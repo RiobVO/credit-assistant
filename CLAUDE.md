@@ -6,9 +6,9 @@
 
 ## Current Status
 
-**Phase:** 0 — Foundation (not started)
-**Last completed task:** None
-**Next task:** Init repo, setup Python project with `uv`, setup Next.js in `web/`
+**Phase:** 1 — Domain Core (not started)
+**Last completed task:** Phase 0 Foundation — repo init, Python+uv, FastAPI `/health`, Next.js + shadcn, page с probe `/health`, Docker Compose (Postgres+Redis), CI workflow
+**Next task:** Phase 1 — entities (`Borrower`, `FinancialReport`, `Invoice`, `RedFlag`), value objects (`INN`, `Money`, `DateRange`, `FlagSeverity`), 17 red-flag правил как pure functions, YAML rules config + loader
 
 ---
 
@@ -55,4 +55,4 @@
 
 | Session | Phase | Completed | Notes |
 |---------|-------|-----------|-------|
-| — | 0 | — | Project not started |
+| 2026-05-08 | 0 | Foundation 0.1–0.9 | Stack: Python 3.12 + uv, FastAPI 0.136, Next 16.2 (вместо 15 — см. ADR 0002), shadcn/ui, TanStack Query, Postgres 16 + Redis 7 в compose, CI с ruff/mypy/pytest и eslint/tsc/build. Compose не поднимался реально (Docker Desktop был остановлен), `docker compose config` валидный. |
