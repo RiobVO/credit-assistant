@@ -26,8 +26,11 @@ class RiskScore:
 
 
 class ScoringService:
+    # Калибровка v1: <15 APPROVE, 15-29 REVIEW, ≥30 REJECT.
+    # Один CRITICAL (15) = REVIEW; CRITICAL + ~2 HIGH (32) = REJECT.
+    # Перекалибровка — после Phase 2 на реальных кейсах (см. ADR 0003).
     APPROVE_BELOW = 15
-    REVIEW_BELOW = 51  # т.е. REVIEW = [15, 50], REJECT = >50
+    REVIEW_BELOW = 30
     MAX_SCORE = 100
 
     def score(self, flags: list[RedFlag]) -> RiskScore:

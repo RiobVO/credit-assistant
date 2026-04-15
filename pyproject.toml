@@ -70,5 +70,5 @@ asyncio_mode = "auto"
 # domain тесты живут рядом с кодом (`*_test.py`); integration — в `tests/`
 testpaths = ["src", "tests"]
 python_files = ["test_*.py", "*_test.py"]
-pythonpath = ["src"]
+pythonpath = ["src", "."]
 addopts = "-ra --strict-markers"
