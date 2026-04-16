@@ -4,7 +4,9 @@
 
 ## Status
 
-**Phase 0 — Foundation: complete.** `/health`-эндпоинт, главная страница с проверкой соединения, локальная инфра в Docker Compose, CI на GitHub Actions.
+**Phase 1 — Domain Core: complete.** 17 red-flag правил, value objects, entities, BorrowerSnapshot, ScoringService, YAML-конфигурация (`config/rules/v1_uz_msb.yaml`). Coverage `src/domain/rules` ≈ 99%, 217 unit + integration тестов.
+
+Phase 0 — Foundation: complete (`/health`, web UI, Docker Compose, CI).
 
 ## Prerequisites
 
@@ -72,3 +74,25 @@ npm run build
 - [`PROJECT_BRIEF.md`](./PROJECT_BRIEF.md) — продуктовый brief, источник правды
 - [`CLAUDE.md`](./CLAUDE.md) — статус проекта и рабочие соглашения
 - [`docs/adr/`](./docs/adr/) — architecture decision records
+- [`config/rules/v1_uz_msb.yaml`](./config/rules/v1_uz_msb.yaml) — все 17 red-flag правил с metadata
+
+## Как добавить новое правило
+
+1. Создать pure-функцию в `src/domain/rules/<category>/<rule_id_lower>.py`:
+   ```python
+   # RULE_SOURCE: <ссылка на регуляторику или industry source>
+   # CONFIDENCE: HIGH | MEDIUM | LOW
+   # VALIDATED_BY: []
+
+   def rule_id_lower(snapshot: BorrowerSnapshot) -> FiringEvidence | None:
+       ...
+   ```
+2. Добавить co-located тест `<rule_id_lower>_test.py` (минимум: positive / negative / edge / missing-data).
+3. Зарегистрировать в `src/infrastructure/rules/registry_factory.py`:
+   ```python
+   from domain.rules.<category>.<rule_id_lower> import rule_id_lower
+
+   CODE_RULES["RULE_ID_UPPER"] = rule_id_lower
+   ```
+4. Описать в `config/rules/v1_uz_msb.yaml` (id, name, category, severity, source, formula, rationale).
+5. Прогнать `uv run pytest -q` — `load_registry()` упадёт, если id не совпадают между кодом и YAML.
