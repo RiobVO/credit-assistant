@@ -17,7 +17,7 @@
 - TODO[CA-004]: per-year taxes UI на Шаге 2 (сейчас taxes_paid="0" для 2023/2024 — degraded)
 - TODO[CA-005]: расширить `ManualInputRequest` схему backend полями `loan_term_months`, `loan_rate_pct`, `loan_purpose`, `loan_category` (сейчас собираются на UI, но в payload не идут)
 
-**Активная ветка:** `feat/phase-2-data-adapters` (HEAD после 2.4.2 ещё не закоммичен). Не смержена в main. После Phase 2 — PR на main.
+**Активная ветка:** `feat/phase-2-data-adapters` (HEAD `0e62486`, запушена в origin). Не смержена в main. После Phase 2 — PR на main.
 
 **Договорённости по Phase 2 (зафиксированы):**
 - VAT хранится отдельно от ЭСФ — агрегат на `BorrowerSnapshot.esf_seller_vat_total` (ADR 0004).
@@ -78,3 +78,4 @@
 | 2026-05-08 | 2 | 2.4.1 ManualInput API | `interfaces/api/shared/dossier_{schema,mapper,dependencies}.py` + endpoint `POST /api/manual-input` (Pydantic v2, FastAPI Annotated Depends, RuleRegistry через `lru_cache`). End-to-end: payload → Borrower+ManualChunk → use case → 17 правил → ScoringService → JSON. 10 integration-тестов покрывают 4 правила + 422-валидацию. 264 passed; ruff + mypy --strict зелёные. |
 | 2026-05-08 | 2 | **Session close** (2.0 → 2.4.1) | За одну сессию закрыто 4 атомарных шага Phase 2 на ветке `feat/phase-2-data-adapters` (`b4c0d3f` → `0ee4cf3` → `4127a3d` → `7408aae`). End-to-end pipeline работает: payload → snapshot → 17 правил → score → JSON. Реальный CSV папы (25 292 invoices, 2020–2026, 111 контрагентов) парсится без ошибок. Открытое: 2.4.2 UI — следующая сессия. |
 | 2026-05-08 | 2 | 2.4.2 ManualInput UI (3 шага) | По дизайну Claude Design (`Credit Assessment - Step 1/2/3.html`): дарк-сайдбар CreditScope, topbar с крошками, page-head + дело-чип, 3-шаговый stepper, info-banner per step, форма с rh-form + zod. Step 1 — 8 полей борровера; Step 2 — 2 квартальные таблицы 3×4 + 4 годовых поля + computed D/A & equity; Step 3 — loan amount/term/rate/purpose + DSCR pre-score panel + checklist. Submit через TanStack Query → `DossierResult` (score, recommendation, severity breakdown, red flags). Дизайн-токены в globals.css, шрифты Inter + JetBrains Mono. tsc + lint + `next build` + smoke (curl /manual-input + curl /api/manual-input) зелёные. Открытые TODO[CA-003..005]. |
+| 2026-05-08 | 2 | **Session close** (2.4.2) | Frontend-сессия. 24 новых файла + 5 модифицированных, коммит `0e62486` запушен в origin. End-to-end проверен: dev server отдаёт `/manual-input`, реальный POST к `/api/manual-input` возвращает корректный `DossierResponse` с red_flags. Открытое: 2.5 persistence — следующая сессия. |
