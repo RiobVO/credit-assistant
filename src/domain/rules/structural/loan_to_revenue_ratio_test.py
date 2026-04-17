@@ -9,6 +9,7 @@ from domain.entities.financial_report import FinancialReport
 from domain.rules.structural.loan_to_revenue_ratio import loan_to_revenue_ratio
 from domain.value_objects.date_range import DateRange
 from domain.value_objects.inn import INN
+from domain.value_objects.loan_request import LoanRequest
 from domain.value_objects.money import Currency, Money
 
 UZS = Currency.UZS
@@ -20,6 +21,16 @@ def _annual(revenue: int) -> FinancialReport:
         revenue=Money(revenue, UZS),
         net_profit=Money(0, UZS),
         taxes_paid=Money(0, UZS),
+    )
+
+
+def _loan(amount: int) -> LoanRequest:
+    return LoanRequest(
+        amount=Money(amount, UZS),
+        term_months=24,
+        rate_pct=Decimal("22.5"),
+        purpose="working_capital",
+        category="standard",
     )
 
 
@@ -37,7 +48,7 @@ def _snapshot(loan: int | None, annual_revenue: int | None) -> BorrowerSnapshot:
     return BorrowerSnapshot(
         borrower=borrower,
         as_of=date(2026, 5, 8),
-        loan_request_amount=Money(loan, UZS) if loan is not None else None,
+        loan_request=_loan(loan) if loan is not None else None,
         annual_reports=[_annual(annual_revenue)] if annual_revenue is not None else [],
     )
 

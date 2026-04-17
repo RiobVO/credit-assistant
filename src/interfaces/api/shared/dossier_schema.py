@@ -105,6 +105,17 @@ class TaxEventInput(_StrictModel):
     duration_days: int | None = None
 
 
+class LoanRequestInput(_StrictModel):
+    """Параметры запрашиваемого кредита (CA-005). Все поля обязательны —
+    UI на Шаге 3 их собирает; адаптеры файловых источников поле не заполняют."""
+
+    amount: MoneyInput
+    term_months: int = Field(gt=0)
+    rate_pct: Decimal = Field(ge=0)
+    purpose: str
+    category: str
+
+
 class InvoiceInput(_StrictModel):
     date: date
     amount: MoneyInput
@@ -154,7 +165,7 @@ class ManualInputRequest(_StrictModel):
     supplier_purchase_share: list[ShareEntry] = Field(default_factory=list)
 
     esf_seller_vat_total: MoneyInput | None = None
-    loan_request_amount: MoneyInput | None = None
+    loan_request: LoanRequestInput | None = None
 
 
 class RedFlagOutput(_StrictModel):

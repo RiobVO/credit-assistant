@@ -13,12 +13,12 @@ THRESHOLD = Decimal("0.5")
 
 
 def loan_to_revenue_ratio(snapshot: BorrowerSnapshot) -> FiringEvidence | None:
-    if snapshot.loan_request_amount is None or not snapshot.annual_reports:
+    if snapshot.loan_request is None or not snapshot.annual_reports:
         return None
 
     # Берём последний по дате окончания отчёт
     latest = max(snapshot.annual_reports, key=lambda r: r.period.end)
-    loan = snapshot.loan_request_amount.amount
+    loan = snapshot.loan_request.amount.amount
     revenue = latest.revenue.amount
 
     if revenue <= 0:

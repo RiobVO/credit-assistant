@@ -15,6 +15,7 @@ from domain.entities.monthly_turnover import MonthlyTurnover
 from domain.entities.tax_event import TaxEvent, TaxEventType
 from domain.value_objects.date_range import DateRange
 from domain.value_objects.inn import INN
+from domain.value_objects.loan_request import LoanRequest
 from domain.value_objects.money import Currency, Money
 from infrastructure.persistence.mappers.snapshot_mapper import (
     snapshot_from_payload,
@@ -112,7 +113,13 @@ def _full_snapshot() -> BorrowerSnapshot:
             ),
         ],
         esf_seller_vat_total=_money(60_000_000),
-        loan_request_amount=_money(1_500_000_000),
+        loan_request=LoanRequest(
+            amount=_money(1_500_000_000),
+            term_months=24,
+            rate_pct=Decimal("22.5"),
+            purpose="working_capital",
+            category="standard",
+        ),
     )
 
 

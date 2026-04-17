@@ -39,7 +39,7 @@ def manual_input_dossier(
         borrower=borrower,
         as_of=payload.as_of,
         chunks=[manual_chunk],
-        loan_request_amount=manual_chunk.loan_request_amount,
+        loan_request=manual_chunk.loan_request,
     )
 
     flags = registry.run_all(snapshot)

@@ -26,7 +26,35 @@ from domain.entities.monthly_turnover import MonthlyTurnover
 from domain.entities.tax_event import TaxEvent, TaxEventType
 from domain.value_objects.date_range import DateRange
 from domain.value_objects.inn import INN
+from domain.value_objects.loan_request import LoanRequest
 from domain.value_objects.money import Currency, Money
+
+
+def _loan_request_to_dict(lr: LoanRequest | None) -> dict[str, Any] | None:
+    if lr is None:
+        return None
+    return {
+        "amount": _money_to_dict(lr.amount),
+        "term_months": lr.term_months,
+        "rate_pct": str(lr.rate_pct),
+        "purpose": lr.purpose,
+        "category": lr.category,
+    }
+
+
+def _loan_request_from_dict(d: dict[str, Any] | None) -> LoanRequest | None:
+    if d is None:
+        return None
+    amount = _money_from_dict(d["amount"])
+    if amount is None:
+        raise ValueError("loan_request.amount cannot be null")
+    return LoanRequest(
+        amount=amount,
+        term_months=int(d["term_months"]),
+        rate_pct=Decimal(d["rate_pct"]),
+        purpose=d["purpose"],
+        category=d["category"],
+    )
 
 
 def _money_to_dict(m: Money | None) -> dict[str, str] | None:
@@ -172,7 +200,7 @@ def snapshot_to_payload(snapshot: BorrowerSnapshot) -> dict[str, Any]:
         "invoices": [_invoice_to_dict(i) for i in snapshot.invoices],
         "tax_events": [_tax_event_to_dict(t) for t in snapshot.tax_events],
         "esf_seller_vat_total": _money_to_dict(snapshot.esf_seller_vat_total),
-        "loan_request_amount": _money_to_dict(snapshot.loan_request_amount),
+        "loan_request": _loan_request_to_dict(snapshot.loan_request),
     }
 
 
@@ -204,5 +232,5 @@ def snapshot_from_payload(payload: dict[str, Any], borrower: Borrower) -> Borrow
         invoices=[_invoice_from_dict(d) for d in payload["invoices"]],
         tax_events=[_tax_event_from_dict(d) for d in payload["tax_events"]],
         esf_seller_vat_total=_money_from_dict(payload.get("esf_seller_vat_total")),
-        loan_request_amount=_money_from_dict(payload.get("loan_request_amount")),
+        loan_request=_loan_request_from_dict(payload.get("loan_request")),
     )

@@ -22,6 +22,7 @@ from domain.entities.tax_event import TaxEvent, TaxEventType
 from domain.services.scoring_service import RiskScore
 from domain.value_objects.date_range import DateRange
 from domain.value_objects.inn import INN
+from domain.value_objects.loan_request import LoanRequest
 from domain.value_objects.money import Currency, Money
 from interfaces.api.shared.dossier_schema import (
     BorrowerInput,
@@ -29,6 +30,7 @@ from interfaces.api.shared.dossier_schema import (
     DossierResponse,
     FinancialReportInput,
     InvoiceInput,
+    LoanRequestInput,
     ManualInputRequest,
     MoneyInput,
     RedFlagOutput,
@@ -91,6 +93,18 @@ def _to_counterparty(p: CounterpartyInput) -> Counterparty:
     )
 
 
+def _to_loan_request(p: LoanRequestInput | None) -> LoanRequest | None:
+    if p is None:
+        return None
+    return LoanRequest(
+        amount=_to_money(p.amount),
+        term_months=p.term_months,
+        rate_pct=p.rate_pct,
+        purpose=p.purpose,
+        category=p.category,
+    )
+
+
 def _to_tax_event(p: TaxEventInput) -> TaxEvent:
     return TaxEvent(
         date=p.date,
@@ -124,7 +138,7 @@ def to_manual_chunk(payload: ManualInputRequest, borrower_inn: INN) -> ManualChu
         supplier_purchase_share={
             s.inn: s.share for s in payload.supplier_purchase_share
         },
-        loan_request_amount=_to_money_optional(payload.loan_request_amount),
+        loan_request=_to_loan_request(payload.loan_request),
     )
 
 

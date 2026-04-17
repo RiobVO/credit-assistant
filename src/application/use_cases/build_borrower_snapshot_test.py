@@ -18,11 +18,22 @@ from domain.entities.monthly_turnover import MonthlyTurnover
 from domain.entities.tax_event import TaxEvent, TaxEventType
 from domain.value_objects.date_range import DateRange
 from domain.value_objects.inn import INN
+from domain.value_objects.loan_request import LoanRequest
 from domain.value_objects.money import Currency, Money
 
 UZS = Currency.UZS
 BORROWER_INN = INN("306399449")
 AS_OF = date(2026, 5, 8)
+
+
+def _loan(amount: int) -> LoanRequest:
+    return LoanRequest(
+        amount=Money(Decimal(amount), UZS),
+        term_months=24,
+        rate_pct=Decimal("22.5"),
+        purpose="working_capital",
+        category="standard",
+    )
 
 
 def _borrower() -> Borrower:
@@ -74,7 +85,7 @@ class TestBorrowerAndAsOf:
         assert snap.annual_reports == []
         assert snap.tax_events == []
         assert snap.esf_seller_vat_total is None
-        assert snap.loan_request_amount is None
+        assert snap.loan_request is None
 
 
 class TestEsfChunk:
@@ -160,29 +171,29 @@ class TestManualChunk:
     def test_loan_amount_picked_up_from_manual_chunk(self) -> None:
         chunk = ManualChunk(
             borrower_inn=BORROWER_INN,
-            loan_request_amount=Money(Decimal(100_000_000), UZS),
+            loan_request=_loan(100_000_000),
         )
         snap = build_borrower_snapshot(
             borrower=_borrower(), as_of=AS_OF, chunks=[chunk],
         )
-        assert snap.loan_request_amount is not None
-        assert snap.loan_request_amount.amount == Decimal(100_000_000)
+        assert snap.loan_request is not None
+        assert snap.loan_request.amount.amount == Decimal(100_000_000)
 
 
 class TestLoanAmountPriority:
     def test_explicit_param_wins_over_manual_chunk(self) -> None:
         chunk = ManualChunk(
             borrower_inn=BORROWER_INN,
-            loan_request_amount=Money(Decimal(50_000_000), UZS),
+            loan_request=_loan(50_000_000),
         )
         snap = build_borrower_snapshot(
             borrower=_borrower(),
             as_of=AS_OF,
             chunks=[chunk],
-            loan_request_amount=Money(Decimal(200_000_000), UZS),
+            loan_request=_loan(200_000_000),
         )
-        assert snap.loan_request_amount is not None
-        assert snap.loan_request_amount.amount == Decimal(200_000_000)
+        assert snap.loan_request is not None
+        assert snap.loan_request.amount.amount == Decimal(200_000_000)
 
 
 class TestMerge:

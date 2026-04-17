@@ -9,7 +9,7 @@ chunks от любых адаптеров. На выход — ``BorrowerSnapsho
   ``ChunkBorrowerMismatchError``. Это страховка от загрузки чужого файла.
 - Дубликаты по периодам не разрешаются автоматически (v1 — extend, последний
   выигрывает). Конфликт-валидация добавится по реальному кейсу.
-- ``loan_request_amount`` имеет приоритет: явный аргумент → first non-None из
+- ``loan_request`` имеет приоритет: явный аргумент → first non-None из
   ``ManualChunk``. ESF/Soliq запрос на кредит не несут.
 """
 
@@ -31,6 +31,7 @@ from domain.entities.invoice import Invoice
 from domain.entities.monthly_turnover import MonthlyTurnover
 from domain.entities.tax_event import TaxEvent
 from domain.value_objects.inn import INN
+from domain.value_objects.loan_request import LoanRequest
 from domain.value_objects.money import Money
 
 
@@ -52,7 +53,7 @@ def build_borrower_snapshot(
     borrower: Borrower,
     as_of: date,
     chunks: Iterable[ParsedDataChunk],
-    loan_request_amount: Money | None = None,
+    loan_request: LoanRequest | None = None,
 ) -> BorrowerSnapshot:
     annual: list[FinancialReport] = []
     quarterly: list[FinancialReport] = []
@@ -64,7 +65,7 @@ def build_borrower_snapshot(
     buyer_share: dict[str, Decimal] = {}
     supplier_share: dict[str, Decimal] = {}
     esf_seller_vat: Money | None = None
-    loan_amount: Money | None = loan_request_amount
+    loan: LoanRequest | None = loan_request
 
     for chunk in chunks:
         _verify_borrower(borrower.inn, chunk)
@@ -88,8 +89,8 @@ def build_borrower_snapshot(
             suppliers.extend(chunk.counterparties_suppliers)
             buyer_share.update(chunk.buyer_revenue_share)
             supplier_share.update(chunk.supplier_purchase_share)
-            if loan_amount is None and chunk.loan_request_amount is not None:
-                loan_amount = chunk.loan_request_amount
+            if loan is None and chunk.loan_request is not None:
+                loan = chunk.loan_request
 
     return BorrowerSnapshot(
         borrower=borrower,
@@ -104,7 +105,7 @@ def build_borrower_snapshot(
         buyer_revenue_share=buyer_share,
         supplier_purchase_share=supplier_share,
         esf_seller_vat_total=esf_seller_vat,
-        loan_request_amount=loan_amount,
+        loan_request=loan,
     )
 
 

@@ -45,6 +45,16 @@ def _money(amount: str, currency: str = "UZS") -> dict[str, str]:
     return {"amount": amount, "currency": currency}
 
 
+def _loan_request(amount: str) -> dict[str, Any]:
+    return {
+        "amount": _money(amount),
+        "term_months": 24,
+        "rate_pct": "22.5",
+        "purpose": "working_capital",
+        "category": "standard",
+    }
+
+
 def _annual(year: int, revenue: str, net_profit: str = "0") -> dict[str, Any]:
     return {
         "period": {"start": f"{year}-01-01", "end": f"{year}-12-31"},
@@ -111,7 +121,7 @@ class TestLoanToRevenueRule:
             "borrower": _borrower_payload(),
             "as_of": "2026-05-08",
             "annual_reports": [_annual(2025, revenue="1000000000")],
-            "loan_request_amount": _money("600000000"),  # 60% от выручки
+            "loan_request": _loan_request("600000000"),  # 60% от выручки
         }
         r = client.post(ENDPOINT, json=payload)
         assert r.status_code == 200
@@ -173,7 +183,7 @@ class TestRiskScoreCombination:
             ),
             "as_of": "2026-05-08",
             "annual_reports": [_annual(2025, revenue="1000000000")],
-            "loan_request_amount": _money("600000000"),    # high
+            "loan_request": _loan_request("600000000"),    # high
             "quarterly_reports": [
                 _quarter(2025, 2, net_profit="-10000000"),
                 _quarter(2025, 3, net_profit="-15000000"),
