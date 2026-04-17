@@ -10,6 +10,7 @@ objects (INN, Money, DateRange). Этот mapper — единственное м
 from datetime import date
 from decimal import Decimal
 from typing import Any
+from uuid import UUID
 
 from application.dto.parsed_data_chunk import ManualChunk
 from domain.entities.borrower import Borrower, LegalForm
@@ -167,6 +168,7 @@ def risk_score_to_output(score: RiskScore) -> RiskScoreOutput:
 
 def build_dossier_response(
     *,
+    dossier_id: UUID,
     borrower_inn: INN,
     as_of: date,
     flags: list[RedFlag],
@@ -174,6 +176,7 @@ def build_dossier_response(
     rules_evaluated: int,
 ) -> DossierResponse:
     return DossierResponse(
+        dossier_id=dossier_id,
         borrower_inn_masked=borrower_inn.masked,
         as_of=as_of,
         red_flags=[red_flag_to_output(f) for f in flags],

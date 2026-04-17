@@ -11,6 +11,7 @@ Money по дизайну (domain.value_objects.money). Pydantic v2 валиди
 from datetime import date
 from decimal import Decimal
 from typing import Any, Literal
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -185,6 +186,7 @@ class RiskScoreOutput(_StrictModel):
 
 
 class DossierResponse(_StrictModel):
+    dossier_id: UUID
     borrower_inn_masked: str
     as_of: date
     red_flags: list[RedFlagOutput]

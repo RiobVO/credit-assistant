@@ -1,26 +1,90 @@
 """Integration-тесты POST /api/manual-input.
 
 Проверяем end-to-end: payload → Pydantic → mapper → use case → rules → scoring → JSON.
+Хранилище переопределено на in-memory dummy: тесты НЕ требуют поднятой БД,
+но проверяют, что endpoint вызывает все три save-метода. Реальные round-trip
+тесты против Postgres — категория testcontainers (2.5.7).
 """
 
+from collections.abc import Iterator
 from typing import Any
+from uuid import UUID, uuid4
 
 import pytest
 from fastapi.testclient import TestClient
 
+from application.dto.dossier_record import DossierRecord
+from domain.entities.borrower import Borrower
+from domain.entities.borrower_snapshot import BorrowerSnapshot
+from domain.value_objects.inn import INN
 from interfaces.api.app import create_app
 from interfaces.api.shared.dependencies import get_rule_registry, get_scoring_service
+from interfaces.api.shared.dossier_storage import DossierStorage, get_dossier_storage
 
 ENDPOINT = "/api/manual-input"
 BORROWER_INN = "306399449"
 
 
+class _InMemoryBorrowerRepo:
+    async def upsert(self, borrower: Borrower) -> UUID:
+        return uuid4()
+
+    async def get_by_inn(self, inn: INN) -> Borrower | None:
+        return None
+
+    async def get_by_id(self, borrower_id: UUID) -> Borrower | None:
+        return None
+
+
+class _InMemorySnapshotRepo:
+    async def save(self, snapshot: BorrowerSnapshot, borrower_id: UUID) -> UUID:
+        return uuid4()
+
+    async def get_by_id(self, snapshot_id: UUID) -> BorrowerSnapshot | None:
+        return None
+
+
+class _InMemoryDossierRepo:
+    async def save(self, record: DossierRecord, snapshot_id: UUID) -> UUID:
+        return uuid4()
+
+    async def get_by_id(self, dossier_id: UUID) -> DossierRecord | None:
+        return None
+
+
+class _InMemoryDraftRepo:
+    async def create(self, payload: dict[str, Any]) -> UUID:
+        return uuid4()
+
+    async def update(self, draft_id: UUID, payload: dict[str, Any]) -> bool:
+        return False
+
+    async def get(self, draft_id: UUID) -> dict[str, Any] | None:
+        return None
+
+    async def purge_expired(self) -> int:
+        return 0
+
+
+def _in_memory_storage() -> DossierStorage:
+    return DossierStorage(
+        borrower=_InMemoryBorrowerRepo(),
+        snapshot=_InMemorySnapshotRepo(),
+        dossier=_InMemoryDossierRepo(),
+        draft=_InMemoryDraftRepo(),
+    )
+
+
 @pytest.fixture
-def client() -> TestClient:
+def client() -> Iterator[TestClient]:
     # Сбросить lru_cache, чтобы тесты не делили зависимости.
     get_rule_registry.cache_clear()
     get_scoring_service.cache_clear()
-    return TestClient(create_app())
+    app = create_app()
+    app.dependency_overrides[get_dossier_storage] = _in_memory_storage
+    with TestClient(app) as c:
+        yield c
+    app.dependency_overrides.clear()
 
 
 def _borrower_payload(

@@ -7,7 +7,10 @@ Engine ленив (создаётся при первом обращении), �
 
 from __future__ import annotations
 
+import json
 from collections.abc import AsyncIterator
+from decimal import Decimal
+from typing import Any
 
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -22,6 +25,21 @@ from config.settings import get_settings
 
 class Base(DeclarativeBase):
     """Базовый класс для всех ORM-моделей persistence слоя."""
+
+
+def _json_default(obj: Any) -> Any:
+    """JSON encoder fallback: Decimal → str (родной float теряет precision).
+
+    Это нужно для JSONB-колонок (snapshot.payload, dossier.red_flags), куда
+    rule evidence приносит Decimal — а stdlib `json.dumps` его не умеет.
+    """
+    if isinstance(obj, Decimal):
+        return str(obj)
+    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
+
+
+def _json_serializer(value: Any) -> str:
+    return json.dumps(value, default=_json_default, ensure_ascii=False)
 
 
 _engine: AsyncEngine | None = None
@@ -41,6 +59,7 @@ def get_engine() -> AsyncEngine:
             settings.database_url,
             future=True,
             pool_pre_ping=True,
+            json_serializer=_json_serializer,
         )
     return _engine
 
@@ -58,9 +77,13 @@ def get_session_factory() -> async_sessionmaker[AsyncSession]:
 
 
 async def get_session() -> AsyncIterator[AsyncSession]:
-    """FastAPI dependency: одна сессия на запрос с автокоммитом транзакции."""
+    """FastAPI dependency: одна сессия на запрос с авто-commit/rollback.
+
+    Транзакция начинается на входе, коммитится при штатном выходе,
+    откатывается при любом исключении. Хэндлеру не нужно явно вызывать commit.
+    """
     factory = get_session_factory()
-    async with factory() as session:
+    async with factory() as session, session.begin():
         yield session
 
 
