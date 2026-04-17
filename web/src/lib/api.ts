@@ -48,10 +48,57 @@ export class ApiError extends Error {
 export async function postManualInput(
   payload: unknown,
 ): Promise<DossierResponseDto> {
-  const r = await fetch(`${API_URL}/api/manual-input`, {
+  return jsonFetch<DossierResponseDto>("/api/manual-input", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
+  });
+}
+
+// --- Drafts API (см. src/interfaces/api/shared/draft.py) ---
+
+export type DraftCreatedDto = {
+  draft_id: string;
+  expires_at: string;
+};
+
+export type DraftResponseDto = {
+  draft_id: string;
+  payload: Record<string, unknown>;
+};
+
+export async function createDraft(
+  payload: Record<string, unknown>,
+): Promise<DraftCreatedDto> {
+  return jsonFetch<DraftCreatedDto>("/api/manual-input/draft", {
+    method: "POST",
+    body: JSON.stringify({ payload }),
+  });
+}
+
+export async function updateDraft(
+  draftId: string,
+  payload: Record<string, unknown>,
+): Promise<DraftCreatedDto> {
+  return jsonFetch<DraftCreatedDto>(
+    `/api/manual-input/draft/${encodeURIComponent(draftId)}`,
+    {
+      method: "PUT",
+      body: JSON.stringify({ payload }),
+    },
+  );
+}
+
+export async function getDraft(draftId: string): Promise<DraftResponseDto> {
+  return jsonFetch<DraftResponseDto>(
+    `/api/manual-input/draft/${encodeURIComponent(draftId)}`,
+    { method: "GET" },
+  );
+}
+
+async function jsonFetch<T>(path: string, init: RequestInit): Promise<T> {
+  const r = await fetch(`${API_URL}${path}`, {
+    ...init,
+    headers: { "Content-Type": "application/json", ...init.headers },
   });
 
   if (!r.ok) {
@@ -64,5 +111,5 @@ export async function postManualInput(
     throw new ApiError(r.status, body);
   }
 
-  return (await r.json()) as DossierResponseDto;
+  return (await r.json()) as T;
 }

@@ -3,12 +3,13 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { TriangleAlert } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 
 import { ApiError, postManualInput, type DossierResponseDto } from "@/lib/api";
 
-import { Topbar } from "../_components/topbar";
+import { Topbar, type DraftIndicator } from "../_components/topbar";
 
 import { DossierResult } from "./_components/dossier-result";
 import { FormFooter } from "./_components/form-footer";
@@ -19,6 +20,7 @@ import { Step1Borrower } from "./_components/step-1-borrower";
 import { Step2Financials } from "./_components/step-2-financials";
 import { Step3Loan } from "./_components/step-3-loan";
 import { formValuesToPayload } from "./_form-mapper";
+import { useFormDraft } from "./_hooks/use-form-draft";
 import { defaultFormValues, formSchema, type FormValues } from "./_schema";
 
 type Step = 1 | 2 | 3;
@@ -36,6 +38,33 @@ const STEP_BANNER: Record<Step, "registry" | "financials" | "final"> = {
 };
 
 export default function ManualInputPage() {
+  // useSearchParams требует Suspense-границы во время prerender Next App Router.
+  return (
+    <Suspense fallback={<ManualInputFallback />}>
+      <ManualInputPageInner />
+    </Suspense>
+  );
+}
+
+function ManualInputFallback() {
+  return (
+    <div className="w-full max-w-[1180px] px-8 pt-7 pb-[120px]">
+      <div className="rounded-lg border border-[var(--ca-border)] bg-white px-5 py-4 text-[13px] text-[var(--ca-ink-500)]">
+        Загружаем форму…
+      </div>
+    </div>
+  );
+}
+
+function ManualInputPageInner() {
+  const searchParams = useSearchParams();
+
+  // Считываем draft id один раз: повторное чтение search params на каждый rerender
+  // привело бы к лишнему GET после нашего же replaceState.
+  const [initialDraftId] = useState<string | null>(
+    () => searchParams?.get("draft") ?? null,
+  );
+
   const [step, setStep] = useState<Step>(1);
   const [result, setResult] = useState<DossierResponseDto | null>(null);
 
@@ -47,7 +76,25 @@ export default function ManualInputPage() {
     mode: "onTouched",
   });
 
-  const mutation = useMutation({
+  const draft = useFormDraft({ form, initialDraftId });
+
+  // Битый/просроченный draft — чистим query, чтобы reload не подбирал его снова.
+  useEffect(() => {
+    if (draft.loadFailed && initialDraftId !== null) {
+      replaceDraftQuery(null);
+    }
+  }, [draft.loadFailed, initialDraftId]);
+
+  // После первого POST (draftId появился) — пишем его в URL.
+  useEffect(() => {
+    if (draft.draftId === null) return;
+    const current = new URLSearchParams(window.location.search).get("draft");
+    if (current !== draft.draftId) {
+      replaceDraftQuery(draft.draftId);
+    }
+  }, [draft.draftId]);
+
+  const submitMutation = useMutation({
     mutationFn: postManualInput,
     onSuccess: (data) => {
       setResult(data);
@@ -60,11 +107,13 @@ export default function ManualInputPage() {
     if (!ok) return;
     if (step === 3) {
       const values = form.getValues();
-      mutation.mutate(formValuesToPayload(values));
+      submitMutation.mutate(formValuesToPayload(values));
       return;
     }
+    // Save до перехода — fire-and-forget, переход не ждёт сети.
+    draft.saveDraft(form.getValues());
     setStep((s) => (s === 1 ? 2 : 3));
-  }, [form, mutation, step]);
+  }, [form, submitMutation, step, draft]);
 
   const goBack = useCallback(() => {
     if (step === 3) setStep(2);
@@ -75,8 +124,10 @@ export default function ManualInputPage() {
     form.reset(defaultFormValues());
     setResult(null);
     setStep(1);
-    mutation.reset();
-  }, [form, mutation]);
+    submitMutation.reset();
+    draft.resetDraft();
+    replaceDraftQuery(null);
+  }, [form, submitMutation, draft]);
 
   const breadcrumbs = useMemo(
     () => [
@@ -87,19 +138,30 @@ export default function ManualInputPage() {
     [result, step],
   );
 
+  const draftIndicator: DraftIndicator = useMemo(() => {
+    if (draft.isSaving) return { state: "saving" };
+    if (draft.saveError) return { state: "error" };
+    if (draft.savedAt) return { state: "saved", at: draft.savedAt };
+    return { state: "idle" };
+  }, [draft.isSaving, draft.saveError, draft.savedAt]);
+
   return (
     <FormProvider {...form}>
-      <Topbar crumbs={breadcrumbs} />
+      <Topbar crumbs={breadcrumbs} draft={draftIndicator} />
       <div className="w-full max-w-[1180px] px-8 pt-7 pb-[120px]">
         <PageHead caseId={caseId} />
 
         {result ? (
           <DossierResult data={result} onNew={newApplication} />
+        ) : draft.isLoading ? (
+          <div className="rounded-lg border border-[var(--ca-border)] bg-white px-5 py-4 text-[13px] text-[var(--ca-ink-500)]">
+            Загружаем черновик…
+          </div>
         ) : (
           <>
             <Stepper activeStep={step} />
             <InfoBanner variant={STEP_BANNER[step]} />
-            {mutation.isError ? <ErrorBanner error={mutation.error} /> : null}
+            {submitMutation.isError ? <ErrorBanner error={submitMutation.error} /> : null}
 
             {step === 1 ? <Step1Borrower /> : null}
             {step === 2 ? <Step2Financials /> : null}
@@ -110,13 +172,26 @@ export default function ManualInputPage() {
               onCancel={() => form.reset(defaultFormValues())}
               onBack={goBack}
               onNext={goNext}
-              isSubmitting={mutation.isPending}
+              isSubmitting={submitMutation.isPending}
             />
           </>
         )}
       </div>
     </FormProvider>
   );
+}
+
+function replaceDraftQuery(draftId: string | null): void {
+  if (typeof window === "undefined") return;
+  const url = new URL(window.location.href);
+  if (draftId === null) {
+    url.searchParams.delete("draft");
+  } else {
+    url.searchParams.set("draft", draftId);
+  }
+  // history.replaceState вместо router.replace: мы не хотим триггерить
+  // server roundtrip / re-render Next-роутера на каждый сейв.
+  window.history.replaceState(window.history.state, "", url.toString());
 }
 
 function ErrorBanner({ error }: { error: unknown }) {
