@@ -20,13 +20,12 @@ from interfaces.api.shared.dossier_mapper import (
     to_manual_chunk,
 )
 from interfaces.api.shared.dossier_schema import DossierResponse, ManualInputRequest
-from interfaces.api.shared.dossier_storage import DossierStorage, get_dossier_storage
+from interfaces.api.shared.dossier_storage import StorageDep
 
 router = APIRouter(prefix="/api", tags=["dossier"])
 
 RuleRegistryDep = Annotated[RuleRegistry, Depends(get_rule_registry)]
 ScoringServiceDep = Annotated[ScoringService, Depends(get_scoring_service)]
-StorageDep = Annotated[DossierStorage, Depends(get_dossier_storage)]
 
 # Versioning rules engine: пока единственный YAML-файл = v1. Запишем как
 # константу — при следующей итерации правил будет сравнение.
