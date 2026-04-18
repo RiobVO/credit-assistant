@@ -1,8 +1,13 @@
 # ADR 0004: VAT хранится отдельно от ЭСФ
 
-- **Status**: Accepted
+- **Status**: Accepted (partially superseded by ADR 0006)
 - **Date**: 2026-05-08
 - **Phase**: 2
+
+> **Note (2.3 Day 2):** одиночное поле `BorrowerSnapshot.esf_seller_vat_total`
+> заменено на список `vat_periods: list[VatPeriodReport]` — см. ADR 0006.
+> Мотивация удаления `Invoice.vat_amount` (этот ADR) актуальна; конкретное место
+> хранения VAT-агрегата мигрировало.
 
 ## Context
 

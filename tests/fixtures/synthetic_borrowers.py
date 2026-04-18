@@ -14,6 +14,7 @@ from domain.entities.financial_report import FinancialReport
 from domain.entities.invoice import Invoice, InvoiceRole
 from domain.entities.monthly_turnover import MonthlyTurnover
 from domain.entities.tax_event import TaxEvent, TaxEventType
+from domain.entities.vat_period_report import VatPeriodReport
 from domain.value_objects.date_range import DateRange
 from domain.value_objects.inn import INN
 from domain.value_objects.loan_request import LoanRequest
@@ -187,8 +188,15 @@ def critical_borrower() -> BorrowerSnapshot:
                 counterparty_name="ООО Однодневка",
             ),
         ],
-        # Агрегат ЭСФ-НДС << декларации (60 млн vs 300 млн) → VAT_ESF_MISMATCH fires.
-        esf_seller_vat_total=Money(Decimal(60_000_000), UZS),
+        # Месячный VAT-период с расхождением: декларация 300 млн vs ЭСФ 60 млн
+        # → VAT_ESF_MISMATCH fires (latest полный период).
+        vat_periods=[
+            VatPeriodReport(
+                period=DateRange(date(2026, 3, 1), date(2026, 3, 31)),
+                vat_declared=Money(Decimal(300_000_000), UZS),
+                esf_seller_vat_total=Money(Decimal(60_000_000), UZS),
+            ),
+        ],
         counterparties_buyers=[shell],
         counterparties_suppliers=[shell],
         tax_events=[
