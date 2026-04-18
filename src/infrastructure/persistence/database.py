@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import AsyncIterator
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
 
@@ -28,13 +29,17 @@ class Base(DeclarativeBase):
 
 
 def _json_default(obj: Any) -> Any:
-    """JSON encoder fallback: Decimal → str (родной float теряет precision).
+    """JSON encoder fallback для JSONB-колонок (snapshot.payload, dossier.red_flags).
 
-    Это нужно для JSONB-колонок (snapshot.payload, dossier.red_flags), куда
-    rule evidence приносит Decimal — а stdlib `json.dumps` его не умеет.
+    * Decimal → str: сохраняем precision (float её бы потерял).
+    * datetime/date → isoformat: rule evidence бывает с временными метками;
+      обратная конверсия — на стороне mapper'а конкретного потребителя.
     """
     if isinstance(obj, Decimal):
         return str(obj)
+    # ВАЖНО: datetime — подкласс date, проверяем сначала его (isoformat для обоих).
+    if isinstance(obj, datetime | date):
+        return obj.isoformat()
     raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
 
 
