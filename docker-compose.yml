@@ -11,7 +11,8 @@ services:
       POSTGRES_PASSWORD: credit
       POSTGRES_DB: credit_assistant
     ports:
-      - "5432:5432"
+      # Host 5433 → container 5432: на dev-машинах часто стоит локальный Postgres на 5432.
+      - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:

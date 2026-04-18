@@ -22,6 +22,13 @@ class Settings(BaseSettings):
     app_env: AppEnv = "local"
     log_level: str = "INFO"
 
+    # Postgres connection. Async URL with asyncpg driver — используется и приложением,
+    # и Alembic (через async engine + run_sync в env.py).
+    database_url: str = "postgresql+asyncpg://credit:credit@localhost:5433/credit_assistant"
+
+    # Draft form retention. По умолчанию 30 дней; в проде регулируется через .env.
+    draft_ttl_days: int = 30
+
     # CORS: либо JSON-массив в .env, либо comma-separated — поддерживаем оба
     cors_allowed_origins: list[str] = Field(
         default_factory=lambda: ["http://localhost:3000"],
