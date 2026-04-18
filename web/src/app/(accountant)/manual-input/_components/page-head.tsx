@@ -1,4 +1,4 @@
-export function PageHead({ caseId }: { caseId: string }) {
+export function PageHead({ caseId }: { caseId: string | null }) {
   return (
     <div className="mb-6 flex items-start gap-6">
       <div>
@@ -17,7 +17,7 @@ export function PageHead({ caseId }: { caseId: string }) {
             Дело
           </div>
           <div className="font-mono text-[13px] text-[var(--ca-ink-900)]">
-            {caseId}
+            {caseId ?? "—"}
           </div>
         </div>
       </div>

@@ -4,7 +4,14 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { TriangleAlert } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { FormProvider, useForm } from "react-hook-form";
 
 import { ApiError, postManualInput, type DossierResponseDto } from "@/lib/api";
@@ -68,7 +75,14 @@ function ManualInputPageInner() {
   const [step, setStep] = useState<Step>(1);
   const [result, setResult] = useState<DossierResponseDto | null>(null);
 
-  const caseId = useMemo(() => generateCaseId(), []);
+  // caseId генерится только на клиенте — Math.random() в SSR не совпадает
+  // с первым клиентским рендером и ловит hydration mismatch.
+  // useSyncExternalStore возвращает null на сервере и стабильный id на клиенте.
+  const caseId = useSyncExternalStore(
+    () => () => {},
+    () => getClientCaseId(),
+    () => null,
+  );
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -226,7 +240,13 @@ function ErrorBanner({ error }: { error: unknown }) {
   );
 }
 
-function generateCaseId(): string {
+// Клиентский singleton: caseId один на mount-сессию, переживает rerender'ы,
+// но не shared между tab'ами. Реальный caseId придёт с бэкенда после
+// создания заявки в Phase 4 (Bank Mode); сейчас это чисто визуальный placeholder.
+let cachedClientCaseId: string | null = null;
+
+function getClientCaseId(): string {
+  if (cachedClientCaseId !== null) return cachedClientCaseId;
   const now = new Date();
   const year = now.getFullYear();
   const mm = String(now.getMonth() + 1).padStart(2, "0");
@@ -234,5 +254,6 @@ function generateCaseId(): string {
   const rand = Math.floor(Math.random() * 100000)
     .toString()
     .padStart(5, "0");
-  return `CR-${year}-${mm}${dd}-${rand}`;
+  cachedClientCaseId = `CR-${year}-${mm}${dd}-${rand}`;
+  return cachedClientCaseId;
 }
