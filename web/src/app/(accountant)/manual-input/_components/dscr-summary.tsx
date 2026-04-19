@@ -40,8 +40,8 @@ export function DscrSummary({
   const todayLabel = format(new Date(), "dd.MM.yyyy");
 
   return (
-    <div className="mt-[22px] overflow-hidden rounded-xl border border-[var(--ca-border)] bg-white">
-      <div className="flex items-center gap-2.5 border-b border-[#EFF1F5] bg-white px-[22px] py-3.5">
+    <div className="mt-[22px] overflow-hidden rounded-xl border border-[var(--ca-border)] bg-[var(--ca-surface)]">
+      <div className="flex items-center gap-2.5 border-b border-[#EFF1F5] bg-[var(--ca-surface)] px-[22px] py-3.5">
         <span className="text-[10.5px] font-semibold tracking-[1.4px] text-[var(--ca-ink-400)] uppercase">
           Pre-score
         </span>

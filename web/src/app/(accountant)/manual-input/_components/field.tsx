@@ -41,7 +41,7 @@ export function Field({
 }
 
 const inputBase =
-  "h-[38px] w-full rounded-md border border-[var(--ca-border-strong)] bg-white px-3 text-[14px] text-[var(--ca-ink-900)] outline-none transition-colors placeholder:text-[#9BA3B3] focus:border-[var(--ca-primary-blue)] focus:shadow-[0_0_0_3px_rgba(30,85,201,0.15)]";
+  "h-[38px] w-full rounded-md border border-[var(--ca-border-strong)] bg-[var(--ca-surface)] px-3 text-[14px] text-[var(--ca-ink-900)] outline-none transition-colors placeholder:text-[#9BA3B3] focus:border-[var(--ca-primary-blue)] focus:shadow-[0_0_0_3px_rgba(30,85,201,0.15)]";
 
 export const fieldInputClass = inputBase;
 

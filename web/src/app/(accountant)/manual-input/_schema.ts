@@ -2,28 +2,28 @@
 //
 // Конвенции форм-значений:
 //   • суммы UZS — строки только из цифр (без пробелов / запятых; форматируется на UI)
-//   • даты — строки в формате "dd.MM.yyyy"
+//   • даты — строки ISO "yyyy-MM-dd" (нативный <input type="date">)
 //   • ставка — строка вида "18,5" (запятая или точка); парсится в число при отправке
 
 import { isValid, parse } from "date-fns";
 import { z } from "zod";
 
 const INN_RE = /^\d{9}$/;
-const DATE_RE = /^\d{2}\.\d{2}\.\d{4}$/;
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const AMOUNT_RE = /^\d+$/;
 const RATE_RE = /^\d{1,2}([.,]\d{1,2})?$/;
 
-function parseRu(date: string): Date | null {
-  const d = parse(date, "dd.MM.yyyy", new Date());
+function parseIso(date: string): Date | null {
+  const d = parse(date, "yyyy-MM-dd", new Date());
   return isValid(d) ? d : null;
 }
 
-const ddMmYyyy = z
+const isoDate = z
   .string()
   .trim()
   .min(1, "Заполните дату")
-  .regex(DATE_RE, "Формат даты: дд.мм.гггг")
-  .refine((v) => parseRu(v) !== null, "Некорректная дата");
+  .regex(ISO_DATE_RE, "Некорректная дата")
+  .refine((v) => parseIso(v) !== null, "Некорректная дата");
 
 const uzsAmount = z
   .string()
@@ -83,16 +83,16 @@ export const step1Schema = z
       .regex(INN_RE, "ИНН должен содержать ровно 9 цифр"),
     name: z.string().trim().min(2, "Заполните наименование"),
     legalForm: z.enum(["llc", "jsc", "ie"]),
-    registrationDate: ddMmYyyy,
+    registrationDate: isoDate,
     okvedMain: z.string().trim().min(2, "Укажите ОКВЭД"),
     directorName: z.string().trim().min(2, "Укажите Ф.И.О. директора"),
-    directorAppointedAt: ddMmYyyy,
+    directorAppointedAt: isoDate,
     registeredAddress: z.string().trim().min(3, "Укажите юридический адрес"),
   })
   .refine(
     ({ registrationDate, directorAppointedAt }) => {
-      const reg = parseRu(registrationDate);
-      const apt = parseRu(directorAppointedAt);
+      const reg = parseIso(registrationDate);
+      const apt = parseIso(directorAppointedAt);
       if (!reg || !apt) return true;
       return apt.getTime() >= reg.getTime();
     },
@@ -120,7 +120,9 @@ export const step2Schema = z.object({
   revenue: yearlyQuarters,
   netProfit: yearlyQuarters,
   vatDeclared: uzsAmount,
-  taxesPaid: uzsAmount,
+  taxesPaid23: uzsAmountOptional,
+  taxesPaid24: uzsAmountOptional,
+  taxesPaid25: uzsAmount,
   totalAssets: uzsAmount,
   totalLiabilities: uzsAmount,
   vatPeriod: vatPeriodFromSoliq.nullable(),
@@ -191,7 +193,9 @@ export function defaultFormValues(): FormValues {
         y2025: { q1: "", q2: "", q3: "", q4: "" },
       },
       vatDeclared: "",
-      taxesPaid: "",
+      taxesPaid23: "",
+      taxesPaid24: "",
+      taxesPaid25: "",
       totalAssets: "",
       totalLiabilities: "",
       vatPeriod: null,
@@ -209,6 +213,6 @@ export function defaultFormValues(): FormValues {
 export const REPORT_YEARS = [2023, 2024, 2025] as const;
 export type ReportYear = (typeof REPORT_YEARS)[number];
 
-export function parseDateRu(s: string): Date | null {
-  return parseRu(s);
+export function parseDateIso(s: string): Date | null {
+  return parseIso(s);
 }

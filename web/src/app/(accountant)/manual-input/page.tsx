@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { TriangleAlert } from "lucide-react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Suspense,
   useCallback,
@@ -14,11 +14,10 @@ import {
 } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 
-import { ApiError, postManualInput, type DossierResponseDto } from "@/lib/api";
+import { ApiError, postManualInput } from "@/lib/api";
 
 import { Topbar, type DraftIndicator } from "../_components/topbar";
 
-import { DossierResult } from "./_components/dossier-result";
 import { FormFooter } from "./_components/form-footer";
 import { InfoBanner } from "./_components/info-banner";
 import { PageHead } from "./_components/page-head";
@@ -56,7 +55,7 @@ export default function ManualInputPage() {
 function ManualInputFallback() {
   return (
     <div className="w-full max-w-[1180px] px-8 pt-7 pb-[120px]">
-      <div className="rounded-lg border border-[var(--ca-border)] bg-white px-5 py-4 text-[13px] text-[var(--ca-ink-500)]">
+      <div className="rounded-lg border border-[var(--ca-border)] bg-[var(--ca-surface)] px-5 py-4 text-[13px] text-[var(--ca-ink-500)]">
         Загружаем форму…
       </div>
     </div>
@@ -64,6 +63,7 @@ function ManualInputFallback() {
 }
 
 function ManualInputPageInner() {
+  const router = useRouter();
   const searchParams = useSearchParams();
 
   // Считываем draft id один раз: повторное чтение search params на каждый rerender
@@ -73,7 +73,6 @@ function ManualInputPageInner() {
   );
 
   const [step, setStep] = useState<Step>(1);
-  const [result, setResult] = useState<DossierResponseDto | null>(null);
 
   // caseId генерится только на клиенте — Math.random() в SSR не совпадает
   // с первым клиентским рендером и ловит hydration mismatch.
@@ -111,7 +110,7 @@ function ManualInputPageInner() {
   const submitMutation = useMutation({
     mutationFn: postManualInput,
     onSuccess: (data) => {
-      setResult(data);
+      router.push(`/dossier/${data.dossier_id}`);
     },
   });
 
@@ -134,22 +133,13 @@ function ManualInputPageInner() {
     else if (step === 2) setStep(1);
   }, [step]);
 
-  const newApplication = useCallback(() => {
-    form.reset(defaultFormValues());
-    setResult(null);
-    setStep(1);
-    submitMutation.reset();
-    draft.resetDraft();
-    replaceDraftQuery(null);
-  }, [form, submitMutation, draft]);
-
   const breadcrumbs = useMemo(
     () => [
       { label: "Заявки" },
       { label: "Новая заявка" },
-      { label: result ? "Результаты скоринга" : STEP_TITLE[step], current: true },
+      { label: STEP_TITLE[step], current: true },
     ],
-    [result, step],
+    [step],
   );
 
   const draftIndicator: DraftIndicator = useMemo(() => {
@@ -165,10 +155,8 @@ function ManualInputPageInner() {
       <div className="w-full max-w-[1180px] px-8 pt-7 pb-[120px]">
         <PageHead caseId={caseId} />
 
-        {result ? (
-          <DossierResult data={result} onNew={newApplication} />
-        ) : draft.isLoading ? (
-          <div className="rounded-lg border border-[var(--ca-border)] bg-white px-5 py-4 text-[13px] text-[var(--ca-ink-500)]">
+        {draft.isLoading ? (
+          <div className="rounded-lg border border-[var(--ca-border)] bg-[var(--ca-surface)] px-5 py-4 text-[13px] text-[var(--ca-ink-500)]">
             Загружаем черновик…
           </div>
         ) : (
@@ -186,7 +174,7 @@ function ManualInputPageInner() {
               onCancel={() => form.reset(defaultFormValues())}
               onBack={goBack}
               onNext={goNext}
-              isSubmitting={submitMutation.isPending}
+              isSubmitting={submitMutation.isPending || submitMutation.isSuccess}
             />
           </>
         )}
@@ -231,7 +219,7 @@ function ErrorBanner({ error }: { error: unknown }) {
         <div className="text-[13px] leading-[1.5] text-[var(--ca-danger)]">
           <b className="font-semibold">Ошибка отправки на скоринг.</b>{" "}
           Проверьте данные и попробуйте снова.
-          <pre className="mt-2 max-h-40 overflow-auto rounded-md border border-[#F2BCBA] bg-white p-2 font-mono text-[11.5px] text-[var(--ca-ink-700)]">
+          <pre className="mt-2 max-h-40 overflow-auto rounded-md border border-[#F2BCBA] bg-[var(--ca-surface)] p-2 font-mono text-[11.5px] text-[var(--ca-ink-700)]">
             {body}
           </pre>
         </div>
