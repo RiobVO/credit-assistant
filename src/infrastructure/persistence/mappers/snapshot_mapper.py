@@ -24,6 +24,7 @@ from domain.entities.financial_report import FinancialReport
 from domain.entities.invoice import Invoice, InvoiceRole
 from domain.entities.monthly_turnover import MonthlyTurnover
 from domain.entities.tax_event import TaxEvent, TaxEventType
+from domain.entities.vat_period_report import VatPeriodReport
 from domain.value_objects.date_range import DateRange
 from domain.value_objects.inn import INN
 from domain.value_objects.loan_request import LoanRequest
@@ -180,6 +181,28 @@ def _tax_event_from_dict(d: dict[str, Any]) -> TaxEvent:
     )
 
 
+def _vat_period_to_dict(p: VatPeriodReport) -> dict[str, Any]:
+    return {
+        "period": {"start": p.period.start.isoformat(), "end": p.period.end.isoformat()},
+        "vat_declared": _money_to_dict(p.vat_declared),
+        "esf_seller_vat_total": _money_to_dict(p.esf_seller_vat_total),
+        "submitted_at": p.submitted_at.isoformat() if p.submitted_at is not None else None,
+    }
+
+
+def _vat_period_from_dict(d: dict[str, Any]) -> VatPeriodReport:
+    submitted_raw = d.get("submitted_at")
+    return VatPeriodReport(
+        period=DateRange(
+            start=date.fromisoformat(d["period"]["start"]),
+            end=date.fromisoformat(d["period"]["end"]),
+        ),
+        vat_declared=_money_from_dict(d.get("vat_declared")),
+        esf_seller_vat_total=_money_from_dict(d.get("esf_seller_vat_total")),
+        submitted_at=date.fromisoformat(submitted_raw) if submitted_raw is not None else None,
+    )
+
+
 def snapshot_to_payload(snapshot: BorrowerSnapshot) -> dict[str, Any]:
     """Сериализует snapshot в JSONB-совместимый dict (без borrower)."""
     return {
@@ -199,7 +222,7 @@ def snapshot_to_payload(snapshot: BorrowerSnapshot) -> dict[str, Any]:
         },
         "invoices": [_invoice_to_dict(i) for i in snapshot.invoices],
         "tax_events": [_tax_event_to_dict(t) for t in snapshot.tax_events],
-        "esf_seller_vat_total": _money_to_dict(snapshot.esf_seller_vat_total),
+        "vat_periods": [_vat_period_to_dict(p) for p in snapshot.vat_periods],
         "loan_request": _loan_request_to_dict(snapshot.loan_request),
     }
 
@@ -231,6 +254,6 @@ def snapshot_from_payload(payload: dict[str, Any], borrower: Borrower) -> Borrow
         },
         invoices=[_invoice_from_dict(d) for d in payload["invoices"]],
         tax_events=[_tax_event_from_dict(d) for d in payload["tax_events"]],
-        esf_seller_vat_total=_money_from_dict(payload.get("esf_seller_vat_total")),
+        vat_periods=[_vat_period_from_dict(d) for d in payload.get("vat_periods", [])],
         loan_request=_loan_request_from_dict(payload.get("loan_request")),
     )

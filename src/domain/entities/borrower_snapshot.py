@@ -14,8 +14,8 @@ from domain.entities.financial_report import FinancialReport
 from domain.entities.invoice import Invoice
 from domain.entities.monthly_turnover import MonthlyTurnover
 from domain.entities.tax_event import TaxEvent
+from domain.entities.vat_period_report import VatPeriodReport
 from domain.value_objects.loan_request import LoanRequest
-from domain.value_objects.money import Money
 
 
 @dataclass(frozen=True, slots=True)
@@ -36,9 +36,9 @@ class BorrowerSnapshot:
     invoices: list[Invoice] = field(default_factory=list)
     tax_events: list[TaxEvent] = field(default_factory=list)
 
-    # Агрегат НДС из ЭСФ как продавец за период последнего годового отчёта.
-    # Заполняется отдельным VAT-адаптером (источник содержит разбивку НДС);
-    # CSV-выгрузка из e-factura.uz его не содержит — оставляем None. См. ADR 0004.
-    esf_seller_vat_total: Money | None = None
+    # НДС-отчётность по налоговым периодам (обычно помесячно). Каждый период
+    # несёт декларацию и/или агрегат ЭСФ-продаж за тот же интервал. См. ADR 0006
+    # — заменяет одиночный agg ``esf_seller_vat_total`` из ADR 0004.
+    vat_periods: list[VatPeriodReport] = field(default_factory=list)
 
     loan_request: LoanRequest | None = None

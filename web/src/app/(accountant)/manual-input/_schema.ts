@@ -102,6 +102,20 @@ export const step1Schema = z
     },
   );
 
+// VAT-период из загрузки Soliq xltx. Заполняется через POST /api/upload/soliq-xltx,
+// сериализуется в payload.vat_periods[0] при финальном submit.
+const vatPeriodFromSoliq = z.object({
+  year: z.number().int().min(2020).max(2099),
+  month: z.number().int().min(1).max(12),
+  vatDeclared: z.string().regex(/^\d+(\.\d+)?$/, "Некорректная сумма НДС"),
+  esfSellerVat: z.string().regex(/^\d+(\.\d+)?$/, "Некорректная сумма ЭСФ-НДС"),
+  organizationName: z.string().optional(),
+  submittedAt: z.string().optional(), // ISO date YYYY-MM-DD
+  diffPct: z.string().optional(),
+});
+
+export type VatPeriodFromSoliq = z.infer<typeof vatPeriodFromSoliq>;
+
 export const step2Schema = z.object({
   revenue: yearlyQuarters,
   netProfit: yearlyQuarters,
@@ -109,6 +123,7 @@ export const step2Schema = z.object({
   taxesPaid: uzsAmount,
   totalAssets: uzsAmount,
   totalLiabilities: uzsAmount,
+  vatPeriod: vatPeriodFromSoliq.nullable(),
 });
 
 export const step3Schema = z.object({
@@ -179,6 +194,7 @@ export function defaultFormValues(): FormValues {
       taxesPaid: "",
       totalAssets: "",
       totalLiabilities: "",
+      vatPeriod: null,
     },
     step3: {
       loanAmount: "",

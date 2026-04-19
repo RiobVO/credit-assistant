@@ -7,28 +7,34 @@
 from decimal import Decimal
 
 from domain.entities.borrower_snapshot import BorrowerSnapshot
+from domain.entities.vat_period_report import VatPeriodReport
 from domain.rules.protocol import FiringEvidence
 
 THRESHOLD = Decimal("0.15")
 
 
 def vat_esf_mismatch(snapshot: BorrowerSnapshot) -> FiringEvidence | None:
-    # Агрегат НДС из ЭСФ заполняет отдельный VAT-адаптер (см. ADR 0004).
-    # CSV-выгрузка e-factura.uz его не содержит — правило молчит (degraded).
-    if snapshot.esf_seller_vat_total is None:
+    """Сравнить декларацию НДС и агрегат ЭСФ за один и тот же налоговый период.
+
+    Берётся latest period с обоими заполненными полями (``vat_declared`` +
+    ``esf_seller_vat_total``). Без полного периода → правило молчит (degraded).
+    Это поведение задокументировано в ADR 0006 — реальные данные my3.soliq.uz
+    приходят помесячно, и сравнивать имеет смысл только в рамках одного периода.
+    """
+    complete = [p for p in snapshot.vat_periods if _is_complete(p)]
+    if not complete:
         return None
 
-    annual_with_vat = [r for r in snapshot.annual_reports if r.vat_declared is not None]
-    if not annual_with_vat:
-        return None
-    latest = max(annual_with_vat, key=lambda r: r.period.end)
-    assert latest.vat_declared is not None  # mypy narrowing
+    latest = max(complete, key=lambda p: p.period.end)
+    # mypy narrowing: _is_complete гарантирует, что оба поля не None.
+    assert latest.vat_declared is not None
+    assert latest.esf_seller_vat_total is not None
 
     vat_declared = latest.vat_declared.amount
     if vat_declared <= 0:
         return None
 
-    sum_seller_vat = snapshot.esf_seller_vat_total.amount
+    sum_seller_vat = latest.esf_seller_vat_total.amount
 
     diff_pct = abs(vat_declared - sum_seller_vat) / vat_declared
     if diff_pct <= THRESHOLD:
@@ -43,3 +49,7 @@ def vat_esf_mismatch(snapshot: BorrowerSnapshot) -> FiringEvidence | None:
             "period": [latest.period.start.isoformat(), latest.period.end.isoformat()],
         },
     )
+
+
+def _is_complete(period: VatPeriodReport) -> bool:
+    return period.vat_declared is not None and period.esf_seller_vat_total is not None

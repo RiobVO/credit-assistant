@@ -63,7 +63,11 @@ redisdata/
 # Полные выгрузки реальных юрлиц — локально, не в repo.
 tests/fixtures/**/*_full.csv
 tests/fixtures/**/*_full.xlsx
+tests/fixtures/**/*_full.xltx
 tests/fixtures/**/*_full.json
+
+# --- Scratch scripts (smoke runners against local real-data, never commit) ---
+scripts/_smoke_*.py
 
 # --- Design handoff bundles (extracted prototypes, not source) ---
 .design-bundle/
