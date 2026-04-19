@@ -55,7 +55,7 @@ export default function ManualInputPage() {
 function ManualInputFallback() {
   return (
     <div className="w-full max-w-[1180px] px-8 pt-7 pb-[120px]">
-      <div className="rounded-lg border border-[var(--ca-border)] bg-white px-5 py-4 text-[13px] text-[var(--ca-ink-500)]">
+      <div className="rounded-lg border border-[var(--ca-border)] bg-[var(--ca-surface)] px-5 py-4 text-[13px] text-[var(--ca-ink-500)]">
         Загружаем форму…
       </div>
     </div>
@@ -156,7 +156,7 @@ function ManualInputPageInner() {
         <PageHead caseId={caseId} />
 
         {draft.isLoading ? (
-          <div className="rounded-lg border border-[var(--ca-border)] bg-white px-5 py-4 text-[13px] text-[var(--ca-ink-500)]">
+          <div className="rounded-lg border border-[var(--ca-border)] bg-[var(--ca-surface)] px-5 py-4 text-[13px] text-[var(--ca-ink-500)]">
             Загружаем черновик…
           </div>
         ) : (
@@ -219,7 +219,7 @@ function ErrorBanner({ error }: { error: unknown }) {
         <div className="text-[13px] leading-[1.5] text-[var(--ca-danger)]">
           <b className="font-semibold">Ошибка отправки на скоринг.</b>{" "}
           Проверьте данные и попробуйте снова.
-          <pre className="mt-2 max-h-40 overflow-auto rounded-md border border-[#F2BCBA] bg-white p-2 font-mono text-[11.5px] text-[var(--ca-ink-700)]">
+          <pre className="mt-2 max-h-40 overflow-auto rounded-md border border-[#F2BCBA] bg-[var(--ca-surface)] p-2 font-mono text-[11.5px] text-[var(--ca-ink-700)]">
             {body}
           </pre>
         </div>

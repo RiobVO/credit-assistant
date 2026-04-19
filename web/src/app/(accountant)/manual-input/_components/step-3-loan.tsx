@@ -53,7 +53,7 @@ export function Step3Loan() {
     termMonths > 0 ? format(addMonths(new Date(), termMonths), "dd.MM.yyyy") : "—";
 
   return (
-    <section className="rounded-[10px] border border-[var(--ca-border)] bg-white shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
+    <section className="rounded-[10px] border border-[var(--ca-border)] bg-[var(--ca-surface)] shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
       <header className="flex items-center gap-2.5 border-b border-[var(--ca-border)] px-[22px] py-[18px]">
         <div>
           <h2 className="m-0 text-[15px] font-semibold text-[var(--ca-ink-900)]">
@@ -173,7 +173,7 @@ export function Step3Loan() {
               rows={5}
               placeholder="Подробно опишите, на что планируется направить кредит. Указание контрагентов и контрактов помогает скорингу."
               aria-invalid={Boolean(e?.loanPurpose) || undefined}
-              className="min-h-[120px] w-full resize-y rounded-md border border-[var(--ca-border-strong)] bg-white px-3 py-3 text-[14px] leading-[1.5] text-[var(--ca-ink-900)] outline-none focus:border-[var(--ca-primary-blue)] focus:shadow-[0_0_0_3px_rgba(30,85,201,0.15)] aria-invalid:border-[var(--ca-danger)]"
+              className="min-h-[120px] w-full resize-y rounded-md border border-[var(--ca-border-strong)] bg-[var(--ca-surface)] px-3 py-3 text-[14px] leading-[1.5] text-[var(--ca-ink-900)] outline-none focus:border-[var(--ca-primary-blue)] focus:shadow-[0_0_0_3px_rgba(30,85,201,0.15)] aria-invalid:border-[var(--ca-danger)]"
             />
             <div className="mt-0.5 flex items-center justify-between">
               <span className="text-[12px] text-[var(--ca-ink-400)]">
@@ -242,7 +242,7 @@ function CategoryPills() {
                   "inline-flex items-center gap-1.5 rounded-full border px-3 py-[7px] text-[13px] transition-colors",
                   active
                     ? "border-[#A8C0EE] bg-[var(--ca-primary-blue-50)] font-semibold text-[var(--ca-primary-blue-700)]"
-                    : "border-[var(--ca-border-strong)] bg-white text-[var(--ca-ink-700)] hover:bg-[#FAFBFC]",
+                    : "border-[var(--ca-border-strong)] bg-[var(--ca-surface)] text-[var(--ca-ink-700)] hover:bg-[#FAFBFC]",
                 )}
               >
                 {cat.label}
@@ -268,7 +268,7 @@ function RateBar({ value }: { value: number }) {
           style={{ width: `${pct}%` }}
         />
         <span
-          className="absolute -top-0.5 size-3.5 -translate-x-1/2 rounded-full border-[3px] border-[var(--ca-primary-blue)] bg-white shadow-[0_1px_4px_rgba(0,0,0,0.15)]"
+          className="absolute -top-0.5 size-3.5 -translate-x-1/2 rounded-full border-[3px] border-[var(--ca-primary-blue)] bg-[var(--ca-surface)] shadow-[0_1px_4px_rgba(0,0,0,0.15)]"
           style={{ left: `${pct}%` }}
         />
       </div>

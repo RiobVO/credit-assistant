@@ -97,7 +97,7 @@ function SoliqUploadInner({ field }: { field: FieldShape }) {
   };
 
   return (
-    <section className="rounded-[10px] border border-[var(--ca-border)] bg-white shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
+    <section className="rounded-[10px] border border-[var(--ca-border)] bg-[var(--ca-surface)] shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
       <header className="flex items-start justify-between gap-2.5 border-b border-[var(--ca-border)] px-[22px] py-[18px]">
         <div>
           <h2 className="m-0 text-[15px] font-semibold text-[var(--ca-ink-900)]">
@@ -111,7 +111,7 @@ function SoliqUploadInner({ field }: { field: FieldShape }) {
           <button
             type="button"
             onClick={reset}
-            className="inline-flex items-center gap-1.5 rounded-md border border-[var(--ca-border-strong)] bg-white px-3 py-1.5 text-[12px] text-[var(--ca-ink-700)] transition-colors hover:bg-[#FAFBFC]"
+            className="inline-flex items-center gap-1.5 rounded-md border border-[var(--ca-border-strong)] bg-[var(--ca-surface)] px-3 py-1.5 text-[12px] text-[var(--ca-ink-700)] transition-colors hover:bg-[#FAFBFC]"
           >
             <Trash2 className="size-3.5" />
             Сбросить
@@ -149,7 +149,7 @@ function SoliqUploadInner({ field }: { field: FieldShape }) {
                 <select
                   value={year}
                   onChange={(e) => setYear(Number(e.target.value))}
-                  className="h-[38px] rounded-md border border-[var(--ca-border-strong)] bg-white px-3 text-[14px] text-[var(--ca-ink-900)]"
+                  className="h-[38px] rounded-md border border-[var(--ca-border-strong)] bg-[var(--ca-surface)] px-3 text-[14px] text-[var(--ca-ink-900)]"
                 >
                   {YEARS.map((y) => (
                     <option key={y} value={y}>
@@ -163,7 +163,7 @@ function SoliqUploadInner({ field }: { field: FieldShape }) {
                 <select
                   value={month}
                   onChange={(e) => setMonth(Number(e.target.value))}
-                  className="h-[38px] rounded-md border border-[var(--ca-border-strong)] bg-white px-3 text-[14px] text-[var(--ca-ink-900)]"
+                  className="h-[38px] rounded-md border border-[var(--ca-border-strong)] bg-[var(--ca-surface)] px-3 text-[14px] text-[var(--ca-ink-900)]"
                 >
                   {MONTHS_RU.map((label, idx) => (
                     <option key={idx} value={idx + 1}>
@@ -230,7 +230,7 @@ function FilePicker({
         onChange={(e) => onChange(e.target.files?.[0] ?? null)}
       />
       {file ? (
-        <div className="mt-2 flex items-center justify-between gap-3 rounded-md border border-[var(--ca-border)] bg-white px-3 py-2">
+        <div className="mt-2 flex items-center justify-between gap-3 rounded-md border border-[var(--ca-border)] bg-[var(--ca-surface)] px-3 py-2">
           <div className="flex min-w-0 items-center gap-2">
             <FileText className="size-4 shrink-0 text-[var(--ca-ink-500)]" />
             <span className="truncate text-[13px] text-[var(--ca-ink-700)]">{file.name}</span>
@@ -247,7 +247,7 @@ function FilePicker({
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
-          className="mt-2 flex w-full items-center justify-center gap-2 rounded-md border border-[var(--ca-border-strong)] bg-white py-3 text-[13px] text-[var(--ca-ink-700)] hover:bg-[#F4F6FA]"
+          className="mt-2 flex w-full items-center justify-center gap-2 rounded-md border border-[var(--ca-border-strong)] bg-[var(--ca-surface)] py-3 text-[13px] text-[var(--ca-ink-700)] hover:bg-[#F4F6FA]"
         >
           <Upload className="size-4" />
           Выбрать .xltx
