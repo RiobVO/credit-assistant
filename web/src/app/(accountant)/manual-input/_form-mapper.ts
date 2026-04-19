@@ -11,7 +11,7 @@
 //   • Step 3 → `loan_request` объект (CA-005): amount/term_months/rate_pct/
 //     purpose/category. Ставка из формы "18,5" → "18.5" (Decimal-friendly).
 
-import { format, parse } from "date-fns";
+import { format } from "date-fns";
 
 import type { FormValues } from "./_schema";
 import { sumQuarters } from "./_lib/finance";
@@ -74,11 +74,6 @@ function money(digits: string): Money {
   return { amount: digits || "0", currency: "UZS" };
 }
 
-function toIsoDate(ddMmYyyy: string): string {
-  const d = parse(ddMmYyyy, "dd.MM.yyyy", new Date());
-  return format(d, "yyyy-MM-dd");
-}
-
 export function formValuesToPayload(values: FormValues): ManualInputPayload {
   const { step1, step2, step3 } = values;
   const today = format(new Date(), "yyyy-MM-dd");
@@ -135,9 +130,9 @@ export function formValuesToPayload(values: FormValues): ManualInputPayload {
       inn: step1.inn,
       name: step1.name,
       legal_form: step1.legalForm,
-      registration_date: toIsoDate(step1.registrationDate),
+      registration_date: step1.registrationDate,
       director_name: step1.directorName,
-      director_appointed_at: toIsoDate(step1.directorAppointedAt),
+      director_appointed_at: step1.directorAppointedAt,
       okved_main: step1.okvedMain,
       registered_address: step1.registeredAddress,
     },

@@ -1,14 +1,14 @@
 "use client";
 
 import { differenceInMonths, parse, isValid } from "date-fns";
-import { Calendar, CheckCircle2, Search } from "lucide-react";
+import { CheckCircle2, Search } from "lucide-react";
 import { Controller, useFormContext } from "react-hook-form";
 
 import { cn } from "@/lib/utils";
 
 import { type FormValues, legalForms } from "../_schema";
 
-import { Field, FieldInput, fieldInputClass, InputGroup } from "./field";
+import { Field, FieldInput, fieldInputClass } from "./field";
 
 export function Step1Borrower() {
   const {
@@ -144,13 +144,12 @@ export function Step1Borrower() {
             help={derivedActivityHint(regDate, "Срок деятельности")}
             error={regErr}
           >
-            <InputGroup addon={<Calendar className="size-4" />}>
-              <FieldInput
-                {...register("step1.registrationDate")}
-                placeholder="дд.мм.гггг"
-                invalid={Boolean(regErr)}
-              />
-            </InputGroup>
+            <FieldInput
+              {...register("step1.registrationDate")}
+              type="date"
+              max={todayIso()}
+              invalid={Boolean(regErr)}
+            />
           </Field>
 
           {/* ОКВЭД */}
@@ -194,13 +193,13 @@ export function Step1Borrower() {
             help={derivedActivityHint(apptDate, "Срок полномочий")}
             error={apptErr}
           >
-            <InputGroup addon={<Calendar className="size-4" />}>
-              <FieldInput
-                {...register("step1.directorAppointedAt")}
-                placeholder="дд.мм.гггг"
-                invalid={Boolean(apptErr)}
-              />
-            </InputGroup>
+            <FieldInput
+              {...register("step1.directorAppointedAt")}
+              type="date"
+              min={regDate || undefined}
+              max={todayIso()}
+              invalid={Boolean(apptErr)}
+            />
           </Field>
 
           {/* Юридический адрес */}
@@ -225,7 +224,7 @@ export function Step1Borrower() {
 
 function derivedActivityHint(value: string | undefined, prefix: string): string | undefined {
   if (!value) return undefined;
-  const d = parse(value, "dd.MM.yyyy", new Date());
+  const d = parse(value, "yyyy-MM-dd", new Date());
   if (!isValid(d)) return undefined;
   const months = differenceInMonths(new Date(), d);
   if (months < 0) return undefined;
@@ -236,6 +235,14 @@ function derivedActivityHint(value: string | undefined, prefix: string): string 
   if (years === 0) return `${prefix}: ${monthsLabel}`;
   if (remMonths === 0) return `${prefix}: ${yearsLabel}`;
   return `${prefix}: ${yearsLabel} ${monthsLabel}`;
+}
+
+function todayIso(): string {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
 }
 
 function pluralYears(n: number): string {
