@@ -1,0 +1,597 @@
+{# PDF-досье: разделы A–G по PROJECT_BRIEF Section 7. Phase 3.C.
+
+   Контекст рендера готовит WeasyPrintPdfRenderer. Все «сырые» значения
+   проходят через Jinja-фильтры (fmt_uzs / fmt_pct / fmt_date_ru / severity_*)
+   из template_filters.py — шаблон не знает про Decimal и enums. #}
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<title>Кредитное досье — {{ borrower.name }}</title>
+<style>
+  /* @page: A4 + running footer. Bottom-left = бренд + ID, bottom-right = пагинация. */
+  @page {
+    size: A4;
+    margin: 18mm 16mm 18mm 16mm;
+    @bottom-left {
+      content: "Credit Assistant · {{ application_id }} · сформировано {{ generated_at | fmt_datetime_ru }}";
+      font: 9pt "Inter", "DejaVu Sans", sans-serif;
+      color: #7A8497;
+    }
+    @bottom-right {
+      content: "Стр. " counter(page) " из " counter(pages);
+      font: 9pt "Inter", "DejaVu Sans", sans-serif;
+      color: #7A8497;
+    }
+  }
+
+  :root {
+    --ink-900: #0E1525;
+    --ink-700: #2B3344;
+    --ink-500: #5A6478;
+    --ink-400: #7A8497;
+    --border: #E4E7EC;
+    --border-strong: #CDD3DD;
+    --surface: #FCFCFD;
+    --primary-700: #1947AA;
+    --primary-50: #EAF0FB;
+    --success: #0F8A5F;
+    --warning: #B8730E;
+    --danger: #B42318;
+  }
+
+  body {
+    margin: 0;
+    color: var(--ink-900);
+    font: 10.5pt/1.45 "Inter", "DejaVu Sans", sans-serif;
+  }
+
+  .doc-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 1pt solid var(--border-strong);
+    padding-bottom: 10pt;
+    margin-bottom: 14pt;
+  }
+  .doc-head .brand {
+    font-weight: 700;
+    font-size: 13pt;
+    color: var(--primary-700);
+  }
+  .doc-head .brand .sub {
+    display: block;
+    font-weight: 500;
+    font-size: 9pt;
+    color: var(--ink-500);
+    margin-top: 2pt;
+  }
+  .doc-head .meta {
+    text-align: right;
+    font-size: 9pt;
+    color: var(--ink-500);
+    line-height: 1.5;
+  }
+  .doc-head .meta .app-id {
+    font: 600 10pt "JetBrains Mono", "DejaVu Sans Mono", monospace;
+    color: var(--ink-900);
+    letter-spacing: 0.4pt;
+  }
+  .doc-head .meta .pill {
+    display: inline-block;
+    margin-top: 4pt;
+    padding: 2pt 8pt;
+    border-radius: 999px;
+    background: var(--primary-50);
+    color: var(--primary-700);
+    font-size: 8.5pt;
+    font-weight: 600;
+    border: 0.5pt solid #C8D7F2;
+  }
+
+  h1.page-title {
+    font-size: 17pt;
+    margin: 0 0 4pt;
+    color: var(--ink-900);
+  }
+  .page-title-sub {
+    font-size: 10pt;
+    color: var(--ink-500);
+    margin: 0 0 16pt;
+  }
+
+  h2.sec {
+    font-size: 12pt;
+    font-weight: 700;
+    margin: 18pt 0 8pt;
+    padding-bottom: 4pt;
+    border-bottom: 0.7pt solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    page-break-after: avoid;
+  }
+  h2.sec .src {
+    font-size: 8.5pt;
+    font-weight: 500;
+    color: var(--ink-400);
+  }
+
+  /* G — gauge + рекомендация */
+  .summary {
+    display: grid;
+    grid-template-columns: 200pt 1fr;
+    gap: 18pt;
+    align-items: center;
+    border: 0.7pt solid var(--border);
+    border-radius: 8pt;
+    padding: 16pt 18pt;
+    background: var(--surface);
+  }
+  .summary .gauge-wrap { text-align: center; }
+  .summary .gauge-score {
+    font: 700 28pt "Inter", "DejaVu Sans", sans-serif;
+    color: var(--ink-900);
+    margin-top: -28pt;
+    line-height: 1;
+  }
+  .summary .gauge-score small { font-size: 13pt; color: var(--ink-400); font-weight: 500; }
+  .summary .gauge-label {
+    font-size: 9pt;
+    color: var(--ink-500);
+    text-transform: uppercase;
+    letter-spacing: 0.6pt;
+    margin-top: 4pt;
+  }
+  .summary .verdict h3 {
+    font-size: 11pt;
+    font-weight: 600;
+    color: var(--ink-500);
+    margin: 0 0 6pt;
+    text-transform: uppercase;
+    letter-spacing: 0.5pt;
+  }
+  .summary .verdict .recommend {
+    font-size: 18pt;
+    font-weight: 700;
+    margin: 0 0 10pt;
+  }
+  .summary .verdict .recommend.approve { color: var(--success); }
+  .summary .verdict .recommend.review  { color: var(--warning); }
+  .summary .verdict .recommend.reject  { color: var(--danger); }
+  .summary .verdict ul {
+    margin: 8pt 0 0;
+    padding-left: 16pt;
+    font-size: 9.5pt;
+    color: var(--ink-700);
+  }
+  .summary .verdict ul li { margin: 2pt 0; }
+
+  /* A — borrower info */
+  .info-grid {
+    display: grid;
+    grid-template-columns: 130pt 1fr;
+    column-gap: 16pt;
+    row-gap: 6pt;
+    font-size: 10pt;
+  }
+  .info-grid .k { color: var(--ink-500); }
+  .info-grid .v.mono {
+    font: 600 10pt "JetBrains Mono", "DejaVu Sans Mono", monospace;
+    letter-spacing: 0.3pt;
+  }
+
+  /* B — financial table */
+  table.t {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 10pt;
+  }
+  table.t thead th {
+    text-align: left;
+    font-weight: 600;
+    color: var(--ink-500);
+    font-size: 8.5pt;
+    text-transform: uppercase;
+    letter-spacing: 0.4pt;
+    border-bottom: 0.7pt solid var(--border-strong);
+    padding: 6pt 6pt 5pt 0;
+  }
+  table.t tbody td {
+    padding: 6pt 6pt 6pt 0;
+    border-bottom: 0.5pt solid var(--border);
+  }
+  table.t tbody td.num {
+    text-align: right;
+    font: 500 10pt "JetBrains Mono", "DejaVu Sans Mono", monospace;
+  }
+  table.t tbody td.dim { color: var(--ink-500); }
+
+  /* KPI strip */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10pt;
+    margin-top: 14pt;
+  }
+  .kpi {
+    border: 0.7pt solid var(--border);
+    border-radius: 6pt;
+    padding: 10pt 12pt;
+    background: var(--surface);
+  }
+  .kpi .label {
+    font-size: 8.5pt;
+    color: var(--ink-500);
+    text-transform: uppercase;
+    letter-spacing: 0.5pt;
+  }
+  .kpi .value {
+    font: 700 14pt "JetBrains Mono", "DejaVu Sans Mono", monospace;
+    color: var(--ink-900);
+    margin-top: 4pt;
+  }
+  .kpi .empty { color: var(--ink-400); }
+  .kpi .yoy {
+    display: inline-block;
+    margin-top: 4pt;
+    padding: 1pt 6pt;
+    border-radius: 4pt;
+    font: 600 8.5pt "Inter", "DejaVu Sans", sans-serif;
+  }
+  .kpi .yoy.up   { color: var(--success); background: #E6F4EE; }
+  .kpi .yoy.down { color: var(--danger);  background: #FCE8E6; }
+  .kpi .hint     { font-size: 8.5pt; color: var(--ink-400); margin-top: 2pt; }
+
+  /* C — chart block */
+  .chart-block {
+    border: 0.7pt solid var(--border);
+    border-radius: 6pt;
+    padding: 10pt 12pt;
+    background: var(--surface);
+    margin-top: 4pt;
+  }
+  .chart-block img { width: 100%; max-width: 540pt; }
+
+  /* D — counterparties two-col */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16pt;
+  }
+  .two-col h3 {
+    font-size: 10pt;
+    font-weight: 600;
+    color: var(--ink-700);
+    margin: 0 0 6pt;
+  }
+
+  /* F — red flags */
+  .flag {
+    display: grid;
+    grid-template-columns: 4pt 1fr 100pt;
+    gap: 10pt;
+    padding: 10pt 12pt;
+    border: 0.7pt solid var(--border);
+    border-radius: 6pt;
+    margin-bottom: 6pt;
+    background: var(--surface);
+    page-break-inside: avoid;
+  }
+  .flag .sev-bar { width: 4pt; border-radius: 2pt; }
+  .flag .body .title { font-weight: 600; margin-bottom: 2pt; }
+  .flag .body .meta { font-size: 9pt; color: var(--ink-500); }
+  .flag .body .src  { font-size: 8pt; color: var(--ink-400); margin-top: 4pt; font-style: italic; }
+  .flag .evidence { text-align: right; }
+  .flag .evidence .num {
+    font: 700 12pt "JetBrains Mono", "DejaVu Sans Mono", monospace;
+    line-height: 1.1;
+  }
+  .flag .evidence .lab {
+    font-size: 8pt;
+    color: var(--ink-500);
+    text-transform: uppercase;
+    letter-spacing: 0.4pt;
+    margin-top: 2pt;
+  }
+
+  .sev-pill {
+    display: inline-block;
+    padding: 1pt 7pt;
+    border-radius: 999px;
+    font: 600 8pt "Inter", "DejaVu Sans", sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.5pt;
+  }
+
+  /* footer disclaimer */
+  .disclaimer {
+    margin-top: 14pt;
+    padding: 8pt 12pt;
+    border-left: 2pt solid var(--ink-400);
+    background: #FAFBFC;
+    font-size: 8.5pt;
+    color: var(--ink-500);
+    line-height: 1.5;
+    page-break-inside: avoid;
+  }
+
+  .pill-ok {
+    display: inline-block;
+    margin-left: 6pt;
+    padding: 1pt 6pt;
+    border-radius: 999px;
+    background: #E6F4EE;
+    color: var(--success);
+    font: 600 8pt "Inter", "DejaVu Sans", sans-serif;
+    border: 0.5pt solid #B8E0CD;
+  }
+
+  .page-break { page-break-before: always; }
+</style>
+</head>
+<body>
+
+  {# ---------- HEADER ---------- #}
+  <header class="doc-head">
+    <div class="brand">
+      Credit Assistant
+      <span class="sub">Кредитное досье · MSB Underwriting</span>
+    </div>
+    <div class="meta">
+      <div class="app-id">{{ application_id }}</div>
+      <div>{{ generated_at | fmt_datetime_ru }}</div>
+      <div class="pill">{{ status_label }}</div>
+    </div>
+  </header>
+
+  <h1 class="page-title">{{ borrower.name }}</h1>
+  <p class="page-title-sub">
+    ИНН&nbsp;{{ borrower.inn.value | fmt_inn }}
+    {% if loan_request %}· кредитная заявка
+      {{ loan_request.amount | fmt_uzs(billions=True) }} на
+      {{ loan_request.term_months }} мес{% endif %}
+    · правила&nbsp;{{ rules_version }}
+    · по&nbsp;данным&nbsp;на&nbsp;{{ snapshot.as_of | fmt_date_ru }}
+  </p>
+
+  {# ---------- G. SCORING ---------- #}
+  <h2 class="sec">G. Сводная оценка <span class="src">Scoring engine · {{ rules_version }}</span></h2>
+  <div class="summary">
+    <div class="gauge-wrap">
+      {# Полудуга score-gauge inline SVG (повторяет frontend score-gauge.tsx).
+         Стрелка вращается на угол (display_score - 50) * 1.8 °. #}
+      <svg viewBox="0 0 200 130" width="180" height="118">
+        <path d="M 20 110 A 90 90 0 0 1 46.36 46.36"   fill="none" stroke="#B42318" stroke-width="14" />
+        <path d="M 46.36 46.36 A 90 90 0 0 1 100 20"   fill="none" stroke="#B8730E" stroke-width="14" />
+        <path d="M 100 20 A 90 90 0 0 1 153.64 46.36"  fill="none" stroke="#C9A227" stroke-width="14" />
+        <path d="M 153.64 46.36 A 90 90 0 0 1 180 110" fill="none" stroke="#0F8A5F" stroke-width="14" />
+        <g transform="rotate({{ gauge_angle_deg }} 100 110)">
+          <line x1="100" y1="110" x2="100" y2="32" stroke="#0E1525" stroke-width="2.4" stroke-linecap="round" />
+          <circle cx="100" cy="110" r="6" fill="#0E1525" />
+        </g>
+        <text x="14"  y="125" font-size="9" fill="#7A8497">0</text>
+        <text x="178" y="125" font-size="9" fill="#7A8497">100</text>
+      </svg>
+      <div class="gauge-score">{{ display_score }}<small>&nbsp;/ 100</small></div>
+      <div class="gauge-label">Display score</div>
+    </div>
+    <div class="verdict">
+      <h3>Рекомендация</h3>
+      <div class="recommend {{ recommendation }}">{{ recommendation_label }}</div>
+      <ul>
+        <li>{{ red_flags_count_label }}</li>
+        {% if loan_request %}<li>Запрос: {{ loan_request.amount | fmt_uzs }} на {{ loan_request.term_months }} мес, ставка {{ loan_request.rate_pct }}%</li>{% endif %}
+        <li>Версия правил: <strong>{{ rules_version }}</strong>
+            (просчитано {{ rules_evaluated }} правил)</li>
+      </ul>
+    </div>
+  </div>
+
+  {# ---------- A. ИДЕНТИФИКАЦИЯ ---------- #}
+  <h2 class="sec">A. Идентификация заёмщика
+    <span class="src">Источник: реестр юрлиц РУз · stat.uz</span></h2>
+  <div class="info-grid">
+    <div class="k">Полное наименование</div>
+    <div class="v">{{ borrower.name }}</div>
+
+    <div class="k">ИНН</div>
+    <div class="v mono">{{ borrower.inn.value | fmt_inn }}<span class="pill-ok">Проверено в ГНК</span></div>
+
+    <div class="k">Организационная форма</div>
+    <div class="v">{{ legal_form_label }}</div>
+
+    <div class="k">Дата регистрации</div>
+    <div class="v">{{ borrower.registration_date | fmt_date_ru }}</div>
+
+    <div class="k">Директор</div>
+    <div class="v">{{ borrower.director_name }} (назначен {{ borrower.director_appointed_at | fmt_date_ru }})</div>
+
+    <div class="k">Основной ОКВЭД</div>
+    <div class="v">{{ borrower.okved_main }}</div>
+
+    <div class="k">Юридический адрес</div>
+    <div class="v">{{ borrower.registered_address }}</div>
+  </div>
+
+  <div class="page-break"></div>
+
+  {# ---------- B. ФИНАНСОВЫЕ ПОКАЗАТЕЛИ ---------- #}
+  <h2 class="sec">B. Финансовые показатели · 3 года
+    <span class="src">Источник: годовая отчётность (my3.soliq.uz)</span></h2>
+  {% if annual_reports %}
+  <table class="t">
+    <thead>
+      <tr>
+        <th>Показатель</th>
+        {% for r in annual_reports %}<th class="num" style="text-align:right">{{ r.period.start.year }}</th>{% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Выручка</td>
+        {% for r in annual_reports %}<td class="num">{{ r.revenue | fmt_uzs }}</td>{% endfor %}
+      </tr>
+      <tr>
+        <td>Чистая прибыль</td>
+        {% for r in annual_reports %}<td class="num">{{ r.net_profit | fmt_uzs }}</td>{% endfor %}
+      </tr>
+      <tr>
+        <td>Налоги уплачено</td>
+        {% for r in annual_reports %}<td class="num">{{ r.taxes_paid | fmt_uzs }}</td>{% endfor %}
+      </tr>
+    </tbody>
+  </table>
+  {% else %}
+  <p class="disclaimer">Годовая отчётность не загружена.</p>
+  {% endif %}
+
+  {# KPI strip — 4 карточки #}
+  <div class="kpi-row">
+    {% for slot in kpi_slots %}
+    <div class="kpi">
+      <div class="label">{{ slot.label }}</div>
+      {% if slot.value is none %}
+        <div class="value empty">—</div>
+        <div class="hint">Нет данных для расчёта</div>
+      {% else %}
+        <div class="value">{{ slot.value }}</div>
+        {% if slot.yoy_pct is not none %}
+        <div class="yoy {{ 'up' if slot.yoy_positive else 'down' }}">{{ slot.yoy_label }}</div>
+        {% endif %}
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  {# ---------- C. ДИНАМИКА 24M ---------- #}
+  <h2 class="sec">C. Динамика помесячной выручки · 24 мес
+    <span class="src">Источник: ЭСФ-реестр (api.faktura.uz)</span></h2>
+  <div class="chart-block">
+    <img src="data:image/png;base64,{{ chart_revenue_24m_b64 }}" alt="Выручка по месяцам" />
+  </div>
+
+  <div class="page-break"></div>
+
+  {# ---------- D. КОНТРАГЕНТЫ ---------- #}
+  <h2 class="sec">D. Контрагенты · топ-{{ top_buyers | length }}
+    <span class="src">Источник: ЭСФ-реестр</span></h2>
+  <div class="two-col">
+    <div>
+      <h3>Покупатели</h3>
+      {% if top_buyers %}
+      <table class="t">
+        <thead>
+          <tr><th>#</th><th>Контрагент</th><th class="num" style="text-align:right">Доля</th></tr>
+        </thead>
+        <tbody>
+          {% for b in top_buyers %}
+          <tr>
+            <td class="dim">{{ loop.index }}</td>
+            <td>{{ b.name }}{% if b.is_new %}
+                <span class="sev-pill" style="background:#FBF1DE;color:#B8730E">новый&nbsp;{{ b.months_since_registration }}&nbsp;мес</span>
+              {% endif %}
+            </td>
+            <td class="num">{{ b.share_pct | fmt_pct_share }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}<p class="disclaimer">Нет данных о покупателях.</p>{% endif %}
+    </div>
+    <div>
+      <h3>Поставщики</h3>
+      {% if top_suppliers %}
+      <table class="t">
+        <thead>
+          <tr><th>#</th><th>Контрагент</th><th class="num" style="text-align:right">Доля</th></tr>
+        </thead>
+        <tbody>
+          {% for s in top_suppliers %}
+          <tr>
+            <td class="dim">{{ loop.index }}</td>
+            <td>{{ s.name }}</td>
+            <td class="num">{{ s.share_pct | fmt_pct_share }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}<p class="disclaimer">Нет данных о поставщиках.</p>{% endif %}
+    </div>
+  </div>
+
+  {# ---------- E. НАЛОГОВАЯ ДИСЦИПЛИНА ---------- #}
+  <h2 class="sec">E. Налоговая дисциплина
+    <span class="src">Источник: ГНК РУз · my3.soliq.uz</span></h2>
+  {% if tax_summary.delays or tax_summary.penalties_total or tax_summary.has_freezes_12m %}
+  <ul style="font-size:10pt;margin:0 0 6pt 0;padding-left:16pt;color:var(--ink-700);line-height:1.5">
+    <li>Просрочки за 3 года: {{ tax_summary.delays | length }}{% if tax_summary.max_delay_days %}, максимальная — {{ tax_summary.max_delay_days }} дн{% endif %}.</li>
+    <li>Штрафы и пени за 3 года: {{ tax_summary.penalties_total | fmt_uzs if tax_summary.penalties_total else '0 сум' }}.</li>
+    <li>Блокировки счёта за 12 мес: {{ tax_summary.account_freezes_count_12m }}{% if tax_summary.has_freezes_12m %} (см. правило BANK_ACCOUNT_FROZEN_12M){% endif %}.</li>
+  </ul>
+  {% if tax_summary.delays %}
+  <table class="t" style="margin-top:6pt">
+    <thead>
+      <tr>
+        <th>Дата уплаты</th>
+        <th class="num" style="text-align:right">Сумма</th>
+        <th class="num" style="text-align:right">Просрочка, дн</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for d in tax_summary.delays %}
+      <tr>
+        <td>{{ d.paid_on | fmt_date_ru }}</td>
+        <td class="num">{{ d.amount | fmt_uzs }}</td>
+        <td class="num" style="color:{% if d.delay_days > 30 %}var(--danger){% else %}var(--warning){% endif %}">{{ d.delay_days }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+  {% else %}
+  <p class="disclaimer">Налоговых событий за окно snapshot не зафиксировано.</p>
+  {% endif %}
+
+  <div class="page-break"></div>
+
+  {# ---------- F. RED FLAGS ---------- #}
+  <h2 class="sec">F. Сработавшие сигналы ({{ red_flags | length }})
+    <span class="src">Red-flag engine · {{ rules_version }}</span></h2>
+  {% if red_flags %}
+    {% for f in red_flags %}
+    <div class="flag" style="border-color:{{ f.severity | severity_color }}33">
+      <div class="sev-bar" style="background:{{ f.severity | severity_color }}"></div>
+      <div class="body">
+        <div class="title">
+          <span class="sev-pill" style="color:{{ f.severity | severity_color }};background:{{ f.severity | severity_bg }}">{{ f.severity | severity_label }}</span>&nbsp;&nbsp;{{ f.name }}
+        </div>
+        <div class="meta">Правило <strong>{{ f.rule_id }}</strong> · {{ f.description }}</div>
+        <div class="src">Источник: {{ f.source }}</div>
+      </div>
+      <div class="evidence">
+        <div class="num" style="color:{{ f.severity | severity_color }}">{{ f.evidence_value }}</div>
+        <div class="lab">{{ f.evidence_label }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+  <div class="disclaimer">
+    Сигналы не сработали. Все правила прошли успешно — заёмщик в зелёной зоне.
+  </div>
+  {% endif %}
+
+  <div class="disclaimer">
+    Полный список из 17 правил с источниками — в репозитории
+    (<code>config/rules/v1_uz_msb.yaml</code>). Каждое сработавшее правило
+    содержит ссылку на нормативный/отраслевой источник и числовое evidence.
+  </div>
+  <div class="disclaimer">
+    Документ сформирован автоматически системой <strong>Credit Assistant</strong>
+    ({{ rules_version }}). Решение о выдаче кредита принимается уполномоченным
+    лицом банка-пользователя на основании настоящего отчёта и иных внутренних
+    процедур андеррайтинга.
+  </div>
+
+</body>
+</html>
