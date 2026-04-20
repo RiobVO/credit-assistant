@@ -14,7 +14,10 @@ from datetime import date
 from decimal import Decimal
 
 from application.dto.kpi_bundle import KpiUnit
-from application.services.kpi_calculator import compute_kpis
+from application.services.kpi_calculator import (
+    compute_kpis,
+    compute_monthly_revenue_24m,
+)
 from domain.entities.borrower import Borrower, LegalForm
 from domain.entities.borrower_snapshot import BorrowerSnapshot
 from domain.entities.financial_report import FinancialReport
@@ -185,3 +188,62 @@ def test_secondary_kpis_always_none_in_phase_3b() -> None:
     assert bundle.ebitda is None
     assert bundle.roe is None
     assert bundle.debt_to_ebitda is None
+
+
+# ----------- monthly_revenue_24m chart -----------------------------------------
+
+
+def test_monthly_revenue_24m_returns_empty_when_no_data() -> None:
+    points = compute_monthly_revenue_24m(_snapshot())
+    assert points == ()
+
+
+def test_monthly_revenue_24m_takes_last_24_in_chrono_order() -> None:
+    """30 точек → берём последние 24, по возрастанию даты."""
+    monthly = [_monthly(date(2024, m, 1), 1_000_000_000 + m) for m in range(1, 13)]
+    monthly += [_monthly(date(2025, m, 1), 1_500_000_000 + m) for m in range(1, 13)]
+    monthly += [_monthly(date(2026, m, 1), 2_000_000_000 + m) for m in range(1, 7)]
+    # Всего 30 точек
+
+    points = compute_monthly_revenue_24m(_snapshot(monthly=monthly))
+
+    assert len(points) == 24
+    assert points[0].month_start == date(2024, 7, 1)  # отбросили 2024-01..06
+    assert points[-1].month_start == date(2026, 6, 1)
+
+
+def test_monthly_revenue_24m_marks_top_3_as_peak() -> None:
+    """Три самых высоких месяца помечены is_peak=True, остальные — False."""
+    monthly = [_monthly(date(2025, m, 1), 1_000_000_000) for m in range(1, 10)]
+    # Три ярких пика в декабре каждого года
+    monthly.append(_monthly(date(2025, 10, 1), 5_000_000_000))
+    monthly.append(_monthly(date(2025, 11, 1), 6_000_000_000))
+    monthly.append(_monthly(date(2025, 12, 1), 7_000_000_000))
+
+    points = compute_monthly_revenue_24m(_snapshot(monthly=monthly))
+
+    peak_months = [p.month_start for p in points if p.is_peak]
+    assert sorted(peak_months) == [date(2025, 10, 1), date(2025, 11, 1), date(2025, 12, 1)]
+
+
+def test_monthly_revenue_24m_trend_is_rolling_average() -> None:
+    """Тренд i-й точки = среднее последних min(12, i+1) значений."""
+    monthly = [_monthly(date(2025, m, 1), m * 1_000_000) for m in range(1, 13)]
+
+    points = compute_monthly_revenue_24m(_snapshot(monthly=monthly))
+
+    # Для i=0 (январь, revenue=1M) тренд = среднее одной точки = 1M
+    assert points[0].trend == Decimal("1000000")
+    # Для i=11 (декабрь, revenue=12M) тренд = среднее [1..12] = 78/12 = 6.5M
+    assert points[11].trend == Decimal("6500000")
+
+
+def test_monthly_revenue_24m_filters_non_uzs() -> None:
+    """USD точки выпадают из выборки."""
+    monthly = [_monthly(date(2025, m, 1), 1_000_000_000) for m in range(1, 13)]
+    monthly.append(_monthly(date(2026, 1, 1), 999, currency=USD))
+
+    points = compute_monthly_revenue_24m(_snapshot(monthly=monthly))
+
+    assert len(points) == 12  # USD точка отброшена
+    assert all(p.month_start.year == 2025 for p in points)

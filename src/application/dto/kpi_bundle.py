@@ -13,6 +13,7 @@ short/long term) не выделены отдельно в текущем snapsh
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 from decimal import Decimal
 from enum import StrEnum
 
@@ -37,3 +38,20 @@ class KpiBundle:
     ebitda: KpiValue | None
     roe: KpiValue | None
     debt_to_ebitda: KpiValue | None
+
+
+@dataclass(frozen=True, slots=True)
+class MonthlyRevenuePoint:
+    """Одна точка чарта «Выручка 24 мес» на экране досье.
+
+    ``trend`` — 12-мес rolling average по revenue (для линии-тренда поверх
+    столбцов). Если меньше 12 точек до текущей — average по доступным.
+
+    ``is_peak`` — точка попадает в top-3 по выручке внутри отображаемого окна.
+    UI рисует такие столбцы акцентным цветом.
+    """
+
+    month_start: date
+    revenue: Decimal
+    trend: Decimal
+    is_peak: bool

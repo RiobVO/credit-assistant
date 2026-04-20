@@ -104,4 +104,7 @@ async def test_returns_view_with_computed_kpis() -> None:
     assert result.kpis.ebitda is None
     assert result.kpis.roe is None
     assert result.kpis.debt_to_ebitda is None
+    # Monthly chart — 12 точек, тренд и peaks посчитаны
+    assert len(result.monthly_revenue_24m) == 12
+    assert all(p.revenue == Decimal("1000000000") for p in result.monthly_revenue_24m)
     assert repo.calls == [record.dossier_id]
