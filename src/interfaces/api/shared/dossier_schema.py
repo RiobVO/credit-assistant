@@ -23,6 +23,8 @@ TaxEventTypeCode = Literal["payment", "penalty", "account_freeze", "account_unfr
 InvoiceRoleCode = Literal["seller", "buyer"]
 SeverityCode = Literal["low", "medium", "high", "critical"]
 RecommendationCode = Literal["approve", "review", "reject"]
+ApplicationStatusCode = Literal["in_review", "approved", "rejected", "draft"]
+KpiUnitCode = Literal["UZS", "PCT", "RATIO"]
 
 
 class _StrictModel(BaseModel):
@@ -193,7 +195,17 @@ class RedFlagOutput(_StrictModel):
 
 
 class RiskScoreOutput(_StrictModel):
+    """Risk score в двух шкалах одновременно (Phase 3.B Q1, правило A).
+
+    ``score`` — raw domain (lower=better, REJECT≥30): источник для аудита и
+    логов; не показываем напрямую.
+
+    ``display_score`` = ``100 - score`` (clamped 0..100) — banking-style
+    higher=better для gauge на UI. Согласовано с дизайном экрана досье.
+    """
+
     score: int
+    display_score: int
     recommendation: RecommendationCode
     severity_breakdown: dict[SeverityCode, int]
 
@@ -205,3 +217,69 @@ class DossierResponse(_StrictModel):
     red_flags: list[RedFlagOutput]
     risk_score: RiskScoreOutput
     rules_evaluated: int
+
+
+# ---------- DossierViewResponse (Phase 3.B GET /api/dossier/{id}) -------------
+
+
+class BorrowerOutput(_StrictModel):
+    inn: str
+    name: str
+    legal_form: LegalFormCode
+    registration_date: date
+    director_name: str
+    director_appointed_at: date
+    okved_main: str
+    registered_address: str
+    okved_main_changed_at: date | None = None
+    charter_capital: MoneyOutput | None = None
+
+
+class ApplicationOutput(_StrictModel):
+    """Метаданные заявки. В Phase 3.B статус всегда ``in_review`` —
+    workflow approve/reject появится в Phase 4 (Bank Mode SSO).
+    """
+
+    id: str  # `BR-YYYY-XXXX`, derived из dossier_id + created_at; deterministic
+    status: ApplicationStatusCode
+
+
+class KpiValueOutput(_StrictModel):
+    """Значение KPI-карточки. Decimal сериализуется как str — защита от потери
+    точности на больших суммах (UZS миллиарды). Frontend парсит в Number для
+    отображения в Recharts (визуальная точность до тыс. — достаточная).
+    """
+
+    value: str  # Decimal как str
+    unit: KpiUnitCode
+    yoy_pct: str | None  # Decimal как str; None если сравнивать не с чем
+    sparkline: list[str]  # точки oldest→newest, может быть пустой
+
+
+class KpiBundleOutput(_StrictModel):
+    revenue_ltm: KpiValueOutput | None
+    ebitda: KpiValueOutput | None
+    roe: KpiValueOutput | None
+    debt_to_ebitda: KpiValueOutput | None
+
+
+class MonthlyRevenuePointOutput(_StrictModel):
+    """Точка чарта «Выручка 24 мес». ``month`` в формате YYYY-MM."""
+
+    month: str
+    revenue: str
+    trend: str
+    is_peak: bool
+
+
+class DossierViewResponse(_StrictModel):
+    dossier_id: UUID
+    borrower_inn_masked: str
+    as_of: date
+    red_flags: list[RedFlagOutput]
+    risk_score: RiskScoreOutput
+    rules_evaluated: int
+    borrower: BorrowerOutput
+    application: ApplicationOutput
+    kpis: KpiBundleOutput
+    monthly_revenue_24m: list[MonthlyRevenuePointOutput]

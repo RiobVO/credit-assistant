@@ -4,13 +4,19 @@ from __future__ import annotations
 
 from uuid import UUID, uuid4
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from application.dto.dossier_record import DossierRecord
+from application.dto.dossier_view_record import DossierViewRecord
+from infrastructure.persistence.mappers.borrower_mapper import borrower_from_orm
 from infrastructure.persistence.mappers.dossier_mapper import (
     dossier_record_from_orm_columns,
     red_flags_to_jsonb,
 )
+from infrastructure.persistence.mappers.snapshot_mapper import snapshot_from_payload
+from infrastructure.persistence.models.borrower import BorrowerORM
+from infrastructure.persistence.models.borrower_snapshot import BorrowerSnapshotORM
 from infrastructure.persistence.models.dossier import DossierORM
 
 
@@ -47,4 +53,43 @@ class SqlAlchemyDossierRepository:
             red_flags=orm.red_flags,
             rules_version=orm.rules_version,
             rules_evaluated=orm.rules_evaluated,
+        )
+
+    async def get_view_by_id(self, dossier_id: UUID) -> DossierViewRecord | None:
+        """Один SELECT с двумя JOIN: dossier + snapshot + borrower.
+
+        Используется экраном /dossier/[id] (Phase 3.B). Альтернатива — три
+        отдельных запроса через ``snapshot_repo.get_by_id`` и
+        ``dossier_repo.get_by_id``; одиночный JOIN дешевле и атомарнее по
+        чтению (snapshot не пропадёт между запросами благодаря FK RESTRICT,
+        но один round-trip читается как одна операция).
+        """
+        stmt = (
+            select(DossierORM, BorrowerSnapshotORM, BorrowerORM)
+            .join(
+                BorrowerSnapshotORM, DossierORM.snapshot_id == BorrowerSnapshotORM.id
+            )
+            .join(BorrowerORM, BorrowerSnapshotORM.borrower_id == BorrowerORM.id)
+            .where(DossierORM.id == dossier_id)
+        )
+        row = (await self._session.execute(stmt)).first()
+        if row is None:
+            return None
+        dossier_orm, snapshot_orm, borrower_orm = row
+
+        borrower = borrower_from_orm(borrower_orm)
+        snapshot = snapshot_from_payload(snapshot_orm.payload, borrower)
+        dossier_record = dossier_record_from_orm_columns(
+            score=dossier_orm.score,
+            recommendation=dossier_orm.recommendation,
+            severity_breakdown=dossier_orm.severity_breakdown,
+            red_flags=dossier_orm.red_flags,
+            rules_version=dossier_orm.rules_version,
+            rules_evaluated=dossier_orm.rules_evaluated,
+        )
+        return DossierViewRecord(
+            dossier_id=dossier_orm.id,
+            dossier=dossier_record,
+            snapshot=snapshot,
+            created_at=dossier_orm.created_at,
         )

@@ -31,7 +31,20 @@ export function Revenue24mChart({
   data: DossierViewDto["monthly_revenue_24m"];
 }) {
   const [period, setPeriod] = useState<Period>(24);
-  const slice = data.slice(-period);
+
+  // Backend отдаёт Decimal как str — парсим один раз. Recharts работает
+  // с числами, формат UZS до тыс. достаточно.
+  const numericData = data.map((p) => ({
+    month: p.month,
+    revenue: parseFloat(p.revenue),
+    trend: parseFloat(p.trend),
+    is_peak: p.is_peak,
+  }));
+  const slice = numericData.slice(-period);
+
+  if (slice.length === 0) {
+    return <EmptyChart />;
+  }
 
   const peakIndex = slice.reduce(
     (best, p, i) => (p.revenue > slice[best].revenue ? i : best),
@@ -147,5 +160,24 @@ function Legend({ color, label }: { color: string; label: string }) {
       />
       {label}
     </span>
+  );
+}
+
+function EmptyChart() {
+  return (
+    <section className="rounded-[10px] border border-[var(--ca-border)] bg-[var(--ca-surface)] shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
+      <header className="border-b border-[var(--ca-border)] px-[22px] py-[18px]">
+        <h2 className="m-0 text-[15px] font-semibold text-[var(--ca-ink-900)]">
+          Выручка по месяцам
+        </h2>
+        <p className="m-0 mt-0.5 text-[12.5px] text-[var(--ca-ink-500)]">
+          Помесячная динамика и rolling-тренд
+        </p>
+      </header>
+      <div className="flex h-[200px] items-center justify-center px-6 text-center text-[13px] text-[var(--ca-ink-500)]">
+        Нет помесячных данных. Загрузите выгрузку Soliq на Шаге 2 формы или
+        укажите помесячный оборот вручную.
+      </div>
+    </section>
   );
 }
