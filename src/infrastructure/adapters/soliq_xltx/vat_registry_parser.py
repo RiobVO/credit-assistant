@@ -4,16 +4,18 @@
 **сумму НДС по каждой ЭСФ** — что и закрывает дилемму с ``esf_seller_vat_total``,
 описанную в ADR 0004.
 
+Best-effort семантика (CA-014 hardening): cell-level ошибки → warning + None
+по полю; если критичные поля (name, date, amount, vat) непригодны — строка
+скипается с записью в ``parse_warnings``. Парсер никогда не raises на
+данных — только на структурных ошибках (не та форма, отсутствие листов).
+
 Структура (по реальной выгрузке папы, март 2026, 503 продажи + 53 закупки):
-- list01 (Таблица №1, **закупки**): шапка R11, данные с R15. Колонки B-K.
-- list02 (Таблица №2, **продажи**): шапка R11, данные с R15. Колонки B-K, плюс
-  I = «Стоимость с НДС» = G + H.
-- ИТОГО-строки (R13) могут содержать формулы =SUM(...); мы **игнорируем** их и
-  считаем суммы НДС вручную по data rows.
+- list01 (Таблица №1, **закупки**): шапка R11, данные с R15.
+- list02 (Таблица №2, **продажи**): шапка R11, данные с R15.
 
 Колонки data rows:
 - B: №
-- C: Наименование контрагента
+- C: Наименование контрагента (required)
 - D: ИНН контрагента (опционально — пусто для розничных покупателей-ПИНФЛ)
 - E: Номер счёта-фактуры
 - F: Дата счёта-фактуры (формат DD.MM.YYYY либо datetime)
@@ -27,16 +29,12 @@ import logging
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Any
 
 from openpyxl.workbook.workbook import Workbook
 from openpyxl.worksheet.worksheet import Worksheet
 
 from domain.value_objects.money import Currency, Money
-from infrastructure.adapters.soliq_xltx.errors import (
-    MalformedXltxError,
-    UnsupportedFormatError,
-)
+from infrastructure.adapters.soliq_xltx.errors import UnsupportedFormatError
 from infrastructure.adapters.soliq_xltx.format_detector import (
     SoliqXltxFormat,
     detect_format,
@@ -56,18 +54,18 @@ class VatRegistryRow:
     vat_amount: Money
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(slots=True)
 class VatRegistryData:
     """Декомпозиция реестра ЭСФ на закупки и продажи.
 
     ``sales_vat_total`` — сумма НДС по всем строкам ``sales`` (агрегат за период).
     Это и есть ``esf_seller_vat_total`` для домена в Day 2.
 
-    ``skipped_rows_count`` — счётчик строк, которые tolerant-парсер пропустил из-за
-    row-level ошибок (бракованные cells, неверный формат даты, пустое имя контрагента
-    и т.п.). Каждая такая строка идёт в логи WARN-уровня с (sheet, row, reason).
-    Структурные ошибки (отсутствие листов, неверный формат файла) по-прежнему
-    бросают исключения — глотаем только row-level.
+    ``skipped_rows_count`` — счётчик строк, которые best-effort-парсер пропустил
+    из-за непригодных critical-cells (name, date, amount, vat). Каждая такая
+    строка добавляет запись в ``parse_warnings`` с (sheet, row, reason) для
+    показа в UI и идёт в logging.WARN. Структурные ошибки (не та форма,
+    отсутствие листов) по-прежнему raise — глотаем только row-level.
     """
 
     sales: list[VatRegistryRow] = field(default_factory=list)
@@ -77,6 +75,7 @@ class VatRegistryData:
     sales_amount_total: Money = field(default_factory=lambda: Money(Decimal(0), Currency.UZS))
     purchases_amount_total: Money = field(default_factory=lambda: Money(Decimal(0), Currency.UZS))
     skipped_rows_count: int = 0
+    parse_warnings: list[str] = field(default_factory=list)
 
 
 _DATA_START_ROW = 15
@@ -85,43 +84,41 @@ _DATA_START_ROW = 15
 def parse_vat_registry(wb: Workbook) -> VatRegistryData:
     """Прочитать ilova-реестр (list01 + list02) с детализацией ЭСФ.
 
-    Tolerant: row-level ошибки (CA-014) логируются и пропускаются; structural
-    (не тот формат) — пробрасываются.
+    Best-effort: row-level ошибки логируются и пропускаются с записью в
+    ``parse_warnings``; структурные (не тот формат) — пробрасываются.
     """
     fmt = detect_format(wb)
     if fmt is not SoliqXltxFormat.VAT_REGISTRY_ILOVA:
         raise UnsupportedFormatError(wb.sheetnames, f"expected VAT_REGISTRY_ILOVA, got {fmt}")
 
+    warnings: list[str] = []
     purchases, purchases_skipped = (
-        _read_rows(wb["list01"]) if "list01" in wb.sheetnames else ([], 0)
+        _read_rows(wb["list01"], warnings) if "list01" in wb.sheetnames else ([], 0)
     )
-    sales, sales_skipped = _read_rows(wb["list02"]) if "list02" in wb.sheetnames else ([], 0)
-
-    sales_vat_total = _sum_money([r.vat_amount for r in sales])
-    purchases_vat_total = _sum_money([r.vat_amount for r in purchases])
-    sales_amount_total = _sum_money([r.amount_excl_vat for r in sales])
-    purchases_amount_total = _sum_money([r.amount_excl_vat for r in purchases])
+    sales, sales_skipped = (
+        _read_rows(wb["list02"], warnings) if "list02" in wb.sheetnames else ([], 0)
+    )
 
     return VatRegistryData(
         sales=sales,
         purchases=purchases,
-        sales_vat_total=sales_vat_total,
-        purchases_vat_total=purchases_vat_total,
-        sales_amount_total=sales_amount_total,
-        purchases_amount_total=purchases_amount_total,
+        sales_vat_total=_sum_money([r.vat_amount for r in sales]),
+        purchases_vat_total=_sum_money([r.vat_amount for r in purchases]),
+        sales_amount_total=_sum_money([r.amount_excl_vat for r in sales]),
+        purchases_amount_total=_sum_money([r.amount_excl_vat for r in purchases]),
         skipped_rows_count=sales_skipped + purchases_skipped,
+        parse_warnings=warnings,
     )
 
 
-def _read_rows(ws: Worksheet) -> tuple[list[VatRegistryRow], int]:
+def _read_rows(ws: Worksheet, warnings: list[str]) -> tuple[list[VatRegistryRow], int]:
     """Прочитать data rows реестра начиная с _DATA_START_ROW.
 
     Останавливается на первой пустой строке (B-cell None и C-cell None) — Soliq
     кладёт пустые строки-заполнители в конце листа.
 
-    Best-effort: если row не парсится (MalformedXltxError), пишем WARN со
-    структурным контекстом и идём дальше — лучше частичные данные, чем 500.
-    Возвращает (валидные строки, число пропущенных).
+    Best-effort: если row не парсится, _parse_row возвращает None и причину;
+    добавляем в warnings + logging.WARN, идём дальше.
     """
     rows: list[VatRegistryRow] = []
     skipped = 0
@@ -130,79 +127,86 @@ def _read_rows(ws: Worksheet) -> tuple[list[VatRegistryRow], int]:
         seq_raw = ws.cell(row=r, column=2).value
         name_raw = ws.cell(row=r, column=3).value
         if seq_raw is None and name_raw is None:
-            # Пустая строка-конец списка — break (на практике без пустых блоков внутри).
             break
         try:
-            rows.append(_parse_row(ws, r))
-        except MalformedXltxError as exc:
+            row, skip_reason = _parse_row(ws, r)
+        except Exception as exc:
+            # Защита от непредсказуемых ошибок openpyxl/Decimal — не должны падать.
+            row, skip_reason = None, f"unexpected error: {exc!r}"
+        if row is None:
             skipped += 1
+            msg = f"{ws.title}!row {r}: {skip_reason or 'invalid row'}"
+            warnings.append(msg)
             _logger.warning(
-                "xltx.row_skipped sheet=%s row=%d reason=%s",
+                "xltx.registry_row_skipped sheet=%s row=%d reason=%s",
                 ws.title,
                 r,
-                exc.reason,
+                skip_reason,
             )
+        else:
+            rows.append(row)
     return rows, skipped
 
 
-def _parse_row(ws: Worksheet, r: int) -> VatRegistryRow:
-    seq_no = _int_cell(ws, r, 2)
-    name = _str_cell(ws, r, 3, required=True, row_no=r)
-    inn = _str_cell(ws, r, 4, required=False, row_no=r)
-    invoice_no = _str_cell(ws, r, 5, required=True, row_no=r)
+def _parse_row(ws: Worksheet, r: int) -> tuple[VatRegistryRow | None, str | None]:
+    """Прочитать одну row реестра.
+
+    Возвращает ``(row, None)`` при успехе или ``(None, reason)`` если хотя бы
+    одно critical-поле (name / invoice_no / date / amount / vat) не разобралось.
+    seq_no при поломке заменяется на 0 — это не critical для downstream.
+    """
+    seq_no = _int_cell(ws, r, 2) or 0
+    name = _str_cell(ws, r, 3)
+    inn = _str_cell(ws, r, 4)  # optional
+    invoice_no = _str_cell(ws, r, 5)
     invoice_date = _date_cell(ws, r, 6)
     amount_excl_vat = _money_cell(ws, r, 7)
     vat_amount = _money_cell(ws, r, 8)
-    return VatRegistryRow(
-        seq_no=seq_no,
-        counterparty_name=name,
-        counterparty_inn=inn,
-        invoice_no=invoice_no,
-        invoice_date=invoice_date,
-        amount_excl_vat=amount_excl_vat,
-        vat_amount=vat_amount,
+
+    if name is None:
+        return None, f"{ws.cell(row=r, column=3).coordinate}: name is empty"
+    if invoice_no is None:
+        return None, f"{ws.cell(row=r, column=5).coordinate}: invoice_no is empty"
+    if invoice_date is None:
+        raw = ws.cell(row=r, column=6).value
+        return None, f"{ws.cell(row=r, column=6).coordinate}: invalid date {raw!r}"
+    if amount_excl_vat is None or vat_amount is None:
+        return None, "amount/vat cell is invalid"
+
+    return (
+        VatRegistryRow(
+            seq_no=seq_no,
+            counterparty_name=name,
+            counterparty_inn=inn,
+            invoice_no=invoice_no,
+            invoice_date=invoice_date,
+            amount_excl_vat=amount_excl_vat,
+            vat_amount=vat_amount,
+        ),
+        None,
     )
 
 
-def _int_cell(ws: Worksheet, r: int, c: int) -> int:
+def _int_cell(ws: Worksheet, r: int, c: int) -> int | None:
     raw = ws.cell(row=r, column=c).value
+    if isinstance(raw, bool):  # bool — подкласс int, не нужен здесь
+        return None
     if isinstance(raw, int):
         return raw
     if isinstance(raw, float) and raw.is_integer():
         return int(raw)
-    raise MalformedXltxError(
-        sheet=ws.title,
-        coord=ws.cell(row=r, column=c).coordinate,
-        reason=f"expected integer seq_no, got {raw!r}",
-        row_no=r,
-    )
+    return None
 
 
-def _str_cell(ws: Worksheet, r: int, c: int, *, required: bool, row_no: int) -> str | Any:
+def _str_cell(ws: Worksheet, r: int, c: int) -> str | None:
     raw = ws.cell(row=r, column=c).value
     if raw is None:
-        if required:
-            raise MalformedXltxError(
-                sheet=ws.title,
-                coord=ws.cell(row=r, column=c).coordinate,
-                reason="required cell is empty",
-                row_no=row_no,
-            )
         return None
     text = str(raw).strip()
-    if not text:
-        if required:
-            raise MalformedXltxError(
-                sheet=ws.title,
-                coord=ws.cell(row=r, column=c).coordinate,
-                reason="required cell is empty",
-                row_no=row_no,
-            )
-        return None
-    return text
+    return text or None
 
 
-def _date_cell(ws: Worksheet, r: int, c: int) -> date:
+def _date_cell(ws: Worksheet, r: int, c: int) -> date | None:
     raw = ws.cell(row=r, column=c).value
     if isinstance(raw, datetime):
         return raw.date()
@@ -211,46 +215,28 @@ def _date_cell(ws: Worksheet, r: int, c: int) -> date:
     if isinstance(raw, str):
         try:
             return datetime.strptime(raw.strip(), "%d.%m.%Y").date()
-        except ValueError as exc:
-            raise MalformedXltxError(
-                sheet=ws.title,
-                coord=ws.cell(row=r, column=c).coordinate,
-                reason=f"invalid date {raw!r} (expected DD.MM.YYYY)",
-                row_no=r,
-            ) from exc
-    raise MalformedXltxError(
-        sheet=ws.title,
-        coord=ws.cell(row=r, column=c).coordinate,
-        reason=f"invalid date type {type(raw)}",
-        row_no=r,
-    )
+        except ValueError:
+            return None
+    return None
 
 
-def _money_cell(ws: Worksheet, r: int, c: int) -> Money:
+def _money_cell(ws: Worksheet, r: int, c: int) -> Money | None:
     raw = ws.cell(row=r, column=c).value
     if raw is None:
         return Money(Decimal(0), Currency.UZS)
     if isinstance(raw, str):
         text = raw.strip()
-        if text == "":
+        if not text:
             return Money(Decimal(0), Currency.UZS)
         try:
             return Money(Decimal(text.replace(",", ".")), Currency.UZS)
-        except Exception as exc:
-            raise MalformedXltxError(
-                sheet=ws.title,
-                coord=ws.cell(row=r, column=c).coordinate,
-                reason=f"non-numeric money: {raw!r}",
-                row_no=r,
-            ) from exc
+        except Exception:
+            return None
+    if isinstance(raw, bool):
+        return None
     if isinstance(raw, (int, float)):
         return Money(Decimal(str(raw)), Currency.UZS)
-    raise MalformedXltxError(
-        sheet=ws.title,
-        coord=ws.cell(row=r, column=c).coordinate,
-        reason=f"unsupported money type {type(raw)}",
-        row_no=r,
-    )
+    return None
 
 
 def _sum_money(values: list[Money]) -> Money:

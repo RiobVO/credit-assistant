@@ -112,6 +112,8 @@ const vatPeriodFromSoliq = z.object({
   organizationName: z.string().optional(),
   submittedAt: z.string().optional(), // ISO date YYYY-MM-DD
   diffPct: z.string().optional(),
+  parseWarnings: z.array(z.string()),
+  skippedRowsCount: z.number().int().nonnegative(),
 });
 
 export type VatPeriodFromSoliq = z.infer<typeof vatPeriodFromSoliq>;

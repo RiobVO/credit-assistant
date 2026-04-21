@@ -154,9 +154,11 @@ export type SoliqUploadResponseDto = {
   period: SoliqDateRangeDto;
   vat_declared: SoliqMoneyDto | null;
   esf_seller_vat_total: SoliqMoneyDto | null;
-  organization_name: string;
+  organization_name: string | null;
   submitted_at: string | null;
   diff_pct: string | null;
+  parse_warnings: string[];
+  skipped_rows_count: number;
 };
 
 export async function uploadSoliqXltx(args: {

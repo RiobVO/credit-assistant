@@ -32,6 +32,7 @@ def _to_bytes(wb: object) -> bytes:
 def test_dispatch_to_vat_declaration_parser(adapter: SoliqXltxAdapter) -> None:
     data = adapter.parse(_to_bytes(build_vat_declaration_wb()))
     assert isinstance(data, VatDeclarationData)
+    assert data.header.borrower_inn is not None
     assert data.header.borrower_inn.value == "306399449"
 
 

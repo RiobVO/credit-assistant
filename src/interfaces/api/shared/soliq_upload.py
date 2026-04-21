@@ -7,6 +7,10 @@ ilova-приложение №4 в любом порядке), ожидаемы�
 ``VAT_REGISTRY_ILOVA``. Mapper ``to_soliq_chunk`` собирает один
 ``VatPeriodReport``. Endpoint возвращает структуру для предпросмотра в UI —
 финальное досье строится отдельно через ``POST /api/manual-input``.
+
+Best-effort: cell-level проблемы данных идут в ``parse_warnings``; ответ
+всегда 200, кроме структурных ошибок (не та форма, отсутствие листов,
+INN-mismatch, неверный размер пары).
 """
 
 from __future__ import annotations
@@ -18,10 +22,7 @@ from pydantic import BaseModel, ConfigDict
 
 from domain.value_objects.inn import INN, VALID_LENGTHS, InvalidInnError
 from domain.value_objects.money import Money
-from infrastructure.adapters.soliq_xltx.errors import (
-    MalformedXltxError,
-    UnsupportedFormatError,
-)
+from infrastructure.adapters.soliq_xltx.errors import UnsupportedFormatError
 from infrastructure.adapters.soliq_xltx.format_detector import (
     SoliqXltxFormat,
 )
@@ -59,9 +60,11 @@ class SoliqUploadResponse(_StrictModel):
     period: DateRangeOutput
     vat_declared: MoneyOutput | None
     esf_seller_vat_total: MoneyOutput | None
-    organization_name: str
+    organization_name: str | None  # best-effort: может быть None если не разобрался
     submitted_at: str | None  # ISO date или null
     diff_pct: str | None  # "1.19%" если оба значения есть, иначе null
+    parse_warnings: list[str] = []  # best-effort cell-level замечания
+    skipped_rows_count: int = 0  # сколько строк ilova пропущено
 
 
 @router.post("/soliq-xltx", response_model=SoliqUploadResponse)
@@ -75,7 +78,7 @@ async def upload_soliq_xltx(
     declaration, registry = await _classify_pair(files)
 
     try:
-        chunk = to_soliq_chunk(
+        chunk, mapper_warnings = to_soliq_chunk(
             declaration=declaration,
             registry=registry,
             borrower_inn=inn,
@@ -105,6 +108,8 @@ async def upload_soliq_xltx(
             period.submitted_at.isoformat() if period.submitted_at is not None else None
         ),
         diff_pct=diff_pct,
+        parse_warnings=mapper_warnings,
+        skipped_rows_count=registry.skipped_rows_count,
     )
 
 
@@ -184,7 +189,7 @@ async def _classify_pair(
                         "ожидается VAT_DECLARATION или VAT_REGISTRY_ILOVA"
                     ),
                 )
-        except (UnsupportedFormatError, MalformedXltxError) as exc:
+        except UnsupportedFormatError as exc:
             raise HTTPException(
                 status_code=422,
                 detail=f"Файл {upload.filename!r}: {exc}",

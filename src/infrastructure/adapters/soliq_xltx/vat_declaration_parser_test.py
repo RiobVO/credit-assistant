@@ -1,4 +1,7 @@
-"""Тесты parse_vat_declaration."""
+"""Тесты parse_vat_declaration.
+
+Best-effort семантика (CA-014 hardening): cell-level ошибки → warning + None.
+Raise остаётся только для отсутствующих list02/list04 (структурный)."""
 
 from decimal import Decimal
 
@@ -6,10 +9,7 @@ import pytest
 from openpyxl import Workbook
 
 from domain.value_objects.money import Currency, Money
-from infrastructure.adapters.soliq_xltx.errors import (
-    MalformedXltxError,
-    UnsupportedFormatError,
-)
+from infrastructure.adapters.soliq_xltx.errors import UnsupportedFormatError
 from infrastructure.adapters.soliq_xltx.vat_declaration_parser import (
     parse_vat_declaration,
 )
@@ -38,6 +38,7 @@ class TestHappyPath:
             vat_to_offset_total=167588345.73,
         )
         data = parse_vat_declaration(wb)
+        assert data.header.borrower_inn is not None
         assert data.header.borrower_inn.value == "306399449"
         assert data.sales_total_excl_vat == _uzs("523333214.06")
         assert data.vat_charged_total == _uzs("62799985.69")
@@ -68,13 +69,15 @@ class TestHappyPath:
         data = parse_vat_declaration(wb)
         assert data.vat_via_export is None
 
-    def test_string_money_with_comma_separator(self) -> None:
-        # На случай если cells приходят строками "62799985,69"
+    def test_string_money_with_spaces_warns_and_returns_none(self) -> None:
+        # Пробелы в числах не разбираем — это искажение формата → warning + None.
         wb = build_vat_declaration_wb()
         wb["list02"]["G6"].value = "62 799 985,69"
-        # пробелы в числах не разбираем — это уже искажение формата → ошибка
-        with pytest.raises(MalformedXltxError):
-            parse_vat_declaration(wb)
+        data = parse_vat_declaration(wb)
+        assert data.vat_charged_total is None
+        assert any("G6" in w for w in data.parse_warnings)
+        # Остальные поля парсятся
+        assert data.sales_via_esf is not None
 
 
 class TestEdgeCases:
@@ -123,10 +126,47 @@ class TestErrors:
         with pytest.raises(UnsupportedFormatError, match="list04"):
             parse_vat_declaration(wb)
 
-    def test_garbage_money_cell_raises_malformed(self) -> None:
+    def test_garbage_money_cell_warns_and_returns_none(self) -> None:
         wb = build_vat_declaration_wb()
         wb["list02"]["G6"].value = "abc-not-a-number"
-        with pytest.raises(MalformedXltxError) as exc:
-            parse_vat_declaration(wb)
-        assert exc.value.sheet == "list02"
-        assert exc.value.coord == "G6"
+        data = parse_vat_declaration(wb)
+        assert data.vat_charged_total is None
+        assert any("G6" in w for w in data.parse_warnings)
+
+
+class TestBestEffort:
+    """CA-014: cell-level ошибки → warn + None, парсер продолжает работу."""
+
+    def test_empty_content_returns_all_none_with_warnings(self) -> None:
+        # Валидная структура (8 листов), но все cells пустые.
+        wb = build_vat_declaration_wb()
+        for sheet in (wb["list02"], wb["list04"]):
+            for row in sheet.iter_rows(min_row=1, max_row=40, max_col=10):
+                for cell in row:
+                    cell.value = None
+        data = parse_vat_declaration(wb)
+        assert data.vat_charged_total is None
+        assert data.sales_total_excl_vat is None
+        # Header тоже посчитан best-effort
+        assert isinstance(data.parse_warnings, list)
+
+    def test_partial_garbage_cells_collect_warnings(self) -> None:
+        wb = build_vat_declaration_wb()
+        wb["list02"]["G6"].value = "garbage"
+        wb["list02"]["F7"].value = "more-garbage"
+        wb["list04"]["G37"].value = "junk"
+        data = parse_vat_declaration(wb)
+        assert data.vat_charged_total is None
+        assert data.sales_via_esf is None
+        assert data.vat_to_offset_total is None
+        # Каждое поле даёт warning (как минимум 3)
+        assert len(data.parse_warnings) >= 3
+        # Хорошие cells всё равно парсятся
+        assert data.sales_via_kkm is not None
+
+    def test_header_warnings_propagate_into_declaration_warnings(self) -> None:
+        wb = build_vat_declaration_wb(inn=12345)  # битый ИНН шапки
+        data = parse_vat_declaration(wb)
+        assert data.header.borrower_inn is None
+        # parse_warnings агрегируют header + body
+        assert any("D3" in w for w in data.parse_warnings)

@@ -1,14 +1,15 @@
-"""Тесты parse_header — извлечение шапки из xltx-форм."""
+"""Тесты parse_header — извлечение шапки из xltx-форм.
+
+После best-effort рефактора (CA-014 hardening): row/cell-level ошибки
+становятся parse_warnings + None, не raise. Raise остаются только для
+структурных ошибок (отсутствие list01, неподдерживаемый формат)."""
 
 from datetime import date
 
 import pytest
 
 from domain.value_objects.inn import INN
-from infrastructure.adapters.soliq_xltx.errors import (
-    MalformedXltxError,
-    UnsupportedFormatError,
-)
+from infrastructure.adapters.soliq_xltx.errors import UnsupportedFormatError
 from infrastructure.adapters.soliq_xltx.format_detector import SoliqXltxFormat
 from infrastructure.adapters.soliq_xltx.header_parser import parse_header
 from tests.fixtures.soliq_xltx._factories import (
@@ -35,6 +36,7 @@ class TestVatDeclarationHeader:
         assert h.period_kind == "month"
         assert h.period_index is None  # для VAT declaration номер не в шапке
         assert h.submitted_at == date(2026, 4, 20)
+        assert h.parse_warnings == []
 
     def test_inn_as_string_with_whitespace(self) -> None:
         wb = build_vat_declaration_wb(inn="  306399449  ")
@@ -46,33 +48,56 @@ class TestVatDeclarationHeader:
         h = parse_header(wb, SoliqXltxFormat.VAT_DECLARATION)
         assert h.period_kind == "quarter"
 
-    def test_invalid_inn_raises_malformed_with_location(self) -> None:
+    def test_invalid_inn_warns_and_returns_none(self) -> None:
         wb = build_vat_declaration_wb(inn=12345)  # короче 9 цифр
-        with pytest.raises(MalformedXltxError) as exc:
-            parse_header(wb, SoliqXltxFormat.VAT_DECLARATION)
-        assert exc.value.sheet == "list01"
-        assert exc.value.coord == "D3"
-        assert "invalid INN" in str(exc.value)
+        h = parse_header(wb, SoliqXltxFormat.VAT_DECLARATION)
+        assert h.borrower_inn is None
+        assert any("INN" in w and "D3" in w for w in h.parse_warnings)
+        # Остальные поля парсятся как обычно
+        assert h.period_year == 2026
 
-    def test_missing_org_name_raises(self) -> None:
+    def test_missing_org_name_warns_and_returns_none(self) -> None:
         wb = build_vat_declaration_wb()
         wb["list01"]["H9"].value = None
-        with pytest.raises(MalformedXltxError) as exc:
-            parse_header(wb, SoliqXltxFormat.VAT_DECLARATION)
-        assert exc.value.coord == "H9"
+        h = parse_header(wb, SoliqXltxFormat.VAT_DECLARATION)
+        assert h.organization_name is None
+        assert any("H9" in w for w in h.parse_warnings)
 
-    def test_missing_year_raises(self) -> None:
+    def test_missing_year_warns_and_returns_none(self) -> None:
         wb = build_vat_declaration_wb()
         wb["list01"]["O5"].value = None
-        with pytest.raises(MalformedXltxError) as exc:
-            parse_header(wb, SoliqXltxFormat.VAT_DECLARATION)
-        assert exc.value.coord == "O5"
+        h = parse_header(wb, SoliqXltxFormat.VAT_DECLARATION)
+        assert h.period_year is None
+        assert any("O5" in w for w in h.parse_warnings)
 
-    def test_missing_submitted_at_is_none_not_error(self) -> None:
+    def test_missing_submitted_at_is_silent_none(self) -> None:
+        # submitted_at и так был optional — не warning, просто None.
         wb = build_vat_declaration_wb()
         wb["list01"]["H17"].value = None
         h = parse_header(wb, SoliqXltxFormat.VAT_DECLARATION)
         assert h.submitted_at is None
+        assert h.parse_warnings == []
+
+    def test_multiple_invalid_fields_collect_all_warnings(self) -> None:
+        wb = build_vat_declaration_wb(inn=12345)
+        wb["list01"]["H9"].value = None
+        wb["list01"]["O5"].value = None
+        h = parse_header(wb, SoliqXltxFormat.VAT_DECLARATION)
+        assert h.borrower_inn is None
+        assert h.organization_name is None
+        assert h.period_year is None
+        assert len(h.parse_warnings) >= 3
+
+    def test_empty_list01_returns_all_none_with_warnings(self) -> None:
+        wb = build_vat_declaration_wb()
+        for row in wb["list01"].iter_rows(min_row=1, max_row=20, max_col=20):
+            for cell in row:
+                cell.value = None
+        h = parse_header(wb, SoliqXltxFormat.VAT_DECLARATION)
+        assert h.borrower_inn is None
+        assert h.organization_name is None
+        assert h.period_year is None
+        assert h.parse_warnings  # не пустой
 
 
 class TestForm2Header:
@@ -83,6 +108,7 @@ class TestForm2Header:
         assert h.period_year == 2025
         assert h.period_kind == "quarter"
         assert h.period_index == 4
+        assert h.parse_warnings == []
 
 
 class TestForm1Header:
@@ -104,6 +130,8 @@ class TestProfitTaxHeader:
 
 
 class TestUnsupported:
+    """Структурные ошибки остаются raise — best-effort только на cell-уровне."""
+
     def test_registry_format_not_supported(self) -> None:
         wb = build_vat_declaration_wb()  # любой workbook
         with pytest.raises(UnsupportedFormatError):
