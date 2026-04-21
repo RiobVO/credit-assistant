@@ -3,12 +3,19 @@
 Веса severity (LOW=1, MEDIUM=3, HIGH=7, CRITICAL=15) — экспоненциальный рост,
 выровнено по Базель III IRB intuition. Финальная калибровка — после прогона на
 реальных папиных фирмах в Phase 2 (см. ADR 0003).
+
+Policy override: если в flags присутствует ``INSUFFICIENT_DATA`` (data-quality
+safeguard, см. ``domain/rules/meta/insufficient_data.py``), скоринг применяет
+defensive floor: domain score = max(score, 50) и recommendation = REVIEW —
+независимо от других флагов. Это закрывает CA-016: пустой снапшот без выручки
+больше не получает ложно-оптимистичный APPROVE.
 """
 
 from dataclasses import dataclass, field
 from enum import StrEnum
 
 from domain.entities.red_flag import RedFlag
+from domain.rules.meta.insufficient_data import INSUFFICIENT_DATA_RULE_ID
 from domain.value_objects.flag_severity import FlagSeverity
 
 
@@ -33,6 +40,10 @@ class ScoringService:
     REVIEW_BELOW = 30
     MAX_SCORE = 100
 
+    # CA-016: defensive floor при срабатывании INSUFFICIENT_DATA — display ≤ 50,
+    # recommendation = REVIEW. См. domain/rules/meta/insufficient_data.py.
+    INSUFFICIENT_DATA_FLOOR = 50
+
     def score(self, flags: list[RedFlag]) -> RiskScore:
         breakdown = {sev: 0 for sev in FlagSeverity}
         total_weight = 0
@@ -47,6 +58,10 @@ class ScoringService:
             recommendation = Recommendation.REVIEW
         else:
             recommendation = Recommendation.REJECT
+
+        if any(f.rule_id == INSUFFICIENT_DATA_RULE_ID for f in flags):
+            score = max(score, self.INSUFFICIENT_DATA_FLOOR)
+            recommendation = Recommendation.REVIEW
 
         return RiskScore(
             score=score,

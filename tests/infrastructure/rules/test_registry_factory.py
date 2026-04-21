@@ -22,8 +22,9 @@ def tmp_yaml(tmp_path: Path) -> Path:
 class TestLoadRegistryHappyPath:
     def test_loads_full_registry_from_default_yaml(self) -> None:
         registry = load_registry(DEFAULT_YAML)
-        assert len(registry.rules) == 17
-        # Все 17 in-code правил должны быть в registry
+        # 17 продакшн-правил + 1 meta (INSUFFICIENT_DATA, CA-016).
+        assert len(registry.rules) == 18
+        # Все in-code правила должны быть в registry
         for rule_id in CODE_RULES:
             assert registry.by_id(rule_id).id == rule_id
 

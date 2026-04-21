@@ -147,7 +147,10 @@ def _quarter(year: int, q: int, net_profit: str) -> dict[str, Any]:
 
 
 class TestEmptyPayload:
-    def test_minimal_valid_payload_returns_zero_flags(self, client: TestClient) -> None:
+    def test_minimal_valid_payload_triggers_insufficient_data(
+        self, client: TestClient
+    ) -> None:
+        # CA-016: пустой снапшот без выручки → INSUFFICIENT_DATA + REVIEW + score floor 50.
         payload = {
             "borrower": _borrower_payload(),
             "as_of": "2026-05-08",
@@ -156,10 +159,11 @@ class TestEmptyPayload:
         assert r.status_code == 200, r.text
         data = r.json()
         assert data["borrower_inn_masked"].endswith("9449")
-        assert data["red_flags"] == []
-        assert data["risk_score"]["score"] == 0
-        assert data["risk_score"]["recommendation"] == "approve"
-        assert data["rules_evaluated"] == 17
+        rule_ids = [f["rule_id"] for f in data["red_flags"]]
+        assert "INSUFFICIENT_DATA" in rule_ids
+        assert data["risk_score"]["score"] == 50
+        assert data["risk_score"]["recommendation"] == "review"
+        assert data["rules_evaluated"] == 18
 
 
 class TestInvalidPayload:

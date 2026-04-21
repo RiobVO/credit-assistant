@@ -144,3 +144,12 @@ rules:
     source: "Group-IB UZ fraud report 2024-2025; AML — накачивание оборота"
     formula: "exists 2-cycle: A→B and B→A within 90 days (упрощ.)"
     rationale: "Симулированный документооборот для увеличения видимого оборота"
+
+  # --- Meta (data-quality safeguards) ---
+  - id: INSUFFICIENT_DATA
+    name: "Недостаточно данных для оценки"
+    category: meta
+    severity: high
+    source: "Внутренняя политика: defensive default при пустом снапшоте"
+    formula: "no positive revenue point in annual / quarterly / monthly"
+    rationale: "Без данных о выручке нельзя адекватно оценить риск; ScoringService применяет policy: score floor=50, recommendation=REVIEW (override)"
