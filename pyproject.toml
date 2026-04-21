@@ -83,6 +83,15 @@ disallow_untyped_decorators = false
 module = ["weasyprint", "weasyprint.*"]
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+# docker-py транзитивно подтягивается testcontainers'ом. На CI mypy
+# находит частичные стабы (модуль резолвится), но без атрибутов вроде
+# ``from_env`` — ``follow_imports = "skip"`` отключает walking содержимого
+# модуля, всё что мы вызываем у docker-клиента типизируется как Any.
+module = ["docker", "docker.*"]
+ignore_missing_imports = true
+follow_imports = "skip"
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 # domain тесты живут рядом с кодом (`*_test.py`); integration — в `tests/`
