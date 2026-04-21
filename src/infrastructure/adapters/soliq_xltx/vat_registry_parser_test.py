@@ -6,10 +6,7 @@ from decimal import Decimal
 import pytest
 
 from domain.value_objects.money import Currency, Money
-from infrastructure.adapters.soliq_xltx.errors import (
-    MalformedXltxError,
-    UnsupportedFormatError,
-)
+from infrastructure.adapters.soliq_xltx.errors import UnsupportedFormatError
 from infrastructure.adapters.soliq_xltx.vat_registry_parser import parse_vat_registry
 from tests.fixtures.soliq_xltx._factories import (
     build_vat_declaration_wb,
@@ -107,30 +104,81 @@ class TestTotals:
 
 
 class TestErrors:
+    """Structural ошибки (не тот формат) по-прежнему пробрасываются."""
+
     def test_wrong_format_raises_unsupported(self) -> None:
         wb = build_vat_declaration_wb()
         with pytest.raises(UnsupportedFormatError):
             parse_vat_registry(wb)
 
-    def test_garbage_seq_no_raises_malformed(self) -> None:
+
+class TestTolerantParsing:
+    """CA-014: row-level ошибки → skip + warn, не падение всего парсинга."""
+
+    def test_garbage_seq_no_skipped(self) -> None:
         wb = build_vat_registry_wb(sales=[("A", "200000000", "1", "01.03.2026", 100.0, 12.0)])
         wb["list02"].cell(row=15, column=2).value = "не число"
-        with pytest.raises(MalformedXltxError) as exc:
-            parse_vat_registry(wb)
-        assert exc.value.row_no == 15
+        data = parse_vat_registry(wb)
+        assert data.sales == []
+        assert data.skipped_rows_count == 1
 
-    def test_invalid_date_format_raises_malformed(self) -> None:
+    def test_invalid_date_format_skipped(self) -> None:
         wb = build_vat_registry_wb(
             sales=[("A", "200000000", "1", "2026-03-01", 100.0, 12.0)]  # ISO, не DD.MM.YYYY
         )
-        with pytest.raises(MalformedXltxError) as exc:
-            parse_vat_registry(wb)
-        assert exc.value.row_no == 15
-        assert "expected DD.MM.YYYY" in str(exc.value)
+        data = parse_vat_registry(wb)
+        assert data.sales == []
+        assert data.skipped_rows_count == 1
 
-    def test_missing_required_name_raises_malformed(self) -> None:
+    def test_missing_required_name_skipped(self) -> None:
         wb = build_vat_registry_wb(sales=[("A", "200000000", "1", "01.03.2026", 100.0, 12.0)])
         wb["list02"].cell(row=15, column=3).value = None
-        with pytest.raises(MalformedXltxError) as exc:
+        data = parse_vat_registry(wb)
+        assert data.sales == []
+        assert data.skipped_rows_count == 1
+
+    def test_partial_success_with_garbage_rows(self) -> None:
+        # 5 валидных продаж + затираем 2-ю и 4-ю → 3 валидных, 2 skipped, totals по valid only.
+        wb = build_vat_registry_wb(
+            sales=[
+                ("A", "200000000", "1", "01.03.2026", 1000.0, 120.0),
+                ("B", "200000001", "2", "02.03.2026", 2000.0, 240.0),
+                ("C", "200000002", "3", "03.03.2026", 3000.0, 360.0),
+                ("D", "200000003", "4", "04.03.2026", 4000.0, 480.0),
+                ("E", "200000004", "5", "05.03.2026", 5000.0, 600.0),
+            ]
+        )
+        wb["list02"].cell(row=16, column=6).value = "garbage-date"  # 2-я строка — bad date
+        wb["list02"].cell(row=18, column=3).value = None  # 4-я строка — пустое имя
+        data = parse_vat_registry(wb)
+        assert len(data.sales) == 3
+        assert [r.invoice_no for r in data.sales] == ["1", "3", "5"]
+        assert data.sales_vat_total == _uzs("1080")  # 120 + 360 + 600
+        assert data.skipped_rows_count == 2
+
+    def test_skipped_in_both_sales_and_purchases(self) -> None:
+        wb = build_vat_registry_wb(
+            sales=[("A", "200000000", "1", "01.03.2026", 1000.0, 120.0)],
+            purchases=[("X", "200000099", "9", "09.03.2026", 9000.0, 1080.0)],
+        )
+        wb["list01"].cell(row=15, column=3).value = None  # испортить purchase
+        wb["list02"].cell(row=15, column=2).value = "abc"  # испортить sale
+        data = parse_vat_registry(wb)
+        assert data.sales == []
+        assert data.purchases == []
+        assert data.skipped_rows_count == 2
+
+    def test_empty_registry_has_zero_skipped(self) -> None:
+        wb = build_vat_registry_wb()
+        data = parse_vat_registry(wb)
+        assert data.skipped_rows_count == 0
+
+    def test_skip_logged_with_structured_context(self, caplog: pytest.LogCaptureFixture) -> None:
+        # Проверяем что про каждую пропущенную строку идёт WARNING с (sheet, row, reason).
+        import logging
+
+        wb = build_vat_registry_wb(sales=[("A", "200000000", "1", "01.03.2026", 100.0, 12.0)])
+        wb["list02"].cell(row=15, column=6).value = "broken-date"
+        with caplog.at_level(logging.WARNING):
             parse_vat_registry(wb)
-        assert exc.value.row_no == 15
+        assert any("xltx.row_skipped" in r.getMessage() for r in caplog.records)
