@@ -12,8 +12,8 @@ import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from application.dto.dossier_record import DossierRecord
-from domain.value_objects.inn import INN
 from config.settings import Settings
+from domain.value_objects.inn import INN
 from infrastructure.auth.password_hasher import PasswordHasher
 from infrastructure.persistence.database import get_session
 from infrastructure.persistence.models.analyst import AnalystORM
