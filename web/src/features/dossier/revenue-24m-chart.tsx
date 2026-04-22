@@ -15,7 +15,7 @@ import {
 
 import type { DossierViewDto } from "@/lib/api";
 
-import { formatBigUzs, formatMonthShort } from "../_lib/format";
+import { formatBigUzs, formatMonthShort } from "./format";
 
 const PERIODS = [
   { value: 24, label: "24 месяца" },

@@ -3,12 +3,23 @@
 import { AlertCircle, ArrowLeft, RefreshCw } from "lucide-react";
 import Link from "next/link";
 
-import { Topbar } from "../../../_components/topbar";
+import { Topbar } from "@/components/topbar";
 
 import { ApiError } from "@/lib/api";
+import { APP_MODE } from "@/lib/config";
 
 // Экран ошибки: отдельная разводка для 404 и для остального (network/500).
-// Оба уводят пользователя обратно в список заявок (mock-link на /manual-input).
+// Back-link зависит от режима (история в bank, форма в accountant).
+
+const PREFIX =
+  APP_MODE === "bank"
+    ? [{ label: "История" }, { label: "Досье" }]
+    : [{ label: "Заявки" }, { label: "Досье" }];
+
+const BACK =
+  APP_MODE === "bank"
+    ? { href: "/history", label: "К истории" }
+    : { href: "/manual-input", label: "К форме" };
 
 export function DossierError({
   dossierId,
@@ -25,8 +36,7 @@ export function DossierError({
     <>
       <Topbar
         crumbs={[
-          { label: "Заявки" },
-          { label: "Досье" },
+          ...PREFIX,
           { label: dossierId.slice(0, 8), current: true },
         ]}
       />
@@ -47,10 +57,11 @@ export function DossierError({
 
           <div className="mt-6 flex flex-wrap justify-center gap-2">
             <Link
-              href="/manual-input"
+              href={BACK.href}
               className="inline-flex items-center gap-2 rounded-md border border-[var(--ca-border)] bg-[var(--ca-surface)] px-4 py-2 text-[13px] font-medium text-[var(--ca-ink-700)] transition-colors hover:bg-[#FAFBFC]"
             >
-              <ArrowLeft className="size-4" />К форме
+              <ArrowLeft className="size-4" />
+              {BACK.label}
             </Link>
             {!isNotFound && (
               <button
