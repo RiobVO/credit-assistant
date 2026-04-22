@@ -46,7 +46,14 @@ class _InMemorySnapshotRepo:
 
 
 class _InMemoryDossierRepo:
-    async def save(self, record: DossierRecord, snapshot_id: UUID) -> UUID:
+    async def save(
+        self,
+        record: DossierRecord,
+        snapshot_id: UUID,
+        *,
+        source_mode: str = "accountant",
+        created_by_analyst_id: UUID | None = None,
+    ) -> UUID:
         return uuid4()
 
     async def get_by_id(self, dossier_id: UUID) -> DossierRecord | None:

@@ -26,7 +26,14 @@ class SqlAlchemyDossierRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def save(self, record: DossierRecord, snapshot_id: UUID) -> UUID:
+    async def save(
+        self,
+        record: DossierRecord,
+        snapshot_id: UUID,
+        *,
+        source_mode: str = "accountant",
+        created_by_analyst_id: UUID | None = None,
+    ) -> UUID:
         new_id = uuid4()
         orm = DossierORM(
             id=new_id,
@@ -37,6 +44,8 @@ class SqlAlchemyDossierRepository:
             red_flags=red_flags_to_jsonb(record.red_flags),
             rules_version=record.rules_version,
             rules_evaluated=record.rules_evaluated,
+            source_mode=source_mode,
+            created_by_analyst_id=created_by_analyst_id,
         )
         self._session.add(orm)
         await self._session.flush()
