@@ -85,24 +85,40 @@ _UNAUTHORIZED = HTTPException(
 )
 
 
-async def get_current_analyst(
+async def get_optional_current_analyst(
     authorization: Annotated[str | None, Header()] = None,
     jwt_service: JwtService = Depends(get_jwt_service),  # noqa: B008
     analyst_repo: SqlAlchemyAnalystRepository = Depends(get_analyst_repo),  # noqa: B008
-) -> AnalystIdentity:
+) -> AnalystIdentity | None:
+    """Best-effort извлечение identity. ``None`` если токена нет / невалиден /
+    аналитик неактивен. Используется shared-endpoints в bank mode для audit:
+    handler не падает на отсутствии токена (mode-gating на router-уровне сам
+    отвергнёт unauth), а просто пропускает audit-запись.
+    """
     if not authorization or not authorization.lower().startswith("bearer "):
-        raise _UNAUTHORIZED
+        return None
 
     token = authorization.split(" ", 1)[1].strip()
     try:
         claims = jwt_service.decode(token, expected_type="access")
-    except InvalidTokenError as exc:
-        raise _UNAUTHORIZED from exc
+    except InvalidTokenError:
+        return None
 
     identity = await analyst_repo.get_by_id(claims.analyst_id)
     if identity is None or not identity.is_active:
-        raise _UNAUTHORIZED
+        return None
     return identity
 
 
+async def get_current_analyst(
+    optional: Annotated[AnalystIdentity | None, Depends(get_optional_current_analyst)],
+) -> AnalystIdentity:
+    """Строгий вариант: 401 если identity не получена. Используется на router-
+    уровне в bank mode и явно в bank-endpoints (search/history/auth.me)."""
+    if optional is None:
+        raise _UNAUTHORIZED
+    return optional
+
+
 CurrentAnalyst = Annotated[AnalystIdentity, Depends(get_current_analyst)]
+OptionalAnalyst = Annotated[AnalystIdentity | None, Depends(get_optional_current_analyst)]

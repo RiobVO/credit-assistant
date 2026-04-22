@@ -19,8 +19,12 @@ from fastapi.responses import Response
 
 from application.use_cases.load_dossier_for_view import LoadDossierForView
 from application.use_cases.render_dossier_pdf import RenderDossierPdf
+from infrastructure.persistence.repositories.audit_log_repository import (
+    SqlAlchemyAuditLogRepository,
+)
 from infrastructure.reports.pdf.pdf_renderer import WeasyPrintPdfRenderer
-from interfaces.api.shared.dossier_storage import StorageDep
+from interfaces.api.bank.dependencies import OptionalAnalyst
+from interfaces.api.shared.dossier_storage import SessionDep, StorageDep
 
 router = APIRouter(prefix="/api", tags=["dossier"])
 
@@ -42,7 +46,12 @@ def _get_pdf_renderer() -> WeasyPrintPdfRenderer:
         503: {"description": "PDF-рендер недоступен (нет GTK runtime)"},
     },
 )
-async def download_dossier_pdf(dossier_id: UUID, storage: StorageDep) -> Response:
+async def download_dossier_pdf(
+    dossier_id: UUID,
+    storage: StorageDep,
+    session: SessionDep,
+    analyst: OptionalAnalyst,
+) -> Response:
     use_case = RenderDossierPdf(
         loader=LoadDossierForView(storage.dossier),
         renderer=_get_pdf_renderer(),
@@ -64,6 +73,14 @@ async def download_dossier_pdf(dossier_id: UUID, storage: StorageDep) -> Respons
 
     if pdf_bytes is None:
         raise HTTPException(status_code=404, detail="Досье не найдено")
+
+    if analyst is not None:
+        await SqlAlchemyAuditLogRepository(session).record(
+            event="download_pdf",
+            analyst_id=analyst.id,
+            target_type="dossier",
+            target_id=dossier_id,
+        )
 
     filename = _build_filename(dossier_id)
     return Response(
