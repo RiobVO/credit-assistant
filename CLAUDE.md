@@ -6,11 +6,11 @@
 
 ## Current Status
 
-**Phase:** 3 закрыта. Парсер soliq_xltx переведён на best-effort (CA-014 закрыт по контракту). **Готовы стартовать Phase 4 (Bank Mode UI)** или 2.6 (E2E на 5 фирмах папы).
+**Phase:** 4 закрыта (Bank Mode UI). Spec: `docs/superpowers/specs/2026-05-11-phase-4-bank-mode-design.md`, ADR-0009. Phase 4 покрыла 4.A (DB фундамент) → 4.B (JWT auth, AuthnPort, CLI seed) → 4.C (search + history endpoints) → 4.D (`APP_MODE` gating + audit-wiring) → 4.E (frontend foundation, BFF httpOnly cookies) → 4.F (`/search` гибрид + `/history` таблица) → 4.G (DossierView extract в features/, shared `/dossier/[id]`) → 4.H (docker smoke + docs).
 
-**Активная ветка:** `main` (HEAD `d34572c`). Phase 4 стартует с новой ветки `feat/phase-4-...` от main.
+**Активная ветка:** `main` (после Phase 4 squash).
 
-**Verify status:** ruff + mypy --strict + 443 unit + 23 integration (5 PDF-тестов skip на Windows-host) + tsc + eslint + next build — зелёные.
+**Verify status:** ruff + mypy --strict + 459 unit + 68 integration (5 PDF-тестов skip на Windows-host) + tsc + eslint + next build (14 routes) — зелёные. Docker smoke `APP_MODE=bank`: login → /me → search → list → audit-log запись подтверждены.
 
 ---
 
@@ -20,6 +20,9 @@
 - TODO[CA-006]: убрать дублирующий `ix_borrowers_inn` — `UniqueConstraint("inn")` уже создаёт `borrowers_inn_key`. Косметика, миграция перед production.
 - TODO[CA-010]: bundle TTF Inter (400/500/600/700) + JetBrains Mono (500/600) в `src/infrastructure/reports/pdf/fonts/` + `@font-face`. Сейчас PDF на DejaVu Sans (читается, но ≠ Inter на экране). Косметика.
 - TODO[CA-015]: уточнить парсер `vat_declaration_parser.py` под живые xltx 10006_45/10006_47 — детектор уже опознаёт через widened sentinel + structural fallback (CA-012), но cells F6/G6/F7-F11/G7 могут быть смещены. Ждём реальные файлы.
+- TODO[CA-018]: extract `(accountant)/manual-input` в `features/manual-input` + thin re-export. Сейчас на bank install `/manual-input` (куда search ведёт для upload) рендерится с accountant sidebar. Аналогично 4.G для DossierView, но scope не вошёл в Phase 4.
+- TODO[CA-019]: refresh-token rotation + denylist (Redis) — в v1 refresh stateless 7д без инвалидации. ADR-0009 fixes path к v2.
+- TODO[CA-020]: LDAP/OAuth AuthnAdapter для production-банка. AuthnPort готов (`application/ports/authn_port.py`), нужен новый adapter в `infrastructure/auth/`.
 
 ---
 
@@ -30,10 +33,14 @@
 - **Реальные данные папы:** локально в `~/Downloads` / `tests/fixtures/**/*_full.*`, не в git. В repo — только `*_sample.csv` + synthetic factory-helpers для xltx (`tests/fixtures/soliq_xltx/_factories.py`).
 - **xltx форматы (5 типов):** VAT_DECLARATION (8 листов), VAT_REGISTRY_ILOVA (10 листов, Приложение №4), FORM_2_INCOME_STATEMENT (3 листа), FORM_1_BALANCE_SHEET (4 листа), PROFIT_TAX (15 листов). Distinguished по сигнатурным cells list01.
 - **Парсер soliq_xltx best-effort:** raises только на формат (UnsupportedFormatError, XltxBorrowerMismatchError); cell-level → warn + None. Каждый DTO имеет `parse_warnings: list[str]`; registry дополнительно `skipped_rows_count`. `to_soliq_chunk` возвращает `tuple[SoliqChunk, list[str]]`.
-- **Persistence:** testcontainers + real Postgres для integration-тестов; draft TTL = 30d (`DRAFT_TTL_DAYS`); draft auth по `draft_id` без owner (переделать в Phase 4 Bank Mode).
+- **Persistence:** testcontainers + real Postgres для integration-тестов; draft TTL = 30d (`DRAFT_TTL_DAYS`); draft auth по `draft_id` без owner (валидно для accountant; bank-mode авторизация перешла на JWT в Phase 4).
 - **Compose-postgres** на host **5433** (5432 занят локальным нативным Postgres).
 - **Windows + asyncpg:** обязателен `WindowsSelectorEventLoopPolicy` (настроено в `migrations/env.py` + `interfaces/api/main.py`).
 - **Backend в Docker:** WeasyPrint требует Pango/HarfBuzz/Fontconfig (см. ADR 0008). Compose-сервис `api` на 8000. Любые правки кода → `docker compose up -d --build api`, не `restart` (см. memory `project_docker_crlf_gotcha.md`).
+- **Phase 4 — Bank Mode (ADR-0009):** `APP_MODE` env управляет инсталляцией (bank/accountant); один режим на установку. Bank: shared endpoints (`/api/manual-input`, `/api/dossier/*`, `/api/soliq-upload`, drafts) закрыты `Depends(get_current_analyst)` на router-уровне. Audit `login/login_failed/logout/search_borrower/view_dossier/generate_dossier/download_pdf` с masked-ИНН пишется из use cases в `audit_log`. `dossiers.source_mode` (`bank` | `accountant`) + nullable FK `created_by_analyst_id` — bank-history фильтрует по `source_mode='bank'`.
+- **JWT (Phase 4.B):** native `bcrypt` (passlib 1.7.x несовместим с bcrypt 5.x), HS256, access 15м + refresh 7д, без ротации в v1 (TODO[CA-019]). `AuthnPort` готов под LDAP/OAuth (TODO[CA-020]). `JWT_SECRET` через env (.env / compose / Vault), мин. 32 байта в проде.
+- **Frontend BFF cookies:** httpOnly + sameSite=lax + secure-в-проде. Backend возвращает JSON, Next route handlers (`app/api/auth/*`, `app/api/bank/*`, `app/api/dossier/[id]/pdf`) пакуют tokens в `ca_access` (path=`/`) и `ca_refresh` (path=`/api/auth`). Client JS никогда не видит JWT.
+- **Seed analyst:** `docker compose exec api bash -c "cd /app/src && uv run --no-sync python -m interfaces.cli.seed_analysts --email ... --password ... --full-name ..."`. Upsert по email.
 
 ---
 
@@ -89,5 +96,6 @@
 | 2026-05-10 | post-3 | Parser hardening (CA-011..014 v1) — squash в main: ₽→сум на досье, widened детект 10006_*, динамические 15 лет селектор, tolerant ilova `_read_rows`. | `75ab42b` |
 | 2026-05-10 | post-3 | Docker CRLF fix — `.gitattributes` для `*.sh` / Dockerfile / `docker/**` после bash`\r` сбоя при rebuild на Windows. См. memory `project_docker_crlf_gotcha.md`. | `319f0fd` |
 | 2026-05-10 | post-3 | **Parser best-effort refactor (CA-014 closed)** — soliq_xltx перешёл на «парсер не raises на данных, только на формате». Все 3 DTO имеют `parse_warnings`; `to_soliq_chunk → tuple[SoliqChunk, list[str]]`; endpoint всегда 200 + warnings; UI collapsable жёлтый блок «Предупреждения парсера (N)». 14 файлов / +612/−279, +15 unit-тестов. | `64444d0` |
+| 2026-05-11 | 4 | **Bank Mode UI — Phase 4 закрыта.** 4.A DB фундамент (analysts/audit_log/dossier columns) → 4.B JWT auth (bcrypt+jose, AuthnPort, /api/bank/auth/{login,refresh,logout,me}, seed CLI) → 4.C bank endpoints (/borrowers/search, /dossiers с filter mine/all+q+pagination, masked-ИНН audit) → 4.D `APP_MODE`-gating в `create_app` + optional-analyst injection в shared endpoints + 6 mode-gating integration-тестов → 4.E frontend foundation (BFF httpOnly cookies, `(bank)` route group, login screen, mode-aware root redirect, Next 16 `proxy.ts`) → 4.F `/search` гибридный flow + `/history` TanStack-Query table → 4.G extract `DossierView` в `features/dossier/`, `AppShell` mode-aware, `/dossier/[id]` переезд в root + PDF BFF proxy → 4.H docker smoke (APP_MODE=bank end-to-end), ADR-0009. | spec, ADR-0009, PRs squashed в main |
 
 > Подробные транзакционные журналы предыдущих сессий (decompositions, real-data smoke numbers, по-step rationale) удалены при сжатии — см. `git log --oneline` для сырого таймлайна и `docs/adr/` для архитектурных решений.

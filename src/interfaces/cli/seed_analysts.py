@@ -75,20 +75,22 @@ def main(argv: list[str] | None = None) -> int:
     if sys.platform == "win32":
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-    try:
-        action, analyst_id = asyncio.run(
-            _upsert_analyst(
+    async def _run() -> tuple[str, str]:
+        try:
+            return await _upsert_analyst(
                 email=args.email,
                 password=args.password,
                 full_name=args.full_name,
                 role=args.role,
                 is_active=not args.inactive,
             )
-        )
-        print(f"{action}: {args.email} -> {analyst_id}")
-        return 0
-    finally:
-        asyncio.run(dispose_engine())
+        finally:
+            # dispose в том же loop'е — глобальный engine привязан к нему.
+            await dispose_engine()
+
+    action, analyst_id = asyncio.run(_run())
+    print(f"{action}: {args.email} -> {analyst_id}")
+    return 0
 
 
 if __name__ == "__main__":  # pragma: no cover
