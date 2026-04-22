@@ -77,7 +77,7 @@ def _make_client_for(
     def _fast_hasher() -> PasswordHasher:
         return PasswordHasher(rounds=4)
 
-    app = create_app(Settings(app_mode=mode))  # type: ignore[arg-type]
+    app = create_app(Settings(app_mode=mode))
     app.dependency_overrides[get_session] = _override_get_session
     app.dependency_overrides[get_password_hasher] = _fast_hasher
     transport = httpx.ASGITransport(app=app)
