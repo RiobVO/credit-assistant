@@ -94,7 +94,7 @@ async def test_get_dossier_returns_full_view(
     assert body["dossier_id"] == dossier_id
     assert body["borrower_inn_masked"] == "XXXXX0888"
     assert body["as_of"] == "2026-05-08"
-    assert body["rules_evaluated"] == 17
+    assert body["rules_evaluated"] == 18
 
     # Score: и raw, и display одновременно (правило A).
     risk = body["risk_score"]
