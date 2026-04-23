@@ -8,9 +8,13 @@
 
 **Phase:** 4 закрыта (Bank Mode UI). Spec: `docs/superpowers/specs/2026-05-11-phase-4-bank-mode-design.md`, ADR-0009. Phase 4 покрыла 4.A (DB фундамент) → 4.B (JWT auth, AuthnPort, CLI seed) → 4.C (search + history endpoints) → 4.D (`APP_MODE` gating + audit-wiring) → 4.E (frontend foundation, BFF httpOnly cookies) → 4.F (`/search` гибрид + `/history` таблица) → 4.G (DossierView extract в features/, shared `/dossier/[id]`) → 4.H (docker smoke + docs).
 
-**Активная ветка:** `main` (после Phase 4 squash).
+**Активная ветка:** `main` (HEAD `156fa5d`). Phase 4 шла линейно прямо в main: 4.A `74a650f` → 4.B `f760b41` → 4.C `487c29b` → 4.D `86b9703` → 4.E `f582edd` → 4.F `64008b1` → 4.G `bc854e9` → 4.H `84c0db6` + 2 fix(ci). Готовы стартовать Phase 5 (E2E на 5 фирмах папы / 2.6, либо переход к pilot-демо).
 
-**Verify status:** ruff + mypy --strict + 459 unit + 68 integration (5 PDF-тестов skip на Windows-host) + tsc + eslint + next build (14 routes) — зелёные. Docker smoke `APP_MODE=bank`: login → /me → search → list → audit-log запись подтверждены.
+**Verify status:** ruff + mypy --strict (src+tests) + 459 unit + 68 integration (5 PDF-тестов skip на Windows-host) + tsc + eslint + next build (14 routes) — зелёные. Docker smoke `APP_MODE=bank`: login → /me → search → list → audit-log запись подтверждены. CI зелёный после `156fa5d`.
+
+## Smoke-инструкция Phase 4 (Bank Mode end-to-end)
+
+См. ниже шаги в README/чеклисте sessions; полный flow воспроизводится на host'е за ~3 минуты.
 
 ---
 
