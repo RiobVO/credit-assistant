@@ -173,6 +173,13 @@ def test_template_renders_minimal_context() -> None:
     # Gauge + recommendation
     assert "73" in html
     assert "К пересмотру" in html
+    # CA-025: arc endpoints должны лежать на окружности r=90 вокруг (100, 110),
+    # иначе WeasyPrint рисует кривые мимо секторов. Проверяем оба «промежуточных»
+    # узла (cos/sin 45° * 90 ≈ 63.64) и крайние точки (10/190 на горизонтали).
+    assert 'd="M 10 110 A 90 90 0 0 1 36.36 46.36"' in html
+    assert 'd="M 36.36 46.36 A 90 90 0 0 1 100 20"' in html
+    assert 'd="M 100 20 A 90 90 0 0 1 163.64 46.36"' in html
+    assert 'd="M 163.64 46.36 A 90 90 0 0 1 190 110"' in html
     # Red flag rendered
     assert "SUPPLIER_CONCENTRATION_30" in html
     # KPI: Revenue LTM активный, EBITDA пустой — оба в разметке
