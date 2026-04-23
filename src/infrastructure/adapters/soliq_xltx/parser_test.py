@@ -11,6 +11,7 @@ from infrastructure.adapters.soliq_xltx.parser import SoliqXltxAdapter
 from infrastructure.adapters.soliq_xltx.vat_declaration_parser import VatDeclarationData
 from infrastructure.adapters.soliq_xltx.vat_registry_parser import VatRegistryData
 from tests.fixtures.soliq_xltx._factories import (
+    build_form1_balance_sheet_wb,
     build_form2_income_statement_wb,
     build_vat_declaration_wb,
     build_vat_registry_wb,
@@ -68,9 +69,11 @@ def test_accepts_binary_io_source(adapter: SoliqXltxAdapter) -> None:
 
 
 def test_unsupported_format_raises(adapter: SoliqXltxAdapter) -> None:
-    # Form 2 распознаётся, но parser ещё не реализован в Day 1
+    # FORM_1_BALANCE_SHEET и PROFIT_TAX по-прежнему без специализированных
+    # парсеров (FORM_2 закрыт CA-026). Проверяем что adapter поднимает
+    # UnsupportedFormatError для FORM_1.
     with pytest.raises(UnsupportedFormatError, match="not implemented"):
-        adapter.parse(_to_bytes(build_form2_income_statement_wb()))
+        adapter.parse(_to_bytes(build_form1_balance_sheet_wb()))
 
 
 def test_detect_returns_format_without_parsing(adapter: SoliqXltxAdapter) -> None:

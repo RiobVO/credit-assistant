@@ -1,12 +1,13 @@
 """Facade-адаптер: открыть .xltx, классифицировать формат, диспетч на парсер.
 
-В Day 1 поддержаны два специализированных парсера:
+Поддержанные парсеры:
 - ``parse_vat_declaration`` для Расчёта НДС (8 листов)
 - ``parse_vat_registry`` для ilova-приложения №4 (10 листов)
+- ``parse_form2`` для Формы №2 «Отчёт о финансовых результатах» (3 листа)
 
-Остальные типы (Form 1/2, Profit Tax) распознаются ``detect_format`` и могут
-быть запрошены через ``parse_header``, но специализированных парсеров для них
-ещё нет — они появятся в следующих сессиях вместе со своими доменными точками.
+Остальные типы (Form 1 баланс, Profit Tax) распознаются ``detect_format`` и
+могут быть запрошены через ``parse_header``, но специализированных парсеров
+для них ещё нет — появятся в следующих сессиях.
 """
 
 from __future__ import annotations
@@ -19,6 +20,10 @@ from openpyxl import load_workbook
 from openpyxl.workbook.workbook import Workbook
 
 from infrastructure.adapters.soliq_xltx.errors import UnsupportedFormatError
+from infrastructure.adapters.soliq_xltx.form2_parser import (
+    Form2IncomeStatementData,
+    parse_form2,
+)
 from infrastructure.adapters.soliq_xltx.format_detector import (
     SoliqXltxFormat,
     detect_format,
@@ -32,7 +37,7 @@ from infrastructure.adapters.soliq_xltx.vat_registry_parser import (
     parse_vat_registry,
 )
 
-ParsedSoliqXltx = VatDeclarationData | VatRegistryData
+ParsedSoliqXltx = VatDeclarationData | VatRegistryData | Form2IncomeStatementData
 
 
 class SoliqXltxAdapter:
@@ -74,8 +79,10 @@ class SoliqXltxAdapter:
             return parse_vat_declaration(wb)
         if fmt is SoliqXltxFormat.VAT_REGISTRY_ILOVA:
             return parse_vat_registry(wb)
+        if fmt is SoliqXltxFormat.FORM_2_INCOME_STATEMENT:
+            return parse_form2(wb)
         raise UnsupportedFormatError(
             wb.sheetnames,
             f"format {fmt} not implemented yet "
-            "(Day 1 supports VAT_DECLARATION + VAT_REGISTRY_ILOVA)",
+            "(supports: VAT_DECLARATION, VAT_REGISTRY_ILOVA, FORM_2_INCOME_STATEMENT)",
         )
