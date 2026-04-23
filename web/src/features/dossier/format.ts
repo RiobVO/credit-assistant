@@ -25,6 +25,10 @@ export function formatPct(value: number, fractionDigits: number = 1): string {
 
 export function formatRatio(value: number): string {
   if (!Number.isFinite(value)) return "—";
+  // Большие коэффициенты (DSCR, Debt/Equity, прочие x-метрики) ломают
+  // ширину pill/карточки; малые — теряют смысл при округлении до 0,1.
+  if (value > 999) return ">999x";
+  if (value > 0 && value < 0.01) return "<0,01x";
   return `${formatRu(value, 1)}x`;
 }
 
