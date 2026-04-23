@@ -1,7 +1,12 @@
-// API-клиент для FastAPI-бэкенда. Типы зеркалят
-// src/interfaces/api/shared/dossier_schema.py:DossierResponse.
-
-import { API_URL } from "./config";
+// API-клиент для shared endpoints. Все запросы идут same-origin через
+// Next BFF catch-all (`app/api/[...path]/route.ts`) — на bank install это
+// подкладывает Authorization Bearer из httpOnly cookie, на accountant
+// проходит как есть. Browser fetch к same-origin URLs автоматически
+// прикладывает cookies → BFF их читает на server-side. Прямой ход на
+// `${API_URL}/...` (другой origin) cookie бы не послал, а CORS-credentials
+// + sameSite=lax не дружат — поэтому BFF путь обязателен.
+//
+// Типы зеркалят src/interfaces/api/shared/dossier_schema.py.
 
 export type Severity = "low" | "medium" | "high" | "critical";
 export type Recommendation = "approve" | "review" | "reject";
@@ -171,7 +176,7 @@ export async function uploadSoliqXltx(args: {
   fd.append("borrower_inn", args.borrowerInn);
   fd.append("period_month", String(args.periodMonth));
 
-  const r = await fetch(`${API_URL}/api/upload/soliq-xltx`, {
+  const r = await fetch(`/api/upload/soliq-xltx`, {
     method: "POST",
     body: fd,
   });
@@ -189,7 +194,7 @@ export async function uploadSoliqXltx(args: {
 }
 
 async function jsonFetch<T>(path: string, init: RequestInit): Promise<T> {
-  const r = await fetch(`${API_URL}${path}`, {
+  const r = await fetch(path, {
     ...init,
     headers: { "Content-Type": "application/json", ...init.headers },
   });
