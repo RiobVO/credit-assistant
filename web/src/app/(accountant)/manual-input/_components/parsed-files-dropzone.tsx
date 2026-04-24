@@ -18,6 +18,7 @@ import { type FieldPath, useFormContext } from "react-hook-form";
 import { ApiError, type ParsedFinancialsDto, parseManualInputFiles } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
+import { useSourceTrail } from "../_hooks/use-source-trail";
 import type { FormValues } from "../_schema";
 
 type SetValueFn = (
@@ -34,6 +35,7 @@ type Source = { fieldLabel: string; year?: number; sourceLabel: string };
 
 export function ParsedFilesDropzone() {
   const { setValue } = useFormContext<FormValues>();
+  const { mergeSourceTrail } = useSourceTrail();
   const [files, setFiles] = useState<File[]>([]);
   const [autofilled, setAutofilled] = useState<Source[]>([]);
   const [warnings, setWarnings] = useState<string[]>([]);
@@ -45,6 +47,10 @@ export function ParsedFilesDropzone() {
       const filled = applyToForm(data, setValue);
       setAutofilled(filled);
       setWarnings(data.parse_warnings ?? []);
+      // CA-035: source_trail в context, чтобы Checklist (Шаг 3) знал какие
+      // парсеры дали данные. Merge, не replace — каждый upload добавляет
+      // свои ключи, ранее загруженные файлы остаются известны.
+      mergeSourceTrail(data.source_trail ?? {});
     },
   });
 

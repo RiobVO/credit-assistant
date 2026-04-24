@@ -1,7 +1,7 @@
 "use client";
 
 import { addMonths, format } from "date-fns";
-import { Check, Info } from "lucide-react";
+import { Info } from "lucide-react";
 import { Controller, useFormContext, useWatch } from "react-hook-form";
 
 import { cn } from "@/lib/utils";
@@ -20,6 +20,7 @@ import {
   loanTerms,
 } from "../_schema";
 
+import { Checklist } from "./checklist";
 import { DscrSummary } from "./dscr-summary";
 import { Field, fieldInputClass } from "./field";
 
@@ -289,76 +290,3 @@ function RateBar({ value }: { value: number }) {
   );
 }
 
-function Checklist() {
-  const { control } = useFormContext<FormValues>();
-  const inn = useWatch({ control, name: "step1.inn" });
-  const innValid = /^\d{9}$/.test(inn ?? "");
-
-  const revenue = useWatch({ control, name: "step2.revenue" });
-  const profit = useWatch({ control, name: "step2.netProfit" });
-  const filledQuarters = countFilled(revenue) + countFilled(profit);
-
-  const totalAssets = useWatch({ control, name: "step2.totalAssets" });
-  const totalLiabilities = useWatch({ control, name: "step2.totalLiabilities" });
-  const balanceFilled = Boolean(totalAssets && totalLiabilities);
-
-  return (
-    <>
-      <h3 className="my-3.5 text-[14px] font-semibold text-[var(--ca-ink-900)]">
-        Перед отправкой на скоринг
-      </h3>
-      <div className="flex flex-col gap-2.5">
-        <ChecklistRow done={innValid}>ИНН подтверждён в реестре ГНК</ChecklistRow>
-        <ChecklistRow done={filledQuarters >= 12}>
-          Финансовая отчётность за 3 года заполнена ({filledQuarters} / 24)
-        </ChecklistRow>
-        <ChecklistRow done={balanceFilled}>
-          Активы и обязательства соответствуют форме №1
-        </ChecklistRow>
-        <ChecklistRow done={false}>
-          Рекомендуется приложить контракт с покупателем (опционально)
-        </ChecklistRow>
-      </div>
-    </>
-  );
-}
-
-function ChecklistRow({
-  done,
-  children,
-}: {
-  done: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-center gap-2.5 text-[13px] text-[var(--ca-ink-700)]">
-      <span
-        className={cn(
-          "grid size-[18px] flex-none place-items-center rounded border",
-          done
-            ? "border-[#BFE2D2] bg-[var(--ca-success-50)] text-[var(--ca-success)]"
-            : "border-[#F1D9A6] bg-[#FFF6E5] text-[var(--ca-warning)]",
-        )}
-      >
-        {done ? (
-          <Check className="size-2.5" />
-        ) : (
-          <span className="text-[12px] font-bold">!</span>
-        )}
-      </span>
-      {children}
-    </div>
-  );
-}
-
-function countFilled(year: FormValues["step2"]["revenue"] | undefined): number {
-  if (!year) return 0;
-  let n = 0;
-  for (const yKey of ["y2023", "y2024", "y2025"] as const) {
-    const y = year[yKey];
-    for (const q of ["q1", "q2", "q3", "q4"] as const) {
-      if (y?.[q]) n += 1;
-    }
-  }
-  return n;
-}

@@ -202,6 +202,52 @@ export async function parseManualInputFiles(files: File[]): Promise<ParsedFinanc
   return (await r.json()) as ParsedFinancialsDto;
 }
 
+// CA-035 Data Readiness Assessment. Stateless POST: фронт шлёт аналитический
+// срез form state Шага 2 + source_trail, бэк возвращает 4-уровневый report
+// + missing_capabilities + confidence_score.
+export type DataReadinessRequest = {
+  annual_report_years: number[];
+  full_quarter_years: number[];
+  partial_quarter_years: number[];
+  source_trail: Record<string, string>;
+};
+
+export type DataReadinessLevel =
+  | "insufficient"
+  | "minimal"
+  | "standard"
+  | "comprehensive";
+
+export type DataReadinessResponse = {
+  level: DataReadinessLevel;
+  years_covered: number[];
+  full_years: number[];
+  missing_capabilities: string[];
+  parser_sources: string[];
+  confidence_score: string; // Decimal as string, "0" / "0.25" / "1"
+};
+
+export async function assessReadiness(
+  body: DataReadinessRequest,
+): Promise<DataReadinessResponse> {
+  const r = await fetch(`/api/manual-input/readiness`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  if (!r.ok) {
+    let errBody: ApiErrorBody | string;
+    try {
+      errBody = (await r.json()) as ApiErrorBody;
+    } catch {
+      errBody = await r.text();
+    }
+    throw new ApiError(r.status, errBody);
+  }
+  return (await r.json()) as DataReadinessResponse;
+}
+
 export async function uploadSoliqXltx(args: {
   files: File[]; // ровно два файла: декларация + ilova (любой порядок)
   borrowerInn: string;
