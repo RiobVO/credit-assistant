@@ -299,14 +299,65 @@ def build_form2_income_statement_wb(
     return wb
 
 
+# Defaults для list02 FORM_1 — realistic snapshot из реальной фикстуры
+# (form1_q4_2025_201308534_full.xltx, ИНН 201308534 QADR DON NON SAVDO).
+# Все суммы в **тыс. сум.** (как в реальном файле). D = period_start
+# (на начало отчётного периода), E = period_end (на конец).
+#
+# Балансовое равенство: E54 = E64 + E97 = 1548059 + 985025 = 2533084 (ровно).
+#                       D54 = D64 + D97 = 1390777 + 696805 = 2087582 (ровно).
+_FORM1_DEFAULT_LIST02_CELLS: dict[str, Any] = {
+    # 012 fixed_assets
+    "D10": 1319663.0, "E10": 1419638.0,
+    # 130 non_current_assets (Итого раздел I актива)
+    "D25": 1319784.0, "E25": 1419759.0,
+    # 140 inventory
+    "D27": 198052.0, "E27": 170065.0,
+    # 210 receivables (всего)
+    "D34": 260734.0, "E34": 661108.0,
+    # 320 cash_and_equivalents (всего)
+    "D46": 4697.0, "E46": 2837.0,
+    # 390 current_assets (Итого раздел II актива)
+    "D53": 767798.0, "E53": 1113325.0,
+    # 400 total_assets
+    "D54": 2087582.0, "E54": 2533084.0,
+    # 480 equity (Итого раздел I пассива)
+    "D64": 1390777.0, "E64": 1548059.0,
+    # 490 long_term_liabilities (всего)
+    "D66": 110000.0, "E66": 451600.0,
+    # 570 LT bank loans (debt component)
+    "D75": None, "E75": None,
+    # 580 LT borrowings (debt component)
+    "D76": 110000.0, "E76": 451600.0,
+    # 600 short_term_liabilities (всего)
+    "D78": 586805.0, "E78": 533425.0,
+    # 730 ST bank loans (debt component)
+    "D93": 222222.0, "E93": 166667.0,
+    # 740 ST borrowings (debt component)
+    "D94": None, "E94": None,
+    # 750 current portion of LT (debt component)
+    "D95": None, "E95": None,
+    # 770 total_liabilities (Итого раздел II пассива)
+    "D97": 696805.0, "E97": 985025.0,
+}
+
+
 def build_form1_balance_sheet_wb(
     *,
     inn: float = 306399449,
     organization_name: str = '"AZ RUHDIL SAVDO" MCHJ',
     period_year: int = 2025,
     period_quarter: int = 4,
+    list02_cells: dict[str, Any] | None = None,
 ) -> WorkbookT:
-    """Форма №1 (Бухбаланс). 4 листа. Минимум для format_detector."""
+    """Форма №1 (Бухбаланс). 4 листа.
+
+    ``list02_cells`` — точечный override словаря координат cell → value поверх
+    realistic defaults из фикстуры папы. Значение ``None`` означает «оставить
+    cell пустым», ``"x"`` — Soliq-маркер «неприменимо». Незатронутые координаты
+    остаются дефолтными — это позволяет тесту менять одно поле и при этом
+    балансовое равенство по умолчанию сходится.
+    """
     wb = Workbook()
     ws1 = wb.active
     assert ws1 is not None
@@ -319,10 +370,20 @@ def build_form1_balance_sheet_wb(
     ws1["F4"] = "квартал"
     ws1["B7"] = "Предприяия, организация"
     ws1["C7"] = organization_name
+    ws1["B23"] = "Единица измерения, тыс. сум."
     ws1["H17"] = "ИНН"
     ws1["I17"] = inn
-    for sn in ("list02", "list03", "list04"):
-        wb.create_sheet(sn)
+
+    ws2 = wb.create_sheet("list02")
+    merged_cells: dict[str, Any] = {**_FORM1_DEFAULT_LIST02_CELLS}
+    if list02_cells:
+        merged_cells.update(list02_cells)
+    for coord, value in merged_cells.items():
+        if value is not None:
+            ws2[coord] = value
+
+    wb.create_sheet("list03")
+    wb.create_sheet("list04")
     return wb
 
 
