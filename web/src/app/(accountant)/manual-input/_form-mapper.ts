@@ -14,7 +14,7 @@
 import { format } from "date-fns";
 
 import type { FormValues } from "./_schema";
-import { sumQuarters } from "./_lib/finance";
+import { yearTotal } from "./_lib/finance";
 
 type Money = { amount: string; currency: "UZS" };
 
@@ -89,15 +89,17 @@ export function formValuesToPayload(values: FormValues): ManualInputPayload {
   const annual: FinancialReport[] = years
     .map((y) => {
       const yKey = `y${y}` as const;
-      const revenueSum = sumQuarters(step2.revenue[yKey]);
-      const profitSum = sumQuarters(step2.netProfit[yKey]);
+      // CA-027: yearTotal даёт annual fallback если квартальные пустые
+      // (FORM_2 Q4 заполняет только annual).
+      const revenueTotal = yearTotal(step2.revenue[yKey]);
+      const profitTotal = yearTotal(step2.netProfit[yKey]);
       const isLatest = y === 2025;
-      const hasData = revenueSum > 0 || profitSum > 0 || isLatest;
+      const hasData = revenueTotal > 0 || profitTotal > 0 || isLatest;
       if (!hasData) return null;
       const report: FinancialReport = {
         period: { start: `${y}-01-01`, end: `${y}-12-31` },
-        revenue: money(String(revenueSum)),
-        net_profit: money(String(profitSum)),
+        revenue: money(String(revenueTotal)),
+        net_profit: money(String(profitTotal)),
         taxes_paid: money(taxesByYear[y]),
       };
       if (isLatest) {

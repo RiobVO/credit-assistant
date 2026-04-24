@@ -166,6 +166,42 @@ export type SoliqUploadResponseDto = {
   skipped_rows_count: number;
 };
 
+// CA-027 multi-file autofill. Зеркалит ``ParsedFinancialsResponse`` из
+// backend (interfaces/api/shared/manual_input_parse.py). Числовые поля —
+// строкой Decimal (без потери точности).
+export type ParsedFinancialsDto = {
+  revenue_by_year: Record<string, string>; // year (str) → Decimal as string
+  net_profit_by_year: Record<string, string>;
+  vat_declared_by_year: Record<string, string>;
+  taxes_paid_by_year: Record<string, string>;
+  assets_total: string | null;
+  liabilities_total: string | null;
+  // field_key (например "revenue_2025") → human label «FORM_2 Q4 2025 (file.xltx)»
+  source_trail: Record<string, string>;
+  parse_warnings: string[];
+};
+
+export async function parseManualInputFiles(files: File[]): Promise<ParsedFinancialsDto> {
+  const fd = new FormData();
+  for (const f of files) fd.append("files", f, f.name);
+
+  const r = await fetch(`/api/manual-input/parse-files`, {
+    method: "POST",
+    body: fd,
+  });
+
+  if (!r.ok) {
+    let body: ApiErrorBody | string;
+    try {
+      body = (await r.json()) as ApiErrorBody;
+    } catch {
+      body = await r.text();
+    }
+    throw new ApiError(r.status, body);
+  }
+  return (await r.json()) as ParsedFinancialsDto;
+}
+
 export async function uploadSoliqXltx(args: {
   files: File[]; // ровно два файла: декларация + ilova (любой порядок)
   borrowerInn: string;

@@ -49,10 +49,26 @@ export function sumQuarters(q: {
   q2: string;
   q3: string;
   q4: string;
+  annual?: string;
 }): number {
   return (
     parseAmount(q.q1) + parseAmount(q.q2) + parseAmount(q.q3) + parseAmount(q.q4)
   );
+}
+
+// CA-027: годовое total — sum квартальных, либо annual если квартальные пустые
+// (FORM_2 Q4 даёт annual без квартальной разбивки). Если оба заполнены —
+// побеждают quarters (явный пользовательский ввод важнее автозаполненного).
+export function yearTotal(q: {
+  q1: string;
+  q2: string;
+  q3: string;
+  q4: string;
+  annual?: string;
+}): number {
+  const quarterSum = sumQuarters(q);
+  if (quarterSum > 0) return quarterSum;
+  return q.annual ? parseAmount(q.annual) : 0;
 }
 
 export function computeAnnuityMonthly(
