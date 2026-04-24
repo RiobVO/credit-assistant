@@ -18,8 +18,10 @@ type Props = {
   loanAmount: number;
   termMonths: number;
   ratePct: number;
-  annualRevenue: number;
-  annualNetProfit: number;
+  // CA-033: nullable — null = «нет данных от Шага 2» (neutral pill),
+  // число (включая 0/отрицательные) = есть данные, классифицируем риск.
+  annualRevenue: number | null;
+  annualNetProfit: number | null;
 };
 
 export function DscrSummary({
@@ -68,7 +70,9 @@ export function DscrSummary({
             <RiskChip tone={risk.tone}>{risk.label}</RiskChip>
           </div>
           <div className="font-mono text-[11px] text-[var(--ca-ink-400)]">
-            норма ≥ 1,25× · покрытие {(dscr * 100).toFixed(0)}%
+            {dscr == null
+              ? "Загрузите Форму №2 для расчёта DSCR"
+              : `норма ≥ 1,25× · покрытие ${(dscr * 100).toFixed(0)}%`}
           </div>
         </div>
 
@@ -117,8 +121,12 @@ export function DscrSummary({
             <span className="h-9 w-px bg-[#EFF1F5]" />
             <SecondaryMetric
               label="Долг / выручка"
-              value={debtToRevenue > 0 ? debtToRevenue.toFixed(1).replace(".", ",") : "—"}
-              unit={debtToRevenue > 0 ? "%" : undefined}
+              value={
+                debtToRevenue != null
+                  ? debtToRevenue.toFixed(1).replace(".", ",")
+                  : "—"
+              }
+              unit={debtToRevenue != null ? "%" : undefined}
               hint="от выручки 2025 г."
             />
           </div>
@@ -132,18 +140,21 @@ function RiskChip({
   tone,
   children,
 }: {
-  tone: "success" | "warning" | "danger";
+  tone: "success" | "warning" | "danger" | "neutral";
   children: React.ReactNode;
 }) {
   const palette = {
     success: "bg-[var(--ca-success-50)] border-[#BFE2D2] text-[var(--ca-success)]",
     warning: "bg-[#FFF6E5] border-[#F1D9A6] text-[var(--ca-warning)]",
     danger: "bg-[#FCE7E5] border-[#F2BCBA] text-[var(--ca-danger)]",
+    // CA-033: нейтральный «нет данных» — серая палитра, не путать с warning.
+    neutral: "bg-[#F1F4F8] border-[#D4D9E0] text-[var(--ca-ink-500)]",
   }[tone];
   const dot = {
     success: "bg-[var(--ca-success)]",
     warning: "bg-[var(--ca-warning)]",
     danger: "bg-[var(--ca-danger)]",
+    neutral: "bg-[var(--ca-ink-400)]",
   }[tone];
   return (
     <span

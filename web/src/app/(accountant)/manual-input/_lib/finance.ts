@@ -56,6 +56,21 @@ export function sumQuarters(q: {
   );
 }
 
+// CA-033: различить «не введено» (все cells пустые) от «введён ноль».
+// parseAmount("") === 0 теряет это различие; для pre-score UI нам нужно
+// показывать neutral state когда данных нет, а red — когда введён явный 0.
+export function hasAnyQuarterValue(q: {
+  q1: string;
+  q2: string;
+  q3: string;
+  q4: string;
+  annual?: string;
+}): boolean {
+  return [q.q1, q.q2, q.q3, q.q4, q.annual ?? ""].some(
+    (s) => digitsOnly(s).length > 0,
+  );
+}
+
 // CA-027: годовое total — sum квартальных, либо annual если квартальные пустые
 // (FORM_2 Q4 даёт annual без квартальной разбивки). Если оба заполнены —
 // побеждают quarters (явный пользовательский ввод важнее автозаполненного).
@@ -91,19 +106,31 @@ export function computeOverpayment(
   return Math.max(0, monthlyPayment * termMonths - principal);
 }
 
-// DSCR = годовая чистая прибыль (используем прокси: net_profit_2025) / годовые платежи
-// Эвристика для pre-score: предположим, что вся годовая чистая прибыль доступна для обслуживания долга.
+// DSCR = годовая чистая прибыль (прокси: net_profit_2025) / годовые платежи.
+// Эвристика для pre-score: предположим, что вся годовая чистая прибыль
+// доступна для обслуживания долга.
+//
+// CA-033: null-семантика — null означает «недостаточно данных», явные 0
+// и отрицательные значения возвращаются как числа (это валидные red-flag
+// сигналы, не «нет данных»):
+// - monthlyPayment null/<=0 → null (нет параметров кредита)
+// - annualNetProfit null → null (нет фин.отчёта)
+// - annualNetProfit < 0 → отрицательный DSCR (убыток, classify → red)
+// - annualNetProfit === 0 → 0 (нулевая прибыль, classify → red)
 export function computeDscr(
-  annualNetProfit: number,
-  monthlyPayment: number,
-): number {
-  if (monthlyPayment <= 0) return 0;
+  annualNetProfit: number | null,
+  monthlyPayment: number | null,
+): number | null {
+  if (monthlyPayment == null || monthlyPayment <= 0) return null;
+  if (annualNetProfit == null) return null;
   return annualNetProfit / (monthlyPayment * 12);
 }
 
-export function classifyDscrRisk(
-  dscr: number,
-): { label: "Низкий риск" | "Средний риск" | "Высокий риск"; tone: "success" | "warning" | "danger" } {
+export function classifyDscrRisk(dscr: number | null): {
+  label: "Низкий риск" | "Средний риск" | "Высокий риск" | "Недостаточно данных";
+  tone: "success" | "warning" | "danger" | "neutral";
+} {
+  if (dscr == null) return { label: "Недостаточно данных", tone: "neutral" };
   if (dscr >= 1.5) return { label: "Низкий риск", tone: "success" };
   if (dscr >= 1.25) return { label: "Средний риск", tone: "warning" };
   return { label: "Высокий риск", tone: "danger" };
@@ -141,10 +168,13 @@ export function computeCagrPct(
   return (Math.pow(endValue / startValue, 1 / years) - 1) * 100;
 }
 
+// CA-033: null если выручка отсутствует ИЛИ === 0 (деление на ноль =
+// «нет данных» по смыслу: нулевая выручка не позволяет посчитать долговую
+// нагрузку).
 export function computeDebtToRevenuePct(
   loanAmount: number,
-  annualRevenue: number,
-): number {
-  if (annualRevenue <= 0) return 0;
+  annualRevenue: number | null,
+): number | null {
+  if (annualRevenue == null || annualRevenue === 0) return null;
   return (loanAmount / annualRevenue) * 100;
 }
