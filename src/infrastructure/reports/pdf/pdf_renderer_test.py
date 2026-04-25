@@ -71,9 +71,9 @@ def _make_bundle() -> DossierPdfBundle:
                 yoy_pct=Decimal("18.2"),
                 sparkline=(),
             ),
-            ebitda=None,
+            ebit=None,
             roe=None,
-            debt_to_ebitda=None,
+            debt_to_ebit=None,
         ),
         monthly_revenue_24m=tuple(
             MonthlyRevenuePoint(

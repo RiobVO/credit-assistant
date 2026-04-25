@@ -1,4 +1,4 @@
-"""KPI-калькулятор для экрана досье (Phase 3.B).
+"""KPI-калькулятор для экрана досье (Phase 3.B / CA-037).
 
 Pure function над ``BorrowerSnapshot``: выдаёт ``KpiBundle`` для GET
 /api/dossier/{id}. Domain не зависит от этого модуля.
@@ -7,9 +7,15 @@ Pure function над ``BorrowerSnapshot``: выдаёт ``KpiBundle`` для GET
 * ``revenue_ltm`` — приоритет ``monthly_turnover`` (последние 12 месяцев),
   fallback на последний ``annual_report``. Если нет ни того, ни другого →
   ``None``.
-* ``ebitda`` / ``roe`` / ``debt_to_ebitda`` — сейчас всегда ``None``: компоненты
-  (EBITDA, equity, debt short/long term) не выделены в snapshot. Заведём,
-  когда появятся данные Form 1 / Form 2.
+* ``ebit`` (CA-037) — последний годовой отчёт: ``profit_before_tax +
+  interest_expense``. Если хотя бы одно None → KPI None. YoY% берётся с
+  предыдущего годового отчёта, если у него оба компонента есть.
+* ``roe`` (CA-037) — net_profit (latest annual) / equity_avg × 100, где
+  ``equity_avg = (equity_period_start + equity) / 2`` (primary: единый FORM_1
+  даёт обе колонки), либо ``(prev_report.equity + current.equity) / 2``
+  (fallback на end предыдущего отчёта). ``equity_avg ≤ 0`` → ``None``
+  (отрицательный SE — отдельный red-flag сигнал, TODO[CA-XXX]).
+* ``debt_to_ebit`` (CA-037) — 4-кейсовая state-machine: см. KpiBundle docstring.
 
 Все деньги в snapshot — ``Money`` с ``Currency``. Здесь работаем только с
 ``UZS`` записями (ETL гарантирует UZS для МСБ Узбекистана; non-UZS — редкая
@@ -30,7 +36,7 @@ from application.dto.kpi_bundle import (
 from domain.entities.borrower_snapshot import BorrowerSnapshot
 from domain.entities.financial_report import FinancialReport
 from domain.entities.monthly_turnover import MonthlyTurnover
-from domain.value_objects.money import Currency
+from domain.value_objects.money import Currency, Money
 
 
 def compute_kpis(snapshot: BorrowerSnapshot) -> KpiBundle:
@@ -39,11 +45,18 @@ def compute_kpis(snapshot: BorrowerSnapshot) -> KpiBundle:
     могут прислать данные старше as_of, и это нормально для исторического
     прогона).
     """
+    annual_uzs = sorted(
+        _filter_uzs_annual(snapshot.annual_reports),
+        key=lambda a: a.period.start,
+    )
+    latest = annual_uzs[-1] if annual_uzs else None
+    prior = annual_uzs[-2] if len(annual_uzs) >= 2 else None
+
     return KpiBundle(
         revenue_ltm=_compute_revenue_ltm(snapshot),
-        ebitda=None,
-        roe=None,
-        debt_to_ebitda=None,
+        ebit=_compute_ebit(latest, prior),
+        roe=_compute_roe(latest, prior),
+        debt_to_ebit=_compute_debt_to_ebit(latest, prior),
     )
 
 
@@ -108,6 +121,112 @@ def _ltm_from_annual(annual: Sequence[FinancialReport]) -> KpiValue:
         unit=KpiUnit.UZS,
         yoy_pct=yoy_pct,
         sparkline=(),  # годовые не дают полезной sparkline
+    )
+
+
+# ----------- CA-037: EBIT / ROE / Debt-to-EBIT --------------------------------
+
+
+def _money_amount(value: Money | None) -> Decimal | None:
+    return value.amount if value is not None else None
+
+
+def _ebit_amount(report: FinancialReport | None) -> Decimal | None:
+    """EBIT-LTM компонент годового отчёта: PBT + interest_expense. Любое
+    отсутствующее звено → None (контракт: «не выдумываем»). Знак сохраняется,
+    отрицательный EBIT возможен (убыток покрыт большим interest — редкость,
+    но математически валидно).
+    """
+    if report is None:
+        return None
+    pbt = _money_amount(report.profit_before_tax)
+    interest = _money_amount(report.interest_expense)
+    if pbt is None or interest is None:
+        return None
+    return pbt + interest
+
+
+def _compute_ebit(
+    latest: FinancialReport | None, prior: FinancialReport | None
+) -> KpiValue | None:
+    """EBIT из latest + YoY% из prior (если оба валидны)."""
+    current = _ebit_amount(latest)
+    if current is None:
+        return None
+    prior_value = _ebit_amount(prior)
+    yoy_pct: Decimal | None = None
+    if prior_value is not None and prior_value != 0:
+        yoy_pct = (current - prior_value) / prior_value * Decimal(100)
+    return KpiValue(value=current, unit=KpiUnit.UZS, yoy_pct=yoy_pct, sparkline=())
+
+
+def _equity_avg(
+    latest: FinancialReport, prior: FinancialReport | None
+) -> Decimal | None:
+    """Среднее equity между началом и концом отчётного периода.
+
+    Primary: ``(equity_period_start + equity) / 2`` — единый FORM_1 даёт обе
+    колонки. Fallback: ``(prior.equity + latest.equity) / 2`` — если start
+    отсутствует, end предыдущего отчёта проксирует «начало» текущего периода.
+
+    None если obe не выработаны. Знак сохраняется: отрицательный или нулевой
+    avg вызывающая сторона трактует как «ROE не определён».
+    """
+    end = _money_amount(latest.equity)
+    if end is None:
+        return None
+    start = _money_amount(latest.equity_period_start)
+    if start is None and prior is not None:
+        start = _money_amount(prior.equity)
+    if start is None:
+        return None
+    return (start + end) / Decimal(2)
+
+
+def _compute_roe(
+    latest: FinancialReport | None, prior: FinancialReport | None
+) -> KpiValue | None:
+    """ROE% = net_profit_ltm / equity_avg × 100. ``equity_avg ≤ 0`` → None."""
+    if latest is None:
+        return None
+    avg = _equity_avg(latest, prior)
+    if avg is None or avg <= 0:
+        return None
+    net = latest.net_profit.amount
+    return KpiValue(
+        value=net / avg * Decimal(100),
+        unit=KpiUnit.PCT,
+        yoy_pct=None,  # CA-037: ROE YoY отложен (нужны 2 FORM_1 разных лет)
+        sparkline=(),
+    )
+
+
+def _compute_debt_to_ebit(
+    latest: FinancialReport | None, prior: FinancialReport | None
+) -> KpiValue | None:
+    """4-кейсовая state machine (см. KpiBundle docstring):
+    * total_debt None → None (UI: empty card «Загрузите Форму №1»);
+    * total_debt = 0 → Decimal("0") (UI: «Нет долга»);
+    * EBIT ≤ 0 → None (UI: «Долговая нагрузка не оценима (убыток)»);
+    * иначе → Decimal ratio.
+    """
+    if latest is None:
+        return None
+    debt = _money_amount(latest.total_debt)
+    if debt is None:
+        return None
+    if debt == 0:
+        return KpiValue(
+            value=Decimal(0), unit=KpiUnit.RATIO, yoy_pct=None, sparkline=()
+        )
+    ebit = _ebit_amount(latest)
+    if ebit is None or ebit <= 0:
+        return None
+    return KpiValue(
+        value=debt / ebit,
+        unit=KpiUnit.RATIO,
+        yoy_pct=None,  # CA-037: YoY отложен
+        sparkline=(),
     )
 
 

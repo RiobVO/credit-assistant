@@ -63,9 +63,10 @@ _LEGAL_FORM_LABEL = {
 
 _KPI_LABEL = {
     "revenue_ltm": "Revenue LTM",
-    "ebitda": "EBITDA",
+    # CA-037: показываем EBIT-прокси до подключения D&A (FORM_5 / PROFIT_TAX).
+    "ebit": "EBIT (прокси EBITDA)",
     "roe": "ROE",
-    "debt_to_ebitda": "Debt / EBITDA",
+    "debt_to_ebit": "Долг / EBIT",
 }
 
 
@@ -174,16 +175,16 @@ def _format_red_flags_label(dossier: Any) -> str:
 
 
 def _build_kpi_slots(view_bundle: DossierViewBundle) -> list[dict[str, object]]:
-    """4 карточки в порядке: revenue_ltm / ebitda / roe / debt_to_ebitda.
+    """4 карточки в порядке: revenue_ltm / ebit / roe / debt_to_ebit.
 
     Если значение ``None`` — карточка показывает «—» + «Нет данных».
     """
     kpis = view_bundle.kpis
     return [
         _kpi_slot("revenue_ltm", kpis.revenue_ltm),
-        _kpi_slot("ebitda", kpis.ebitda),
+        _kpi_slot("ebit", kpis.ebit),
         _kpi_slot("roe", kpis.roe),
-        _kpi_slot("debt_to_ebitda", kpis.debt_to_ebitda),
+        _kpi_slot("debt_to_ebit", kpis.debt_to_ebit),
     ]
 
 

@@ -70,6 +70,9 @@ class ParseManualInputFilesUseCase:
         revenue_by_year: dict[int, Decimal] = {}
         net_profit_by_year: dict[int, Decimal] = {}
         vat_declared_by_year: dict[int, Decimal] = {}
+        # CA-037: income-statement расширения для EBIT-прокси.
+        profit_before_tax_by_year: dict[int, Decimal] = {}
+        interest_expense_by_year: dict[int, Decimal] = {}
         source_trail: dict[str, str] = {}
         warnings: list[str] = []
         # FORM_1 dispatch — latest-period wins (см. модульный docstring).
@@ -111,6 +114,8 @@ class ParseManualInputFilesUseCase:
                     f.name,
                     revenue_by_year,
                     net_profit_by_year,
+                    profit_before_tax_by_year,
+                    interest_expense_by_year,
                     source_trail,
                     warnings,
                 )
@@ -130,24 +135,25 @@ class ParseManualInputFilesUseCase:
                 # VAT_REGISTRY_ILOVA — не несёт financials, тихо скипаем.
                 continue
 
-        assets_end: Decimal | None = None
-        liab_end: Decimal | None = None
-        assets_start: Decimal | None = None
-        liab_start: Decimal | None = None
+        form1_unpack = _Form1Unpacked()
         if form1_winner is not None:
-            assets_end, liab_end, assets_start, liab_start = _apply_form1(
-                form1_winner, source_trail, warnings,
-            )
+            form1_unpack = _apply_form1(form1_winner, source_trail, warnings)
 
         return ParsedFinancials(
             revenue_by_year=revenue_by_year,
             net_profit_by_year=net_profit_by_year,
             vat_declared_by_year=vat_declared_by_year,
             taxes_paid_by_year={},
-            assets_total=assets_end,
-            liabilities_total=liab_end,
-            assets_total_period_start=assets_start,
-            liabilities_total_period_start=liab_start,
+            profit_before_tax_by_year=profit_before_tax_by_year,
+            interest_expense_by_year=interest_expense_by_year,
+            assets_total=form1_unpack.assets_end,
+            liabilities_total=form1_unpack.liabilities_end,
+            assets_total_period_start=form1_unpack.assets_start,
+            liabilities_total_period_start=form1_unpack.liabilities_start,
+            equity_period_end=form1_unpack.equity_end,
+            equity_period_start=form1_unpack.equity_start,
+            total_debt_period_end=form1_unpack.total_debt_end,
+            total_debt_period_start=form1_unpack.total_debt_start,
             source_trail=source_trail,
             parse_warnings=warnings,
         )
@@ -158,10 +164,17 @@ def _merge_form2(
     filename: str,
     revenue_by_year: dict[int, Decimal],
     net_profit_by_year: dict[int, Decimal],
+    profit_before_tax_by_year: dict[int, Decimal],
+    interest_expense_by_year: dict[int, Decimal],
     source_trail: dict[str, str],
     warnings: list[str],
 ) -> None:
-    """Слить current_period + prior_year в annual maps. Только Q4 (option b)."""
+    """Слить current_period + prior_year в annual maps. Только Q4 (option b).
+
+    CA-037: дополнительно мерджит profit_before_tax / interest_expense из тех
+    же двух колонок (current/prior) — компоненты EBIT-прокси. Та же first-wins
+    семантика, что и для revenue/net_profit.
+    """
     header = parsed.header
     year = header.period_year
     quarter = header.period_index
@@ -197,6 +210,27 @@ def _merge_form2(
         _set_once(
             net_profit_by_year, year - 1, parsed.net_profit_prior_year,
             source_trail, "net_profit", prior_label, warnings,
+        )
+    # CA-037: PBT и interest expense — обе колонки, поведение совпадает с revenue.
+    if parsed.profit_before_tax_current is not None:
+        _set_once(
+            profit_before_tax_by_year, year, parsed.profit_before_tax_current,
+            source_trail, "profit_before_tax", label, warnings,
+        )
+    if parsed.profit_before_tax_prior_year is not None:
+        _set_once(
+            profit_before_tax_by_year, year - 1, parsed.profit_before_tax_prior_year,
+            source_trail, "profit_before_tax", prior_label, warnings,
+        )
+    if parsed.interest_expense_current is not None:
+        _set_once(
+            interest_expense_by_year, year, parsed.interest_expense_current,
+            source_trail, "interest_expense", label, warnings,
+        )
+    if parsed.interest_expense_prior_year is not None:
+        _set_once(
+            interest_expense_by_year, year - 1, parsed.interest_expense_prior_year,
+            source_trail, "interest_expense", prior_label, warnings,
         )
 
     # Прокидываем cell-level warnings парсера, если они есть.
@@ -302,38 +336,76 @@ def _consider_form1(
     return current
 
 
+@dataclass(slots=True)
+class _Form1Unpacked:
+    """Развёрнутый FORM_1-победитель: balance values + period_start снимки.
+
+    Default-фабрика (все None) используется когда FORM_1 не пришёл —
+    исполняемый код выше не разветвляется лишний раз.
+    """
+
+    assets_end: Decimal | None = None
+    liabilities_end: Decimal | None = None
+    assets_start: Decimal | None = None
+    liabilities_start: Decimal | None = None
+    # CA-037 расширения.
+    equity_end: Decimal | None = None
+    equity_start: Decimal | None = None
+    total_debt_end: Decimal | None = None
+    total_debt_start: Decimal | None = None
+
+
 def _apply_form1(
     winner: _Form1Candidate,
     source_trail: dict[str, str],
     warnings: list[str],
-) -> tuple[Decimal | None, Decimal | None, Decimal | None, Decimal | None]:
-    """Развернуть победителя в (assets_end, liab_end, assets_start, liab_start).
+) -> _Form1Unpacked:
+    """Развернуть победителя в snapshot-целиком (assets/liab/equity/total_debt
+    × period_end + period_start).
 
     Source_trail обогащается ключами ``form1.*`` — согласовано с CA-035
     ``assess_draft_readiness`` префикс-mapper'ом. Cell-level warnings парсера
     прокидываются с указанием filename.
+
+    CA-037: добавлены equity_period_end/start, total_debt_period_end/start.
+    Все 8 полей независимо None-aware — частичный FORM_1 (битые ячейки) даёт
+    частичное заполнение, не all-or-nothing.
     """
     parsed = winner.parsed
     label = _form1_label(parsed, winner.filename)
 
-    assets_end = _money_amount(parsed.total_assets_period_end)
-    liab_end = _money_amount(parsed.total_liabilities_period_end)
-    assets_start = _money_amount(parsed.total_assets_period_start)
-    liab_start = _money_amount(parsed.total_liabilities_period_start)
+    out = _Form1Unpacked(
+        assets_end=_money_amount(parsed.total_assets_period_end),
+        liabilities_end=_money_amount(parsed.total_liabilities_period_end),
+        assets_start=_money_amount(parsed.total_assets_period_start),
+        liabilities_start=_money_amount(parsed.total_liabilities_period_start),
+        equity_end=_money_amount(parsed.equity_period_end),
+        equity_start=_money_amount(parsed.equity_period_start),
+        total_debt_end=_money_amount(parsed.total_debt_period_end),
+        total_debt_start=_money_amount(parsed.total_debt_period_start),
+    )
 
-    if assets_end is not None:
+    if out.assets_end is not None:
         source_trail["form1.assets_total"] = label
-    if liab_end is not None:
+    if out.liabilities_end is not None:
         source_trail["form1.liabilities_total"] = label
-    if assets_start is not None:
+    if out.assets_start is not None:
         source_trail["form1.assets_total_period_start"] = label
-    if liab_start is not None:
+    if out.liabilities_start is not None:
         source_trail["form1.liabilities_total_period_start"] = label
+    if out.equity_end is not None:
+        source_trail["form1.equity"] = label
+    if out.equity_start is not None:
+        source_trail["form1.equity_period_start"] = label
+    if out.total_debt_end is not None:
+        source_trail["form1.total_debt"] = label
+    if out.total_debt_start is not None:
+        source_trail["form1.total_debt_period_start"] = label
 
     for w in parsed.parse_warnings:
         warnings.append(f"{winner.filename}: {w}")
 
-    return assets_end, liab_end, assets_start, liab_start
+    return out
 
 
 def _form1_label(parsed: Form1BalanceSheetData, filename: str) -> str:

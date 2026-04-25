@@ -59,9 +59,10 @@ export type DossierViewDto = DossierResponseDto & {
   };
   kpis: {
     revenue_ltm: KpiValueDto | null;
-    ebitda: KpiValueDto | null;
+    // CA-037: EBIT (прокси EBITDA до подключения D&A через FORM_5 / PROFIT_TAX).
+    ebit: KpiValueDto | null;
     roe: KpiValueDto | null;
-    debt_to_ebitda: KpiValueDto | null;
+    debt_to_ebit: KpiValueDto | null;
   };
   monthly_revenue_24m: Array<{
     month: string; // YYYY-MM
@@ -174,13 +175,22 @@ export type ParsedFinancialsDto = {
   net_profit_by_year: Record<string, string>;
   vat_declared_by_year: Record<string, string>;
   taxes_paid_by_year: Record<string, string>;
+  // CA-037: income-statement расширения — компоненты EBIT (прокси EBITDA)
+  // из FORM_2 column F/D. Подключены к payload через _form-mapper на CA-037.6.
+  profit_before_tax_by_year: Record<string, string>;
+  interest_expense_by_year: Record<string, string>;
   // CA-041: column E xltx, «На конец отчётного периода» — текущий срез.
   assets_total: string | null;
   liabilities_total: string | null;
-  // column D xltx, «На начало отчётного периода». Не используется в UI;
-  // зарезервировано для CA-037 (ROE с average_equity = (BoY+EoY)/2).
-  assets_total_period_start?: string | null;
-  liabilities_total_period_start?: string | null;
+  // column D xltx, «На начало отчётного периода» — для ROE avg = (start+end)/2.
+  assets_total_period_start: string | null;
+  liabilities_total_period_start: string | null;
+  // CA-037: equity + total_debt снимки (period_end + period_start) для
+  // расчётов ROE и Debt-to-EBIT. Подключаются в payload на CA-037.6.
+  equity_period_end: string | null;
+  equity_period_start: string | null;
+  total_debt_period_end: string | null;
+  total_debt_period_start: string | null;
   // field_key (например "revenue_2025", "form1.assets_total") → human label
   // «FORM_2 Q4 2025 (file.xltx)»
   source_trail: Record<string, string>;

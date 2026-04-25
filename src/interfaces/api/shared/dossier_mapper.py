@@ -94,6 +94,15 @@ def _to_financial_report(p: FinancialReportInput) -> FinancialReport:
         vat_declared=_to_money_optional(p.vat_declared),
         assets=_to_money_optional(p.assets),
         liabilities=_to_money_optional(p.liabilities),
+        # CA-037: income statement + balance-sheet расширения.
+        profit_before_tax=_to_money_optional(p.profit_before_tax),
+        interest_expense=_to_money_optional(p.interest_expense),
+        equity=_to_money_optional(p.equity),
+        total_debt=_to_money_optional(p.total_debt),
+        assets_period_start=_to_money_optional(p.assets_period_start),
+        liabilities_period_start=_to_money_optional(p.liabilities_period_start),
+        equity_period_start=_to_money_optional(p.equity_period_start),
+        total_debt_period_start=_to_money_optional(p.total_debt_period_start),
     )
 
 
@@ -294,9 +303,9 @@ def _kpi_value_to_output(kv: KpiValue | None) -> KpiValueOutput | None:
 def _kpi_bundle_to_output(bundle: KpiBundle) -> KpiBundleOutput:
     return KpiBundleOutput(
         revenue_ltm=_kpi_value_to_output(bundle.revenue_ltm),
-        ebitda=_kpi_value_to_output(bundle.ebitda),
+        ebit=_kpi_value_to_output(bundle.ebit),
         roe=_kpi_value_to_output(bundle.roe),
-        debt_to_ebitda=_kpi_value_to_output(bundle.debt_to_ebitda),
+        debt_to_ebit=_kpi_value_to_output(bundle.debt_to_ebit),
     )
 
 

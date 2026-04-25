@@ -120,9 +120,9 @@ async def test_get_dossier_returns_full_view(
     assert kpis["revenue_ltm"]["unit"] == "UZS"
     assert kpis["revenue_ltm"]["value"] == "12000000000"
     assert len(kpis["revenue_ltm"]["sparkline"]) == 12
-    assert kpis["ebitda"] is None
+    assert kpis["ebit"] is None
     assert kpis["roe"] is None
-    assert kpis["debt_to_ebitda"] is None
+    assert kpis["debt_to_ebit"] is None
 
     # Monthly chart: 12 точек по 1B каждый, в хронологическом порядке.
     chart = body["monthly_revenue_24m"]

@@ -196,6 +196,54 @@ class TestOptionalTaxesPaid:
         assert r.status_code == 200, r.text
 
 
+class TestCa037FinancialReportExtensions:
+    """CA-037: FinancialReportInput принимает 8 новых nullable money-полей —
+    profit_before_tax / interest_expense / equity / total_debt (период_end) +
+    тот же набор period_start для balance. Schema на extra='forbid', поэтому
+    без расширения schema endpoint вернёт 422.
+    """
+
+    def test_annual_report_with_all_ca037_money_fields_accepted_200(
+        self, client: TestClient
+    ) -> None:
+        payload = {
+            "borrower": _borrower_payload(),
+            "as_of": "2026-05-08",
+            "annual_reports": [
+                {
+                    "period": {"start": "2025-01-01", "end": "2025-12-31"},
+                    "revenue": _money("5000000000"),
+                    "net_profit": _money("400000000"),
+                    "taxes_paid": _money("250000000"),
+                    "assets": _money("2500000000"),
+                    "liabilities": _money("1000000000"),
+                    "profit_before_tax": _money("550000000"),
+                    "interest_expense": _money("80000000"),
+                    "equity": _money("1500000000"),
+                    "total_debt": _money("700000000"),
+                    "assets_period_start": _money("2300000000"),
+                    "liabilities_period_start": _money("950000000"),
+                    "equity_period_start": _money("1350000000"),
+                    "total_debt_period_start": _money("650000000"),
+                },
+            ],
+        }
+        r = client.post(ENDPOINT, json=payload)
+        assert r.status_code == 200, r.text
+
+    def test_annual_report_omits_ca037_fields_still_accepted_200(
+        self, client: TestClient
+    ) -> None:
+        # Все 8 — Optional, payload без них принимается как до CA-037 (регрессия).
+        payload = {
+            "borrower": _borrower_payload(),
+            "as_of": "2026-05-08",
+            "annual_reports": [_annual(2025, revenue="1000000000")],
+        }
+        r = client.post(ENDPOINT, json=payload)
+        assert r.status_code == 200, r.text
+
+
 class TestInvalidPayload:
     def test_invalid_inn_returns_422(self, client: TestClient) -> None:
         payload = {

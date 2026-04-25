@@ -54,9 +54,19 @@ class ParsedFinancials:
     net_profit_by_year: dict[int, Decimal] = field(default_factory=dict)
     vat_declared_by_year: dict[int, Decimal] = field(default_factory=dict)
     taxes_paid_by_year: dict[int, Decimal] = field(default_factory=dict)
+    # CA-037: income-statement расширения для EBIT-прокси
+    # (EBIT = profit_before_tax + interest_expense, current+prior из FORM_2).
+    profit_before_tax_by_year: dict[int, Decimal] = field(default_factory=dict)
+    interest_expense_by_year: dict[int, Decimal] = field(default_factory=dict)
     assets_total: Decimal | None = None
     liabilities_total: Decimal | None = None
     assets_total_period_start: Decimal | None = None
     liabilities_total_period_start: Decimal | None = None
+    # CA-037: balance-sheet расширения для ROE и Debt-to-EBIT.
+    # equity_avg = (period_start + period_end) / 2 — стандарт финанализа.
+    equity_period_end: Decimal | None = None
+    equity_period_start: Decimal | None = None
+    total_debt_period_end: Decimal | None = None
+    total_debt_period_start: Decimal | None = None
     source_trail: dict[str, str] = field(default_factory=dict)
     parse_warnings: list[str] = field(default_factory=list)

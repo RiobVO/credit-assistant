@@ -15,12 +15,16 @@ export function KpiCard({
   yoyPct,
   changeTone,
   sparkline,
+  tooltip,
 }: {
   label: string;
   value: string;
   yoyPct: number | null; // null когда нет предыдущего периода для сравнения
   changeTone: ChangeTone;
   sparkline: number[];
+  // CA-037: опциональный подсказывающий title на карточке (для EBIT-прокси
+  // объясняет, что D&A недоступен и величина — EBIT, не EBITDA).
+  tooltip?: string;
 }) {
   const data = sparkline.map((y, i) => ({ i, y }));
 
@@ -33,7 +37,10 @@ export function KpiCard({
   const Icon = changeTone === "positive" ? TrendingUp : TrendingDown;
 
   return (
-    <div className="rounded-[10px] border border-[var(--ca-border)] bg-[var(--ca-surface)] p-4 shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
+    <div
+      className="rounded-[10px] border border-[var(--ca-border)] bg-[var(--ca-surface)] p-4 shadow-[0_1px_2px_rgba(16,24,40,0.05)]"
+      title={tooltip}
+    >
       <div className="text-[10.5px] font-semibold tracking-[1.2px] text-[var(--ca-ink-400)] uppercase">
         {label}
       </div>

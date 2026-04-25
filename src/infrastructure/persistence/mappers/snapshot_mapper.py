@@ -71,6 +71,9 @@ def _money_from_dict(d: dict[str, str] | None) -> Money | None:
 
 
 def _financial_report_to_dict(r: FinancialReport) -> dict[str, Any]:
+    # CA-037: 8 новых nullable полей сериализуются по той же схеме, что и
+    # taxes_paid/assets — `.get()` на чтении обеспечивает обратную совместимость
+    # с legacy записями (до CA-037 ключей не существовало).
     return {
         "period": {"start": r.period.start.isoformat(), "end": r.period.end.isoformat()},
         "revenue": _money_to_dict(r.revenue),
@@ -79,6 +82,14 @@ def _financial_report_to_dict(r: FinancialReport) -> dict[str, Any]:
         "vat_declared": _money_to_dict(r.vat_declared),
         "assets": _money_to_dict(r.assets),
         "liabilities": _money_to_dict(r.liabilities),
+        "profit_before_tax": _money_to_dict(r.profit_before_tax),
+        "interest_expense": _money_to_dict(r.interest_expense),
+        "equity": _money_to_dict(r.equity),
+        "total_debt": _money_to_dict(r.total_debt),
+        "assets_period_start": _money_to_dict(r.assets_period_start),
+        "liabilities_period_start": _money_to_dict(r.liabilities_period_start),
+        "equity_period_start": _money_to_dict(r.equity_period_start),
+        "total_debt_period_start": _money_to_dict(r.total_debt_period_start),
     }
 
 
@@ -101,6 +112,15 @@ def _financial_report_from_dict(d: dict[str, Any]) -> FinancialReport:
         vat_declared=_money_from_dict(d.get("vat_declared")),
         assets=_money_from_dict(d.get("assets")),
         liabilities=_money_from_dict(d.get("liabilities")),
+        # CA-037: 8 nullable полей; `.get()` без default → None для legacy.
+        profit_before_tax=_money_from_dict(d.get("profit_before_tax")),
+        interest_expense=_money_from_dict(d.get("interest_expense")),
+        equity=_money_from_dict(d.get("equity")),
+        total_debt=_money_from_dict(d.get("total_debt")),
+        assets_period_start=_money_from_dict(d.get("assets_period_start")),
+        liabilities_period_start=_money_from_dict(d.get("liabilities_period_start")),
+        equity_period_start=_money_from_dict(d.get("equity_period_start")),
+        total_debt_period_start=_money_from_dict(d.get("total_debt_period_start")),
     )
 
 

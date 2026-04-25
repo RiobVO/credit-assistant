@@ -266,6 +266,73 @@ def test_vat_registry_ilova_quietly_skipped(usecase: ParseManualInputFilesUseCas
     assert result.parse_warnings == []
 
 
+def test_ca037_form2_fills_pbt_and_interest_expense_for_both_years(
+    usecase: ParseManualInputFilesUseCase,
+) -> None:
+    """CA-037: FORM_2 за Q4 заполняет profit_before_tax_by_year и
+    interest_expense_by_year — для текущего года из current column и для
+    предыдущего из prior column. Source_trail обогащается соответствующими
+    ключами.
+    """
+    content = _bytes(
+        build_form2_income_statement_wb(
+            period_year=2025,
+            period_quarter=4,
+            # PBT: current 63358 (income=63358, expense=0) → +63358
+            #      prior   −124633 (income=0, expense=124633) → −124633
+            profit_before_tax_current=(63358.0, 0.0),
+            profit_before_tax_prior=(0.0, 124633.0),
+            interest_expense_current=40088.0,
+            interest_expense_prior=158407.0,
+        )
+    )
+
+    result = usecase.execute([NamedFile(name="form2.xltx", content=content)])
+
+    assert result.profit_before_tax_by_year == {
+        2025: Decimal("63358000"),
+        2024: Decimal("-124633000"),
+    }
+    assert result.interest_expense_by_year == {
+        2025: Decimal("40088000"),
+        2024: Decimal("158407000"),
+    }
+    assert "profit_before_tax_2025" in result.source_trail
+    assert "interest_expense_2025" in result.source_trail
+    assert "profit_before_tax_2024" in result.source_trail
+    assert "interest_expense_2024" in result.source_trail
+    assert "FORM_2 Q4 2025" in result.source_trail["profit_before_tax_2025"]
+
+
+def test_ca037_form1_fills_equity_and_total_debt_both_periods(
+    usecase: ParseManualInputFilesUseCase,
+) -> None:
+    """CA-037: FORM_1 wiring расширяется equity/total_debt на конец и начало
+    отчётного периода. Дефолтная фикстура:
+    * E64 = 1 548 059 тыс. сум → equity_period_end = 1 548 059 000 UZS
+    * D64 = 1 390 777 → equity_period_start = 1 390 777 000
+    * total_debt_end = 451600 + 166667 = 618 267 тыс. → 618 267 000
+    * total_debt_start = 110000 + 222222 = 332 222 тыс. → 332 222 000
+
+    source_trail обогащается ключами ``form1.equity`` / ``form1.total_debt``
+    плюс period_start версии — согласовано с префикс-маппером CA-035
+    assess_draft_readiness.
+    """
+    content = _bytes(build_form1_balance_sheet_wb(period_year=2025, period_quarter=4))
+
+    result = usecase.execute([NamedFile(name="form1.xltx", content=content)])
+
+    assert result.equity_period_end == Decimal("1548059000")
+    assert result.equity_period_start == Decimal("1390777000")
+    assert result.total_debt_period_end == Decimal("618267000")
+    assert result.total_debt_period_start == Decimal("332222000")
+    assert "form1.equity" in result.source_trail
+    assert "form1.equity_period_start" in result.source_trail
+    assert "form1.total_debt" in result.source_trail
+    assert "form1.total_debt_period_start" in result.source_trail
+    assert "FORM_1 Q4 2025" in result.source_trail["form1.equity"]
+
+
 def test_empty_input_returns_empty_parsed(usecase: ParseManualInputFilesUseCase) -> None:
     result = usecase.execute([])
 
