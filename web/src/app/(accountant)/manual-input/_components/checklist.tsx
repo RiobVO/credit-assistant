@@ -20,7 +20,7 @@ import { useFormContext, useWatch } from "react-hook-form";
 import { assessReadiness, type DataReadinessRequest } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
-import { digitsOnly, hasAnyQuarterValue } from "../_lib/finance";
+import { digitsOnly, hasAnyQuarterValue, yearTotal } from "../_lib/finance";
 import { useSourceTrail } from "../_hooks/use-source-trail";
 import type { FormValues } from "../_schema";
 
@@ -169,26 +169,29 @@ function buildRequest(
     const yearRevenue = revenue?.[yKey];
     const yearProfit = profit?.[yKey];
 
-    // Полный год = заполнен annual cell ИЛИ 4 квартала в revenue.
-    // Profit alone не считаем full (revenue — primary axis для readiness;
-    // в реальности они идут парой через autofill).
-    const hasAnnual =
-      digitsOnly(yearRevenue?.annual ?? "").length > 0 ||
-      digitsOnly(yearProfit?.annual ?? "").length > 0;
+    // Согласовано с CA-027 yearTotal-семантикой: если есть annual revenue
+    // (через annual cell ИЛИ sum заполненных квартальных cells) → считаем
+    // что у нас есть «годовой total» за этот год, эквивалент annual report.
+    // Это держит readiness в согласии с pre-score gauge (тот тоже uses
+    // sumQuarters как proxy для annual revenue).
+    const revenueAnnualTotal = yearRevenue ? yearTotal(yearRevenue) : 0;
     const allQuartersFilled =
       yearRevenue !== undefined &&
       (["q1", "q2", "q3", "q4"] as const).every(
         (q) => digitsOnly(yearRevenue[q] ?? "").length > 0,
       );
-    const hasPartial =
-      (yearRevenue !== undefined && hasAnyQuarterValue(yearRevenue)) ||
-      (yearProfit !== undefined && hasAnyQuarterValue(yearProfit));
+    const hasPartialProfit =
+      yearProfit !== undefined && hasAnyQuarterValue(yearProfit);
 
-    if (hasAnnual) {
-      annualYears.add(y);
-    } else if (allQuartersFilled) {
+    if (allQuartersFilled) {
+      // 4 quarters revenue заполнены → full coverage (квартальная гранулярность).
       fullQuarterYears.add(y);
-    } else if (hasPartial) {
+    } else if (revenueAnnualTotal > 0) {
+      // Есть годовая выручка (хотя бы один квартал ИЛИ annual cell) — proxy
+      // для annual report. Domain поднимет уровень до MINIMAL.
+      annualYears.add(y);
+    } else if (hasPartialProfit) {
+      // Только profit без revenue (странный кейс) — partial.
       partialQuarterYears.add(y);
     }
   }
