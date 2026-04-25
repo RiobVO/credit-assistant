@@ -8,9 +8,9 @@
 
 **Phase:** 4 закрыта (Bank Mode UI). Spec: `docs/superpowers/specs/2026-05-11-phase-4-bank-mode-design.md`, ADR-0009. Phase 4 покрыла 4.A (DB фундамент) → 4.B (JWT auth, AuthnPort, CLI seed) → 4.C (search + history endpoints) → 4.D (`APP_MODE` gating + audit-wiring) → 4.E (frontend foundation, BFF httpOnly cookies) → 4.F (`/search` гибрид + `/history` таблица) → 4.G (DossierView extract в features/, shared `/dossier/[id]`) → 4.H (docker smoke + docs).
 
-**Активная ветка:** `main` (HEAD `156fa5d`). Phase 4 шла линейно прямо в main: 4.A `74a650f` → 4.B `f760b41` → 4.C `487c29b` → 4.D `86b9703` → 4.E `f582edd` → 4.F `64008b1` → 4.G `bc854e9` → 4.H `84c0db6` + 2 fix(ci). Готовы стартовать Phase 5 (E2E на 5 фирмах папы / 2.6, либо переход к pilot-демо).
+**Активная ветка:** `main` (HEAD `4b89873`). Phase 4 закрыта линейно (см. Session Log); post-4 серия CA-034/CA-035/CA-041/CA-036+043+044+045+046 — fix-батчи по UI/PDF/data-integrity после реального smoke на досье папы. Готовы стартовать Phase 5 (E2E на 5 фирмах папы / 2.6, либо переход к pilot-демо).
 
-**Verify status:** ruff + mypy --strict (src+tests) + 459 unit + 68 integration (5 PDF-тестов skip на Windows-host) + tsc + eslint + next build (14 routes) — зелёные. Docker smoke `APP_MODE=bank`: login → /me → search → list → audit-log запись подтверждены. CI зелёный после `156fa5d`.
+**Verify status:** ruff + mypy --strict (225 src files) + 666 passed (5 PDF-тестов skip на Windows-host — нужен GTK runtime в Docker) + tsc + eslint + next build (14 routes) — зелёные. Docker smoke: `APP_MODE=bank` login→search→list+audit подтверждён ранее; CA-044 runtime smoke (POST /api/manual-input без taxes_paid[2024] → HTTP 200) на образе `7edf363`. CI зелёный.
 
 ## Smoke-инструкция Phase 4 (Bank Mode end-to-end)
 
@@ -30,10 +30,9 @@
 - TODO[CA-028]: dynamic unit detection для FORM_2 — сейчас hardcoded ×1000 («тыс. сум»), читать B24 list01 («Единица измерения, …»). Если Soliq поменяет ЕИ — суммы поедут в 1000×. Косметика, до production.
 - TODO[CA-029b]: парсер PROFIT_TAX (taxes_paid, 15 листов) — adapter всё ещё raises UnsupportedFormatError. По образцу FORM_2/FORM_1 + реальные xltx папы. FORM_1 закрыт в CA-029a.
 - TODO[CA-040] (P2): Frontend unit-test infra (vitest + @testing-library) для `web/`. Сейчас `web/package.json` без test-инфры, ни одного `.test.tsx`. Под этот тикет — тесты CA-033 (pre-score 3 ветки), CA-035 (FORM_1 checklist + autofill counter), и любые будущие frontend unit-тесты. Реализация: добавить `vitest`, `@vitest/ui`, `jsdom`, `@testing-library/react`, `@testing-library/jest-dom` в devDependencies, `vitest.config.ts`, `npm run test` script.
-- TODO[CA-034] (P2): CAGR 2023→2025 = 0.0% когда 2023 пустой → должно быть N/A; в колонке «Итого за год» сумма (2024+2025) подтягивается без 2023 — если базовый год пустой, не показывать сумму под «Итого».
 - TODO[CA-035b] (P2): GET `/api/dossier/{id}/readiness` — domain readiness готов (CA-035 ADR 0010), нужен application use case (load dossier → snapshot → assess) + interfaces wiring + frontend consumer в досье/PDF (показать «доверие к данным» + missing_capabilities). По образцу POST `/api/manual-input/readiness`.
 - TODO[CA-042] (P2): latest-period priority для FORM_2 multi-file dispatch. Сейчас first wins per year (`_set_once` в `parse_manual_input_files.py`). Если в одном дропе FORM_2 Q4 2024 + Q4 2025 — конфликт на `revenue_2024` (Q4 2025 prior column vs Q4 2024 current column): первая выигрывает по порядку, не по authoritativeness. Q4 2024 current authoritative для 2024 года. CA-041 применил эту семантику только для FORM_1, FORM_2 оставлен под отдельный обдуманный фикс.
-- TODO[CA-037] (P3): 3 из 4 KPI карточек в досье пустые (EBITDA, ROE, Долг/EBITDA). Решение зависит от CA-029 (FORM_1 даст assets + liabilities → ROE/D-EBITDA).
+- TODO[CA-037] (P2): 3 из 4 KPI карточек в досье пустые (EBITDA, ROE, Долг/EBITDA). Данные для ROE/D-EBITDA готовы после CA-029a (FORM_1) + CA-041 (wiring: `assets_total` + `liabilities_total` + `*_period_start` в `ParsedFinancialsResponse`). Нужно расширить `kpi_calculator`: ROE = net_profit / avg_equity (avg = (assets−liab)_end + (assets−liab)_start)/2; D-EBITDA — после CA-029b (parser PROFIT_TAX). Зависимость на CA-029 закрыта частично.
 - TODO[CA-038] (P3): валидация юр.адреса — минимум 15 символов + наличие цифры. Сейчас «Ташкент» проходит.
 - TODO[CA-039] (P3): Шаг 1 — если дата назначения директора < 90 дней назад, показать inline warning «Будет учтено как сигнал риска».
 
@@ -54,6 +53,8 @@
 - **JWT (Phase 4.B):** native `bcrypt` (passlib 1.7.x несовместим с bcrypt 5.x), HS256, access 15м + refresh 7д, без ротации в v1 (TODO[CA-019]). `AuthnPort` готов под LDAP/OAuth (TODO[CA-020]). `JWT_SECRET` через env (.env / compose / Vault), мин. 32 байта в проде.
 - **Frontend BFF cookies:** httpOnly + sameSite=lax + secure-в-проде. Backend возвращает JSON, Next route handlers (`app/api/auth/*`, `app/api/bank/*`, `app/api/dossier/[id]/pdf`) пакуют tokens в `ca_access` (path=`/`) и `ca_refresh` (path=`/api/auth`). Client JS никогда не видит JWT.
 - **Seed analyst:** `docker compose exec api bash -c "cd /app/src && uv run --no-sync python -m interfaces.cli.seed_analysts --email ... --password ... --full-name ..."`. Upsert по email.
+- **CA-044 data integrity (Money | None):** `FinancialReport.taxes_paid` опциональный сквозь весь стек (entity → Pydantic input → mapper → persistence). `None` = «пользователь не заполнил» (PDF «—», БД null); `Money(0)` = «осознанно ноль уплат» (red-flag-ready для будущих правил). Frontend mapper: `moneyOptional(digits)` → `undefined` при пустой строке, **не** `Money(0)`. Этот же паттерн применять к любому новому опциональному money-полю — пустая строка формы никогда не должна фабриковать `Money(0)` в банковский документ.
+- **CA-043 fmt_pct contract:** `template_filters.fmt_pct` принимает значение **уже в процентах** (consistent с `kpi_calculator: (a-b)/b*100`, frontend `formatYoy`, rule evidence). Не fraction. До CA-043 фильтр умножал на 100 повторно, PDF показывал `−1442,9%` вместо `−14,4%`.
 
 ---
 
