@@ -89,14 +89,124 @@ def test_vat_declaration_fills_vat_declared_by_year(usecase: ParseManualInputFil
     assert "vat_declared_2026" in result.source_trail
 
 
-def test_unsupported_format_form1_warns(usecase: ParseManualInputFilesUseCase) -> None:
-    """FORM_1 распознан, но парсера нет (TODO[CA-029]) → warning, файл скип."""
-    content = _bytes(build_form1_balance_sheet_wb())
+def test_form1_fills_assets_and_liabilities(usecase: ParseManualInputFilesUseCase) -> None:
+    """CA-041: FORM_1 заполняет assets_total + liabilities_total из column E
+    (период_end) и assets/liabilities_period_start из column D.
+
+    Дефолтная фикстура: E54=2533084 (тыс. сум), E97=985025; D54=2087582,
+    D97=696805. ×1000 → UZS. source_trail обогащается form1.* ключами.
+    """
+    content = _bytes(build_form1_balance_sheet_wb(period_year=2025, period_quarter=4))
 
     result = usecase.execute([NamedFile(name="form1.xltx", content=content)])
 
-    assert result.revenue_by_year == {}
-    assert any("CA-029" in w and "form1.xltx" in w for w in result.parse_warnings)
+    assert result.assets_total == Decimal("2533084000")
+    assert result.liabilities_total == Decimal("985025000")
+    assert result.assets_total_period_start == Decimal("2087582000")
+    assert result.liabilities_total_period_start == Decimal("696805000")
+    assert "form1.assets_total" in result.source_trail
+    assert "form1.liabilities_total" in result.source_trail
+    assert "form1.assets_total_period_start" in result.source_trail
+    assert "form1.liabilities_total_period_start" in result.source_trail
+    assert "FORM_1 Q4 2025" in result.source_trail["form1.assets_total"]
+    assert "form1.xltx" in result.source_trail["form1.assets_total"]
+
+
+def test_form1_latest_period_wins_silently(usecase: ParseManualInputFilesUseCase) -> None:
+    """Q4 2024 + Q4 2025 → побеждает Q4 2025 (свежий срез). Без warning —
+    это ожидаемое поведение для balance sheet, не конфликт.
+    """
+    older = _bytes(
+        build_form1_balance_sheet_wb(
+            period_year=2024,
+            period_quarter=4,
+            list02_cells={"E54": 1.0, "E97": 1.0, "D54": 1.0, "D97": 1.0},
+        )
+    )
+    newer = _bytes(
+        build_form1_balance_sheet_wb(
+            period_year=2025,
+            period_quarter=4,
+            list02_cells={"E54": 2.0, "E97": 2.0, "D54": 2.0, "D97": 2.0},
+        )
+    )
+
+    # Порядок: новый сначала, потом старый — старый должен проиграть с warning.
+    result = usecase.execute(
+        [
+            NamedFile(name="newer.xltx", content=newer),
+            NamedFile(name="older.xltx", content=older),
+        ]
+    )
+
+    assert result.assets_total == Decimal("2000")  # 2.0 × 1000
+    assert result.liabilities_total == Decimal("2000")
+    assert "FORM_1 Q4 2025" in result.source_trail["form1.assets_total"]
+    assert any("older.xltx" in w and "пропуск" in w for w in result.parse_warnings)
+
+
+def test_form1_latest_period_wins_when_order_reversed(
+    usecase: ParseManualInputFilesUseCase,
+) -> None:
+    """Старый файл сначала, новый потом — новый вытесняет, без warning."""
+    older = _bytes(
+        build_form1_balance_sheet_wb(
+            period_year=2024,
+            period_quarter=4,
+            list02_cells={"E54": 1.0, "E97": 1.0, "D54": 1.0, "D97": 1.0},
+        )
+    )
+    newer = _bytes(
+        build_form1_balance_sheet_wb(
+            period_year=2025,
+            period_quarter=4,
+            list02_cells={"E54": 2.0, "E97": 2.0, "D54": 2.0, "D97": 2.0},
+        )
+    )
+
+    result = usecase.execute(
+        [
+            NamedFile(name="older.xltx", content=older),
+            NamedFile(name="newer.xltx", content=newer),
+        ]
+    )
+
+    assert result.assets_total == Decimal("2000")
+    assert "FORM_1 Q4 2025" in result.source_trail["form1.assets_total"]
+    # Свежий вытеснил старого тихо — это не конфликт.
+    assert not any("пропуск" in w for w in result.parse_warnings)
+
+
+def test_form1_same_period_first_wins_with_warning(
+    usecase: ParseManualInputFilesUseCase,
+) -> None:
+    """Два FORM_1 за тот же (year, quarter) → first wins + дубликат-warning."""
+    first = _bytes(
+        build_form1_balance_sheet_wb(
+            period_year=2025,
+            period_quarter=4,
+            list02_cells={"E54": 100.0, "E97": 100.0, "D54": 100.0, "D97": 100.0},
+        )
+    )
+    second = _bytes(
+        build_form1_balance_sheet_wb(
+            period_year=2025,
+            period_quarter=4,
+            list02_cells={"E54": 999.0, "E97": 999.0, "D54": 999.0, "D97": 999.0},
+        )
+    )
+
+    result = usecase.execute(
+        [
+            NamedFile(name="first.xltx", content=first),
+            NamedFile(name="second.xltx", content=second),
+        ]
+    )
+
+    assert result.assets_total == Decimal("100000")
+    assert any(
+        "тот же период" in w and "second.xltx" in w for w in result.parse_warnings
+    )
 
 
 def test_unknown_garbage_file_warns(usecase: ParseManualInputFilesUseCase) -> None:

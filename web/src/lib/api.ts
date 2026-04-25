@@ -174,9 +174,15 @@ export type ParsedFinancialsDto = {
   net_profit_by_year: Record<string, string>;
   vat_declared_by_year: Record<string, string>;
   taxes_paid_by_year: Record<string, string>;
+  // CA-041: column E xltx, «На конец отчётного периода» — текущий срез.
   assets_total: string | null;
   liabilities_total: string | null;
-  // field_key (например "revenue_2025") → human label «FORM_2 Q4 2025 (file.xltx)»
+  // column D xltx, «На начало отчётного периода». Не используется в UI;
+  // зарезервировано для CA-037 (ROE с average_equity = (BoY+EoY)/2).
+  assets_total_period_start?: string | null;
+  liabilities_total_period_start?: string | null;
+  // field_key (например "revenue_2025", "form1.assets_total") → human label
+  // «FORM_2 Q4 2025 (file.xltx)»
   source_trail: Record<string, string>;
   parse_warnings: string[];
 };

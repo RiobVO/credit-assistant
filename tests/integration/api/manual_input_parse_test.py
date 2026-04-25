@@ -19,6 +19,7 @@ import pytest_asyncio
 
 from interfaces.api.app import create_app
 from tests.fixtures.soliq_xltx._factories import (
+    build_form1_balance_sheet_wb,
     build_form2_income_statement_wb,
     build_vat_declaration_wb,
 )
@@ -88,6 +89,53 @@ async def test_parse_mixed_form2_and_vat(api_client: httpx.AsyncClient) -> None:
     body = response.json()
     assert "2025" in body["revenue_by_year"]
     assert "2026" in body["vat_declared_by_year"]
+
+
+@pytest.mark.asyncio
+async def test_parse_form1_returns_assets_and_liabilities(
+    api_client: httpx.AsyncClient,
+) -> None:
+    """CA-041: FORM_1 wiring. Дефолтная фикстура → assets/liabilities на конец
+    и начало периода + source_trail с form1.* префиксом.
+    """
+    form1 = _bytes(build_form1_balance_sheet_wb(period_year=2025, period_quarter=4))
+
+    response = await api_client.post(
+        ENDPOINT,
+        files=[("files", ("form1.xltx", form1, "application/octet-stream"))],
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["assets_total"] == "2533084000"
+    assert body["liabilities_total"] == "985025000"
+    assert body["assets_total_period_start"] == "2087582000"
+    assert body["liabilities_total_period_start"] == "696805000"
+    assert "FORM_1 Q4 2025" in body["source_trail"]["form1.assets_total"]
+    assert "form1.liabilities_total" in body["source_trail"]
+
+
+@pytest.mark.asyncio
+async def test_parse_form2_plus_form1_combined(
+    api_client: httpx.AsyncClient,
+) -> None:
+    """Mixed batch: FORM_2 заполняет revenue, FORM_1 — assets/liabilities."""
+    form2 = _bytes(build_form2_income_statement_wb(period_year=2025, period_quarter=4))
+    form1 = _bytes(build_form1_balance_sheet_wb(period_year=2025, period_quarter=4))
+
+    response = await api_client.post(
+        ENDPOINT,
+        files=[
+            ("files", ("form2.xltx", form2, "application/octet-stream")),
+            ("files", ("form1.xltx", form1, "application/octet-stream")),
+        ],
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert "2025" in body["revenue_by_year"]
+    assert body["assets_total"] == "2533084000"
+    assert body["liabilities_total"] == "985025000"
 
 
 @pytest.mark.asyncio
