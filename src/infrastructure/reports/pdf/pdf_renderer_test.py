@@ -68,7 +68,7 @@ def _make_bundle() -> DossierPdfBundle:
             revenue_ltm=KpiValue(
                 value=Decimal("21460000000"),
                 unit=KpiUnit.UZS,
-                yoy_pct=Decimal("0.182"),
+                yoy_pct=Decimal("18.2"),
                 sparkline=(),
             ),
             ebitda=None,

@@ -173,6 +173,29 @@ class TestEmptyPayload:
         assert data["rules_evaluated"] == 18
 
 
+class TestOptionalTaxesPaid:
+    def test_annual_report_without_taxes_paid_accepted_200(
+        self, client: TestClient
+    ) -> None:
+        """CA-044: taxes_paid опциональный — отсутствие поля в payload
+        не должно валить запрос и не должно превращаться в Money(0).
+        """
+        payload = {
+            "borrower": _borrower_payload(),
+            "as_of": "2026-05-08",
+            "annual_reports": [
+                {
+                    "period": {"start": "2024-01-01", "end": "2024-12-31"},
+                    "revenue": _money("5000000000"),
+                    "net_profit": _money("300000000"),
+                    # taxes_paid намеренно отсутствует — «не заполнено».
+                },
+            ],
+        }
+        r = client.post(ENDPOINT, json=payload)
+        assert r.status_code == 200, r.text
+
+
 class TestInvalidPayload:
     def test_invalid_inn_returns_422(self, client: TestClient) -> None:
         payload = {

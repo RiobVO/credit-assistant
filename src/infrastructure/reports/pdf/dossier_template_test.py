@@ -102,7 +102,7 @@ def _minimal_context() -> dict[str, object]:
             {
                 "label": "Revenue LTM",
                 "value": "21,5 млрд",
-                "yoy_pct": Decimal("0.182"),
+                "yoy_pct": Decimal("18.2"),
                 "yoy_positive": True,
                 "yoy_label": "+18,2%",
             },

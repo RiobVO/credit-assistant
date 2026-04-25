@@ -155,6 +155,29 @@ def test_snapshot_payload_is_json_serializable() -> None:
     assert json.loads(serialized) == payload
 
 
+def test_financial_report_round_trip_with_taxes_paid_none() -> None:
+    """CA-044: taxes_paid=None должен пережить serialize→deserialize без
+    превращения в Money(0). Это и есть data-integrity контракт «не заполнено»
+    vs «осознанно ноль».
+    """
+    original = BorrowerSnapshot(
+        borrower=_borrower(),
+        as_of=date(2026, 5, 8),
+        annual_reports=[
+            FinancialReport(
+                period=DateRange(start=date(2024, 1, 1), end=date(2024, 12, 31)),
+                revenue=_money(5_000_000_000),
+                net_profit=_money(500_000_000),
+                taxes_paid=None,
+            ),
+        ],
+    )
+    payload = snapshot_to_payload(original)
+    restored = snapshot_from_payload(payload, original.borrower)
+    assert restored.annual_reports[0].taxes_paid is None
+    assert restored == original
+
+
 def test_snapshot_decimal_precision_preserved() -> None:
     original = BorrowerSnapshot(
         borrower=_borrower(),

@@ -27,8 +27,10 @@ type Period = (typeof PERIODS)[number]["value"];
 
 export function Revenue24mChart({
   data,
+  hasAnnualRevenue,
 }: {
   data: DossierViewDto["monthly_revenue_24m"];
+  hasAnnualRevenue: boolean;
 }) {
   const [period, setPeriod] = useState<Period>(24);
 
@@ -43,7 +45,7 @@ export function Revenue24mChart({
   const slice = numericData.slice(-period);
 
   if (slice.length === 0) {
-    return <EmptyChart />;
+    return <EmptyChart hasAnnualRevenue={hasAnnualRevenue} />;
   }
 
   const peakIndex = slice.reduce(
@@ -163,20 +165,33 @@ function Legend({ color, label }: { color: string; label: string }) {
   );
 }
 
-function EmptyChart() {
+// CA-036: два сценария empty state различает аналитик с одного взгляда.
+// hasAnnualRevenue = true  → годовые данные посчитаны из FORM_2, нет лишь
+//                            помесячной разбивки (нужен ESF CSV — CA-032).
+// hasAnnualRevenue = false → INSUFFICIENT: вообще нет ни годовой, ни помесячной.
+function EmptyChart({ hasAnnualRevenue }: { hasAnnualRevenue: boolean }) {
+  const title = hasAnnualRevenue
+    ? "Помесячная динамика недоступна"
+    : "Нет данных о выручке";
+  const subtitle = hasAnnualRevenue
+    ? "Годовая выручка есть, помесячная разбивка — нет"
+    : "Помесячная динамика и rolling-тренд";
+  const body = hasAnnualRevenue
+    ? "Годовая выручка вычислена из Формы №2. Помесячная разбивка появится после загрузки ESF CSV (электронные счета-фактуры из my3.soliq.uz) на Шаге 2 формы."
+    : "Нет помесячных данных. Загрузите выгрузку Soliq на Шаге 2 формы или укажите помесячный оборот вручную.";
+
   return (
     <section className="rounded-[10px] border border-[var(--ca-border)] bg-[var(--ca-surface)] shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
       <header className="border-b border-[var(--ca-border)] px-[22px] py-[18px]">
         <h2 className="m-0 text-[15px] font-semibold text-[var(--ca-ink-900)]">
-          Выручка по месяцам
+          {title}
         </h2>
         <p className="m-0 mt-0.5 text-[12.5px] text-[var(--ca-ink-500)]">
-          Помесячная динамика и rolling-тренд
+          {subtitle}
         </p>
       </header>
       <div className="flex h-[200px] items-center justify-center px-6 text-center text-[13px] text-[var(--ca-ink-500)]">
-        Нет помесячных данных. Загрузите выгрузку Soliq на Шаге 2 формы или
-        укажите помесячный оборот вручную.
+        {body}
       </div>
     </section>
   );
