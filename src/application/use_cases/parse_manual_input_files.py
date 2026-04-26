@@ -21,8 +21,13 @@ CA-027 scope (option b): только annual суммы. FORM_2 за Q4 → annu
 в этой итерации — дельты будут отдельным TODO.
 
 Конфликт источников:
-* FORM_2 / VAT_DECLARATION — first wins per year (TODO[CA-042] заменит на
-  latest-period priority);
+* FORM_2 (CA-042) — tier priority per (field, year): `header.period_year == Y`
+  даёт **current column** для года Y (authoritative, закрытый отчёт);
+  `header.period_year == Y + 1` даёт **prior column** для года Y
+  (колонка-сравнение). CURRENT silently перезаписывает PRIOR; same-tier
+  конфликт → first wins + warning. Реализация через `_Form2SourceTier`
+  IntEnum + локальный `tier_by_field_year` map в `execute`.
+* VAT_DECLARATION — first wins per year (`_set_once`).
 * FORM_1 (CA-041) — latest-period wins: balance sheet это срез на дату,
   для autofill «текущее состояние заёмщика» свежий снимок authoritative.
   Snapshot-целиком: победивший файл даёт все 4 поля; не дополняем None'ы из
@@ -34,6 +39,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from decimal import Decimal
+from enum import IntEnum
 
 from application.dto.parsed_financials import ParsedFinancials
 from domain.value_objects.money import Money
@@ -78,6 +84,9 @@ class ParseManualInputFilesUseCase:
         # FORM_1 dispatch — latest-period wins (см. модульный docstring).
         # Откладываем merge до конца цикла: храним кандидат + (year, quarter).
         form1_winner: _Form1Candidate | None = None
+        # CA-042: tier бухгалтерия для FORM_2 dispatch'а — CURRENT > PRIOR
+        # per (field_name, year). Локально к execute, расходный после return.
+        tier_by_field_year: dict[tuple[str, int], _Form2SourceTier] = {}
 
         for f in files:
             try:
@@ -118,6 +127,7 @@ class ParseManualInputFilesUseCase:
                     interest_expense_by_year,
                     source_trail,
                     warnings,
+                    tier_by_field_year,
                 )
             elif isinstance(parsed, VatDeclarationData):
                 _merge_vat_declaration(
@@ -168,12 +178,16 @@ def _merge_form2(
     interest_expense_by_year: dict[int, Decimal],
     source_trail: dict[str, str],
     warnings: list[str],
+    tier_by_field_year: dict[tuple[str, int], _Form2SourceTier],
 ) -> None:
     """Слить current_period + prior_year в annual maps. Только Q4 (option b).
 
     CA-037: дополнительно мерджит profit_before_tax / interest_expense из тех
-    же двух колонок (current/prior) — компоненты EBIT-прокси. Та же first-wins
-    семантика, что и для revenue/net_profit.
+    же двух колонок (current/prior) — компоненты EBIT-прокси.
+
+    CA-042: tier priority через `_set_with_tier_priority`. CURRENT (current
+    column данного года) перебивает PRIOR (prior column из FORM_2 следующего
+    года) silent; same-tier дубликат → first wins + warning.
     """
     header = parsed.header
     year = header.period_year
@@ -192,45 +206,53 @@ def _merge_form2(
     prior_label = f"FORM_2 Q4 {year} prior column ({filename})"
 
     if parsed.revenue_current_period is not None:
-        _set_once(
+        _set_with_tier_priority(
             revenue_by_year, year, parsed.revenue_current_period,
-            source_trail, "revenue", label, warnings,
+            _Form2SourceTier.CURRENT,
+            source_trail, "revenue", label, warnings, tier_by_field_year,
         )
     if parsed.revenue_prior_year_period is not None:
-        _set_once(
+        _set_with_tier_priority(
             revenue_by_year, year - 1, parsed.revenue_prior_year_period,
-            source_trail, "revenue", prior_label, warnings,
+            _Form2SourceTier.PRIOR,
+            source_trail, "revenue", prior_label, warnings, tier_by_field_year,
         )
     if parsed.net_profit_current is not None:
-        _set_once(
+        _set_with_tier_priority(
             net_profit_by_year, year, parsed.net_profit_current,
-            source_trail, "net_profit", label, warnings,
+            _Form2SourceTier.CURRENT,
+            source_trail, "net_profit", label, warnings, tier_by_field_year,
         )
     if parsed.net_profit_prior_year is not None:
-        _set_once(
+        _set_with_tier_priority(
             net_profit_by_year, year - 1, parsed.net_profit_prior_year,
-            source_trail, "net_profit", prior_label, warnings,
+            _Form2SourceTier.PRIOR,
+            source_trail, "net_profit", prior_label, warnings, tier_by_field_year,
         )
     # CA-037: PBT и interest expense — обе колонки, поведение совпадает с revenue.
     if parsed.profit_before_tax_current is not None:
-        _set_once(
+        _set_with_tier_priority(
             profit_before_tax_by_year, year, parsed.profit_before_tax_current,
-            source_trail, "profit_before_tax", label, warnings,
+            _Form2SourceTier.CURRENT,
+            source_trail, "profit_before_tax", label, warnings, tier_by_field_year,
         )
     if parsed.profit_before_tax_prior_year is not None:
-        _set_once(
+        _set_with_tier_priority(
             profit_before_tax_by_year, year - 1, parsed.profit_before_tax_prior_year,
-            source_trail, "profit_before_tax", prior_label, warnings,
+            _Form2SourceTier.PRIOR,
+            source_trail, "profit_before_tax", prior_label, warnings, tier_by_field_year,
         )
     if parsed.interest_expense_current is not None:
-        _set_once(
+        _set_with_tier_priority(
             interest_expense_by_year, year, parsed.interest_expense_current,
-            source_trail, "interest_expense", label, warnings,
+            _Form2SourceTier.CURRENT,
+            source_trail, "interest_expense", label, warnings, tier_by_field_year,
         )
     if parsed.interest_expense_prior_year is not None:
-        _set_once(
+        _set_with_tier_priority(
             interest_expense_by_year, year - 1, parsed.interest_expense_prior_year,
-            source_trail, "interest_expense", prior_label, warnings,
+            _Form2SourceTier.PRIOR,
+            source_trail, "interest_expense", prior_label, warnings, tier_by_field_year,
         )
 
     # Прокидываем cell-level warnings парсера, если они есть.
@@ -279,6 +301,61 @@ def _set_once(
         return
     target[year] = value.amount
     source_trail[f"{field_name}_{year}"] = source_label
+
+
+class _Form2SourceTier(IntEnum):
+    """CA-042: иерархия источников значения per (field, year) для FORM_2.
+
+    ``CURRENT`` — `header.period_year == year` (закрытый отчётный год,
+    authoritative). ``PRIOR`` — `header.period_year == year + 1`
+    (колонка-сравнение в FORM_2 следующего года). CURRENT > PRIOR.
+    """
+
+    PRIOR = 0
+    CURRENT = 1
+
+
+def _set_with_tier_priority(
+    target: dict[int, Decimal],
+    year: int,
+    value: Money,
+    new_tier: _Form2SourceTier,
+    source_trail: dict[str, str],
+    field_name: str,
+    source_label: str,
+    warnings: list[str],
+    tier_by_field_year: dict[tuple[str, int], _Form2SourceTier],
+) -> None:
+    """CA-042: положить amount в map[year] с учётом tier-приоритета.
+
+    * key отсутствует → set + record tier.
+    * new_tier > stored_tier → перезаписать silent (CURRENT перебивает PRIOR;
+      согласовано с CA-041 latest_period_wins_silently — иерархия известна,
+      warning размывал бы важные сигналы).
+    * new_tier == stored_tier → first wins + warning (same-tier дубликат).
+    * new_tier < stored_tier → silent skip (PRIOR после CURRENT — нормальная
+      иерархия, не информативное сообщение для аналитика).
+    """
+    key = (field_name, year)
+    stored_tier = tier_by_field_year.get(key)
+    if stored_tier is None:
+        target[year] = value.amount
+        source_trail[f"{field_name}_{year}"] = source_label
+        tier_by_field_year[key] = new_tier
+        return
+    if new_tier > stored_tier:
+        target[year] = value.amount
+        source_trail[f"{field_name}_{year}"] = source_label
+        tier_by_field_year[key] = new_tier
+        return
+    if new_tier == stored_tier:
+        warnings.append(
+            f"{source_label}: значение {field_name} за {year} уже было заполнено "
+            f"из другого файла того же приоритета — оставляем первое"
+        )
+        return
+    # new_tier < stored_tier — silent skip.
+    return
 
 
 @dataclass(frozen=True, slots=True)

@@ -255,6 +255,169 @@ def test_duplicate_year_form2_keeps_first(usecase: ParseManualInputFilesUseCase)
     assert any("уже было заполнено" in w for w in result.parse_warnings)
 
 
+# ----------- CA-042: FORM_2 tier priority (current > prior) -------------------
+#
+# Контракт: для (field, year) приоритет CURRENT > PRIOR. CURRENT = FORM_2 с
+# header.period_year == year (закрытый отчёт). PRIOR = FORM_2 с
+# period_year == year + 1 (колонка-сравнение). CURRENT silently перезаписывает
+# PRIOR; same-tier дубликат → first wins + warning.
+
+
+def test_form2_current_wins_over_prior_silently(
+    usecase: ParseManualInputFilesUseCase,
+) -> None:
+    """Q4 2025 (prior=2024) обработан первым, потом Q4 2024 (current=2024) →
+    revenue_by_year[2024] = current value (600), warnings без шума на 2024."""
+    q4_2025 = _bytes(
+        build_form2_income_statement_wb(
+            period_year=2025,
+            period_quarter=4,
+            revenue_current=700.0,  # CURRENT для 2025
+            revenue_prior=999.0,  # PRIOR для 2024 (заведомо «не authoritative»)
+        )
+    )
+    q4_2024 = _bytes(
+        build_form2_income_statement_wb(
+            period_year=2024,
+            period_quarter=4,
+            revenue_current=600.0,  # CURRENT для 2024 — должен перебить PRIOR
+            revenue_prior=500.0,  # PRIOR для 2023
+        )
+    )
+
+    result = usecase.execute(
+        [
+            NamedFile(name="q4_2025.xltx", content=q4_2025),
+            NamedFile(name="q4_2024.xltx", content=q4_2024),
+        ]
+    )
+
+    assert result.revenue_by_year[2024] == Decimal("600000"), (
+        "CURRENT из Q4 2024 должен перебить PRIOR из Q4 2025"
+    )
+    assert result.revenue_by_year[2025] == Decimal("700000")
+    assert result.revenue_by_year[2023] == Decimal("500000")
+    # Конфликт CURRENT vs PRIOR — silent (известная иерархия).
+    assert not any(
+        "revenue" in w and "уже было заполнено" in w for w in result.parse_warnings
+    )
+
+
+def test_form2_current_wins_over_prior_when_order_reversed(
+    usecase: ParseManualInputFilesUseCase,
+) -> None:
+    """Тот же сценарий в обратном порядке: Q4 2024 первым (CURRENT=600 на 2024),
+    Q4 2025 вторым (PRIOR=999 на 2024). PRIOR после CURRENT — silent skip."""
+    q4_2024 = _bytes(
+        build_form2_income_statement_wb(
+            period_year=2024,
+            period_quarter=4,
+            revenue_current=600.0,
+            revenue_prior=500.0,
+        )
+    )
+    q4_2025 = _bytes(
+        build_form2_income_statement_wb(
+            period_year=2025,
+            period_quarter=4,
+            revenue_current=700.0,
+            revenue_prior=999.0,
+        )
+    )
+
+    result = usecase.execute(
+        [
+            NamedFile(name="q4_2024.xltx", content=q4_2024),
+            NamedFile(name="q4_2025.xltx", content=q4_2025),
+        ]
+    )
+
+    assert result.revenue_by_year[2024] == Decimal("600000")
+    assert not any(
+        "revenue" in w and "уже было заполнено" in w for w in result.parse_warnings
+    )
+
+
+def test_form2_two_current_same_year_first_wins_with_warning(
+    usecase: ParseManualInputFilesUseCase,
+) -> None:
+    """Два FORM_2 Q4 2024, оба дают CURRENT для 2024 → first wins + warning."""
+    first = _bytes(
+        build_form2_income_statement_wb(period_year=2024, revenue_current=100.0)
+    )
+    second = _bytes(
+        build_form2_income_statement_wb(period_year=2024, revenue_current=999.0)
+    )
+
+    result = usecase.execute(
+        [
+            NamedFile(name="first.xltx", content=first),
+            NamedFile(name="second.xltx", content=second),
+        ]
+    )
+
+    assert result.revenue_by_year[2024] == Decimal("100000")
+    assert any(
+        "revenue" in w and "уже было заполнено" in w for w in result.parse_warnings
+    )
+
+
+def test_form2_two_prior_same_year_first_wins_with_warning(
+    usecase: ParseManualInputFilesUseCase,
+) -> None:
+    """Два FORM_2 Q4 2025, оба дают PRIOR для 2024 → first wins + warning.
+    Same-tier конфликт (оба PRIOR) — пользователю важно знать о дубликате."""
+    first = _bytes(
+        build_form2_income_statement_wb(period_year=2025, revenue_prior=100.0)
+    )
+    second = _bytes(
+        build_form2_income_statement_wb(period_year=2025, revenue_prior=999.0)
+    )
+
+    result = usecase.execute(
+        [
+            NamedFile(name="first.xltx", content=first),
+            NamedFile(name="second.xltx", content=second),
+        ]
+    )
+
+    assert result.revenue_by_year[2024] == Decimal("100000")
+    assert any(
+        "revenue" in w and "уже было заполнено" in w for w in result.parse_warnings
+    )
+
+
+def test_form2_source_trail_points_to_current_when_both_tiers_present(
+    usecase: ParseManualInputFilesUseCase,
+) -> None:
+    """После CURRENT-перебивает-PRIOR source_trail для 2024 должен указывать
+    на Q4 2024 файл (current label), не на Q4 2025 prior label."""
+    q4_2025 = _bytes(
+        build_form2_income_statement_wb(
+            period_year=2025, revenue_prior=999.0,  # PRIOR для 2024
+        )
+    )
+    q4_2024 = _bytes(
+        build_form2_income_statement_wb(
+            period_year=2024, revenue_current=600.0,  # CURRENT для 2024
+        )
+    )
+
+    result = usecase.execute(
+        [
+            NamedFile(name="q4_2025.xltx", content=q4_2025),
+            NamedFile(name="q4_2024.xltx", content=q4_2024),
+        ]
+    )
+
+    assert "revenue_2024" in result.source_trail
+    trail = result.source_trail["revenue_2024"]
+    assert "q4_2024.xltx" in trail, f"trail должен указывать на CURRENT file, got: {trail}"
+    assert "prior column" not in trail, (
+        f"trail для 2024 не должен иметь 'prior column' label: {trail}"
+    )
+
+
 def test_vat_registry_ilova_quietly_skipped(usecase: ParseManualInputFilesUseCase) -> None:
     """Реестр счетов-фактур не несёт financial-полей — скип без warning."""
     content = _bytes(build_vat_registry_wb())
