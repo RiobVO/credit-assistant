@@ -107,7 +107,7 @@ async def test_manual_input_persists_full_dossier_chain(
     dossier_orm = await pg_session.get(DossierORM, dossier_id)
     assert dossier_orm is not None
     assert dossier_orm.snapshot_id == snapshot_rows[0].id
-    assert dossier_orm.rules_evaluated == 18
+    assert dossier_orm.rules_evaluated == 19  # CA-049: +NEGATIVE_EQUITY
 
 
 async def test_draft_create_get_update_404_cycle(

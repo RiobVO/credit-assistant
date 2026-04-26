@@ -170,7 +170,7 @@ class TestEmptyPayload:
         assert "INSUFFICIENT_DATA" in rule_ids
         assert data["risk_score"]["score"] == 50
         assert data["risk_score"]["recommendation"] == "review"
-        assert data["rules_evaluated"] == 18
+        assert data["rules_evaluated"] == 19  # CA-049: +NEGATIVE_EQUITY
 
 
 class TestOptionalTaxesPaid:

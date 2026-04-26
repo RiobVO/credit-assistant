@@ -21,6 +21,7 @@ from domain.rules.counterparty.single_supplier_concentration import (
     single_supplier_concentration,
 )
 from domain.rules.financial.low_margin_high_turnover import low_margin_high_turnover
+from domain.rules.financial.negative_equity import negative_equity
 from domain.rules.financial.negative_profit_3q import negative_profit_3q
 from domain.rules.financial.revenue_drop_mom_30 import revenue_drop_mom_30
 from domain.rules.financial.revenue_drop_yoy_50 import revenue_drop_yoy_50
@@ -53,6 +54,7 @@ CODE_RULES: dict[str, RuleFn] = {
     "REVENUE_DROP_MOM_30": revenue_drop_mom_30,
     "REVENUE_DROP_YOY_50": revenue_drop_yoy_50,
     "NEGATIVE_PROFIT_3Q": negative_profit_3q,
+    "NEGATIVE_EQUITY": negative_equity,
     "VAT_GROWTH_NO_REVENUE": vat_growth_no_revenue,
     "VAT_ESF_MISMATCH": vat_esf_mismatch,
     "LOW_MARGIN_HIGH_TURNOVER": low_margin_high_turnover,
