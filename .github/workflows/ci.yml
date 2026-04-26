@@ -59,6 +59,9 @@ jobs:
       - name: Lint (eslint)
         run: npm run lint
 
+      - name: Tests (vitest)
+        run: npm run test:run
+
       - name: Type-check (tsc)
         run: npx tsc --noEmit
 
