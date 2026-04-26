@@ -21,12 +21,15 @@ from fastapi import APIRouter, Depends, HTTPException
 from application.dto.dossier_record import DossierRecord
 from application.use_cases.build_borrower_snapshot import build_borrower_snapshot
 from application.use_cases.load_dossier_for_view import LoadDossierForView
+from application.use_cases.load_dossier_readiness import LoadDossierReadiness
 from domain.rules.rule import RuleRegistry
 from domain.services.scoring_service import ScoringService
 from infrastructure.persistence.repositories.audit_log_repository import (
     SqlAlchemyAuditLogRepository,
 )
 from interfaces.api.bank.dependencies import OptionalAnalyst
+from interfaces.api.shared.data_readiness import _format_decimal
+from interfaces.api.shared.data_readiness_schema import DataReadinessResponse
 from interfaces.api.shared.dependencies import get_rule_registry, get_scoring_service
 from interfaces.api.shared.dossier_mapper import (
     build_dossier_response,
@@ -134,3 +137,32 @@ async def get_dossier(
         )
 
     return build_dossier_view_response(bundle)
+
+
+@router.get("/dossier/{dossier_id}/readiness", response_model=DataReadinessResponse)
+async def get_dossier_readiness(
+    dossier_id: UUID,
+    storage: StorageDep,
+) -> DataReadinessResponse:
+    """CA-035b: оценка готовности данных для готового досье.
+
+    Зеркало POST /api/manual-input/readiness, но работает на persisted
+    snapshot'е. `source_trail` в БД не хранится — восстанавливаем
+    `set[ParserSource]` через heuristic по присутствию полей (см.
+    `infer_parser_sources_from_snapshot`).
+
+    Read-only, без audit-логирования: это derived view над уже доступным
+    досье, не отдельное действие.
+    """
+    use_case = LoadDossierReadiness(storage.dossier)
+    report = await use_case.execute(dossier_id)
+    if report is None:
+        raise HTTPException(status_code=404, detail="Досье не найдено")
+    return DataReadinessResponse(
+        level=report.level.value,
+        years_covered=list(report.years_covered),
+        full_years=list(report.full_years),
+        missing_capabilities=list(report.missing_capabilities),
+        parser_sources=sorted(s.value for s in report.parser_sources),
+        confidence_score=_format_decimal(report.confidence_score),
+    )

@@ -14,6 +14,7 @@ import { BorrowerCard } from "./borrower-card";
 import { DossierError } from "./dossier-error";
 import { DossierSkeleton } from "./dossier-skeleton";
 import { KpiRow } from "./kpi-row";
+import { ReadinessBadge } from "./readiness-badge";
 import { Revenue24mChart } from "./revenue-24m-chart";
 import { RiskSignals } from "./risk-signals";
 import { ScoreGauge } from "./score-gauge";
@@ -68,7 +69,9 @@ export function DossierView({ dossierId }: { dossierId: string }) {
           documentsCount={5}
         />
 
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[320px_1fr]">
+        <ReadinessBadge dossierId={dossierId} />
+
+        <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[320px_1fr]">
           <ScoreGauge
             score={data.risk_score.display_score}
             recommendation={data.risk_score.recommendation}

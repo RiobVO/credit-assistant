@@ -167,3 +167,38 @@ async def test_get_dossier_returns_422_for_malformed_uuid(
     """Path-param не парсится → FastAPI отдаёт 422, не доходит до use case."""
     r = await api_client.get("/api/dossier/not-a-uuid")
     assert r.status_code == 422
+
+
+# ----------- CA-035b: GET /api/dossier/{id}/readiness -------------------------
+
+
+async def test_get_dossier_readiness_happy_path(
+    api_client: httpx.AsyncClient,
+) -> None:
+    """Создаём досье, читаем readiness — манипуляции с DataReadinessResponse."""
+    create = await api_client.post(POST_ENDPOINT, json=_payload_with_12_months())
+    assert create.status_code == 200, create.text
+    dossier_id = create.json()["dossier_id"]
+
+    r = await api_client.get(f"/api/dossier/{dossier_id}/readiness")
+    assert r.status_code == 200, r.text
+    body = r.json()
+
+    # Skeleton: совпадает с DataReadinessResponse.
+    assert body["level"] in ("insufficient", "minimal", "standard", "comprehensive")
+    assert isinstance(body["years_covered"], list)
+    assert isinstance(body["full_years"], list)
+    assert isinstance(body["missing_capabilities"], list)
+    # MANUAL добавляется всегда (досье существует → данные были введены).
+    assert "manual" in body["parser_sources"]
+    # confidence_score — строка-Decimal, не None.
+    assert isinstance(body["confidence_score"], str)
+
+
+async def test_get_dossier_readiness_returns_404_for_unknown_id(
+    api_client: httpx.AsyncClient,
+) -> None:
+    unknown = UUID("00000000-0000-0000-0000-000000000000")
+    r = await api_client.get(f"/api/dossier/{unknown}/readiness")
+    assert r.status_code == 404
+    assert r.json()["detail"] == "Досье не найдено"
