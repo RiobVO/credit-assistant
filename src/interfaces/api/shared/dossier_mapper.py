@@ -292,11 +292,15 @@ def _kpi_unit_code(unit: KpiUnit) -> KpiUnitCode:
 def _kpi_value_to_output(kv: KpiValue | None) -> KpiValueOutput | None:
     if kv is None:
         return None
+    # CA-048: StrEnum.value уже строковый литерал "good"/"warn"/"bad",
+    # совпадающий с KpiLevelToneCode Literal — Pydantic примет без cast.
+    level_tone = kv.level_tone.value if kv.level_tone is not None else None
     return KpiValueOutput(
         value=str(kv.value),
         unit=_kpi_unit_code(kv.unit),
         yoy_pct=str(kv.yoy_pct) if kv.yoy_pct is not None else None,
         sparkline=[str(p) for p in kv.sparkline],
+        level_tone=level_tone,
     )
 
 

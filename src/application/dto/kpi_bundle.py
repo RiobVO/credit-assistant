@@ -15,6 +15,19 @@ CA-037: вместо ``ebitda`` экспортируем ``ebit`` — EBIT пр�
 * total_debt = 0 → KPI Decimal("0") (UI: green «Нет долга»);
 * EBIT ≤ 0 → KPI None (убыток, оценка некорректна);
 * иначе → Decimal ratio в формате ``X.XX``.
+
+CA-048: ``KpiValue.level_tone`` — ортогональный сигнал «absolute level»
+для UI/PDF (left severity stripe). Заполняется только для ROE и
+Debt-to-EBIT; для revenue/ebit остаётся ``None`` (нет универсального
+порога для абсолютной величины). Источник порогов: Базель III IRB
+(leverage / capital adequacy) + внутренние методики банков-партнёров.
+Boundary inclusive на верхней границе warn — пограничные значения
+банк лучше держит в осторожной зоне.
+* **ROE**: ``>15% → GOOD``, ``5 ≤ ROE ≤ 15 → WARN``, ``<5% → BAD``.
+* **Debt/EBIT**: ``<2× → GOOD``, ``2 ≤ ratio ≤ 4 → WARN``, ``>4× → BAD``;
+  ``Decimal(0)`` («нет долга») → GOOD (но UI рендерит спец-карточку
+  ``NoDebtCard``, level_tone GOOD здесь — теоретическая консистентность,
+  не визуальный канал).
 """
 
 from __future__ import annotations
@@ -31,12 +44,23 @@ class KpiUnit(StrEnum):
     RATIO = "RATIO"
 
 
+class KpiLevelTone(StrEnum):
+    """Категория абсолютного уровня KPI (CA-048). См. модуль-docstring."""
+
+    GOOD = "good"
+    WARN = "warn"
+    BAD = "bad"
+
+
 @dataclass(frozen=True, slots=True)
 class KpiValue:
     value: Decimal
     unit: KpiUnit
     yoy_pct: Decimal | None  # знак: + рост, − падение; None если сравнивать не с чем
     sparkline: tuple[Decimal, ...]  # точки динамики, oldest → newest; может быть пустой
+    # CA-048: категория absolute-level порога. None для KPI без универсального
+    # threshold (revenue_ltm, ebit). Для ROE/Debt-to-EBIT — см. модуль-docstring.
+    level_tone: KpiLevelTone | None = None
 
 
 @dataclass(frozen=True, slots=True)

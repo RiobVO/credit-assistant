@@ -77,6 +77,10 @@ export type KpiValueDto = {
   unit: "UZS" | "PCT" | "RATIO";
   yoy_pct: string | null; // Decimal как str; null если сравнивать не с чем
   sparkline: string[]; // точки oldest→newest, может быть пустой
+  // CA-048: категория absolute-level порога. Заполняется только для ROE и
+  // Debt-to-EBIT — frontend рисует left severity stripe на KpiCard.
+  // Для прочих KPI — null (нет универсального threshold).
+  level_tone?: "good" | "warn" | "bad" | null;
 };
 
 export type ApiErrorBody = {

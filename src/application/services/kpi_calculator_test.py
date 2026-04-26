@@ -13,7 +13,9 @@ from __future__ import annotations
 from datetime import date
 from decimal import Decimal
 
-from application.dto.kpi_bundle import KpiUnit
+import pytest
+
+from application.dto.kpi_bundle import KpiLevelTone, KpiUnit
 from application.services.kpi_calculator import (
     compute_kpis,
     compute_monthly_revenue_24m,
@@ -395,6 +397,93 @@ def test_debt_to_ebit_none_when_ebit_components_missing() -> None:
     )
     bundle = compute_kpis(_snapshot(annual=[annual]))
     assert bundle.debt_to_ebit is None
+
+
+# ----------- CA-048: level_tone категоризация ---------------------------------
+#
+# Backend-резидентный single source of truth для absolute-level порогов
+# (см. KpiBundle docstring). Boundary inclusive на верхней границе warn:
+# ROE 15.00 → WARN (не GOOD), 5.00 → WARN (не BAD); Debt/EBIT 2.00 → WARN
+# (не GOOD), 4.00 → WARN (не BAD).
+
+
+@pytest.mark.parametrize(
+    "net_profit,expected_tone",
+    [
+        (20_000_000, KpiLevelTone.GOOD),  # ROE = 20%
+        (15_010_000, KpiLevelTone.GOOD),  # 15.01%
+        (15_000_000, KpiLevelTone.WARN),  # 15.00% — boundary inclusive в warn
+        (10_000_000, KpiLevelTone.WARN),  # 10%
+        (5_000_000, KpiLevelTone.WARN),  # 5.00% — boundary inclusive в warn
+        (4_990_000, KpiLevelTone.BAD),  # 4.99%
+        (1_000_000, KpiLevelTone.BAD),  # 1%
+    ],
+)
+def test_roe_level_tone_boundary(net_profit: int, expected_tone: KpiLevelTone) -> None:
+    """ROE level_tone пороги: >15 GOOD, 5..15 WARN, <5 BAD. equity_avg фиксирован
+    100M (50M start + 150M end → /2 = 100M) — варьируем net_profit, получаем
+    нужный ROE через net/avg×100."""
+    annual = _annual_extended(
+        2025, net_profit=net_profit, equity_start=50_000_000, equity_end=150_000_000,
+    )
+    bundle = compute_kpis(_snapshot(annual=[annual]))
+    assert bundle.roe is not None
+    assert bundle.roe.level_tone is expected_tone
+
+
+@pytest.mark.parametrize(
+    "total_debt,expected_tone",
+    [
+        (150_000_000, KpiLevelTone.GOOD),  # ratio 1.5×
+        (199_000_000, KpiLevelTone.GOOD),  # 1.99×
+        (200_000_000, KpiLevelTone.WARN),  # 2.00× — boundary inclusive в warn
+        (300_000_000, KpiLevelTone.WARN),  # 3×
+        (400_000_000, KpiLevelTone.WARN),  # 4.00× — boundary inclusive в warn
+        (401_000_000, KpiLevelTone.BAD),  # 4.01×
+        (1_000_000_000, KpiLevelTone.BAD),  # 10×
+    ],
+)
+def test_debt_to_ebit_level_tone_boundary(
+    total_debt: int, expected_tone: KpiLevelTone,
+) -> None:
+    """Debt/EBIT level_tone пороги: <2 GOOD, 2..4 WARN, >4 BAD. ebit
+    фиксирован 100M (PBT 80M + interest 20M) — варьируем total_debt."""
+    annual = _annual_extended(
+        2025,
+        profit_before_tax=80_000_000,
+        interest_expense=20_000_000,
+        total_debt_end=total_debt,
+    )
+    bundle = compute_kpis(_snapshot(annual=[annual]))
+    assert bundle.debt_to_ebit is not None
+    assert bundle.debt_to_ebit.level_tone is expected_tone
+
+
+def test_debt_to_ebit_zero_is_good_level_tone() -> None:
+    """total_debt = 0 («Нет долга») → GOOD. Frontend всё равно рисует
+    спец-карточку NoDebtCard, но backend-контракт консистентен (GOOD,
+    не None) — пригодится для аудит-логирования."""
+    annual = _annual_extended(2025, total_debt_end=0)
+    bundle = compute_kpis(_snapshot(annual=[annual]))
+    assert bundle.debt_to_ebit is not None
+    assert bundle.debt_to_ebit.level_tone is KpiLevelTone.GOOD
+
+
+def test_revenue_ltm_has_no_level_tone() -> None:
+    """Revenue LTM не категоризируется — нет универсального threshold для
+    абсолютной выручки (зависит от отрасли/размера)."""
+    bundle = compute_kpis(_snapshot(annual=[_annual(2025, 1_000_000_000)]))
+    assert bundle.revenue_ltm is not None
+    assert bundle.revenue_ltm.level_tone is None
+
+
+def test_ebit_has_no_level_tone() -> None:
+    """EBIT не категоризируется — нет универсального threshold для абсолютной
+    величины. Раскраска по YoY-тренду происходит на frontend через pill."""
+    annual = _annual_extended(2025, profit_before_tax=130_000_000, interest_expense=20_000_000)
+    bundle = compute_kpis(_snapshot(annual=[annual]))
+    assert bundle.ebit is not None
+    assert bundle.ebit.level_tone is None
 
 
 def test_kpi_bundle_renamed_fields_replace_ebitda() -> None:

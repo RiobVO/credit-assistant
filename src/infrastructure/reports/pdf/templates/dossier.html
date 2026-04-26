@@ -220,6 +220,12 @@
     padding: 10pt 12pt;
     background: var(--surface);
   }
+  /* CA-048: left severity stripe — категория absolute-level порога KPI
+     (ROE и Debt/EBIT, см. KpiBundle docstring). Padding-left увеличен,
+     чтобы 3pt полоса не «съела» контент. */
+  .kpi.lvl-good { border-left: 3pt solid var(--success); padding-left: 10pt; }
+  .kpi.lvl-warn { border-left: 3pt solid var(--warning); padding-left: 10pt; }
+  .kpi.lvl-bad  { border-left: 3pt solid var(--danger);  padding-left: 10pt; }
   .kpi .label {
     font-size: 8.5pt;
     color: var(--ink-500);
@@ -452,7 +458,7 @@
   {# KPI strip — 4 карточки #}
   <div class="kpi-row">
     {% for slot in kpi_slots %}
-    <div class="kpi">
+    <div class="kpi{% if slot.level_tone %} lvl-{{ slot.level_tone }}{% endif %}">
       <div class="label">{{ slot.label }}</div>
       {% if slot.value is none %}
         <div class="value empty">—</div>

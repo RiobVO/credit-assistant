@@ -196,6 +196,7 @@ def _kpi_slot(key: str, kpi: KpiValue | None) -> dict[str, object]:
             "yoy_pct": None,
             "yoy_positive": False,
             "yoy_label": "",
+            "level_tone": None,
         }
     if kpi.unit == KpiUnit.UZS:
         value_str = fmt_uzs(kpi.value, billions=True)
@@ -210,12 +211,17 @@ def _kpi_slot(key: str, kpi: KpiValue | None) -> dict[str, object]:
         yoy_positive = kpi.yoy_pct > 0
         yoy_label = fmt_pct(kpi.yoy_pct, with_sign=True)
 
+    # CA-048: StrEnum.value → "good"/"warn"/"bad", совпадает с CSS-классами
+    # .lvl-good/.lvl-warn/.lvl-bad в dossier.html. None → шаблон не добавит класс.
+    level_tone = kpi.level_tone.value if kpi.level_tone is not None else None
+
     return {
         "label": _KPI_LABEL[key],
         "value": value_str,
         "yoy_pct": kpi.yoy_pct,
         "yoy_positive": yoy_positive,
         "yoy_label": yoy_label,
+        "level_tone": level_tone,
     }
 
 
