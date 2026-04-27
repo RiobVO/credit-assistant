@@ -1,6 +1,6 @@
 "use client";
 
-import { Clock, LogOut, Search } from "lucide-react";
+import { Clock, LogOut, Plus, Search } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { type ReactNode } from "react";
@@ -73,6 +73,19 @@ export function BankSidebar() {
             Кредитный конвейер
           </div>
         </div>
+      </div>
+
+      {/* CA-051: primary CTA «+ Новая заявка». Без поиска ИНН — аналитик
+          может сразу заполнять Шаг 1 руками (ИНН вводится в форме). Точка
+          входа для нового workflow в bank-mode, чтобы не требовать ИНН-first. */}
+      <div className="px-3 pt-4">
+        <Link
+          href="/manual-input"
+          className="flex items-center justify-center gap-2 rounded-md bg-[#1E40AF] px-3 py-[10px] text-[13px] font-semibold text-white shadow-sm transition-colors hover:bg-[#1A3899]"
+        >
+          <Plus className="size-4" />
+          Новая заявка
+        </Link>
       </div>
 
       <div className="px-3 pt-4 pb-1">
