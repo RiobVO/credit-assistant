@@ -11,6 +11,7 @@ from domain.entities.borrower import Borrower, LegalForm
 from domain.entities.borrower_snapshot import BorrowerSnapshot
 from domain.entities.financial_report import FinancialReport
 from domain.rules.financial.negative_equity import negative_equity
+from domain.value_objects.balance_snapshot import BalanceSnapshot
 from domain.value_objects.date_range import DateRange
 from domain.value_objects.inn import INN
 from domain.value_objects.money import Currency, Money
@@ -19,12 +20,17 @@ UZS = Currency.UZS
 
 
 def _annual(year: int, *, equity: int | None) -> FinancialReport:
+    balance_end = (
+        BalanceSnapshot(equity=Money(Decimal(equity), UZS))
+        if equity is not None
+        else None
+    )
     return FinancialReport(
         period=DateRange(date(year, 1, 1), date(year, 12, 31)),
         revenue=Money(Decimal(1_000_000_000), UZS),
         net_profit=Money(Decimal(100_000_000), UZS),
         taxes_paid=Money(Decimal(0), UZS),
-        equity=Money(Decimal(equity), UZS) if equity is not None else None,
+        balance_end=balance_end,
     )
 
 

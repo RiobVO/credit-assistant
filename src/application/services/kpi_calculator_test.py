@@ -24,6 +24,7 @@ from domain.entities.borrower import Borrower, LegalForm
 from domain.entities.borrower_snapshot import BorrowerSnapshot
 from domain.entities.financial_report import FinancialReport
 from domain.entities.monthly_turnover import MonthlyTurnover
+from domain.value_objects.balance_snapshot import BalanceSnapshot
 from domain.value_objects.date_range import DateRange
 from domain.value_objects.inn import INN
 from domain.value_objects.money import Currency, Money
@@ -198,10 +199,22 @@ def _annual_extended(
     total_debt_end: int | None = 200_000_000,
     total_debt_start: int | None = 180_000_000,
 ) -> FinancialReport:
-    """Годовой отчёт с CA-037 расширениями. None — поле отсутствует в исходных."""
+    """Годовой отчёт с CA-037 расширениями. None — поле отсутствует в исходных.
+
+    CA-047: balance_end / balance_start как BalanceSnapshot sub-entity;
+    пустой snapshot (`is_empty()=True`) превращается в None — KPI calculator
+    обрабатывает это как «FORM_1 не загружен».
+    """
 
     def money_opt(v: int | None) -> Money | None:
         return Money(Decimal(v), UZS) if v is not None else None
+
+    balance_end = BalanceSnapshot(
+        equity=money_opt(equity_end), total_debt=money_opt(total_debt_end),
+    )
+    balance_start = BalanceSnapshot(
+        equity=money_opt(equity_start), total_debt=money_opt(total_debt_start),
+    )
 
     return FinancialReport(
         period=DateRange(date(year, 1, 1), date(year, 12, 31)),
@@ -210,10 +223,8 @@ def _annual_extended(
         taxes_paid=Money(Decimal(revenue // 20), UZS),
         profit_before_tax=money_opt(profit_before_tax),
         interest_expense=money_opt(interest_expense),
-        equity=money_opt(equity_end),
-        equity_period_start=money_opt(equity_start),
-        total_debt=money_opt(total_debt_end),
-        total_debt_period_start=money_opt(total_debt_start),
+        balance_end=balance_end if not balance_end.is_empty() else None,
+        balance_start=balance_start if not balance_start.is_empty() else None,
     )
 
 

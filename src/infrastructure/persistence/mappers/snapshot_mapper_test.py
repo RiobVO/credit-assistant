@@ -14,6 +14,7 @@ from domain.entities.invoice import Invoice, InvoiceRole
 from domain.entities.monthly_turnover import MonthlyTurnover
 from domain.entities.tax_event import TaxEvent, TaxEventType
 from domain.entities.vat_period_report import VatPeriodReport
+from domain.value_objects.balance_snapshot import BalanceSnapshot
 from domain.value_objects.date_range import DateRange
 from domain.value_objects.inn import INN
 from domain.value_objects.loan_request import LoanRequest
@@ -55,8 +56,10 @@ def _full_snapshot() -> BorrowerSnapshot:
                 net_profit=_money(500_000_000),
                 taxes_paid=_money(120_000_000),
                 vat_declared=_money(300_000_000),
-                assets=_money(4_000_000_000),
-                liabilities=_money(2_000_000_000),
+                balance_end=BalanceSnapshot(
+                    assets=_money(4_000_000_000),
+                    liabilities=_money(2_000_000_000),
+                ),
             ),
         ],
         quarterly_reports=[
@@ -193,32 +196,37 @@ def test_ca037_financial_report_round_trip_with_all_extensions() -> None:
                 revenue=_money(7_279_371_000),
                 net_profit=_money(157_282_000),
                 taxes_paid=_money(56_000_000),
-                assets=_money(2_533_084_000),
-                liabilities=_money(985_025_000),
                 profit_before_tax=_money(189_060_000),
                 interest_expense=_money(67_803_000),
-                equity=_money(1_548_059_000),
-                total_debt=_money(618_267_000),
-                assets_period_start=_money(2_087_582_000),
-                liabilities_period_start=_money(696_805_000),
-                equity_period_start=_money(1_390_777_000),
-                total_debt_period_start=_money(332_222_000),
+                balance_end=BalanceSnapshot(
+                    assets=_money(2_533_084_000),
+                    liabilities=_money(985_025_000),
+                    equity=_money(1_548_059_000),
+                    total_debt=_money(618_267_000),
+                ),
+                balance_start=BalanceSnapshot(
+                    assets=_money(2_087_582_000),
+                    liabilities=_money(696_805_000),
+                    equity=_money(1_390_777_000),
+                    total_debt=_money(332_222_000),
+                ),
             ),
         ],
     )
     payload = snapshot_to_payload(original)
     restored = snapshot_from_payload(payload, original.borrower)
-    # Frozen dataclass equality сравнит все 15 полей FinancialReport — если
+    # Frozen dataclass equality сравнит все поля FinancialReport — если
     # хоть одно потерялось, equality упадёт.
     assert restored == original
     # Дополнительно — явная проверка на критичные для KPI поля.
     r = restored.annual_reports[0]
     assert r.profit_before_tax is not None
     assert r.profit_before_tax.amount == Decimal("189060000")
-    assert r.equity is not None
-    assert r.equity.amount == Decimal("1548059000")
-    assert r.total_debt is not None
-    assert r.total_debt.amount == Decimal("618267000")
+    assert r.balance_end is not None
+    assert r.balance_end.equity is not None
+    assert r.balance_end.equity.amount == Decimal("1548059000")
+    assert r.balance_end.total_debt is not None
+    assert r.balance_end.total_debt.amount == Decimal("618267000")
 
 
 def test_ca037_legacy_payload_without_new_keys_still_loads() -> None:
@@ -250,12 +258,10 @@ def test_ca037_legacy_payload_without_new_keys_still_loads() -> None:
     r = restored.annual_reports[0]
     assert r.profit_before_tax is None
     assert r.interest_expense is None
-    assert r.equity is None
-    assert r.total_debt is None
-    assert r.equity_period_start is None
-    assert r.total_debt_period_start is None
-    assert r.assets_period_start is None
-    assert r.liabilities_period_start is None
+    # CA-047: пустой BalanceSnapshot (все 4 None) сворачивается в None,
+    # читатели должны различать «нет snapshot» и «есть snapshot со всеми None».
+    assert r.balance_end is None
+    assert r.balance_start is None
 
 
 def test_snapshot_decimal_precision_preserved() -> None:
