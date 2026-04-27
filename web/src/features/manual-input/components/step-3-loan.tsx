@@ -13,12 +13,12 @@ import {
   parseAmount,
   parseRate,
   sumQuarters,
-} from "../_lib/finance";
+} from "../lib/finance";
 import {
   type FormValues,
   loanCategories,
   loanTerms,
-} from "../_schema";
+} from "../schema";
 
 import { Checklist } from "./checklist";
 import { DscrSummary } from "./dscr-summary";

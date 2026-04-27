@@ -18,17 +18,17 @@ import { ApiError, postManualInput } from "@/lib/api";
 
 import { Topbar, type DraftIndicator } from "@/components/topbar";
 
-import { FormFooter } from "./_components/form-footer";
-import { InfoBanner } from "./_components/info-banner";
-import { PageHead } from "./_components/page-head";
-import { Stepper } from "./_components/stepper";
-import { Step1Borrower } from "./_components/step-1-borrower";
-import { Step2Financials } from "./_components/step-2-financials";
-import { Step3Loan } from "./_components/step-3-loan";
-import { formValuesToPayload } from "./_form-mapper";
-import { useFormDraft } from "./_hooks/use-form-draft";
-import { SourceTrailProvider } from "./_hooks/use-source-trail";
-import { defaultFormValues, formSchema, type FormValues } from "./_schema";
+import { FormFooter } from "./components/form-footer";
+import { InfoBanner } from "./components/info-banner";
+import { PageHead } from "./components/page-head";
+import { Stepper } from "./components/stepper";
+import { Step1Borrower } from "./components/step-1-borrower";
+import { Step2Financials } from "./components/step-2-financials";
+import { Step3Loan } from "./components/step-3-loan";
+import { formValuesToPayload } from "./form-mapper";
+import { useFormDraft } from "./hooks/use-form-draft";
+import { SourceTrailProvider } from "./hooks/use-source-trail";
+import { defaultFormValues, formSchema, type FormValues } from "./schema";
 
 type Step = 1 | 2 | 3;
 
@@ -44,7 +44,10 @@ const STEP_BANNER: Record<Step, "registry" | "financials" | "final"> = {
   3: "final",
 };
 
-export default function ManualInputPage() {
+// CA-018: extract из (accountant)/manual-input/page.tsx. Чтобы один и тот же
+// route работал в обоих режимах (bank/accountant) с правильным sidebar,
+// view вынесен в features/, а chrome решается AppShell на уровне layout.
+export function ManualInputView() {
   // useSearchParams требует Suspense-границы во время prerender Next App Router.
   return (
     <Suspense fallback={<ManualInputFallback />}>

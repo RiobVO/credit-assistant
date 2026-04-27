@@ -12,9 +12,9 @@ import { Controller, useFormContext, useWatch } from "react-hook-form";
 import { ApiError, uploadSoliqXltx } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
-import { formatUzs } from "../_lib/finance";
-import { getYearsRange } from "../_lib/years";
-import type { FormValues, VatPeriodFromSoliq } from "../_schema";
+import { formatUzs } from "../lib/finance";
+import { getYearsRange } from "../lib/years";
+import type { FormValues, VatPeriodFromSoliq } from "../schema";
 
 const MONTHS_RU = [
   "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",

@@ -14,7 +14,7 @@ import type { UseFormReturn } from "react-hook-form";
 
 import { ApiError, createDraft, getDraft, updateDraft } from "@/lib/api";
 
-import type { FormValues } from "../_schema";
+import type { FormValues } from "../schema";
 
 export type UseFormDraftResult = {
   draftId: string | null;

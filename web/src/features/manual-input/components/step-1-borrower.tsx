@@ -6,7 +6,7 @@ import { Controller, useFormContext } from "react-hook-form";
 
 import { cn } from "@/lib/utils";
 
-import { type FormValues, legalForms } from "../_schema";
+import { type FormValues, legalForms } from "../schema";
 
 import { Field, FieldInput, fieldInputClass } from "./field";
 

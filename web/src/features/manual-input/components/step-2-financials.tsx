@@ -10,8 +10,8 @@ import {
   digitsOnly,
   formatUzs,
   parseAmount,
-} from "../_lib/finance";
-import type { FormValues } from "../_schema";
+} from "../lib/finance";
+import type { FormValues } from "../schema";
 
 import { Field, fieldInputClass } from "./field";
 import { FinancialTable } from "./financial-table";

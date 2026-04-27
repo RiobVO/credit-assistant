@@ -8,8 +8,8 @@ import {
   digitsOnly,
   formatUzs,
   yearTotal,
-} from "../_lib/finance";
-import type { FormValues } from "../_schema";
+} from "../lib/finance";
+import type { FormValues } from "../schema";
 
 type SectionPath = "step2.revenue" | "step2.netProfit";
 
