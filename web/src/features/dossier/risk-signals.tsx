@@ -1,4 +1,7 @@
-import { ChevronRight } from "lucide-react";
+"use client";
+
+import { ChevronDown, ChevronRight } from "lucide-react";
+import { useState } from "react";
 
 import type { RedFlagDto, Severity } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -15,6 +18,13 @@ const SEVERITY_PILL: Record<Severity, string> = {
   medium: "border-[#F1D9A6] bg-[#FFF6E5] text-[var(--ca-warning)]",
   high: "border-[#F2BCBA] bg-[#FCE7E5] text-[var(--ca-danger)]",
   critical: "border-[var(--ca-danger)] bg-[#FCE7E5] text-[var(--ca-danger)]",
+};
+
+const SEVERITY_LABEL: Record<Severity, string> = {
+  low: "Низкий",
+  medium: "Средний",
+  high: "Высокий",
+  critical: "Критический",
 };
 
 const RULE_LABEL: Record<string, string> = {
@@ -36,9 +46,18 @@ const RULE_LABEL: Record<string, string> = {
   TAX_PENALTIES_CURRENT_YEAR: "Пеня по налогам",
   DIRECTOR_CHANGED_6M: "Смена директора",
   OKVED_CHANGED_12M: "Смена ОКВЭД",
+  NEGATIVE_EQUITY: "Отрицательный капитал",
 };
 
-export function RiskSignals({ flags }: { flags: RedFlagDto[] }) {
+// CA-050: accordion-rows + actual rules_evaluated count из API
+// (вместо хардкода 17 — реестр после CA-049 содержит 19 правил).
+export function RiskSignals({
+  flags,
+  rulesEvaluated,
+}: {
+  flags: RedFlagDto[];
+  rulesEvaluated: number;
+}) {
   return (
     <section className="flex h-full flex-col rounded-[10px] border border-[var(--ca-border)] bg-[var(--ca-surface)] shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
       <header className="flex items-center gap-2.5 border-b border-[var(--ca-border)] px-[22px] py-[18px]">
@@ -47,7 +66,7 @@ export function RiskSignals({ flags }: { flags: RedFlagDto[] }) {
             Сигналы риска
           </h2>
           <p className="m-0 mt-0.5 text-[12.5px] text-[var(--ca-ink-500)]">
-            {flags.length} {pluralFlags(flags.length)} из 17 проверенных
+            {flags.length} {pluralFlags(flags.length)} из {rulesEvaluated} проверенных
           </p>
         </div>
       </header>
@@ -68,31 +87,75 @@ export function RiskSignals({ flags }: { flags: RedFlagDto[] }) {
 }
 
 function SignalRow({ flag }: { flag: RedFlagDto }) {
+  const [expanded, setExpanded] = useState(false);
   const label = RULE_LABEL[flag.rule_id] ?? flag.rule_id;
   const value = renderEvidenceValue(flag);
+  const Chevron = expanded ? ChevronDown : ChevronRight;
+  const evidenceEntries = Object.entries(flag.evidence ?? {});
 
   return (
-    <li className="flex items-center gap-3 px-[22px] py-3">
-      <span className={cn("size-2 flex-none rounded-full", SEVERITY_DOT[flag.severity])} />
-      <div className="min-w-0 flex-1">
-        <div className="text-[13.5px] font-medium text-[var(--ca-ink-900)]">
-          {label}
-        </div>
-        <div className="mt-0.5 truncate text-[11.5px] text-[var(--ca-ink-500)]">
-          {flag.message}
-        </div>
-      </div>
-      {value ? (
+    <li className="px-[22px]">
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        aria-expanded={expanded}
+        className="flex w-full items-center gap-3 py-3 text-left transition-colors hover:bg-[#FAFBFC] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1E40AF]/40"
+      >
         <span
-          className={cn(
-            "inline-flex items-center rounded-full border px-2.5 py-px font-mono text-[12px] font-semibold whitespace-nowrap",
-            SEVERITY_PILL[flag.severity],
-          )}
-        >
-          {value}
-        </span>
-      ) : null}
-      <ChevronRight className="size-4 flex-none text-[var(--ca-ink-400)]" />
+          className={cn("size-2 flex-none rounded-full", SEVERITY_DOT[flag.severity])}
+          aria-hidden
+        />
+        <div className="min-w-0 flex-1">
+          <div className="text-[13.5px] font-medium text-[var(--ca-ink-900)]">{label}</div>
+          <div className="mt-0.5 truncate text-[11.5px] text-[var(--ca-ink-500)]">
+            {flag.message}
+          </div>
+        </div>
+        {value ? (
+          <span
+            className={cn(
+              "inline-flex items-center rounded-full border px-2.5 py-px font-mono text-[12px] font-semibold whitespace-nowrap",
+              SEVERITY_PILL[flag.severity],
+            )}
+          >
+            {value}
+          </span>
+        ) : null}
+        <Chevron className="size-4 flex-none text-[var(--ca-ink-400)]" aria-hidden />
+      </button>
+
+      {expanded && (
+        <div className="ml-5 border-l-2 border-[var(--ca-border)] pl-4 pb-4 text-[12.5px] text-[var(--ca-ink-700)]">
+          <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5">
+            <dt className="text-[var(--ca-ink-500)]">Правило</dt>
+            <dd className="font-mono text-[11.5px]">{flag.rule_id}</dd>
+
+            <dt className="text-[var(--ca-ink-500)]">Severity</dt>
+            <dd>{SEVERITY_LABEL[flag.severity]}</dd>
+
+            <dt className="text-[var(--ca-ink-500)]">Сообщение</dt>
+            <dd>{flag.message}</dd>
+
+            {evidenceEntries.length > 0 && (
+              <>
+                <dt className="self-start text-[var(--ca-ink-500)]">Evidence</dt>
+                <dd>
+                  <ul className="space-y-0.5">
+                    {evidenceEntries.map(([k, v]) => (
+                      <li key={k} className="font-mono text-[11.5px]">
+                        <span className="text-[var(--ca-ink-500)]">{k}:</span>{" "}
+                        <span className="text-[var(--ca-ink-900)]">
+                          {formatEvidenceCell(v)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </dd>
+              </>
+            )}
+          </dl>
+        </div>
+      )}
     </li>
   );
 }
@@ -130,6 +193,23 @@ function formatEvidenceNumber(raw: unknown): string | null {
   const n = typeof raw === "number" ? raw : parseFloat(raw);
   if (!Number.isFinite(n)) return null;
   return n.toFixed(2).replace(".", ",");
+}
+
+// CA-050: универсальное отображение evidence-значения в раскрытой строке.
+// Числовые Decimal-строки округляем до 2 знаков (как в pill); прочее — as-is.
+function formatEvidenceCell(raw: unknown): string {
+  if (raw === null || raw === undefined) return "—";
+  if (typeof raw === "boolean") return raw ? "да" : "нет";
+  if (typeof raw === "number") return raw.toFixed(2).replace(".", ",");
+  if (typeof raw === "string") {
+    // Числовая строка → округляем; остальное (год, имя, ИНН) — без изменений.
+    const n = parseFloat(raw);
+    if (Number.isFinite(n) && /^-?\d+(?:\.\d+)?$/.test(raw)) {
+      return n.toFixed(2).replace(".", ",");
+    }
+    return raw;
+  }
+  return JSON.stringify(raw);
 }
 
 function pluralFlags(n: number): string {
