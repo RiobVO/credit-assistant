@@ -1,7 +1,6 @@
 "use client";
 
 import { ChevronLeft, Download } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { APP_MODE } from "@/lib/config";
@@ -16,34 +15,29 @@ const BACK_BUTTON_CLASS =
 // Mode-aware actions. PDF идёт через Next BFF (same-origin) — это нужно
 // в bank-режиме, где backend требует Bearer, и не мешает в accountant.
 //
-// Bank-режим: фиксированный «К истории» (там есть /history page).
-// Accountant: history-aware back — возвращает откуда пришёл (search /
-// /manual-input / прямой URL). Fallback на /manual-input для прямого захода.
+// CA-052: history-aware back в обоих режимах. Раньше bank-режим жёстко
+// шёл на /history через <Link>, даже если аналитик пришёл из /search —
+// получался лишний клик. Теперь router.back() с mode-specific fallback:
+// bank → /history, accountant → /manual-input (когда нет prev в history).
 export function ActionBar({ dossierId }: Props) {
   const router = useRouter();
   const pdfHref = `/api/dossier/${dossierId}/pdf`;
+  const fallback = APP_MODE === "bank" ? "/history" : "/manual-input";
 
-  const handleAccountantBack = () => {
+  const handleBack = () => {
     if (typeof window !== "undefined" && window.history.length > 1) {
       router.back();
     } else {
-      router.push("/manual-input");
+      router.push(fallback);
     }
   };
 
   return (
     <div className="mt-7 flex items-center justify-between border-t border-[var(--ca-border)] pt-5">
-      {APP_MODE === "bank" ? (
-        <Link href="/history" className={BACK_BUTTON_CLASS}>
-          <ChevronLeft className="size-4" />
-          К истории
-        </Link>
-      ) : (
-        <button type="button" onClick={handleAccountantBack} className={BACK_BUTTON_CLASS}>
-          <ChevronLeft className="size-4" />
-          Назад
-        </button>
-      )}
+      <button type="button" onClick={handleBack} className={BACK_BUTTON_CLASS}>
+        <ChevronLeft className="size-4" />
+        Назад
+      </button>
 
       <a
         href={pdfHref}
