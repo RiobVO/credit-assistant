@@ -3,8 +3,9 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { ArrowUpRight, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
+import { rememberBackTarget } from "@/features/dossier/back-target";
 import {
   type BankDossierListItem,
   type ListFilter,
@@ -38,6 +39,12 @@ export function HistoryView() {
   const [q, setQ] = useState("");
   const [appliedQ, setAppliedQ] = useState("");
   const [page, setPage] = useState(1);
+
+  // CA-055: запоминаем как back-target для досье — открыл досье, нажал
+  // «Назад» → вернёшься сюда, а не на промежуточный /manual-input.
+  useEffect(() => {
+    rememberBackTarget("/history");
+  }, []);
 
   const { data, isLoading, isError, error, isFetching } = useQuery({
     queryKey: ["bank", "dossiers", { filter, q: appliedQ, page }],
