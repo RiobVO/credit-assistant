@@ -28,7 +28,13 @@ import { Step3Loan } from "./components/step-3-loan";
 import { formValuesToPayload } from "./form-mapper";
 import { useFormDraft } from "./hooks/use-form-draft";
 import { SourceTrailProvider } from "./hooks/use-source-trail";
-import { defaultFormValues, formSchema, type FormValues } from "./schema";
+import { consumeStep1Prefill } from "./prefill";
+import {
+  defaultFormValues,
+  formSchema,
+  type FormValues,
+  type Step1Values,
+} from "./schema";
 
 type Step = 1 | 2 | 3;
 
@@ -101,14 +107,41 @@ function ManualInputPageInner() {
 
   const draft = useFormDraft({ form, initialDraftId });
 
-  // CA-056: pre-fill ИНН из query, только если нет draft (draft сам несёт ИНН).
-  // Используем setValue, а не form.reset — не сбиваем другие defaults и
-  // не перетираем уже введённые поля при перерендере.
+  // CA-056 / CA-058: pre-fill при «Пересобрать с дополнениями» с досье.
+  // - draft в URL приоритетнее (содержит полный snapshot — Шаг 1, 2, 3).
+  // - sessionStorage (CA-058) — полная borrower-карточка из досье →
+  //   form.reset Шага 1, Шаги 2/3 остаются defaults.
+  // - fallback на `?inn=` (CA-056): только ИНН, остальное руками.
   useEffect(() => {
     if (initialDraftId !== null) return;
-    if (!initialInn) return;
-    if (!/^\d{9}$/.test(initialInn)) return;
-    form.setValue("step1.inn", initialInn, { shouldDirty: false });
+
+    const prefill = consumeStep1Prefill();
+    if (prefill && /^\d{9}$/.test(prefill.inn)) {
+      // CA-058: borrower-карточка из досье. ИНН в URL и в prefill должны
+      // совпадать (defensive — sessionStorage мог остаться с прошлой
+      // навигации); если не совпадают, доверяем URL и игнорируем prefill.
+      if (initialInn !== null && initialInn !== prefill.inn) return;
+      const legalForm = prefill.legal_form as Step1Values["legalForm"];
+      form.reset({
+        ...defaultFormValues(),
+        step1: {
+          inn: prefill.inn,
+          name: prefill.name,
+          legalForm,
+          registrationDate: prefill.registration_date,
+          okvedMain: prefill.okved_main,
+          directorName: prefill.director_name,
+          directorAppointedAt: prefill.director_appointed_at,
+          registeredAddress: prefill.registered_address,
+        },
+      });
+      return;
+    }
+
+    // CA-056 fallback: только ИНН в URL — заполняем одно поле.
+    if (initialInn && /^\d{9}$/.test(initialInn)) {
+      form.setValue("step1.inn", initialInn, { shouldDirty: false });
+    }
   }, [form, initialDraftId, initialInn]);
 
   // Битый/просроченный draft — чистим query, чтобы reload не подбирал его снова.
