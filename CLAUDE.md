@@ -26,7 +26,6 @@
 - TODO[CA-029b]: парсер PROFIT_TAX (taxes_paid, 15 листов) — adapter raises UnsupportedFormatError. По образцу FORM_2/FORM_1 + реальные xltx папы.
 - TODO[CA-038] (P3): валидация юр.адреса — минимум 15 символов + наличие цифры. Сейчас «Ташкент» проходит.
 - TODO[CA-039] (P3): Шаг 1 — если дата назначения директора < 90 дней назад, показать inline warning «Будет учтено как сигнал риска».
-- TODO[CA-021b] (P3): округлять `MARGIN` evidence в `LOW_MARGIN_HIGH_TURNOVER` до 4 знаков. Сейчас в PDF выводится `0.02160653715822424767`.
 - TODO[CA-059] (P3): SubHeader на досье — badge статуса hardcoded `"В работе"` + `documentsCount=5`. Читать из `data.application.status` и реальных documents (когда подключим documents endpoint). Сейчас аналитик видит одинаковую плашку на каждом досье — misleading.
 
 ---
@@ -139,5 +138,6 @@
 | 2026-05-12 | post-4 | **«Пересобрать с дополнениями» + ?inn= (CA-056)** — третья кнопка в ActionBar → `/manual-input?inn=<INN>`. Pre-fill ИНН в Шаге 1. | `8d10c71` |
 | 2026-05-12 | post-4 | **Убрана dead «Сохранить как черновик» (CA-057)** — `onSaveDraft` никогда не передавался → клик был no-op. Auto-save в `goNext` уже работает. | `4be0b53` |
 | 2026-05-12 | post-4 | **Pre-fill Шага 1 при «Пересобрать» (CA-058)** — borrower-карточка из досье тянется через sessionStorage (per-tab). `form.reset` Шага 1 при mount если нет draft. Финансы и кредит остаются пустыми. | `3fd0a34` |
+| 2026-05-12 | post-4 | **Округление MARGIN evidence до 4 знаков (CA-021b)** — `low_margin_high_turnover` делил Decimal'ы с хвостом 20+ знаков (0.02160653715822424767 в PDF). `margin.quantize(Decimal("0.0001"))` перед сериализацией в evidence. +1 тест. | `20699d0` |
 
 > Сжатая история. Полные decomposition / smoke numbers / per-step rationale — в commit messages (`git log --oneline`) и `docs/adr/`.
