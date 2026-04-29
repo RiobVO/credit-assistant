@@ -251,11 +251,16 @@ class BorrowerOutput(_StrictModel):
 
 class ApplicationOutput(_StrictModel):
     """Метаданные заявки. В Phase 3.B статус всегда ``in_review`` —
-    workflow approve/reject появится в Phase 4 (Bank Mode SSO).
+    workflow approve/reject появится с UI решения аналитика (TODO).
+
+    CA-059: ``documents_count`` — заглушка под documents endpoint.
+    Сейчас mapper не выставляет → None → фронт скрывает кнопку
+    «Документы», вместо misleading hardcoded `(5)`.
     """
 
     id: str  # `BR-YYYY-XXXX`, derived из dossier_id + created_at; deterministic
     status: ApplicationStatusCode
+    documents_count: int | None = None
 
 
 class KpiValueOutput(_StrictModel):

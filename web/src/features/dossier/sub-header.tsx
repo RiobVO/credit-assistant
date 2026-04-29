@@ -25,8 +25,11 @@ export function SubHeader({
   applicationId: string;
   borrowerName: string;
   status: string;
-  documentsCount: number;
+  // CA-059: null = endpoint ещё не подключён, кнопка скрывается;
+  // 0 = подключён, документов нет — тоже скрываем (нечего открывать).
+  documentsCount: number | null;
 }) {
+  const hasDocuments = documentsCount !== null && documentsCount > 0;
   return (
     <div className="mb-5 flex flex-wrap items-center gap-x-4 gap-y-2">
       <Badge
@@ -48,7 +51,12 @@ export function SubHeader({
       </span>
 
       <div className="ml-auto flex items-center gap-2">
-        <SecondaryAction icon={<FolderOpen className="size-4" />} label={`Документы (${documentsCount})`} />
+        {hasDocuments ? (
+          <SecondaryAction
+            icon={<FolderOpen className="size-4" />}
+            label={`Документы (${documentsCount})`}
+          />
+        ) : null}
         <SecondaryAction icon={<IdCard className="size-4" />} label="Карточка клиента" />
       </div>
     </div>

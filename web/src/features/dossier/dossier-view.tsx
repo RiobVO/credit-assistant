@@ -66,7 +66,7 @@ export function DossierView({ dossierId }: { dossierId: string }) {
           applicationId={data.application.id}
           borrowerName={data.borrower.name}
           status={data.application.status}
-          documentsCount={5}
+          documentsCount={data.application.documents_count}
         />
 
         <ReadinessBadge dossierId={dossierId} />
