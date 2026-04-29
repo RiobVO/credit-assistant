@@ -26,11 +26,14 @@ def low_margin_high_turnover(snapshot: BorrowerSnapshot) -> FiringEvidence | Non
     if margin >= MARGIN_THRESHOLD:
         return None
 
+    # Decimal-деление двух integer-like значений даёт хвост в 20+ знаков
+    # (см. CA-021b: было 0.02160653715822424767 в evidence PDF).
+    margin_rounded = margin.quantize(Decimal("0.0001"))
     return FiringEvidence(
         message=f"Маржа {margin:.1%} при годовой выручке {revenue}",
         evidence={
             "revenue": str(revenue),
             "net_profit": str(latest.net_profit.amount),
-            "margin": str(margin),
+            "margin": str(margin_rounded),
         },
     )
