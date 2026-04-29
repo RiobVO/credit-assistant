@@ -1,7 +1,7 @@
 "use client";
 
-import { differenceInMonths, parse, isValid } from "date-fns";
-import { CheckCircle2, Search } from "lucide-react";
+import { differenceInDays, differenceInMonths, parse, isValid } from "date-fns";
+import { CheckCircle2, Search, TriangleAlert } from "lucide-react";
 import { Controller, useFormContext } from "react-hook-form";
 
 import { cn } from "@/lib/utils";
@@ -200,6 +200,19 @@ export function Step1Borrower() {
               max={todayIso()}
               invalid={Boolean(apptErr)}
             />
+            {/* CA-039: pre-warning — формальной error нет, поле валидно,
+                но смена директора <90 дней — будущий risk signal в досье. */}
+            {!apptErr && isRecentDirectorAppointment(apptDate) ? (
+              <div
+                role="note"
+                className="mt-1.5 inline-flex items-start gap-1.5 rounded-md border border-[#F1D9A6] bg-[#FFF6E5] px-2 py-1 text-[12px] text-[var(--ca-warning)]"
+              >
+                <TriangleAlert className="mt-px size-3.5 shrink-0" />
+                <span>
+                  Назначение менее 90 дней назад — будет учтено как сигнал риска
+                </span>
+              </div>
+            ) : null}
           </Field>
 
           {/* Юридический адрес */}
@@ -220,6 +233,21 @@ export function Step1Borrower() {
       </div>
     </section>
   );
+}
+
+// CA-039: «свежее» назначение директора (<90 дней) — pre-warning о будущем risk-сигнале.
+// Чистая функция, экспортируется для unit-теста.
+export function isRecentDirectorAppointment(
+  value: string | undefined,
+  thresholdDays = 90,
+  now: Date = new Date(),
+): boolean {
+  if (!value) return false;
+  const d = parse(value, "yyyy-MM-dd", new Date());
+  if (!isValid(d)) return false;
+  const diff = differenceInDays(now, d);
+  // Будущая дата (diff<0) или старше порога — не показываем.
+  return diff >= 0 && diff < thresholdDays;
 }
 
 function derivedActivityHint(value: string | undefined, prefix: string): string | undefined {
