@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
+import { BRAND_ID } from "@/lib/config";
+import { resolveBrand } from "@/lib/brand";
 
 const inter = Inter({
   variable: "--font-sans",
@@ -25,10 +27,15 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const brand = resolveBrand(BRAND_ID);
+  const brandStyle = brand.cssVars as React.CSSProperties;
+
   return (
     <html
       lang="ru"
       className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
+      style={brandStyle}
+      data-brand={brand.id}
     >
       <body className="min-h-full flex flex-col">
         <Providers>{children}</Providers>
