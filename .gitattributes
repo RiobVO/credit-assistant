@@ -6,3 +6,6 @@
 Dockerfile text eol=lf
 *.dockerfile text eol=lf
 docker/** text eol=lf
+
+# Bundled TTF (CA-010): binary, не текст. Защищаем от EOL-подмены и diff'а.
+*.ttf binary

@@ -90,11 +90,13 @@ Use case `RenderDossierPdf` оборачивает sync `port.render` в
 ## Шрифты
 
 `font-family: "Inter", "DejaVu Sans", sans-serif` — fallback chain.
-**v1 шаблон работает на DejaVu Sans** (системный в Debian-base, полная
-поддержка кириллицы). Inter подключим позже через bundle TTF в
-`infrastructure/reports/pdf/fonts/` — нужен FontConfiguration, ~600 KB
-в репо. Фиксируем как **TODO[CA-010]**: некритично для DoD Phase 3.C,
-улучшение типографики.
+**После CA-010 PDF рендерится на bundle Inter + JetBrains Mono** (TTF
+в `infrastructure/reports/pdf/fonts/`, SIL OFL). 4 веса Inter
+(400/500/600/700) + 2 веса JetBrains Mono (500/600), ~2.4 МБ в репо.
+`@font-face` в шаблоне резолвится через `base_url` рендерера
+(`PDF_DIR.as_uri()`); FontConfiguration WeasyPrint не нужен — `file://`
+URI работают по умолчанию. DejaVu Sans остаётся как fallback на случай,
+если кто-то рендерит шаблон без бандла.
 
 ## Degraded states
 
@@ -136,17 +138,12 @@ Use case `RenderDossierPdf` оборачивает sync `port.render` в
 
 - Зависимость от Docker для PDF-разработки — приемлемо: prod-стек
   идентичный, экономит «двойной maintenance» Windows + Linux setups.
-- DejaVu Sans вместо Inter в v1 PDF — приемлемо: PDF читается, дизайн
-  совпадает по структуре с экраном (разница только в гарнитуре).
 - matplotlib + WeasyPrint импортятся 200-300 мс на cold start —
   приемлемо: первый PDF-запрос держит в `lru_cache` Jinja2 Environment
   + matplotlib backend; следующие запросы используют разогретое.
 
 ## Future work
 
-- **TODO[CA-010]**: bundle Inter TTF (400/500/600/700) + JetBrains Mono
-  (500/600) в `fonts/`, прописать `@font-face`. Тогда PDF и экран
-  выглядят одной семьёй.
 - Шаблон может разрастись на partials по мере добавления секций H+
   (история заявок, сравнение с прошлым досье).
 - В Phase 4 Bank Mode — водяной знак «Только для внутреннего

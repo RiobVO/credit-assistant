@@ -9,6 +9,22 @@
 <meta charset="utf-8" />
 <title>Кредитное досье — {{ borrower.name }}</title>
 <style>
+  /* Bundled TTF (CA-010, ADR-0008): WeasyPrint резолвит url(...) относительно
+     base_url, который рендерер выставляет на директорию pdf/. Inter — основной
+     текст (4 веса), JetBrains Mono — числовые блоки (KPI, gauge, evidence). */
+  @font-face { font-family: "Inter"; font-weight: 400; font-style: normal;
+               src: url("fonts/Inter-Regular.ttf") format("truetype"); }
+  @font-face { font-family: "Inter"; font-weight: 500; font-style: normal;
+               src: url("fonts/Inter-Medium.ttf") format("truetype"); }
+  @font-face { font-family: "Inter"; font-weight: 600; font-style: normal;
+               src: url("fonts/Inter-SemiBold.ttf") format("truetype"); }
+  @font-face { font-family: "Inter"; font-weight: 700; font-style: normal;
+               src: url("fonts/Inter-Bold.ttf") format("truetype"); }
+  @font-face { font-family: "JetBrains Mono"; font-weight: 500; font-style: normal;
+               src: url("fonts/JetBrainsMono-Medium.ttf") format("truetype"); }
+  @font-face { font-family: "JetBrains Mono"; font-weight: 600; font-style: normal;
+               src: url("fonts/JetBrainsMono-SemiBold.ttf") format("truetype"); }
+
   /* @page: A4 + running footer. Bottom-left = бренд + ID, bottom-right = пагинация. */
   @page {
     size: A4;
