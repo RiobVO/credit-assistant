@@ -1,0 +1,11 @@
+{
+  "id": "uzbekbank",
+  "name": "Uzbekbank Credit",
+  "tagline": "Bank Mode",
+  "logoMark": "UB",
+  "primary": "#CC785C",
+  "primaryHover": "#B5624A",
+  "primarySoft": "#F7E8DF",
+  "primaryInk": "#6E2F1C",
+  "primaryRing": "rgba(204,120,92,0.22)"
+}

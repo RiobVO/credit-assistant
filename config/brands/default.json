@@ -1,0 +1,11 @@
+{
+  "id": "default",
+  "name": "Credit Assistant",
+  "tagline": "Accountant Mode",
+  "logoMark": "CA",
+  "primary": "#1E55C9",
+  "primaryHover": "#1947AA",
+  "primarySoft": "#EAF0FB",
+  "primaryInk": "#1947AA",
+  "primaryRing": "rgba(30,85,201,0.22)"
+}
