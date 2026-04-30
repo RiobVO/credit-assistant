@@ -7,17 +7,17 @@ import type { RedFlagDto, Severity } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 const SEVERITY_DOT: Record<Severity, string> = {
-  low: "bg-[var(--ca-success)]",
-  medium: "bg-[var(--ca-warning)]",
-  high: "bg-[var(--ca-danger)]",
-  critical: "bg-[var(--ca-danger)]",
+  low: "bg-[var(--ub-ok-fg)]",
+  medium: "bg-[var(--ub-warn-fg)]",
+  high: "bg-[var(--ub-bad-fg)]",
+  critical: "bg-[var(--ub-bad-fg)]",
 };
 
 const SEVERITY_PILL: Record<Severity, string> = {
-  low: "border-[#BFE2D2] bg-[var(--ca-success-50)] text-[var(--ca-success)]",
-  medium: "border-[#F1D9A6] bg-[#FFF6E5] text-[var(--ca-warning)]",
-  high: "border-[#F2BCBA] bg-[#FCE7E5] text-[var(--ca-danger)]",
-  critical: "border-[var(--ca-danger)] bg-[#FCE7E5] text-[var(--ca-danger)]",
+  low: "border-[#BFE2D2] bg-[var(--ub-ok-bg)] text-[var(--ub-ok-fg)]",
+  medium: "border-[#F1D9A6] bg-[#FFF6E5] text-[var(--ub-warn-fg)]",
+  high: "border-[#F2BCBA] bg-[#FCE7E5] text-[var(--ub-bad-fg)]",
+  critical: "border-[var(--ub-bad-fg)] bg-[#FCE7E5] text-[var(--ub-bad-fg)]",
 };
 
 const SEVERITY_LABEL: Record<Severity, string> = {
@@ -59,24 +59,24 @@ export function RiskSignals({
   rulesEvaluated: number;
 }) {
   return (
-    <section className="flex h-full flex-col rounded-[10px] border border-[var(--ca-border)] bg-[var(--ca-surface)] shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
-      <header className="flex items-center gap-2.5 border-b border-[var(--ca-border)] px-[22px] py-[18px]">
+    <section className="flex h-full flex-col rounded-[10px] border border-[var(--ub-hairline)] bg-[var(--ub-surface)] shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
+      <header className="flex items-center gap-2.5 border-b border-[var(--ub-hairline)] px-[22px] py-[18px]">
         <div>
-          <h2 className="m-0 text-[15px] font-semibold text-[var(--ca-ink-900)]">
+          <h2 className="m-0 text-[15px] font-semibold text-[var(--ub-ink)]">
             Сигналы риска
           </h2>
-          <p className="m-0 mt-0.5 text-[12.5px] text-[var(--ca-ink-500)]">
+          <p className="m-0 mt-0.5 text-[12.5px] text-[var(--ub-ink-3)]">
             {flags.length} {pluralFlags(flags.length)} из {rulesEvaluated} проверенных
           </p>
         </div>
       </header>
 
       {flags.length === 0 ? (
-        <div className="flex-1 px-[22px] py-10 text-center text-[13px] text-[var(--ca-ink-500)]">
+        <div className="flex-1 px-[22px] py-10 text-center text-[13px] text-[var(--ub-ink-3)]">
           Все проверки пройдены.
         </div>
       ) : (
-        <ul className="divide-y divide-[var(--ca-border)]">
+        <ul className="divide-y divide-[var(--ub-hairline)]">
           {flags.map((f) => (
             <SignalRow key={`${f.rule_id}-${f.detected_at}`} flag={f} />
           ))}
@@ -99,15 +99,15 @@ function SignalRow({ flag }: { flag: RedFlagDto }) {
         type="button"
         onClick={() => setExpanded((v) => !v)}
         aria-expanded={expanded}
-        className="flex w-full items-center gap-3 py-3 text-left transition-colors hover:bg-[#FAFBFC] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1E40AF]/40"
+        className="flex w-full items-center gap-3 py-3 text-left transition-colors hover:bg-[#FAFBFC] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ub-accent)]/40"
       >
         <span
           className={cn("size-2 flex-none rounded-full", SEVERITY_DOT[flag.severity])}
           aria-hidden
         />
         <div className="min-w-0 flex-1">
-          <div className="text-[13.5px] font-medium text-[var(--ca-ink-900)]">{label}</div>
-          <div className="mt-0.5 truncate text-[11.5px] text-[var(--ca-ink-500)]">
+          <div className="text-[13.5px] font-medium text-[var(--ub-ink)]">{label}</div>
+          <div className="mt-0.5 truncate text-[11.5px] text-[var(--ub-ink-3)]">
             {flag.message}
           </div>
         </div>
@@ -121,30 +121,30 @@ function SignalRow({ flag }: { flag: RedFlagDto }) {
             {value}
           </span>
         ) : null}
-        <Chevron className="size-4 flex-none text-[var(--ca-ink-400)]" aria-hidden />
+        <Chevron className="size-4 flex-none text-[var(--ub-ink-4)]" aria-hidden />
       </button>
 
       {expanded && (
-        <div className="ml-5 border-l-2 border-[var(--ca-border)] pl-4 pb-4 text-[12.5px] text-[var(--ca-ink-700)]">
+        <div className="ml-5 border-l-2 border-[var(--ub-hairline)] pl-4 pb-4 text-[12.5px] text-[var(--ub-ink-2)]">
           <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5">
-            <dt className="text-[var(--ca-ink-500)]">Правило</dt>
+            <dt className="text-[var(--ub-ink-3)]">Правило</dt>
             <dd className="font-mono text-[11.5px]">{flag.rule_id}</dd>
 
-            <dt className="text-[var(--ca-ink-500)]">Severity</dt>
+            <dt className="text-[var(--ub-ink-3)]">Severity</dt>
             <dd>{SEVERITY_LABEL[flag.severity]}</dd>
 
-            <dt className="text-[var(--ca-ink-500)]">Сообщение</dt>
+            <dt className="text-[var(--ub-ink-3)]">Сообщение</dt>
             <dd>{flag.message}</dd>
 
             {evidenceEntries.length > 0 && (
               <>
-                <dt className="self-start text-[var(--ca-ink-500)]">Evidence</dt>
+                <dt className="self-start text-[var(--ub-ink-3)]">Evidence</dt>
                 <dd>
                   <ul className="space-y-0.5">
                     {evidenceEntries.map(([k, v]) => (
                       <li key={k} className="font-mono text-[11.5px]">
-                        <span className="text-[var(--ca-ink-500)]">{k}:</span>{" "}
-                        <span className="text-[var(--ca-ink-900)]">
+                        <span className="text-[var(--ub-ink-3)]">{k}:</span>{" "}
+                        <span className="text-[var(--ub-ink)]">
                           {formatEvidenceCell(v)}
                         </span>
                       </li>
