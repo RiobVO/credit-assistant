@@ -11,3 +11,9 @@ export const APP_MODE: AppMode =
 // Frontend никогда не видит сами токены — только наличие сессии (через /api/auth/me).
 export const ACCESS_COOKIE = "ca_access";
 export const REFRESH_COOKIE = "ca_refresh";
+
+// Brand tenant id (см. config/brands/<id>.json + ADR-0011). По умолчанию
+// производный от APP_MODE: bank → uzbekbank, accountant → default.
+export const BRAND_ID: string =
+  process.env.NEXT_PUBLIC_BRAND_ID ??
+  (APP_MODE === "bank" ? "uzbekbank" : "default");
