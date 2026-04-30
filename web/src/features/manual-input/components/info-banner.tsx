@@ -43,7 +43,7 @@ export function InfoBanner({ variant }: { variant: Variant }) {
   const { icon, text } = variants[variant];
   return (
     <div className="mb-[22px] flex items-start gap-3 rounded-lg border border-[#D4E1F7] bg-[#F4F8FF] px-[14px] py-3">
-      <span className="mt-px flex-none text-[var(--ca-primary-blue)]">
+      <span className="mt-px flex-none text-[var(--brand-primary)]">
         {icon}
       </span>
       <div className="text-[13px] leading-[1.5] text-[#1A3A78]">{text}</div>

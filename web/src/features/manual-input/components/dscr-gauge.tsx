@@ -53,13 +53,13 @@ export function DscrGauge({
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center gap-0.5">
-        <div className="text-[10.5px] font-semibold tracking-[1.2px] text-[var(--ca-ink-400)] uppercase">
+        <div className="text-[10.5px] font-semibold tracking-[1.2px] text-[var(--ink-4)] uppercase">
           DSCR
         </div>
-        <div className="font-mono text-[34px] leading-none font-bold tracking-[-1px] text-[var(--ca-ink-900)]">
+        <div className="font-mono text-[34px] leading-none font-bold tracking-[-1px] text-[var(--ink-1)]">
           {isProvided && safeValue > 0 ? formatDscrLabel(safeValue) : "—"}
           {isProvided && safeValue > 0 ? (
-            <span className="ml-0.5 text-[18px] font-medium text-[var(--ca-ink-500)]">
+            <span className="ml-0.5 text-[18px] font-medium text-[var(--ink-3)]">
               ×
             </span>
           ) : null}

@@ -78,7 +78,7 @@ export function Checklist() {
 
   return (
     <>
-      <h3 className="my-3.5 text-[14px] font-semibold text-[var(--ca-ink-900)]">
+      <h3 className="my-3.5 text-[14px] font-semibold text-[var(--ink-1)]">
         Перед отправкой на скоринг
       </h3>
       <div className="flex flex-col gap-2.5">
@@ -117,15 +117,15 @@ function ChecklistRow({
   children: React.ReactNode;
 }) {
   const palette = {
-    ok: "border-[#BFE2D2] bg-[var(--ca-success-50)] text-[var(--ca-success)]",
-    warn: "border-[#F1D9A6] bg-[#FFF6E5] text-[var(--ca-warning)]",
-    pending: "border-[#F2BCBA] bg-[#FCE7E5] text-[var(--ca-danger)]",
+    ok: "border-[#BFE2D2] bg-[var(--state-ok-bg)] text-[var(--state-ok-fg)]",
+    warn: "border-[#F1D9A6] bg-[#FFF6E5] text-[var(--state-warn-fg)]",
+    pending: "border-[#F2BCBA] bg-[#FCE7E5] text-[var(--state-bad-fg)]",
   }[status];
   const Icon =
     status === "ok" ? Check : status === "pending" ? X : TriangleAlertSmall;
 
   return (
-    <div className="flex items-center gap-2.5 text-[13px] text-[var(--ca-ink-700)]">
+    <div className="flex items-center gap-2.5 text-[13px] text-[var(--ink-2)]">
       <span
         className={cn(
           "grid size-[18px] flex-none place-items-center rounded border",
@@ -142,8 +142,8 @@ function ChecklistRow({
 // Inline sub-row для missing_capabilities (без иконки слева, с offset).
 function CapabilityRow({ label }: { label: string }) {
   return (
-    <div className="ml-7 flex items-center gap-2 text-[12px] text-[var(--ca-ink-500)]">
-      <Info className="size-3.5 text-[var(--ca-warning)]" />
+    <div className="ml-7 flex items-center gap-2 text-[12px] text-[var(--ink-3)]">
+      <Info className="size-3.5 text-[var(--state-warn-fg)]" />
       {label}
     </div>
   );

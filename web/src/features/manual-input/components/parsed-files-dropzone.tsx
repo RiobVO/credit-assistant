@@ -80,14 +80,14 @@ export function ParsedFilesDropzone() {
         : null;
 
   return (
-    <section className="rounded-[10px] border border-[var(--ca-border)] bg-[var(--ca-surface)] shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
-      <header className="flex items-center gap-2.5 border-b border-[var(--ca-border)] px-[22px] py-[18px]">
-        <Upload className="size-4 text-[var(--ca-primary-blue)]" />
+    <section className="rounded-[10px] border border-[var(--border)] bg-[var(--surface)] shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
+      <header className="flex items-center gap-2.5 border-b border-[var(--border)] px-[22px] py-[18px]">
+        <Upload className="size-4 text-[var(--brand-primary)]" />
         <div>
-          <h2 className="m-0 text-[15px] font-semibold text-[var(--ca-ink-900)]">
+          <h2 className="m-0 text-[15px] font-semibold text-[var(--ink-1)]">
             Автозаполнение из выгрузок my3.soliq.uz
           </h2>
-          <p className="m-0 mt-0.5 text-[12.5px] text-[var(--ca-ink-500)]">
+          <p className="m-0 mt-0.5 text-[12.5px] text-[var(--ink-3)]">
             Загрузите xltx-файлы (Форма №2, декларация НДС) — поля ниже заполнятся
             автоматически. Можно несколько за один год / разные годы.
           </p>
@@ -101,21 +101,21 @@ export function ParsedFilesDropzone() {
         />
 
         {files.length > 0 && (
-          <ul className="divide-y divide-[var(--ca-border)] rounded-md border border-[var(--ca-border)]">
+          <ul className="divide-y divide-[var(--border)] rounded-md border border-[var(--border)]">
             {files.map((f, i) => (
               <li key={`${f.name}-${i}`} className="flex items-center gap-2 px-3 py-2">
-                <FileText className="size-4 flex-none text-[var(--ca-ink-400)]" />
-                <span className="flex-1 truncate text-[13px] text-[var(--ca-ink-700)]">
+                <FileText className="size-4 flex-none text-[var(--ink-4)]" />
+                <span className="flex-1 truncate text-[13px] text-[var(--ink-2)]">
                   {f.name}
                 </span>
-                <span className="font-mono text-[11.5px] text-[var(--ca-ink-400)]">
+                <span className="font-mono text-[11.5px] text-[var(--ink-4)]">
                   {(f.size / 1024).toFixed(0)} КБ
                 </span>
                 <button
                   type="button"
                   aria-label={`Удалить ${f.name}`}
                   onClick={() => removeFile(i)}
-                  className="rounded p-1 text-[var(--ca-ink-400)] transition-colors hover:bg-[#FCE7E5] hover:text-[var(--ca-danger)]"
+                  className="rounded p-1 text-[var(--ink-4)] transition-colors hover:bg-[#FCE7E5] hover:text-[var(--state-bad-fg)]"
                 >
                   <Trash2 className="size-4" />
                 </button>
@@ -125,7 +125,7 @@ export function ParsedFilesDropzone() {
         )}
 
         <div className="flex items-center justify-between">
-          <span className="text-[12px] text-[var(--ca-ink-500)]">
+          <span className="text-[12px] text-[var(--ink-3)]">
             {files.length === 0
               ? `До ${MAX_FILES} файлов · xltx из личного кабинета Soliq`
               : `${files.length} ${pluralFiles(files.length)} готов${files.length === 1 ? "" : "ы"} к загрузке`}
@@ -137,8 +137,8 @@ export function ParsedFilesDropzone() {
             className={cn(
               "inline-flex h-[38px] items-center gap-2 rounded-md px-5 text-[13.5px] font-semibold transition-colors",
               canSubmit
-                ? "bg-[var(--ca-primary-blue)] text-white hover:bg-[var(--ca-primary-blue-700)]"
-                : "cursor-not-allowed bg-[#E5E9EF] text-[var(--ca-ink-400)]",
+                ? "bg-[var(--brand-primary)] text-white hover:bg-[var(--brand-primary-hover)]"
+                : "cursor-not-allowed bg-[#E5E9EF] text-[var(--ink-4)]",
             )}
           >
             {mutation.isPending ? "Парсим…" : "Распарсить и заполнить"}
@@ -146,7 +146,7 @@ export function ParsedFilesDropzone() {
         </div>
 
         {errorMessage && (
-          <div className="flex items-start gap-2 rounded-md border border-[#F2BCBA] bg-[#FCE7E5] px-3 py-2 text-[12.5px] text-[var(--ca-danger)]">
+          <div className="flex items-start gap-2 rounded-md border border-[#F2BCBA] bg-[#FCE7E5] px-3 py-2 text-[12.5px] text-[var(--state-bad-fg)]">
             <TriangleAlert className="size-4 flex-none" />
             <span>{errorMessage}</span>
           </div>
@@ -187,15 +187,15 @@ function DropZone({
       className={cn(
         "flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-md border-2 border-dashed px-6 py-7 transition-colors",
         over
-          ? "border-[var(--ca-primary-blue)] bg-[#F4F8FF]"
-          : "border-[var(--ca-border-strong)] bg-[#FAFBFC] hover:bg-[#F4F6F9]",
+          ? "border-[var(--brand-primary)] bg-[#F4F8FF]"
+          : "border-[var(--border-strong)] bg-[#FAFBFC] hover:bg-[#F4F6F9]",
       )}
     >
-      <Upload className="size-5 text-[var(--ca-ink-500)]" />
-      <span className="text-[13px] font-medium text-[var(--ca-ink-700)]">
+      <Upload className="size-5 text-[var(--ink-3)]" />
+      <span className="text-[13px] font-medium text-[var(--ink-2)]">
         Перетащите xltx-файлы сюда
       </span>
-      <span className="text-[11.5px] text-[var(--ca-ink-500)]">
+      <span className="text-[11.5px] text-[var(--ink-3)]">
         или нажмите, чтобы выбрать (несколько файлов сразу)
       </span>
       <input
@@ -212,17 +212,17 @@ function DropZone({
 
 function AutofilledSummary({ entries }: { entries: Source[] }) {
   return (
-    <div className="rounded-md border border-[#BFE2D2] bg-[var(--ca-success-50)] px-3 py-2.5">
-      <div className="mb-1.5 flex items-center gap-1.5 text-[12.5px] font-semibold text-[var(--ca-success)]">
+    <div className="rounded-md border border-[#BFE2D2] bg-[var(--state-ok-bg)] px-3 py-2.5">
+      <div className="mb-1.5 flex items-center gap-1.5 text-[12.5px] font-semibold text-[var(--state-ok-fg)]">
         <CheckCircle2 className="size-4" />
         Автозаполнено {entries.length} {pluralFields(entries.length)}
       </div>
-      <ul className="space-y-1 text-[12px] text-[var(--ca-ink-700)]">
+      <ul className="space-y-1 text-[12px] text-[var(--ink-2)]">
         {entries.map((e, i) => (
           <li key={i} className="flex items-baseline gap-2">
             <span className="font-medium">{e.fieldLabel}</span>
-            {e.year ? <span className="text-[var(--ca-ink-500)]">{e.year}</span> : null}
-            <span className="text-[11.5px] text-[var(--ca-ink-500)]">— из {e.sourceLabel}</span>
+            {e.year ? <span className="text-[var(--ink-3)]">{e.year}</span> : null}
+            <span className="text-[11.5px] text-[var(--ink-3)]">— из {e.sourceLabel}</span>
           </li>
         ))}
       </ul>
@@ -233,10 +233,10 @@ function AutofilledSummary({ entries }: { entries: Source[] }) {
 function WarningsBlock({ warnings }: { warnings: string[] }) {
   return (
     <details className="rounded-md border border-[#F1D9A6] bg-[#FFF6E5] px-3 py-2">
-      <summary className="cursor-pointer text-[12.5px] font-semibold text-[var(--ca-warning)]">
+      <summary className="cursor-pointer text-[12.5px] font-semibold text-[var(--state-warn-fg)]">
         Предупреждения парсера ({warnings.length})
       </summary>
-      <ul className="mt-2 list-disc space-y-0.5 pl-5 text-[11.5px] text-[var(--ca-ink-700)]">
+      <ul className="mt-2 list-disc space-y-0.5 pl-5 text-[11.5px] text-[var(--ink-2)]">
         {warnings.map((w, i) => (
           <li key={i}>{w}</li>
         ))}

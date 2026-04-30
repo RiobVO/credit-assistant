@@ -34,13 +34,13 @@ export function Step1Borrower() {
   const innTouched = touchedFields.step1?.inn;
 
   return (
-    <section className="rounded-[10px] border border-[var(--ca-border)] bg-[var(--ca-surface)] shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
-      <header className="flex items-center gap-2.5 border-b border-[var(--ca-border)] px-[22px] py-[18px]">
+    <section className="rounded-[10px] border border-[var(--border)] bg-[var(--surface)] shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
+      <header className="flex items-center gap-2.5 border-b border-[var(--border)] px-[22px] py-[18px]">
         <div>
-          <h2 className="m-0 text-[15px] font-semibold text-[var(--ca-ink-900)]">
+          <h2 className="m-0 text-[15px] font-semibold text-[var(--ink-1)]">
             Сведения о заёмщике
           </h2>
-          <p className="m-0 mt-0.5 text-[12.5px] text-[var(--ca-ink-500)]">
+          <p className="m-0 mt-0.5 text-[12.5px] text-[var(--ink-3)]">
             Юридическое лицо · резидент Республики Узбекистан
           </p>
         </div>
@@ -56,7 +56,7 @@ export function Step1Borrower() {
             error={innTouched ? innErr : undefined}
             badge={
               innValid ? (
-                <span className="inline-flex items-center gap-1 rounded-full border border-[#BFE2D2] bg-[var(--ca-success-50)] px-[7px] py-px text-[11.5px] font-semibold text-[var(--ca-success)]">
+                <span className="inline-flex items-center gap-1 rounded-full border border-[#BFE2D2] bg-[var(--state-ok-bg)] px-[7px] py-px text-[11.5px] font-semibold text-[var(--state-ok-fg)]">
                   <CheckCircle2 className="size-3" />
                   Проверено в ГНК
                 </span>
@@ -130,7 +130,7 @@ export function Step1Borrower() {
                   </select>
                   <span
                     aria-hidden
-                    className="pointer-events-none absolute top-1/2 right-[14px] size-2 -translate-y-[70%] rotate-45 border-r-[1.5px] border-b-[1.5px] border-[var(--ca-ink-500)]"
+                    className="pointer-events-none absolute top-1/2 right-[14px] size-2 -translate-y-[70%] rotate-45 border-r-[1.5px] border-b-[1.5px] border-[var(--ink-3)]"
                   />
                 </div>
               )}
@@ -168,7 +168,7 @@ export function Step1Borrower() {
                   "pr-[38px] font-mono",
                 )}
               />
-              <Search className="pointer-events-none absolute right-[10px] size-4 text-[var(--ca-ink-500)]" />
+              <Search className="pointer-events-none absolute right-[10px] size-4 text-[var(--ink-3)]" />
             </div>
           </Field>
 
@@ -205,7 +205,7 @@ export function Step1Borrower() {
             {!apptErr && isRecentDirectorAppointment(apptDate) ? (
               <div
                 role="note"
-                className="mt-1.5 inline-flex items-start gap-1.5 rounded-md border border-[#F1D9A6] bg-[#FFF6E5] px-2 py-1 text-[12px] text-[var(--ca-warning)]"
+                className="mt-1.5 inline-flex items-start gap-1.5 rounded-md border border-[#F1D9A6] bg-[#FFF6E5] px-2 py-1 text-[12px] text-[var(--state-warn-fg)]"
               >
                 <TriangleAlert className="mt-px size-3.5 shrink-0" />
                 <span>
