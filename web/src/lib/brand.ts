@@ -1,7 +1,7 @@
-import { z } from "zod";
+import fs from "node:fs";
+import path from "node:path";
 
-import defaultJson from "../../../config/brands/default.json";
-import uzbekbankJson from "../../../config/brands/uzbekbank.json";
+import { z } from "zod";
 
 const hex = z.string().regex(/^#[0-9A-Fa-f]{6}$/, "must be #RRGGBB");
 const rgba = z
@@ -47,12 +47,24 @@ export function loadBrandFromJson(raw: unknown): Brand {
   };
 }
 
-const REGISTRY: Record<string, Brand> = {
-  default: loadBrandFromJson(defaultJson),
-  uzbekbank: loadBrandFromJson(uzbekbankJson),
-};
+function readBrandFile(brandId: string): Brand {
+  const filePath = path.resolve(process.cwd(), "..", "config", "brands", `${brandId}.json`);
+  const raw = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+  return loadBrandFromJson(raw);
+}
+
+const REGISTRY = new Map<string, Brand>();
 
 export function resolveBrand(brandId: string | undefined): Brand {
-  if (brandId && REGISTRY[brandId]) return REGISTRY[brandId];
-  return REGISTRY.default;
+  const id = brandId && /^[a-z0-9-]+$/.test(brandId) ? brandId : "default";
+  const cached = REGISTRY.get(id);
+  if (cached) return cached;
+  try {
+    const brand = readBrandFile(id);
+    REGISTRY.set(id, brand);
+    return brand;
+  } catch {
+    if (id !== "default") return resolveBrand("default");
+    throw new Error(`Brand config missing: ${id}.json`);
+  }
 }

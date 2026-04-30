@@ -99,6 +99,39 @@
   --color-ub-neutral-fg: var(--ub-neutral-fg);
   --color-ub-neutral-bg: var(--ub-neutral-bg);
 
+  /* Semantic + brand layer (CA-060). */
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-bg: var(--bg);
+  --color-ink-1: var(--ink-1);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-ink-4: var(--ink-4);
+  --color-border-semantic: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-nav-bg: var(--nav-bg);
+  --color-nav-bg-2: var(--nav-bg-2);
+  --color-nav-bg-hover: var(--nav-bg-hover);
+  --color-nav-border: var(--nav-border);
+  --color-nav-text: var(--nav-text);
+  --color-nav-text-2: var(--nav-text-2);
+  --color-nav-text-3: var(--nav-text-3);
+  --color-state-ok-fg: var(--state-ok-fg);
+  --color-state-ok-bg: var(--state-ok-bg);
+  --color-state-warn-fg: var(--state-warn-fg);
+  --color-state-warn-bg: var(--state-warn-bg);
+  --color-state-bad-fg: var(--state-bad-fg);
+  --color-state-bad-bg: var(--state-bad-bg);
+  --color-state-info-fg: var(--state-info-fg);
+  --color-state-info-bg: var(--state-info-bg);
+  --color-state-neutral-fg: var(--state-neutral-fg);
+  --color-state-neutral-bg: var(--state-neutral-bg);
+  --color-brand-primary: var(--brand-primary);
+  --color-brand-primary-hover: var(--brand-primary-hover);
+  --color-brand-primary-soft: var(--brand-primary-soft);
+  --color-brand-primary-ink: var(--brand-primary-ink);
+
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -201,6 +234,66 @@
   --ub-bad-fg:     #991B1B; --ub-bad-bg:     #FEE2E2;
   --ub-info-fg:    #6E2F1C; --ub-info-bg:    #F7E8DF;
   --ub-neutral-fg: #334155; --ub-neutral-bg: #F1F5F9;
+
+  /* ── Semantic layer (CA-060) — единственный источник для UI кода.
+     Tenant-specific значения здесь — для default (accountant); bank-tenant
+     переопределяет их в [data-brand="uzbekbank"] блоке ниже. */
+  --surface: #FCFCFD;
+  --surface-2: #FAFBFC;
+  --surface-3: #F1F5F9;
+  --bg: #F1F5F9;
+
+  --ink-1: #0E1525;
+  --ink-2: #2B3344;
+  --ink-3: #5A6478;
+  --ink-4: #7A8497;
+
+  /* --border уже задан в shadcn-defaults выше (#E4E7EC), используем его как semantic. */
+  --border-strong: #CDD3DD;
+
+  --nav-bg: #0B1220;
+  --nav-bg-2: #111A2E;
+  --nav-bg-hover: #1F2D47;
+  --nav-border: #243049;
+  --nav-text: #E6EAF2;
+  --nav-text-2: #8A95AC;
+  --nav-text-3: #5C6884;
+
+  --state-ok-fg: #0F8A5F;  --state-ok-bg: #E6F4EE;
+  --state-warn-fg: #B8730E; --state-warn-bg: #FFF6E5;
+  --state-bad-fg: #B42318;  --state-bad-bg: #FCE7E5;
+  --state-info-fg: #1947AA; --state-info-bg: #EAF0FB;
+  --state-neutral-fg: #5A6478; --state-neutral-bg: #FAFBFC;
+
+  /* Brand fallback (если cssVars из brand JSON не загружены инлайном на <html>). */
+  --brand-primary: #1E55C9;
+  --brand-primary-hover: #1947AA;
+  --brand-primary-soft: #EAF0FB;
+  --brand-primary-ink: #1947AA;
+  --brand-primary-ring: rgba(30, 85, 201, 0.22);
+}
+
+/* Bank-tenant overrides (когда <html data-brand="uzbekbank">). */
+:root[data-brand="uzbekbank"] {
+  --surface: #FFFFFF;
+  --surface-2: #F8FAFC;
+  --ink-1: #0F172A;
+  --ink-2: #475569;
+  --ink-3: #64748B;
+  --ink-4: #94A3B8;
+  --border: #E2E8F0;
+  --border-strong: #CBD5E1;
+  --nav-bg-2: #0F172A;
+  --nav-bg-hover: #1E293B;
+  --nav-border: #1E293B;
+  --nav-text: #E2E8F0;
+  --nav-text-2: #94A3B8;
+  --nav-text-3: #64748B;
+  --state-ok-fg: #166534; --state-ok-bg: #DCFCE7;
+  --state-warn-fg: #92400E; --state-warn-bg: #FEF3C7;
+  --state-bad-fg: #991B1B;  --state-bad-bg: #FEE2E2;
+  --state-info-fg: #6E2F1C; --state-info-bg: #F7E8DF;
+  --state-neutral-fg: #334155; --state-neutral-bg: #F1F5F9;
 }
 
 @layer base {
