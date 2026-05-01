@@ -354,13 +354,13 @@ function PasswordField({
 // ─────────────── About ───────────────
 
 function AboutSection() {
-  const mode = process.env.NEXT_PUBLIC_APP_MODE ?? "bank";
+  // Settings-view рендерится только внутри (bank) route group → mode = "bank".
   const buildVersion =
     process.env.NEXT_PUBLIC_BUILD_VERSION ?? "dev";
   return (
     <SectionLayout title="О системе" hint="Информация об установленной версии Credit Assistant.">
       <div className="grid gap-4 md:grid-cols-2">
-        <ReadField label="Режим работы" value={mode === "bank" ? "Bank Mode" : mode} />
+        <ReadField label="Режим работы" value="Bank Mode" />
         <ReadField label="Версия" value={buildVersion} mono />
         <ReadField
           label="Описание"

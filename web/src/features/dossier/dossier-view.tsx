@@ -19,13 +19,20 @@ import { ScoreGauge } from "./score-gauge";
 import { SubHeader } from "./sub-header";
 
 import { getDossier } from "@/lib/api";
+import { useAppMode } from "@/lib/use-app-mode";
 
 export function DossierView({ dossierId }: { dossierId: string }) {
+  const mode = useAppMode();
   const query = useQuery({
     queryKey: ["dossier", dossierId],
     queryFn: () => getDossier(dossierId),
     retry: 1,
   });
+
+  const back =
+    mode === "bank"
+      ? { href: "/history", label: "К истории" }
+      : { href: "/manual-input", label: "К форме" };
 
   if (query.isPending) {
     return <DossierSkeleton />;
@@ -37,6 +44,8 @@ export function DossierView({ dossierId }: { dossierId: string }) {
         dossierId={dossierId}
         error={query.error}
         onRetry={() => query.refetch()}
+        backHref={back.href}
+        backLabel={back.label}
       />
     );
   }
