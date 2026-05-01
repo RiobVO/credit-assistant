@@ -55,18 +55,18 @@ export function Revenue24mChart({
   const peakLabel = formatMonthShort(slice[peakIndex].month);
 
   return (
-    <section className="rounded-[10px] border border-[var(--ub-hairline)] bg-[var(--ub-surface)] shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
-      <header className="flex flex-wrap items-center gap-2.5 border-b border-[var(--ub-hairline)] px-[22px] py-[18px]">
+    <section className="rounded-[10px] border border-[var(--border)] bg-[var(--surface)] shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
+      <header className="flex flex-wrap items-center gap-2.5 border-b border-[var(--border)] px-[22px] py-[18px]">
         <div>
-          <h2 className="m-0 text-[15px] font-semibold text-[var(--ub-ink)]">
+          <h2 className="m-0 text-[15px] font-semibold text-[var(--ink-1)]">
             Выручка — {period} мес.
           </h2>
-          <p className="m-0 mt-0.5 text-[12.5px] text-[var(--ub-ink-3)]">
+          <p className="m-0 mt-0.5 text-[12.5px] text-[var(--ink-3)]">
             Помесячная динамика и 12-месячный rolling-тренд · сезонный пик в {peakLabel}
           </p>
         </div>
 
-        <div className="ml-auto inline-flex rounded-md border border-[var(--ub-hairline)] bg-[var(--ub-surface)] p-0.5">
+        <div className="ml-auto inline-flex rounded-md border border-[var(--border)] bg-[var(--surface)] p-0.5">
           {PERIODS.map((p) => (
             <button
               key={p.value}
@@ -74,8 +74,8 @@ export function Revenue24mChart({
               onClick={() => setPeriod(p.value)}
               className={`px-2.5 py-1 text-[12px] font-medium transition-colors ${
                 period === p.value
-                  ? "rounded-[5px] bg-[var(--ub-accent-soft)] text-[var(--ub-accent-hover)]"
-                  : "text-[var(--ub-ink-3)] hover:text-[var(--ub-ink-2)]"
+                  ? "rounded-[5px] bg-[var(--brand-primary-soft)] text-[var(--brand-primary-hover)]"
+                  : "text-[var(--ink-3)] hover:text-[var(--ink-2)]"
               }`}
             >
               {p.label}
@@ -143,7 +143,7 @@ export function Revenue24mChart({
           </ResponsiveContainer>
         </div>
 
-        <div className="mt-3 flex items-center gap-4 px-2 text-[11.5px] text-[var(--ub-ink-3)]">
+        <div className="mt-3 flex items-center gap-4 px-2 text-[11.5px] text-[var(--ink-3)]">
           <Legend color="#9FB1CC" label="Помесячная выручка" />
           <Legend color="#E07A2A" label="Сезонный пик" />
           <Legend color="#1E55C9" label="Тренд (12 мес. rolling)" />
@@ -181,16 +181,16 @@ function EmptyChart({ hasAnnualRevenue }: { hasAnnualRevenue: boolean }) {
     : "Нет помесячных данных. Загрузите выгрузку Soliq на Шаге 2 формы или укажите помесячный оборот вручную.";
 
   return (
-    <section className="rounded-[10px] border border-[var(--ub-hairline)] bg-[var(--ub-surface)] shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
-      <header className="border-b border-[var(--ub-hairline)] px-[22px] py-[18px]">
-        <h2 className="m-0 text-[15px] font-semibold text-[var(--ub-ink)]">
+    <section className="rounded-[10px] border border-[var(--border)] bg-[var(--surface)] shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
+      <header className="border-b border-[var(--border)] px-[22px] py-[18px]">
+        <h2 className="m-0 text-[15px] font-semibold text-[var(--ink-1)]">
           {title}
         </h2>
-        <p className="m-0 mt-0.5 text-[12.5px] text-[var(--ub-ink-3)]">
+        <p className="m-0 mt-0.5 text-[12.5px] text-[var(--ink-3)]">
           {subtitle}
         </p>
       </header>
-      <div className="flex h-[200px] items-center justify-center px-6 text-center text-[13px] text-[var(--ub-ink-3)]">
+      <div className="flex h-[200px] items-center justify-center px-6 text-center text-[13px] text-[var(--ink-3)]">
         {body}
       </div>
     </section>

@@ -56,9 +56,9 @@ export function ReadinessBadge({ dossierId }: { dossierId: string }) {
   const Icon = status === "ok" ? Check : status === "pending" ? X : TriangleAlert;
 
   const palette = {
-    ok: "border-[#BFE2D2] bg-[var(--ub-ok-bg)] text-[var(--ub-ok-fg)]",
-    warn: "border-[#F1D9A6] bg-[#FFF6E5] text-[var(--ub-warn-fg)]",
-    pending: "border-[#F2BCBA] bg-[#FCE7E5] text-[var(--ub-bad-fg)]",
+    ok: "border-[#BFE2D2] bg-[var(--state-ok-bg)] text-[var(--state-ok-fg)]",
+    warn: "border-[#F1D9A6] bg-[#FFF6E5] text-[var(--state-warn-fg)]",
+    pending: "border-[#F2BCBA] bg-[#FCE7E5] text-[var(--state-bad-fg)]",
   }[status];
 
   return (
@@ -74,8 +74,8 @@ export function ReadinessBadge({ dossierId }: { dossierId: string }) {
         {formatConfidence(data.confidence_score)}
       </span>
       {data.missing_capabilities.length > 0 && (
-        <span className="inline-flex items-center gap-1.5 text-[12px] text-[var(--ub-ink-3)]">
-          <Info className="size-3.5 text-[var(--ub-warn-fg)]" />
+        <span className="inline-flex items-center gap-1.5 text-[12px] text-[var(--ink-3)]">
+          <Info className="size-3.5 text-[var(--state-warn-fg)]" />
           Недоступно:{" "}
           {data.missing_capabilities
             .map((c) => CAPABILITY_LABEL[c] ?? c)

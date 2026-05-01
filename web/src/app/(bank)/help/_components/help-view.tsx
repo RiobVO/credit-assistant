@@ -27,9 +27,9 @@ const FAQ: FaqItem[] = [
       <>
         Scoring — числовая оценка кредитного риска заёмщика от 0 до 100.
         Чем выше — тем ниже риск. Шкала разделена на три полосы:{" "}
-        <b style={{ color: "var(--ub-ok-fg)" }}>≥70 «к выдаче»</b>,{" "}
-        <b style={{ color: "var(--ub-warn-fg)" }}>40–69 «на проверку»</b>,{" "}
-        <b style={{ color: "var(--ub-bad-fg)" }}>&lt;40 «отклонить»</b>. Цифра —
+        <b style={{ color: "var(--state-ok-fg)" }}>≥70 «к выдаче»</b>,{" "}
+        <b style={{ color: "var(--state-warn-fg)" }}>40–69 «на проверку»</b>,{" "}
+        <b style={{ color: "var(--state-bad-fg)" }}>&lt;40 «отклонить»</b>. Цифра —
         результат правил из YAML-реестра, не black-box ML, у каждого правила
         указан источник (ЦБ РУз, Базель III, методика банка).
       </>
@@ -121,13 +121,13 @@ export function HelpView() {
       />
 
       <div className="grid gap-6 md:grid-cols-[1fr_300px]">
-        <section className="rounded-lg border border-[var(--ub-hairline)] bg-[var(--ub-surface)]">
-          <header className="border-b border-[var(--ub-hairline)] px-6 py-4">
-            <h2 className="m-0 text-[16px] font-semibold tracking-[-0.01em] text-[var(--ub-ink)]">
+        <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)]">
+          <header className="border-b border-[var(--border)] px-6 py-4">
+            <h2 className="m-0 text-[16px] font-semibold tracking-[-0.01em] text-[var(--ink-1)]">
               Частые вопросы
             </h2>
           </header>
-          <div className="divide-y divide-[var(--ub-hairline-soft)]">
+          <div className="divide-y divide-[var(--border)]">
             {FAQ.map((item) => (
               <FaqRow key={item.id} item={item} />
             ))}
@@ -159,7 +159,7 @@ export function HelpView() {
             value="docs.credit-assistant"
             hint="методология scoring и список правил"
           />
-          <div className="rounded-lg border border-[#F1D9A6] bg-[#FFF6E5] p-4 text-[13px] text-[var(--ub-warn-fg)]">
+          <div className="rounded-lg border border-[#F1D9A6] bg-[#FFF6E5] p-4 text-[13px] text-[var(--state-warn-fg)]">
             <div className="mb-1 inline-flex items-center gap-1.5 font-semibold">
               <AlertTriangle className="size-3.5" />
               Срочные инциденты
@@ -183,18 +183,18 @@ function FaqRow({ item }: { item: FaqItem }) {
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="flex w-full items-center justify-between gap-3 px-6 py-4 text-left text-[14px] font-medium text-[var(--ub-ink)] transition-colors hover:bg-[var(--ub-surface-2)]"
+        className="flex w-full items-center justify-between gap-3 px-6 py-4 text-left text-[14px] font-medium text-[var(--ink-1)] transition-colors hover:bg-[var(--surface-2)]"
       >
         {item.question}
         <ChevronDown
           className={cn(
-            "size-4 shrink-0 text-[var(--ub-ink-3)] transition-transform",
+            "size-4 shrink-0 text-[var(--ink-3)] transition-transform",
             open && "rotate-180",
           )}
         />
       </button>
       {open ? (
-        <div className="px-6 pb-5 text-[13.5px] leading-[1.55] text-[var(--ub-ink-2)]">
+        <div className="px-6 pb-5 text-[13.5px] leading-[1.55] text-[var(--ink-2)]">
           {item.answer}
         </div>
       ) : null}
@@ -217,13 +217,13 @@ function ContactCard({
 }) {
   const inner = (
     <>
-      <div className="mb-2 inline-flex items-center gap-2 text-[12px] font-medium text-[var(--ub-ink-3)]">
-        <span className="text-[var(--ub-accent)]">{icon}</span>
+      <div className="mb-2 inline-flex items-center gap-2 text-[12px] font-medium text-[var(--ink-3)]">
+        <span className="text-[var(--brand-primary)]">{icon}</span>
         {title}
       </div>
-      <div className="text-[14px] font-semibold text-[var(--ub-ink)]">{value}</div>
+      <div className="text-[14px] font-semibold text-[var(--ink-1)]">{value}</div>
       {hint ? (
-        <div className="mt-1 text-[12px] text-[var(--ub-ink-3)]">{hint}</div>
+        <div className="mt-1 text-[12px] text-[var(--ink-3)]">{hint}</div>
       ) : null}
     </>
   );
@@ -231,14 +231,14 @@ function ContactCard({
     return (
       <a
         href={href}
-        className="block rounded-lg border border-[var(--ub-hairline)] bg-[var(--ub-surface)] p-4 transition-colors hover:border-[var(--ub-accent)] hover:bg-[var(--ub-accent-soft)]"
+        className="block rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 transition-colors hover:border-[var(--brand-primary)] hover:bg-[var(--brand-primary-soft)]"
       >
         {inner}
       </a>
     );
   }
   return (
-    <div className="rounded-lg border border-[var(--ub-hairline)] bg-[var(--ub-surface)] p-4">
+    <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
       {inner}
     </div>
   );

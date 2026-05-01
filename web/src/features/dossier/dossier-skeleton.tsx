@@ -40,7 +40,7 @@ export function DossierSkeleton() {
 function Card({ className = "" }: { className?: string }) {
   return (
     <div
-      className={`rounded-[10px] border border-[var(--ub-hairline)] bg-[var(--ub-surface)] shadow-[0_1px_2px_rgba(16,24,40,0.05)] ${className}`}
+      className={`rounded-[10px] border border-[var(--border)] bg-[var(--surface)] shadow-[0_1px_2px_rgba(16,24,40,0.05)] ${className}`}
     />
   );
 }

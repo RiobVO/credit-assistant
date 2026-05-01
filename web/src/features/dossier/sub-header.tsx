@@ -10,10 +10,10 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 const STATUS_TONE: Record<string, string> = {
-  in_review: "border-[#F1D9A6] bg-[#FFF6E5] text-[var(--ub-warn-fg)]",
-  approved: "border-[#BFE2D2] bg-[var(--ub-ok-bg)] text-[var(--ub-ok-fg)]",
-  rejected: "border-[#F2BCBA] bg-[#FCE7E5] text-[var(--ub-bad-fg)]",
-  draft: "border-[var(--ub-hairline)] bg-[#FAFBFC] text-[var(--ub-ink-3)]",
+  in_review: "border-[#F1D9A6] bg-[#FFF6E5] text-[var(--state-warn-fg)]",
+  approved: "border-[#BFE2D2] bg-[var(--state-ok-bg)] text-[var(--state-ok-fg)]",
+  rejected: "border-[#F2BCBA] bg-[#FCE7E5] text-[var(--state-bad-fg)]",
+  draft: "border-[var(--border)] bg-[#FAFBFC] text-[var(--ink-3)]",
 };
 
 export function SubHeader({
@@ -39,7 +39,7 @@ export function SubHeader({
         Заявка {applicationId}
       </Badge>
 
-      <h1 className="m-0 text-[26px] font-semibold tracking-[-0.4px] text-[var(--ub-ink)]">
+      <h1 className="m-0 text-[26px] font-semibold tracking-[-0.4px] text-[var(--ink-1)]">
         {borrowerName}
       </h1>
 
@@ -67,7 +67,7 @@ function SecondaryAction({ icon, label }: { icon: React.ReactNode; label: string
   return (
     <button
       type="button"
-      className="inline-flex h-[34px] items-center gap-2 rounded-md border border-[var(--ub-hairline)] bg-[var(--ub-surface)] px-3 text-[12.5px] font-medium text-[var(--ub-ink-2)] transition-colors hover:bg-[#FAFBFC]"
+      className="inline-flex h-[34px] items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-[12.5px] font-medium text-[var(--ink-2)] transition-colors hover:bg-[#FAFBFC]"
     >
       {icon}
       {label}
