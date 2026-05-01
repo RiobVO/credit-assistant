@@ -21,15 +21,15 @@ export function DscrGauge({
   const offset = CIRCUMFERENCE * (1 - fraction);
   // Цвет stroke: при null — серый (нейтрально). При наличии значения —
   // градиент, даже если оно <= 0 (signal «данные есть» отделён от «нет данных»).
-  const strokeStyle = isProvided ? "url(#gaugeGrad)" : "#D4D9E0";
+  const strokeStyle = isProvided ? "url(#gaugeGrad)" : "var(--chart-track)";
 
   return (
     <div className="relative size-[160px]">
       <svg viewBox="0 0 100 100" className="-rotate-90">
         <defs>
           <linearGradient id="gaugeGrad" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#0F8A5F" />
-            <stop offset="100%" stopColor="#1E55C9" />
+            <stop offset="0%" stopColor="var(--chart-green)" />
+            <stop offset="100%" stopColor="var(--chart-blue)" />
           </linearGradient>
         </defs>
         <circle
@@ -37,7 +37,7 @@ export function DscrGauge({
           cy="50"
           r={RADIUS}
           fill="none"
-          stroke="#EEF1F6"
+          stroke="var(--chart-track-light)"
           strokeWidth="8"
         />
         <circle

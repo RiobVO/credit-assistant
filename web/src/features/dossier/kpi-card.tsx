@@ -44,10 +44,11 @@ export function KpiCard({
 
   const tone =
     changeTone === "positive"
-      ? "border-[#BFE2D2] bg-[var(--state-ok-bg)] text-[var(--state-ok-fg)]"
-      : "border-[#F2BCBA] bg-[#FCE7E5] text-[var(--state-bad-fg)]";
+      ? "border-[var(--state-ok-border)] bg-[var(--state-ok-bg)] text-[var(--state-ok-fg)]"
+      : "border-[var(--state-bad-border)] bg-[var(--state-bad-bg)] text-[var(--state-bad-fg)]";
 
-  const sparkColor = changeTone === "positive" ? "#0F8A5F" : "#B42318";
+  const sparkColor =
+    changeTone === "positive" ? "var(--chart-green)" : "var(--chart-red)";
   const Icon = changeTone === "positive" ? TrendingUp : TrendingDown;
 
   return (

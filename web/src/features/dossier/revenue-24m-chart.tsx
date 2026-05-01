@@ -91,27 +91,27 @@ export function Revenue24mChart({
               data={slice}
               margin={{ top: 8, right: 14, bottom: 0, left: 8 }}
             >
-              <CartesianGrid stroke="#EFF1F5" vertical={false} />
+              <CartesianGrid stroke="var(--chart-grid)" vertical={false} />
               <XAxis
                 dataKey="month"
                 tickFormatter={formatMonthShort}
-                tick={{ fontSize: 11, fill: "#7A8497" }}
-                axisLine={{ stroke: "#E4E7EC" }}
+                tick={{ fontSize: 11, fill: "var(--ink-4)" }}
+                axisLine={{ stroke: "var(--border)" }}
                 tickLine={false}
                 interval={Math.max(0, Math.floor(slice.length / 12) - 1)}
               />
               <YAxis
                 tickFormatter={(v: number) => `${(v / 1_000_000_000).toFixed(1)}`}
-                tick={{ fontSize: 11, fill: "#7A8497" }}
+                tick={{ fontSize: 11, fill: "var(--ink-4)" }}
                 axisLine={false}
                 tickLine={false}
                 width={40}
               />
               <Tooltip
-                cursor={{ fill: "#FAFBFC" }}
+                cursor={{ fill: "var(--surface-2)" }}
                 contentStyle={{
                   borderRadius: 8,
-                  border: "1px solid #E4E7EC",
+                  border: "1px solid var(--border)",
                   fontSize: 12,
                 }}
                 labelFormatter={(label) =>
@@ -127,14 +127,16 @@ export function Revenue24mChart({
                 {slice.map((entry, i) => (
                   <Cell
                     key={i}
-                    fill={entry.is_peak ? "#E07A2A" : "#9FB1CC"}
+                    fill={
+                      entry.is_peak ? "var(--chart-orange)" : "var(--chart-grey)"
+                    }
                   />
                 ))}
               </Bar>
               <Line
                 type="monotone"
                 dataKey="trend"
-                stroke="#1E55C9"
+                stroke="var(--chart-blue)"
                 strokeWidth={2}
                 dot={false}
                 isAnimationActive={false}
@@ -144,9 +146,9 @@ export function Revenue24mChart({
         </div>
 
         <div className="mt-3 flex items-center gap-4 px-2 text-[11.5px] text-[var(--ink-3)]">
-          <Legend color="#9FB1CC" label="Помесячная выручка" />
-          <Legend color="#E07A2A" label="Сезонный пик" />
-          <Legend color="#1E55C9" label="Тренд (12 мес. rolling)" />
+          <Legend color="var(--chart-grey)" label="Помесячная выручка" />
+          <Legend color="var(--chart-orange)" label="Сезонный пик" />
+          <Legend color="var(--chart-blue)" label="Тренд (12 мес. rolling)" />
         </div>
       </div>
     </section>

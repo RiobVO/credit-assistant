@@ -48,7 +48,7 @@ function Card({ className = "" }: { className?: string }) {
 function Block({ className = "" }: { className?: string }) {
   return (
     <div
-      className={`animate-pulse rounded-md bg-[#E4E7EC] ${className}`}
+      className={`animate-pulse rounded-md bg-[var(--border)] ${className}`}
       aria-hidden="true"
     />
   );

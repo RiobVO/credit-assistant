@@ -145,11 +145,23 @@
   --nav-text-2: #8A95AC;
   --nav-text-3: #5C6884;
 
-  --state-ok-fg: #0F8A5F;  --state-ok-bg: #E6F4EE;
-  --state-warn-fg: #B8730E; --state-warn-bg: #FFF6E5;
-  --state-bad-fg: #B42318;  --state-bad-bg: #FCE7E5;
+  --state-ok-fg: #0F8A5F;  --state-ok-bg: #E6F4EE;  --state-ok-border: #BFE2D2;
+  --state-warn-fg: #B8730E; --state-warn-bg: #FFF6E5; --state-warn-border: #F1D9A6;
+  --state-bad-fg: #B42318;  --state-bad-bg: #FCE7E5;  --state-bad-border: #F2BCBA;
   --state-info-fg: #1947AA; --state-info-bg: #EAF0FB;
   --state-neutral-fg: #5A6478; --state-neutral-bg: #FAFBFC;
+  --state-ok-stroke: #7CC2A6;
+
+  /* Chart palette (CA-062) — для recharts / SVG-визуализаций. */
+  --chart-red: #B42318;
+  --chart-orange: #E07A2A;
+  --chart-yellow: #D4A815;
+  --chart-green: #0F8A5F;
+  --chart-blue: #1E55C9;
+  --chart-grey: #9FB1CC;
+  --chart-grid: #EFF1F5;
+  --chart-track: #D4D9E0;
+  --chart-track-light: #EEF1F6;
 
   /* Brand fallback (если cssVars из brand JSON не инжектированы на <html>). */
   --brand-primary: #1E55C9;
