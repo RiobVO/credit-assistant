@@ -206,15 +206,14 @@ function ComputedRow({
   const l = parseAmount(liabilities ?? "");
   const da = computeDebtToAssets(l, a);
   const equity = computeEquity(a, l);
-  const daTone = a === 0 ? "neutral" : da <= 0.55 ? "good" : "warn";
 
   return (
     <div className="md:col-span-2">
       <ComputedBox
         keyLabel="Расчётный коэффициент D/A"
-        sub="Обязательства ÷ Активы · норма для отрасли ≤ 0.55"
+        sub="Обязательства ÷ Активы"
         value={a === 0 ? "—" : da.toFixed(2)}
-        tone={daTone}
+        tone="neutral"
       />
       <div className="h-2.5" />
       <ComputedBox
