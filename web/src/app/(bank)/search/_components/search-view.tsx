@@ -10,6 +10,7 @@ import {
   Search as SearchIcon,
   X,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -60,12 +61,15 @@ function saveRecent(inn: string): void {
   }
 }
 
-function validateInn(raw: string): { ok: true; value: string } | { ok: false; message: string } {
+function validateInn(
+  raw: string,
+  msgs: { required: string; digitsOnly: string; length: string },
+): { ok: true; value: string } | { ok: false; message: string } {
   const cleaned = raw.trim();
-  if (!cleaned) return { ok: false, message: "Введите ИНН" };
-  if (!/^\d+$/.test(cleaned)) return { ok: false, message: "Только цифры" };
+  if (!cleaned) return { ok: false, message: msgs.required };
+  if (!/^\d+$/.test(cleaned)) return { ok: false, message: msgs.digitsOnly };
   if (cleaned.length !== 9 && cleaned.length !== 14) {
-    return { ok: false, message: "ИНН должен быть 9 или 14 цифр" };
+    return { ok: false, message: msgs.length };
   }
   return { ok: true, value: cleaned };
 }
@@ -81,6 +85,8 @@ type State =
 // ─────────────── Main view ───────────────
 
 export function SearchView() {
+  const t = useTranslations("bank.search");
+  const tCta = useTranslations("bank.cta");
   const [inn, setInn] = useState("");
   const [state, setState] = useState<State>({ kind: "idle" });
   const [recent, setRecent] = useState<string[]>([]);
@@ -92,7 +98,11 @@ export function SearchView() {
   }, []);
 
   const runSearch = async (raw: string) => {
-    const v = validateInn(raw);
+    const v = validateInn(raw, {
+      required: t("error_required"),
+      digitsOnly: t("error_digits_only"),
+      length: t("error_length"),
+    });
     if (!v.ok) {
       setState({ kind: "error", message: v.message });
       return;
@@ -106,7 +116,7 @@ export function SearchView() {
     } catch (err) {
       setState({
         kind: "error",
-        message: err instanceof Error ? err.message : "Не удалось выполнить поиск",
+        message: err instanceof Error ? err.message : t("error_generic"),
       });
     }
   };
@@ -135,15 +145,15 @@ export function SearchView() {
   return (
     <>
       <BankPageHead
-        title="Поиск компании"
-        subtitle="Введите 9-значный ИНН узбекской компании, чтобы открыть кредитное досье и увидеть рекомендацию системы."
+        title={t("title")}
+        subtitle={t("subtitle")}
         actions={
           <Link
             href="/manual-input"
             className="inline-flex h-9 items-center gap-2 rounded-md bg-[var(--brand-primary)] px-3 text-[13px] font-semibold text-white transition-colors hover:bg-[var(--brand-primary-hover)]"
           >
             <Plus className="size-3.5" />
-            Новая заявка
+            {tCta("new_application")}
           </Link>
         }
       />
@@ -178,7 +188,7 @@ export function SearchView() {
                 setInn("");
                 setState({ kind: "idle" });
               }}
-              aria-label="Очистить"
+              aria-label={t("clear_aria")}
               className="absolute top-1/2 right-2 grid size-[22px] -translate-y-1/2 place-items-center rounded text-[var(--ink-4)] hover:bg-[var(--surface-2)] hover:text-[var(--ink-2)]"
             >
               <X className="size-3.5" />
@@ -193,7 +203,7 @@ export function SearchView() {
             "hover:bg-[var(--brand-primary-hover)] disabled:cursor-not-allowed disabled:opacity-55",
           )}
         >
-          {isLoading ? "Ищем…" : "Найти"}
+          {isLoading ? t("submit_loading") : t("submit")}
         </button>
       </form>
 
@@ -201,6 +211,8 @@ export function SearchView() {
         recent={recent}
         onChipClick={handleChipClick}
         showHelper={state.kind === "idle"}
+        recentLabel={t("recent")}
+        enterHint={t("enter_hint")}
       />
 
       {state.kind === "error" ? (
@@ -220,17 +232,21 @@ function HintRow({
   recent,
   onChipClick,
   showHelper,
+  recentLabel,
+  enterHint,
 }: {
   recent: string[];
   onChipClick: (inn: string) => void;
   showHelper: boolean;
+  recentLabel: string;
+  enterHint: string;
 }) {
   if (recent.length === 0 && !showHelper) return null;
   return (
     <div className="mb-8 flex flex-wrap items-center gap-3 text-[13px] text-[var(--ink-3)]">
       {recent.length > 0 ? (
         <>
-          <span className="text-[13px] text-[var(--ink-3)]">Недавние:</span>
+          <span className="text-[13px] text-[var(--ink-3)]">{recentLabel}</span>
           {recent.map((r) => (
             <button
               key={r}
@@ -245,7 +261,7 @@ function HintRow({
       ) : null}
       {showHelper ? (
         <span className="ml-auto inline-flex items-center gap-2 text-[12px] text-[var(--ink-3)]">
-          ИНН в Узбекистане — 9 цифр
+          {enterHint}
           <kbd className="rounded border border-b-2 border-[var(--border)] bg-[var(--surface)] px-1.5 py-0.5 font-mono text-[11px] text-[var(--ink-2)]">
             Enter
           </kbd>
@@ -256,17 +272,17 @@ function HintRow({
 }
 
 function EmptyHero() {
+  const t = useTranslations("bank.search");
   return (
     <div className="flex flex-col items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-8 py-14 text-center">
       <div className="grid size-10 place-items-center rounded-md bg-[var(--surface-3)] text-[var(--ink-2)]">
         <Building className="size-5" />
       </div>
       <h3 className="m-0 text-[16px] font-semibold tracking-[-0.01em] text-[var(--ink-1)]">
-        Начните с ИНН
+        {t("empty_hero_title")}
       </h3>
       <p className="m-0 max-w-[56ch] text-[14px] text-[var(--ink-3)]">
-        Введите идентификационный номер компании — система найдёт существующее
-        досье или предложит загрузить выгрузки для нового заёмщика.
+        {t("empty_hero_text")}
       </p>
     </div>
   );
@@ -306,6 +322,7 @@ function FoundWithDossier({
   result: BorrowerSearchResult;
   inn: string;
 }) {
+  const t = useTranslations("bank.search");
   const band = scoreBand(result.display_score) ?? "warn";
   const colors: Record<"good" | "warn" | "bad", { fg: string; bg: string; line: string }> = {
     good: { fg: "var(--state-ok-fg)", bg: "var(--state-ok-bg)", line: "#059669" },
@@ -330,7 +347,7 @@ function FoundWithDossier({
                 className="size-1.5 rounded-full"
                 style={{ background: "var(--state-ok-fg)" }}
               />
-              Досье найдено
+              {t("found_pill")}
             </span>
           </div>
           <h2 className="m-0 text-[22px] font-semibold tracking-[-0.015em] text-[var(--ink-1)]">
@@ -338,7 +355,7 @@ function FoundWithDossier({
           </h2>
           {result.created_at ? (
             <p className="mt-1.5 text-[13px] text-[var(--ink-3)]">
-              Последнее досье обновлено{" "}
+              {t("found_last_updated")}{" "}
               {new Date(result.created_at).toLocaleDateString("ru", {
                 day: "2-digit",
                 month: "long",
@@ -350,7 +367,7 @@ function FoundWithDossier({
 
         <div className="flex flex-col items-end gap-1.5 md:min-w-[180px]">
           <span className="text-[11px] font-semibold tracking-[0.08em] text-[var(--ink-3)] uppercase">
-            Скоринг
+            {t("found_scoring_label")}
           </span>
           <div className="font-semibold tabular-nums text-[36px] leading-none tracking-[-0.03em] text-[var(--ink-1)]">
             {result.display_score ?? "—"}
@@ -381,13 +398,13 @@ function FoundWithDossier({
           className="inline-flex h-9 items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-[13px] font-medium text-[var(--ink-1)] transition-colors hover:bg-[var(--surface-2)]"
         >
           <FileText className="size-3.5" />
-          Открыть полное досье
+          {t("found_open_dossier")}
         </Link>
         <Link
           href={`/manual-input?inn=${encodeURIComponent(inn)}`}
           className="inline-flex h-9 items-center gap-2 rounded-md bg-[var(--brand-primary)] px-3 text-[13px] font-semibold text-white transition-colors hover:bg-[var(--brand-primary-hover)]"
         >
-          Пересобрать с новыми данными
+          {t("found_rebuild")}
           <ArrowRight className="size-3.5" />
         </Link>
       </div>
@@ -396,6 +413,7 @@ function FoundWithDossier({
 }
 
 function NoDossierState({ inn, name }: { inn: string; name: string }) {
+  const t = useTranslations("bank.search");
   return (
     <div className="flex flex-col items-start gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-8">
       <div className="grid size-10 place-items-center rounded-md bg-[var(--state-info-bg)] text-[var(--state-info-fg)]">
@@ -403,18 +421,18 @@ function NoDossierState({ inn, name }: { inn: string; name: string }) {
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <h3 className="m-0 text-[16px] font-semibold tracking-[-0.01em] text-[var(--ink-1)]">
-          Компания найдена, но досье не сформировано
+          {t("no_dossier_title")}
         </h3>
         <span
           className="rounded px-2 py-0.5 text-[12px] font-medium"
           style={{ color: "var(--state-info-fg)", background: "var(--state-info-bg)" }}
         >
-          Новый клиент
+          {t("no_dossier_new_client")}
         </span>
       </div>
       <div className="w-full rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-3.5 py-2.5">
         <div className="mb-0.5 text-[12px] text-[var(--ink-3)]">
-          Найдено в реестре
+          {t("no_dossier_registry_found")}
         </div>
         <div className="flex flex-wrap items-center gap-3 text-[13px]">
           <span className="font-mono text-[var(--ink-1)]">{formatInn(inn)}</span>
@@ -423,8 +441,7 @@ function NoDossierState({ inn, name }: { inn: string; name: string }) {
         </div>
       </div>
       <p className="m-0 max-w-[56ch] text-[14px] text-[var(--ink-3)]">
-        Кредитное досье ещё не собрано. Запустите формирование — система пройдёт
-        через 3 шага мастера и подготовит scoring.
+        {t("no_dossier_text")}
       </p>
       <div className="mt-2 flex flex-wrap gap-2">
         <Link
@@ -432,7 +449,7 @@ function NoDossierState({ inn, name }: { inn: string; name: string }) {
           className="inline-flex h-8 items-center gap-1.5 rounded-md bg-[var(--brand-primary)] px-3 text-[13px] font-semibold text-white transition-colors hover:bg-[var(--brand-primary-hover)]"
         >
           <Plus className="size-3.5" />
-          Сформировать досье
+          {t("no_dossier_submit")}
         </Link>
       </div>
     </div>
@@ -440,18 +457,18 @@ function NoDossierState({ inn, name }: { inn: string; name: string }) {
 }
 
 function NotFoundState({ inn }: { inn: string }) {
+  const t = useTranslations("bank.search");
   return (
     <div className="flex flex-col items-start gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-8">
       <div className="grid size-10 place-items-center rounded-md bg-[var(--state-warn-bg)] text-[var(--state-warn-fg)]">
         <FileX className="size-5" />
       </div>
       <h3 className="m-0 text-[16px] font-semibold tracking-[-0.01em] text-[var(--ink-1)]">
-        Компания не найдена
+        {t("not_found_title")}
       </h3>
       <p className="m-0 max-w-[56ch] text-[14px] text-[var(--ink-3)]">
-        ИНН <span className="font-mono text-[var(--ink-1)]">{formatInn(inn)}</span>{" "}
-        не встречался в системе. Проверьте правильность ввода или загрузите выгрузки
-        Soliq — мы создадим новое досье с нуля.
+        <span className="font-mono text-[var(--ink-1)]">{formatInn(inn)}</span>{" "}
+        {t("not_found_text")}
       </p>
       <div className="mt-2 flex flex-wrap gap-2">
         <Link
@@ -459,7 +476,7 @@ function NotFoundState({ inn }: { inn: string }) {
           className="inline-flex h-8 items-center gap-1.5 rounded-md bg-[var(--brand-primary)] px-3 text-[13px] font-semibold text-white transition-colors hover:bg-[var(--brand-primary-hover)]"
         >
           <Plus className="size-3.5" />
-          Создать досье
+          {t("not_found_submit")}
         </Link>
       </div>
     </div>
