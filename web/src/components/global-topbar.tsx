@@ -1,6 +1,7 @@
 "use client";
 
 import { Bell, ChevronRight, HelpCircle, Search } from "lucide-react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useEffect } from "react";
 
@@ -13,6 +14,7 @@ export function GlobalTopbar({
   crumbs: Crumb[];
   onSearchOpen?: () => void;
 }) {
+  const t = useTranslations("shared.topbar");
   useEffect(() => {
     if (!onSearchOpen) return;
     function handler(e: KeyboardEvent) {
@@ -28,7 +30,7 @@ export function GlobalTopbar({
   return (
     <header className="sticky top-0 z-20 flex h-14 items-center gap-4 border-b border-[var(--border)] bg-[var(--surface)] px-6">
       <nav
-        aria-label="Хлебные крошки"
+        aria-label={t("breadcrumbs_aria")}
         className="flex min-w-0 items-center gap-1.5 text-[13px]"
       >
         {crumbs.map((c, i) => (
@@ -68,21 +70,21 @@ export function GlobalTopbar({
           className="flex items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-3 py-1.5 text-[12.5px] text-[var(--ink-3)] hover:border-[var(--border-strong)]"
         >
           <Search className="size-3.5" />
-          <span>Поиск</span>
+          <span>{t("search_button")}</span>
           <kbd className="ml-2 rounded border border-[var(--border)] bg-[var(--surface)] px-1.5 py-px font-mono text-[10px] text-[var(--ink-4)]">
             ⌘K
           </kbd>
         </button>
         <Link
           href="/help"
-          aria-label="Помощь"
+          aria-label={t("help_aria")}
           className="grid size-9 place-items-center rounded-md text-[var(--ink-3)] hover:bg-[var(--surface-2)] hover:text-[var(--ink-1)]"
         >
           <HelpCircle className="size-4" />
         </Link>
         <button
           type="button"
-          aria-label="Уведомления"
+          aria-label={t("bell_aria")}
           className="grid size-9 place-items-center rounded-md text-[var(--ink-3)] hover:bg-[var(--surface-2)] hover:text-[var(--ink-1)]"
         >
           <Bell className="size-4" />

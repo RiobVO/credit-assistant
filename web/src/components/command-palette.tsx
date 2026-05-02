@@ -1,17 +1,18 @@
 "use client";
 
 import { Search, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
-type Item = { label: string; href: string; section: string };
+type Item = { labelKey: string; href: string; sectionKey: "section_navigation" | "section_actions" };
 
 const ITEMS: Item[] = [
-  { label: "Поиск заёмщика", href: "/search", section: "Навигация" },
-  { label: "История досье", href: "/history", section: "Навигация" },
-  { label: "Новая заявка", href: "/manual-input", section: "Действия" },
-  { label: "Настройки", href: "/settings", section: "Навигация" },
-  { label: "Помощь", href: "/help", section: "Навигация" },
+  { labelKey: "search_borrower", href: "/search", sectionKey: "section_navigation" },
+  { labelKey: "history", href: "/history", sectionKey: "section_navigation" },
+  { labelKey: "new_application", href: "/manual-input", sectionKey: "section_actions" },
+  { labelKey: "settings", href: "/settings", sectionKey: "section_navigation" },
+  { labelKey: "help", href: "/help", sectionKey: "section_navigation" },
 ];
 
 export function CommandPalette({
@@ -21,6 +22,7 @@ export function CommandPalette({
   open: boolean;
   onClose: () => void;
 }) {
+  const t = useTranslations("shared.palette");
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
@@ -42,12 +44,23 @@ export function CommandPalette({
     return () => window.removeEventListener("keydown", handler);
   }, [open, onClose]);
 
+  // Локализованные items пересоздаются при смене query — t() в нескольких местах ниже.
+  const itemsLocalized = useMemo(
+    () =>
+      ITEMS.map((i) => ({
+        ...i,
+        label: t(i.labelKey as "search_borrower"),
+        section: t(i.sectionKey),
+      })),
+    [t],
+  );
+
   if (!open) return null;
 
-  const filtered = ITEMS.filter((i) =>
+  const filtered = itemsLocalized.filter((i) =>
     i.label.toLowerCase().includes(query.toLowerCase()),
   );
-  const grouped = filtered.reduce<Record<string, Item[]>>((acc, item) => {
+  const grouped = filtered.reduce<Record<string, (typeof itemsLocalized)[number][]>>((acc, item) => {
     (acc[item.section] ??= []).push(item);
     return acc;
   }, {});
@@ -61,7 +74,7 @@ export function CommandPalette({
     >
       <button
         type="button"
-        aria-label="Закрыть"
+        aria-label={t("close_aria")}
         onClick={onClose}
         className="absolute inset-0 bg-black/40"
       />
@@ -72,13 +85,13 @@ export function CommandPalette({
             ref={inputRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Найти страницу или действие…"
+            placeholder={t("placeholder")}
             className="flex-1 bg-transparent text-[14px] text-[var(--ink-1)] placeholder-[var(--ink-4)] focus:outline-none"
           />
           <button
             type="button"
             onClick={onClose}
-            aria-label="Закрыть"
+            aria-label={t("close_aria")}
             className="text-[var(--ink-4)] hover:text-[var(--ink-1)]"
           >
             <X className="size-4" />
@@ -87,7 +100,7 @@ export function CommandPalette({
         <div className="max-h-[400px] overflow-y-auto p-2">
           {Object.entries(grouped).length === 0 ? (
             <div className="px-3 py-6 text-center text-[13px] text-[var(--ink-3)]">
-              Ничего не найдено
+              {t("empty")}
             </div>
           ) : (
             Object.entries(grouped).map(([section, items]) => (
