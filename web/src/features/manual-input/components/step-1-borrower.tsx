@@ -1,11 +1,12 @@
 "use client";
 
-import { differenceInDays, differenceInMonths, parse, isValid } from "date-fns";
+import { differenceInDays, parse, isValid } from "date-fns";
 import { CheckCircle2, Search, TriangleAlert } from "lucide-react";
 import { Controller, useFormContext } from "react-hook-form";
 
 import { cn } from "@/lib/utils";
 
+import { formatBusinessAge } from "../lib/duration";
 import { type FormValues, legalForms } from "../schema";
 
 import { Field, FieldInput, fieldInputClass } from "./field";
@@ -147,7 +148,7 @@ export function Step1Borrower() {
           <Field
             label="Дата государственной регистрации"
             required
-            help={derivedActivityHint(regDate, "Срок деятельности")}
+            help={formatBusinessAgeHint(regDate, "Срок деятельности")}
             error={regErr}
           >
             <FieldInput
@@ -196,7 +197,7 @@ export function Step1Borrower() {
           <Field
             label="Дата назначения директора"
             required
-            help={derivedActivityHint(apptDate, "Срок полномочий")}
+            help={formatBusinessAgeHint(apptDate, "Срок полномочий")}
             error={apptErr}
           >
             <FieldInput
@@ -256,19 +257,12 @@ export function isRecentDirectorAppointment(
   return diff >= 0 && diff < thresholdDays;
 }
 
-function derivedActivityHint(value: string | undefined, prefix: string): string | undefined {
-  if (!value) return undefined;
-  const d = parse(value, "yyyy-MM-dd", new Date());
-  if (!isValid(d)) return undefined;
-  const months = differenceInMonths(new Date(), d);
-  if (months < 0) return undefined;
-  const years = Math.floor(months / 12);
-  const remMonths = months % 12;
-  const yearsLabel = pluralYears(years);
-  const monthsLabel = pluralMonths(remMonths);
-  if (years === 0) return `${prefix}: ${monthsLabel}`;
-  if (remMonths === 0) return `${prefix}: ${yearsLabel}`;
-  return `${prefix}: ${yearsLabel} ${monthsLabel}`;
+function formatBusinessAgeHint(
+  value: string | undefined,
+  prefix: string,
+): string | undefined {
+  const age = formatBusinessAge(value);
+  return age ? `${prefix}: ${age}` : undefined;
 }
 
 function todayIso(): string {
@@ -279,19 +273,3 @@ function todayIso(): string {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-function pluralYears(n: number): string {
-  const mod10 = n % 10;
-  const mod100 = n % 100;
-  if (mod100 >= 11 && mod100 <= 14) return `${n} лет`;
-  if (mod10 === 1) return `${n} год`;
-  if (mod10 >= 2 && mod10 <= 4) return `${n} года`;
-  return `${n} лет`;
-}
-
-function pluralMonths(n: number): string {
-  const mod10 = n % 10;
-  const mod100 = n % 100;
-  if (mod100 >= 11 && mod100 <= 14) return `${n} мес.`;
-  if (mod10 === 1) return `${n} мес.`;
-  return `${n} мес.`;
-}
