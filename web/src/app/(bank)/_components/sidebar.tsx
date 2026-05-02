@@ -1,6 +1,7 @@
 "use client";
 
 import { HelpCircle, History as HistoryIcon, LogOut, Plus, Search, Settings } from "lucide-react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { type ReactNode } from "react";
@@ -14,16 +15,6 @@ type NavItem = {
   icon: ReactNode;
   count?: number | null;
 };
-
-const PRIMARY: NavItem[] = [
-  { href: "/search", label: "Поиск", icon: <Search className="size-[17px]" /> },
-  { href: "/history", label: "История", icon: <HistoryIcon className="size-[17px]" /> },
-];
-
-const SECONDARY: NavItem[] = [
-  { href: "/help", label: "Помощь", icon: <HelpCircle className="size-[17px]" /> },
-  { href: "/settings", label: "Настройки", icon: <Settings className="size-[17px]" /> },
-];
 
 function NavLink({ item, active }: { item: NavItem; active: boolean }) {
   return (
@@ -55,10 +46,13 @@ function initials(fullName: string): string {
   return (first + second).toUpperCase() || "??";
 }
 
-function roleLabel(role: string | undefined): string {
-  if (role === "senior_analyst") return "Старший аналитик";
-  if (role === "analyst") return "Кредитный аналитик";
-  return role ?? "";
+function useRoleLabel() {
+  const t = useTranslations("bank.sidebar");
+  return (role: string | undefined): string => {
+    if (role === "senior_analyst") return t("role_senior");
+    if (role === "analyst") return t("role_analyst");
+    return role ?? "";
+  };
 }
 
 export function BankSidebar() {
@@ -66,6 +60,19 @@ export function BankSidebar() {
   const router = useRouter();
   const { data: analyst } = useAnalyst();
   const logout = useLogout();
+  const tNav = useTranslations("shared.nav");
+  const tSidebar = useTranslations("bank.sidebar");
+  const tCta = useTranslations("bank.cta");
+  const roleLabel = useRoleLabel();
+
+  const PRIMARY: NavItem[] = [
+    { href: "/search", label: tNav("search"), icon: <Search className="size-[17px]" /> },
+    { href: "/history", label: tNav("history"), icon: <HistoryIcon className="size-[17px]" /> },
+  ];
+  const SECONDARY: NavItem[] = [
+    { href: "/help", label: tNav("help"), icon: <HelpCircle className="size-[17px]" /> },
+    { href: "/settings", label: tNav("settings"), icon: <Settings className="size-[17px]" /> },
+  ];
 
   const handleLogout = async () => {
     await logout.mutateAsync();
@@ -97,14 +104,14 @@ export function BankSidebar() {
           className="flex items-center justify-center gap-2 rounded-md bg-[var(--brand-primary)] px-3 py-[10px] text-[13.5px] font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-primary-hover)]"
         >
           <Plus className="size-4" />
-          Новая заявка
+          {tCta("new_application")}
         </Link>
       </div>
 
-      {/* Primary nav — «Рабочее пространство» */}
+      {/* Primary nav — workspace */}
       <div className="px-3 pt-5 pb-2">
         <div className="px-3 pb-2 text-[10.5px] font-semibold tracking-[0.1em] text-[var(--nav-text-3)] uppercase">
-          Рабочее пространство
+          {tSidebar("workspace")}
         </div>
         <nav className="flex flex-col gap-px">
           {PRIMARY.map((item) => (
@@ -117,10 +124,10 @@ export function BankSidebar() {
         </nav>
       </div>
 
-      {/* Secondary nav — «Помощь» (внизу) */}
+      {/* Secondary nav — help (внизу) */}
       <div className="mt-auto px-3 pb-2">
         <div className="px-3 pb-2 text-[10.5px] font-semibold tracking-[0.1em] text-[var(--nav-text-3)] uppercase">
-          Помощь
+          {tSidebar("help_section")}
         </div>
         <nav className="flex flex-col gap-px">
           {SECONDARY.map((item) => (
@@ -150,8 +157,8 @@ export function BankSidebar() {
           type="button"
           onClick={handleLogout}
           disabled={logout.isPending}
-          aria-label="Выйти"
-          title="Выйти"
+          aria-label={tSidebar("logout_aria")}
+          title={tSidebar("logout_aria")}
           className="grid size-7 shrink-0 place-items-center rounded text-[var(--nav-text-3)] transition-colors hover:bg-[var(--nav-bg-hover)] hover:text-[var(--nav-text)] disabled:cursor-wait disabled:opacity-60"
         >
           <LogOut className="size-4" />
