@@ -12,6 +12,7 @@ import {
   Search,
   X,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -64,8 +65,11 @@ function pageNumbers(current: number, total: number): Array<number | "gap"> {
   return [1, "gap", current - 1, current, current + 1, "gap", total];
 }
 
-function downloadCsv(items: BankDossierListItem[], filename: string): void {
-  const headers = ["ИНН", "Название", "Скоринг", "Рекомендация", "Дата", "Аналитик"];
+function downloadCsv(
+  items: BankDossierListItem[],
+  filename: string,
+  headers: string[],
+): void {
   const rows = items.map((it) => [
     it.borrower_inn_masked,
     `"${it.borrower_name.replace(/"/g, '""')}"`,
@@ -101,6 +105,8 @@ function thresholdDate(filter: DateFilter): Date | null {
 
 export function HistoryView() {
   const router = useRouter();
+  const t = useTranslations("bank.history");
+  const tCta = useTranslations("bank.cta");
   const [filter, setFilter] = useState<ListFilter>("mine");
   const [q, setQ] = useState("");
   const [appliedQ, setAppliedQ] = useState("");
@@ -157,8 +163,8 @@ export function HistoryView() {
   return (
     <>
       <BankPageHead
-        title="История проверок"
-        subtitle="Все компании, прошедшие через систему — с результатами скоринга и принятыми решениями."
+        title={t("title")}
+        subtitle={t("subtitle")}
         actions={
           <>
             <button
@@ -167,20 +173,28 @@ export function HistoryView() {
                 downloadCsv(
                   visibleItems,
                   `history-${new Date().toISOString().slice(0, 10)}.csv`,
+                  [
+                    t("col_inn"),
+                    t("col_company"),
+                    t("col_score"),
+                    t("col_recommendation"),
+                    t("col_date"),
+                    t("col_analyst"),
+                  ],
                 )
               }
               disabled={visibleItems.length === 0}
               className="inline-flex h-9 items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-[13px] font-medium text-[var(--ink-1)] transition-colors hover:bg-[var(--surface-2)] disabled:cursor-not-allowed disabled:opacity-55"
             >
               <Download className="size-3.5" />
-              Экспорт
+              {t("export")}
             </button>
             <Link
               href="/manual-input"
               className="inline-flex h-9 items-center gap-2 rounded-md bg-[var(--brand-primary)] px-3 text-[13px] font-semibold text-white transition-colors hover:bg-[var(--brand-primary-hover)]"
             >
               <Plus className="size-3.5" />
-              Новая заявка
+              {tCta("new_application")}
             </Link>
           </>
         }
@@ -218,7 +232,7 @@ export function HistoryView() {
             message={
               main.error instanceof Error
                 ? main.error.message
-                : "Ошибка загрузки"
+                : t("load_error")
             }
           />
         ) : visibleItems.length === 0 ? (
@@ -258,10 +272,11 @@ function Tabs({
   mineCount: number | null;
   allCount: number | null;
 }) {
+  const t = useTranslations("bank.history");
   const items: Array<{ key: ListFilter; label: string; count: number | null }> =
     [
-      { key: "mine", label: "Мои", count: mineCount },
-      { key: "all", label: "Все", count: allCount },
+      { key: "mine", label: t("tab_mine"), count: mineCount },
+      { key: "all", label: t("tab_all"), count: allCount },
     ];
   return (
     <div className="mb-5 inline-flex gap-0 rounded-md bg-[var(--surface-3)] p-[3px]">
@@ -316,6 +331,7 @@ function Toolbar({
   dateFilter: DateFilter;
   onDateFilter: (v: DateFilter) => void;
 }) {
+  const t = useTranslations("bank.history");
   return (
     <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
       <form onSubmit={onSubmit} className="flex-1" style={{ maxWidth: 480 }}>
@@ -323,7 +339,7 @@ function Toolbar({
           <Search className="pointer-events-none absolute left-3 size-4 text-[var(--ink-4)]" />
           <input
             type="search"
-            placeholder="Поиск по ИНН или названию компании"
+            placeholder={t("search_placeholder")}
             value={q}
             onChange={(e) => onQ(e.target.value)}
             className="h-[38px] w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-9 text-[14px] text-[var(--ink-1)] outline-none transition-colors placeholder:text-[var(--ink-4)] focus:border-[var(--brand-primary)] focus:shadow-[0_0_0_3px_var(--brand-primary-ring)]"
@@ -332,7 +348,7 @@ function Toolbar({
             <button
               type="button"
               onClick={() => onQ("")}
-              aria-label="Очистить"
+              aria-label={t("clear_aria")}
               className="absolute right-2 grid size-[22px] place-items-center rounded text-[var(--ink-4)] hover:bg-[var(--surface-2)] hover:text-[var(--ink-2)]"
             >
               <X className="size-3.5" />
@@ -343,34 +359,34 @@ function Toolbar({
 
       <div className="flex flex-wrap items-center gap-3">
         <FilterSelect
-          label="Рекомендация"
+          label={t("filter_recommendation")}
           value={recFilter}
           onChange={(v) => onRecFilter(v as RecFilter)}
           options={[
-            { v: "all", l: "Все" },
-            { v: "approve", l: "К выдаче" },
-            { v: "review", l: "На проверку" },
-            { v: "reject", l: "Отклонить" },
+            { v: "all", l: t("rec_all") },
+            { v: "approve", l: t("rec_approve") },
+            { v: "review", l: t("rec_review") },
+            { v: "reject", l: t("rec_reject") },
           ]}
         />
         <FilterSelect
-          label="Период"
+          label={t("filter_period")}
           value={dateFilter}
           onChange={(v) => onDateFilter(v as DateFilter)}
           options={[
-            { v: "7", l: "7 дней" },
-            { v: "30", l: "30 дней" },
-            { v: "90", l: "90 дней" },
-            { v: "all", l: "Всё время" },
+            { v: "7", l: t("period_7") },
+            { v: "30", l: t("period_30") },
+            { v: "90", l: t("period_90") },
+            { v: "all", l: t("period_all") },
           ]}
         />
         <button
           type="button"
-          title="Дополнительные фильтры"
+          title={t("filter_more")}
           className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2.5 text-[13px] text-[var(--ink-2)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--ink-1)]"
         >
           <Filter className="size-3.5 text-[var(--ink-4)]" />
-          Ещё
+          {t("filter_more")}
         </button>
       </div>
     </div>
@@ -423,13 +439,7 @@ function Table({
       <table className="w-full border-collapse text-[14px]">
         <thead>
           <tr>
-            <Th width={150}>ИНН</Th>
-            <Th>Название компании</Th>
-            <Th width={180}>Скоринг</Th>
-            <Th width={160}>Рекомендация</Th>
-            <Th width={180}>Дата</Th>
-            <Th width={170}>Аналитик</Th>
-            <Th width={40} />
+            <TableHeaders />
           </tr>
         </thead>
         <tbody>
@@ -439,6 +449,21 @@ function Table({
         </tbody>
       </table>
     </div>
+  );
+}
+
+function TableHeaders() {
+  const t = useTranslations("bank.history");
+  return (
+    <>
+      <Th width={150}>{t("col_inn")}</Th>
+      <Th>{t("col_company")}</Th>
+      <Th width={180}>{t("col_score")}</Th>
+      <Th width={160}>{t("col_recommendation")}</Th>
+      <Th width={180}>{t("col_date")}</Th>
+      <Th width={170}>{t("col_analyst")}</Th>
+      <Th width={40} />
+    </>
   );
 }
 
@@ -484,19 +509,32 @@ function Row({
         <AnalystCell name={item.analyst_full_name} />
       </td>
       <td className="px-4 py-3.5">
-        <button
-          type="button"
-          aria-label="Действия"
+        <ActionsButton
           onClick={(e) => {
             e.stopPropagation();
             // TODO: контекстное меню (открыть, дублировать, экспортировать)
           }}
-          className="grid size-7 place-items-center rounded text-[var(--ink-3)] hover:bg-[var(--surface-3)] hover:text-[var(--ink-1)]"
-        >
-          <MoreHorizontal className="size-4" />
-        </button>
+        />
       </td>
     </tr>
+  );
+}
+
+function ActionsButton({
+  onClick,
+}: {
+  onClick: (e: React.MouseEvent) => void;
+}) {
+  const t = useTranslations("bank.history");
+  return (
+    <button
+      type="button"
+      aria-label={t("row_actions")}
+      onClick={onClick}
+      className="grid size-7 place-items-center rounded text-[var(--ink-3)] hover:bg-[var(--surface-3)] hover:text-[var(--ink-1)]"
+    >
+      <MoreHorizontal className="size-4" />
+    </button>
   );
 }
 
@@ -575,18 +613,21 @@ function Pagination({
   apiTotal: number;
   onSetPage: (p: number) => void;
 }) {
+  const t = useTranslations("bank.history");
   const pages = pageNumbers(page, totalPages);
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-[13px] text-[var(--ink-3)]">
       <span>
-        Показано <b className="text-[var(--ink-1)]">{shownCount}</b> из{" "}
-        <b className="text-[var(--ink-1)]">{apiTotal}</b>
+        {t.rich("pagination_shown", {
+          shown: () => <b className="text-[var(--ink-1)]">{shownCount}</b>,
+          total: () => <b className="text-[var(--ink-1)]">{apiTotal}</b>,
+        })}
       </span>
       <div className="flex items-center gap-1">
         <PageBtn
           disabled={page <= 1}
           onClick={() => onSetPage(page - 1)}
-          aria-label="Назад"
+          aria-label={t("pagination_prev")}
         >
           <ChevronLeft className="size-3.5" />
         </PageBtn>
@@ -611,7 +652,7 @@ function Pagination({
         <PageBtn
           disabled={page >= totalPages}
           onClick={() => onSetPage(page + 1)}
-          aria-label="Вперёд"
+          aria-label={t("pagination_next")}
         >
           <ChevronRight className="size-3.5" />
         </PageBtn>
@@ -665,17 +706,19 @@ function SkeletonRows() {
 }
 
 function ErrorBlock({ message }: { message: string }) {
+  const t = useTranslations("bank.history");
   return (
     <div className="px-5 py-10 text-center text-[13px] text-[var(--state-bad-fg)]">
-      Не удалось загрузить историю: {message}
+      {t("load_error")}: {message}
     </div>
   );
 }
 
 function EmptyBlock() {
+  const t = useTranslations("bank.history");
   return (
     <div className="px-5 py-12 text-center text-[13px] text-[var(--ink-3)]">
-      Ничего не найдено по текущим фильтрам.
+      {t("empty")}
     </div>
   );
 }
