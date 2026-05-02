@@ -152,6 +152,20 @@
       "upload_files": "Загрузить файлы",
       "back_to_form": "К форме"
     },
+    "sidebar": {
+      "section_main": "Основное",
+      "section_tools": "Инструменты",
+      "nav_dashboard": "Панель управления",
+      "nav_applications": "Заявки на кредит",
+      "nav_borrowers": "Заёмщики",
+      "nav_scoring": "Скоринг и аналитика",
+      "nav_portfolio": "Портфель",
+      "nav_new_analysis": "Новый анализ",
+      "nav_reports": "Отчёты",
+      "nav_history": "История",
+      "nav_settings": "Настройки",
+      "role_analyst": "Кредитный аналитик"
+    },
     "manual_input": {
       "title": "Подготовка досье",
       "step_1": "Заёмщик",

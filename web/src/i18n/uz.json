@@ -152,6 +152,20 @@
       "upload_files": "Fayllarni yuklash",
       "back_to_form": "Formaga"
     },
+    "sidebar": {
+      "section_main": "Asosiy",
+      "section_tools": "Vositalar",
+      "nav_dashboard": "Boshqaruv paneli",
+      "nav_applications": "Kredit arizalari",
+      "nav_borrowers": "Qarz oluvchilar",
+      "nav_scoring": "Skoring va tahlil",
+      "nav_portfolio": "Portfel",
+      "nav_new_analysis": "Yangi tahlil",
+      "nav_reports": "Hisobotlar",
+      "nav_history": "Tarix",
+      "nav_settings": "Sozlamalar",
+      "role_analyst": "Kredit analitigi"
+    },
     "manual_input": {
       "title": "Dosyeni tayyorlash",
       "step_1": "Qarz oluvchi",
