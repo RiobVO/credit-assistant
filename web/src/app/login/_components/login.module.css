@@ -10,8 +10,10 @@
   --as-text-2: #9a958a;
   --as-text-3: #6b675e;
   --as-text-4: #45433d;
-  --as-accent: #d4b26a;
-  --as-accent-2: #f2d89a;
+  /* CA-060: sync с brand-tenant (см. config/brands/uzbekbank.json).
+     accent → terracotta для uzbekbank, blue для default. */
+  --as-accent: var(--brand-primary);
+  --as-accent-2: var(--brand-primary-hover);
   --as-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
 
   --mx: 38%;
@@ -112,12 +114,12 @@
   height: 30px;
   border-radius: 6px;
   background: var(--as-accent);
-  color: #1a1410;
+  color: var(--brand-primary-ink);
   display: grid;
   place-items: center;
   font-weight: 700;
   font-size: 12px;
-  box-shadow: 0 4px 16px rgba(212, 178, 106, 0.18);
+  box-shadow: 0 4px 16px var(--brand-primary-ring);
 }
 .brandText {
   display: flex;
@@ -240,7 +242,7 @@
   outline: none;
   border-color: var(--as-accent);
   background: rgba(0, 0, 0, 0.45);
-  box-shadow: 0 0 0 3px rgba(212, 178, 106, 0.14);
+  box-shadow: 0 0 0 3px var(--brand-primary-ring);
 }
 .suffix {
   position: absolute;
@@ -332,8 +334,8 @@
   transition: background 180ms var(--as-ease), border-color 180ms var(--as-ease), color 180ms var(--as-ease), transform 100ms var(--as-ease);
 }
 .cta:hover {
-  background: rgba(212, 178, 106, 0.1);
-  border-color: rgba(212, 178, 106, 0.45);
+  background: var(--brand-primary-ring);
+  border-color: var(--brand-primary);
   color: var(--as-accent-2);
 }
 .cta:active { transform: translateY(1px); }
@@ -361,6 +363,18 @@
   font-size: 11px;
   color: var(--as-text-4);
   letter-spacing: 0.04em;
+}
+.footSecurity {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--as-text-2);
+}
+.footDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--state-ok-fg);
 }
 
 @media (max-width: 720px) {
