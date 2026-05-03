@@ -1,22 +1,17 @@
 "use client";
 
-// CA-035b: Readiness badge для готового досье. Компактный pill с level
-// (Insufficient/Minimal/Standard/Comprehensive) + confidence_score% +
-// inline список missing_capabilities (если есть).
-//
-// Семантика дополняет, не дублирует ROE/Debt-to-EBIT карточки: KPI говорят
-// «что мы посчитали», readiness — «насколько мы можем доверять расчётам».
-// Аналитик видит, что досье построено на partial-данных и может запросить
-// у клиента FORM_1 / ESF-выгрузку перед approve.
+// CA-035b → дизайн-парити: вместо отдельного pill — 4-я KPI-карточка
+// «Готовность данных» в KpiRow. Семантика та же: «насколько мы можем
+// доверять расчётам». Левая stripe по level (good/warn/bad), значение —
+// confidence_score%, подзаголовок — LEVEL · источники.
 
 import { useQuery } from "@tanstack/react-query";
-import { Check, Info, TriangleAlert, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { getDossierReadiness } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
-type Status = "ok" | "warn" | "pending";
+type Tone = "good" | "warn" | "bad";
 
 const LEVEL_KEY: Record<
   string,
@@ -28,27 +23,45 @@ const LEVEL_KEY: Record<
   comprehensive: "level_comprehensive",
 };
 
-const LEVEL_STATUS: Record<string, Status> = {
-  insufficient: "pending",
+const LEVEL_TONE: Record<string, Tone> = {
+  insufficient: "bad",
   minimal: "warn",
   standard: "warn",
-  comprehensive: "ok",
+  comprehensive: "good",
 };
 
-const CAPABILITY_KEY: Record<
+const SOURCE_KEY: Record<
   string,
-  | "capability_yoy_trend"
-  | "capability_cagr"
-  | "capability_balance_ratios"
-  | "capability_tax_burden"
+  | "source_manual"
+  | "source_form1"
+  | "source_form2"
+  | "source_vat_declaration"
+  | "source_vat_registry_ilova"
+  | "source_profit_tax"
+  | "source_esf"
 > = {
-  yoy_trend: "capability_yoy_trend",
-  cagr: "capability_cagr",
-  balance_ratios: "capability_balance_ratios",
-  tax_burden: "capability_tax_burden",
+  manual: "source_manual",
+  form1: "source_form1",
+  form2: "source_form2",
+  vat_declaration: "source_vat_declaration",
+  vat_registry_ilova: "source_vat_registry_ilova",
+  profit_tax: "source_profit_tax",
+  esf: "source_esf",
 };
 
-export function ReadinessBadge({ dossierId }: { dossierId: string }) {
+const STRIPE_CLASS: Record<Tone, string> = {
+  good: "border-l-4 border-l-[var(--state-ok-fg)]",
+  warn: "border-l-4 border-l-[var(--state-warn-fg)]",
+  bad: "border-l-4 border-l-[var(--state-bad-fg)]",
+};
+
+export function ReadinessKpiCard({
+  dossierId,
+  label,
+}: {
+  dossierId: string;
+  label: string;
+}) {
   const t = useTranslations("dossier.readiness");
   const query = useQuery({
     queryKey: ["dossier-readiness", dossierId],
@@ -57,54 +70,70 @@ export function ReadinessBadge({ dossierId }: { dossierId: string }) {
     staleTime: 60_000,
   });
 
-  // Тихо ничего не рендерим во время загрузки/ошибки: readiness — derived
-  // signal, не блокирующая часть досье. Если бэк не отвечает — досье
-  // остаётся читаемым, только без сигнала «доверие к данным».
-  if (!query.data) return null;
+  if (!query.data) {
+    // Pending или error — non-blocking контракт CA-035b: KPI-row остаётся
+    // читаемой, в карточке просто прочерк.
+    return (
+      <Card label={label} value="—" subtitle={query.isPending ? t("card_loading") : ""} />
+    );
+  }
 
   const data = query.data;
-  const status = LEVEL_STATUS[data.level] ?? "warn";
-  const Icon = status === "ok" ? Check : status === "pending" ? X : TriangleAlert;
-
-  const palette = {
-    ok: "border-[#BFE2D2] bg-[var(--state-ok-bg)] text-[var(--state-ok-fg)]",
-    warn: "border-[#F1D9A6] bg-[#FFF6E5] text-[var(--state-warn-fg)]",
-    pending: "border-[#F2BCBA] bg-[#FCE7E5] text-[var(--state-bad-fg)]",
-  }[status];
-
+  const tone = LEVEL_TONE[data.level] ?? "warn";
   const levelKey = LEVEL_KEY[data.level];
-  const levelLabel = levelKey ? t(levelKey) : data.level;
-  const missing = data.missing_capabilities.map((c) => {
-    const ck = CAPABILITY_KEY[c];
-    return ck ? t(ck) : c;
-  });
+  const levelLabel = (levelKey ? t(levelKey) : data.level).toUpperCase();
+  const sources = data.parser_sources
+    .map((s) => {
+      const key = SOURCE_KEY[s];
+      return key ? t(key) : s;
+    })
+    .join(" + ");
+  const subtitle = sources ? `${levelLabel} · ${sources}` : levelLabel;
 
   return (
-    <div className="mt-3 flex flex-wrap items-center gap-2">
-      <span
-        className={cn(
-          "inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[12.5px] font-medium",
-          palette,
-        )}
-      >
-        <Icon className="size-3.5" />
-        {t("pill_template", {
-          level: levelLabel,
-          confidence: formatConfidence(data.confidence_score),
-        })}
-      </span>
-      {missing.length > 0 && (
-        <span className="inline-flex items-center gap-1.5 text-[12px] text-[var(--ink-3)]">
-          <Info className="size-3.5 text-[var(--state-warn-fg)]" />
-          {t("missing_prefix", { items: missing.join(" · ") })}
-        </span>
-      )}
-    </div>
+    <Card
+      label={label}
+      value={formatConfidence(data.confidence_score)}
+      subtitle={subtitle}
+      tone={tone}
+    />
   );
 }
 
 function formatConfidence(decimalStr: string): string {
   const n = Number.parseFloat(decimalStr);
   if (Number.isNaN(n)) return "—";
-  return `${Math.round(n * 100)}%`;
+  return `${Math.round(n * 100)} %`;
+}
+
+function Card({
+  label,
+  value,
+  subtitle,
+  tone,
+}: {
+  label: string;
+  value: string;
+  subtitle: string;
+  tone?: Tone;
+}) {
+  return (
+    <div
+      className={cn(
+        "rounded-[10px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[0_1px_2px_rgba(16,24,40,0.05)]",
+        tone && STRIPE_CLASS[tone],
+      )}
+    >
+      <div className="text-[10.5px] font-semibold tracking-[1.2px] text-[var(--ink-4)] uppercase">
+        {label}
+      </div>
+      <div className="mt-2 font-mono text-[24px] leading-none font-semibold tracking-[-0.6px] text-[var(--ink-1)]">
+        {value}
+      </div>
+      <div className="mt-2 text-[11.5px] text-[var(--ink-3)]">
+        {subtitle || " "}
+      </div>
+      <div className="mt-3 h-[36px]" aria-hidden="true" />
+    </div>
+  );
 }

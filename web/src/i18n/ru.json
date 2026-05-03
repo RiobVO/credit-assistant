@@ -176,7 +176,7 @@
       "col_date": "Дата",
       "col_analyst": "Аналитик",
       "row_actions": "Действия",
-      "pagination_shown": "Показано {shown} из {total}",
+      "pagination_shown": "Показано <b>{shown}</b> из <b>{total}</b>",
       "pagination_prev": "Назад",
       "pagination_next": "Вперёд",
       "clear_aria": "Очистить"
@@ -455,13 +455,11 @@
     "load_error_title": "Не удалось загрузить досье",
     "load_error_hint": "Попробуйте ещё раз. Если ошибка повторяется — проверьте, что бэкенд запущен и доступна база данных.",
     "sub_header": {
-      "application_label": "Заявка {id}",
-      "documents_label": "Документы ({count})",
-      "client_card": "Карточка клиента",
-      "status_in_review": "В работе",
-      "status_approved": "Одобрено",
-      "status_rejected": "Отказ",
-      "status_draft": "Черновик"
+      "meta_inn": "ИНН {inn}",
+      "meta_legal_form": "ОПФ {form}",
+      "meta_okved": "ОКВЭД {code}",
+      "action_rebuild": "Пересобрать",
+      "action_download_pdf": "Скачать PDF"
     },
     "borrower_card": {
       "title": "Карточка заёмщика",
@@ -481,7 +479,7 @@
       "legal_other": "Иная форма"
     },
     "kpi": {
-      "label_revenue_ltm": "Выручка LTM",
+      "label_readiness": "Готовность данных",
       "label_ebit": "EBIT (прокси EBITDA)",
       "ebit_tooltip": "D&A недоступен без формы №5 / PROFIT_TAX — показываем EBIT",
       "ebit_empty_hint": "Нужны данные FORM_2 (PBT + проценты)",
@@ -556,12 +554,14 @@
       "level_minimal": "Минимальный набор",
       "level_standard": "Стандартный набор",
       "level_comprehensive": "Полный набор",
-      "pill_template": "Готовность данных: {level} · доверие {confidence}",
-      "missing_prefix": "Недоступно: {items}",
-      "capability_yoy_trend": "Тренд YoY",
-      "capability_cagr": "CAGR",
-      "capability_balance_ratios": "Балансовые коэффициенты (FORM_1)",
-      "capability_tax_burden": "Налоговая нагрузка (ESF / Расчёт налога)"
+      "card_loading": "Загружаем оценку…",
+      "source_manual": "Manual",
+      "source_form1": "Form 1",
+      "source_form2": "Form 2",
+      "source_vat_declaration": "VAT decl.",
+      "source_vat_registry_ilova": "Ilova",
+      "source_profit_tax": "Profit Tax",
+      "source_esf": "ESF"
     }
   }
 }

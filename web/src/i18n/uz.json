@@ -176,7 +176,7 @@
       "col_date": "Sana",
       "col_analyst": "Analitik",
       "row_actions": "Amallar",
-      "pagination_shown": "{shown} dan {total} ko'rsatildi",
+      "pagination_shown": "<b>{shown}</b> dan <b>{total}</b> ko'rsatildi",
       "pagination_prev": "Orqaga",
       "pagination_next": "Oldinga",
       "clear_aria": "Tozalash"
@@ -455,13 +455,11 @@
     "load_error_title": "Dosyeni yuklab bo'lmadi",
     "load_error_hint": "Qaytadan urining. Agar xato takrorlansa — backend ishlayotganini va ma'lumotlar bazasi mavjudligini tekshiring.",
     "sub_header": {
-      "application_label": "Ariza {id}",
-      "documents_label": "Hujjatlar ({count})",
-      "client_card": "Mijoz kartochkasi",
-      "status_in_review": "Ishda",
-      "status_approved": "Tasdiqlangan",
-      "status_rejected": "Rad etilgan",
-      "status_draft": "Qoralama"
+      "meta_inn": "STIR {inn}",
+      "meta_legal_form": "Shakl {form}",
+      "meta_okved": "OKED {code}",
+      "action_rebuild": "Qayta yig'ish",
+      "action_download_pdf": "PDF yuklab olish"
     },
     "borrower_card": {
       "title": "Qarz oluvchi kartochkasi",
@@ -481,7 +479,7 @@
       "legal_other": "Boshqa shakl"
     },
     "kpi": {
-      "label_revenue_ltm": "Tushum LTM",
+      "label_readiness": "Ma'lumotlar tayyorligi",
       "label_ebit": "EBIT (EBITDA proksisi)",
       "ebit_tooltip": "D&A №5 forma / PROFIT_TAX bo'lmasdan mavjud emas — EBIT ko'rsatilmoqda",
       "ebit_empty_hint": "FORM_2 ma'lumotlari kerak (PBT + foizlar)",
@@ -556,12 +554,14 @@
       "level_minimal": "Minimal to'plam",
       "level_standard": "Standart to'plam",
       "level_comprehensive": "To'liq to'plam",
-      "pill_template": "Ma'lumotlar tayyorligi: {level} · ishonch {confidence}",
-      "missing_prefix": "Mavjud emas: {items}",
-      "capability_yoy_trend": "YoY trend",
-      "capability_cagr": "CAGR",
-      "capability_balance_ratios": "Balans koeffitsientlari (FORM_1)",
-      "capability_tax_burden": "Soliq yuki (ESF / Soliq hisobi)"
+      "card_loading": "Baholanmoqda…",
+      "source_manual": "Manual",
+      "source_form1": "Form 1",
+      "source_form2": "Form 2",
+      "source_vat_declaration": "VAT decl.",
+      "source_vat_registry_ilova": "Ilova",
+      "source_profit_tax": "Profit Tax",
+      "source_esf": "ESF"
     }
   }
 }

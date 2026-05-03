@@ -7,6 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { type ReactNode } from "react";
 
 import { useAnalyst, useLogout } from "@/lib/auth";
+import { useBrand } from "@/lib/brand-context";
 import { cn } from "@/lib/utils";
 
 type NavItem = {
@@ -64,6 +65,7 @@ export function BankSidebar() {
   const tSidebar = useTranslations("bank.sidebar");
   const tCta = useTranslations("bank.cta");
   const roleLabel = useRoleLabel();
+  const brand = useBrand();
 
   const PRIMARY: NavItem[] = [
     { href: "/search", label: tNav("search"), icon: <Search className="size-[17px]" /> },
@@ -84,15 +86,15 @@ export function BankSidebar() {
     <aside className="sticky top-0 flex h-screen flex-col border-r border-[var(--nav-border)] bg-[var(--nav-bg)] text-[var(--nav-text)]">
       {/* Brand */}
       <div className="flex items-center gap-[10px] border-b border-[var(--nav-border)] px-5 pt-[18px] pb-4">
-        <div className="grid size-7 shrink-0 place-items-center rounded-md bg-gradient-to-br from-[#D88E73] to-[#B5624A] text-[13px] font-bold tracking-[-0.02em] text-white">
-          UB
+        <div className="grid size-7 shrink-0 place-items-center rounded-md bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-primary-hover)] text-[13px] font-bold tracking-[-0.02em] text-white">
+          {brand.logoMark}
         </div>
         <div className="min-w-0">
           <div className="truncate text-[14px] font-semibold tracking-[-0.01em] text-white">
-            Uzbekbank Credit
+            {brand.name}
           </div>
           <div className="mt-0.5 text-[11px] tracking-[0.02em] text-[var(--nav-text-3)]">
-            Bank Mode · Андижон
+            {brand.tagline}
           </div>
         </div>
       </div>
@@ -142,7 +144,7 @@ export function BankSidebar() {
 
       {/* User card */}
       <div className="flex items-center gap-3 border-t border-[var(--nav-border)] p-4">
-        <div className="grid size-8 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#D88E73] to-[#B5624A] text-[12px] font-semibold text-white">
+        <div className="grid size-8 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-primary-hover)] text-[12px] font-semibold text-white">
           {analyst ? initials(analyst.full_name) : "—"}
         </div>
         <div className="min-w-0 flex-1">

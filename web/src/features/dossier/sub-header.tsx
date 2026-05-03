@@ -1,88 +1,90 @@
 "use client";
 
-import { FolderOpen, IdCard } from "lucide-react";
+import { Download, RefreshCw } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 
-import { Badge } from "@/components/ui/badge";
+import { rememberStep1Prefill } from "@/features/manual-input/prefill";
+import type { DossierViewDto } from "@/lib/api";
 
-const STATUS_TONE: Record<string, string> = {
-  in_review: "border-[#F1D9A6] bg-[#FFF6E5] text-[var(--state-warn-fg)]",
-  approved: "border-[#BFE2D2] bg-[var(--state-ok-bg)] text-[var(--state-ok-fg)]",
-  rejected: "border-[#F2BCBA] bg-[#FCE7E5] text-[var(--state-bad-fg)]",
-  draft: "border-[var(--border)] bg-[#FAFBFC] text-[var(--ink-3)]",
-};
-
-const STATUS_KEY: Record<
-  string,
-  "status_in_review" | "status_approved" | "status_rejected" | "status_draft"
+const LEGAL_FORM_KEY: Record<
+  DossierViewDto["borrower"]["legal_form"],
+  | "legal_llc"
+  | "legal_pe"
+  | "legal_ltd"
+  | "legal_jsc"
+  | "legal_ie"
+  | "legal_other"
 > = {
-  in_review: "status_in_review",
-  approved: "status_approved",
-  rejected: "status_rejected",
-  draft: "status_draft",
+  llc: "legal_llc",
+  pe: "legal_pe",
+  ltd: "legal_ltd",
+  jsc: "legal_jsc",
+  ie: "legal_ie",
+  other: "legal_other",
 };
 
 export function SubHeader({
-  applicationId,
-  borrowerName,
-  status,
-  documentsCount,
+  dossierId,
+  borrower,
 }: {
-  applicationId: string;
-  borrowerName: string;
-  status: string;
-  // CA-059: null = endpoint ещё не подключён, кнопка скрывается;
-  // 0 = подключён, документов нет — тоже скрываем (нечего открывать).
-  documentsCount: number | null;
+  dossierId: string;
+  borrower: DossierViewDto["borrower"];
 }) {
   const t = useTranslations("dossier.sub_header");
-  const hasDocuments = documentsCount !== null && documentsCount > 0;
-  const statusKey = STATUS_KEY[status];
-  const statusLabel = statusKey ? t(statusKey) : status;
+  const tBorrower = useTranslations("dossier.borrower_card");
+  const router = useRouter();
+  const pdfHref = `/api/dossier/${dossierId}/pdf`;
+
+  const handleRebuild = () => {
+    rememberStep1Prefill({
+      inn: borrower.inn,
+      name: borrower.name,
+      legal_form: borrower.legal_form,
+      registration_date: borrower.registration_date,
+      director_name: borrower.director_name,
+      director_appointed_at: borrower.director_appointed_at,
+      okved_main: borrower.okved_main,
+      registered_address: borrower.registered_address,
+    });
+    router.push(`/manual-input?inn=${encodeURIComponent(borrower.inn)}`);
+  };
+
+  const legalLabel = tBorrower(LEGAL_FORM_KEY[borrower.legal_form]);
+  const meta = [
+    t("meta_inn", { inn: borrower.inn }),
+    t("meta_legal_form", { form: legalLabel }),
+    t("meta_okved", { code: borrower.okved_main }),
+  ].join(" · ");
+
   return (
-    <div className="mb-5 flex flex-wrap items-center gap-x-4 gap-y-2">
-      <Badge
-        variant="outline"
-        className="font-mono text-[11px] tracking-[0.4px] uppercase"
-      >
-        {t("application_label", { id: applicationId })}
-      </Badge>
+    <div className="mb-5 flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+      <div className="min-w-0">
+        <h1 className="m-0 text-[26px] font-semibold tracking-[-0.4px] text-[var(--ink-1)]">
+          {borrower.name}
+        </h1>
+        <p className="m-0 mt-1 text-[13px] text-[var(--ink-3)]">{meta}</p>
+      </div>
 
-      <h1 className="m-0 text-[26px] font-semibold tracking-[-0.4px] text-[var(--ink-1)]">
-        {borrowerName}
-      </h1>
-
-      <span
-        className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] font-semibold ${STATUS_TONE[status] ?? STATUS_TONE.draft}`}
-      >
-        <span className="size-1.5 rounded-full bg-current opacity-70" />
-        {statusLabel}
-      </span>
-
-      <div className="ml-auto flex items-center gap-2">
-        {hasDocuments ? (
-          <SecondaryAction
-            icon={<FolderOpen className="size-4" />}
-            label={t("documents_label", { count: documentsCount })}
-          />
-        ) : null}
-        <SecondaryAction
-          icon={<IdCard className="size-4" />}
-          label={t("client_card")}
-        />
+      <div className="flex shrink-0 items-center gap-2">
+        <button
+          type="button"
+          onClick={handleRebuild}
+          className="inline-flex h-[38px] items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-4 text-[13.5px] font-semibold text-[var(--ink-2)] transition-colors hover:bg-[var(--surface-2)]"
+        >
+          <RefreshCw className="size-4" />
+          {t("action_rebuild")}
+        </button>
+        <a
+          href={pdfHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex h-[38px] items-center gap-2 rounded-md bg-[var(--brand-primary)] px-5 text-[13.5px] font-semibold text-white transition-colors hover:bg-[var(--brand-primary-hover)]"
+        >
+          <Download className="size-4" />
+          {t("action_download_pdf")}
+        </a>
       </div>
     </div>
-  );
-}
-
-function SecondaryAction({ icon, label }: { icon: React.ReactNode; label: string }) {
-  return (
-    <button
-      type="button"
-      className="inline-flex h-[34px] items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-[12.5px] font-medium text-[var(--ink-2)] transition-colors hover:bg-[#FAFBFC]"
-    >
-      {icon}
-      {label}
-    </button>
   );
 }

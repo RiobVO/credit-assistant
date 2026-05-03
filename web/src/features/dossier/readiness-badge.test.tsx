@@ -1,6 +1,5 @@
-// CA-040 smoke: проверяем что ReadinessBadge корректно рендерит ключевые
-// поля ответа (level label, confidence %, missing_capabilities) и тихо
-// ничего не рисует пока запрос летит — non-blocking контракт CA-035b.
+// CA-040 smoke + post-design-parity: ReadinessKpiCard рендерит confidence%,
+// uppercase level + parser sources в подзаголовке, цветную stripe по level.
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
@@ -13,7 +12,7 @@ vi.mock("@/lib/api", () => ({
 import { getDossierReadiness } from "@/lib/api";
 
 import ru from "../../i18n/ru.json";
-import { ReadinessBadge } from "./readiness-badge";
+import { ReadinessKpiCard } from "./readiness-badge";
 
 function renderWithClient(ui: React.ReactElement) {
   const client = new QueryClient({
@@ -26,64 +25,65 @@ function renderWithClient(ui: React.ReactElement) {
   );
 }
 
-describe("ReadinessBadge", () => {
-  it("ничего не рендерит пока loading (non-blocking контракт)", () => {
+describe("ReadinessKpiCard", () => {
+  it("loading: показывает прочерк + подзаголовок «Загружаем оценку…»", () => {
     vi.mocked(getDossierReadiness).mockReturnValue(new Promise(() => {}));
-    const { container } = renderWithClient(<ReadinessBadge dossierId="d-1" />);
-    expect(container.firstChild).toBeNull();
+    renderWithClient(<ReadinessKpiCard dossierId="d-1" label="Готовность данных" />);
+    expect(screen.getByText("—")).toBeInTheDocument();
+    expect(screen.getByText(/Загружаем оценку/)).toBeInTheDocument();
   });
 
-  it("standard 65% + 2 missing capabilities", async () => {
+  it("standard 65% — value «65 %», подзаголовок UPPERCASE level + sources", async () => {
     vi.mocked(getDossierReadiness).mockResolvedValue({
       level: "standard",
       years_covered: [2024, 2025],
       full_years: [2025],
       missing_capabilities: ["yoy_trend", "balance_ratios"],
-      parser_sources: ["manual", "form2"],
+      parser_sources: ["form1", "form2"],
       confidence_score: "0.65",
     });
 
-    renderWithClient(<ReadinessBadge dossierId="d-1" />);
+    renderWithClient(<ReadinessKpiCard dossierId="d-1" label="Готовность данных" />);
 
-    const pill = await screen.findByText(/Стандартный набор/);
-    expect(pill).toBeInTheDocument();
-    expect(pill).toHaveTextContent(/доверие 65%/);
-    expect(screen.getByText(/Тренд YoY/)).toBeInTheDocument();
-    expect(
-      screen.getByText(/Балансовые коэффициенты \(FORM_1\)/),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("65 %")).toBeInTheDocument();
+    expect(screen.getByText(/СТАНДАРТНЫЙ НАБОР · Form 1 \+ Form 2/)).toBeInTheDocument();
   });
 
-  it("comprehensive 100% без блока «Недоступно» когда missing пустой", async () => {
+  it("comprehensive 100% — value «100 %», good-tone stripe", async () => {
     vi.mocked(getDossierReadiness).mockResolvedValue({
       level: "comprehensive",
       years_covered: [2023, 2024, 2025],
       full_years: [2023, 2024, 2025],
       missing_capabilities: [],
-      parser_sources: ["manual", "form1", "form2", "vat_declaration"],
+      parser_sources: ["form1", "form2", "vat_declaration"],
       confidence_score: "1",
     });
 
-    renderWithClient(<ReadinessBadge dossierId="d-1" />);
+    const { container } = renderWithClient(
+      <ReadinessKpiCard dossierId="d-1" label="Готовность данных" />,
+    );
 
-    const pill = await screen.findByText(/Полный набор/);
-    expect(pill).toHaveTextContent(/доверие 100%/);
-    expect(screen.queryByText(/Недоступно:/)).not.toBeInTheDocument();
+    expect(await screen.findByText("100 %")).toBeInTheDocument();
+    expect(
+      screen.getByText(/ПОЛНЫЙ НАБОР · Form 1 \+ Form 2 \+ VAT decl\./),
+    ).toBeInTheDocument();
+    // good-tone stripe — присутствует utility-класс с border-l-4 + ok-fg.
+    expect(container.querySelector(".border-l-4")).toBeInTheDocument();
   });
 
-  it("insufficient 0% — заголовок «Недостаточно данных»", async () => {
+  it("insufficient 0% — bad-tone stripe", async () => {
     vi.mocked(getDossierReadiness).mockResolvedValue({
       level: "insufficient",
       years_covered: [],
       full_years: [],
-      missing_capabilities: ["yoy_trend", "cagr", "balance_ratios", "tax_burden"],
+      missing_capabilities: ["yoy_trend", "cagr"],
       parser_sources: ["manual"],
       confidence_score: "0",
     });
 
-    renderWithClient(<ReadinessBadge dossierId="d-1" />);
+    renderWithClient(<ReadinessKpiCard dossierId="d-1" label="Готовность данных" />);
 
-    const pill = await screen.findByText(/Недостаточно данных/);
-    expect(pill).toHaveTextContent(/доверие 0%/);
+    expect(await screen.findByText("0 %")).toBeInTheDocument();
+    expect(screen.getByText(/НЕДОСТАТОЧНО ДАННЫХ · Manual/)).toBeInTheDocument();
   });
 });

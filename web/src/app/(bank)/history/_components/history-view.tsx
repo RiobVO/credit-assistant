@@ -622,8 +622,9 @@ function Pagination({
     <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-[13px] text-[var(--ink-3)]">
       <span>
         {t.rich("pagination_shown", {
-          shown: () => <b className="text-[var(--ink-1)]">{shownCount}</b>,
-          total: () => <b className="text-[var(--ink-1)]">{apiTotal}</b>,
+          shown: shownCount,
+          total: apiTotal,
+          b: (chunks) => <b className="text-[var(--ink-1)]">{chunks}</b>,
         })}
       </span>
       <div className="flex items-center gap-1">
