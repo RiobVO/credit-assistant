@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Controller, useFormContext, useWatch } from "react-hook-form";
 
 import {
@@ -25,6 +26,7 @@ export function FinancialTable({
   basePath: SectionPath;
   variant: "revenue" | "netProfit";
 }) {
+  const t = useTranslations("accountant.manual_input");
   const { control } = useFormContext<FormValues>();
   const watched = useWatch({
     control,
@@ -36,12 +38,12 @@ export function FinancialTable({
       <table className="w-full border-collapse text-[13px]">
         <thead>
           <tr>
-            <Th first>Период</Th>
+            <Th first>{t("table_period")}</Th>
             <Th>Q1</Th>
             <Th>Q2</Th>
             <Th>Q3</Th>
             <Th>Q4</Th>
-            <Th>Итого за год</Th>
+            <Th>{t("table_total")}</Th>
           </tr>
         </thead>
         <tbody>
@@ -51,7 +53,7 @@ export function FinancialTable({
             const total = watched ? yearTotal(watched[yKey]) : 0;
             return (
               <tr key={year}>
-                <FirstCell>{year} г.</FirstCell>
+                <FirstCell>{t("table_year", { year })}</FirstCell>
                 {QUARTERS.map((q) => (
                   <CellInput
                     key={q}
@@ -138,6 +140,7 @@ function Footer({
     | FormValues["step2"]["netProfit"]
     | undefined;
 }) {
+  const t = useTranslations("accountant.manual_input");
   if (!watched) return null;
   // Footer-агрегаты тоже учитывают annual-fallback (CA-027).
   const total2023 = yearTotal(watched.y2023);
@@ -149,14 +152,14 @@ function Footer({
       <tfoot>
         <tr>
           <td className="rounded-bl-lg border-r border-b border-l border-t-[1px] border-[var(--border-strong)] bg-[var(--surface-2)] px-3 py-2.5 text-left font-semibold text-[var(--ink-2)]">
-            CAGR 2023→2025
+            {t("table_cagr_label")}
             <RatioPill tone={cagrTone(cagr)}>{formatRatioPct(cagr)}</RatioPill>
           </td>
           <td
             colSpan={4}
             className="border-r border-b border-t-[1px] border-[var(--border-strong)] bg-[var(--surface-2)] px-3 py-2.5 pl-[14px] text-left font-medium text-[var(--ink-3)]"
           >
-            Совокупный среднегодовой темп роста выручки
+            {t("table_cagr_sub")}
           </td>
           <RatioTotalCell />
         </tr>
@@ -170,14 +173,14 @@ function Footer({
     <tfoot>
       <tr>
         <td className="rounded-bl-lg border-r border-b border-l border-t-[1px] border-[var(--border-strong)] bg-[var(--surface-2)] px-3 py-2.5 text-left font-semibold text-[var(--ink-2)]">
-          Маржа 2025
+          {t("table_margin_label")}
           <MarginPill />
         </td>
         <td
           colSpan={4}
           className="border-r border-b border-t-[1px] border-[var(--border-strong)] bg-[var(--surface-2)] px-3 py-2.5 pl-[14px] text-left font-medium text-[var(--ink-3)]"
         >
-          Рентабельность по чистой прибыли
+          {t("table_margin_sub")}
         </td>
         <RatioTotalCell />
       </tr>

@@ -14,6 +14,7 @@
 
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { Check, Info, TriangleAlert, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
@@ -28,18 +29,30 @@ type Status = "ok" | "warn" | "pending";
 
 const KNOWN_YEARS = [2023, 2024, 2025] as const;
 
-const CAPABILITY_LABEL: Record<string, string> = {
-  yoy_trend: "Тренд год к году (YoY) недоступен",
-  cagr: "CAGR (среднегодовой темп роста) недоступен",
-  balance_ratios: "Балансовые коэффициенты (FORM_1) недоступны",
-  tax_burden: "Налоговая нагрузка (ESF / Расчёт налога на прибыль) недоступна",
+const CAPABILITY_KEY: Record<
+  string,
+  | "checklist_cap_yoy_trend"
+  | "checklist_cap_cagr"
+  | "checklist_cap_balance_ratios"
+  | "checklist_cap_tax_burden"
+> = {
+  yoy_trend: "checklist_cap_yoy_trend",
+  cagr: "checklist_cap_cagr",
+  balance_ratios: "checklist_cap_balance_ratios",
+  tax_burden: "checklist_cap_tax_burden",
 };
 
-const LEVEL_LABEL: Record<string, string> = {
-  insufficient: "Недостаточно данных",
-  minimal: "Минимальный набор",
-  standard: "Стандартный набор",
-  comprehensive: "Полный набор",
+const LEVEL_KEY: Record<
+  string,
+  | "checklist_level_insufficient"
+  | "checklist_level_minimal"
+  | "checklist_level_standard"
+  | "checklist_level_comprehensive"
+> = {
+  insufficient: "checklist_level_insufficient",
+  minimal: "checklist_level_minimal",
+  standard: "checklist_level_standard",
+  comprehensive: "checklist_level_comprehensive",
 };
 
 const LEVEL_STATUS: Record<string, Status> = {
@@ -50,6 +63,7 @@ const LEVEL_STATUS: Record<string, Status> = {
 };
 
 export function Checklist() {
+  const t = useTranslations("accountant.manual_input");
   const { control } = useFormContext<FormValues>();
   const inn = useWatch({ control, name: "step1.inn" });
   const innValid = /^\d{9}$/.test(inn ?? "");
@@ -76,32 +90,40 @@ export function Checklist() {
     staleTime: 30_000,
   });
 
+  const readinessLine = readiness.isLoading
+    ? t("checklist_assessing")
+    : readiness.isError
+      ? t("checklist_assess_error")
+      : readiness.data
+        ? t("checklist_ready_template", {
+            level: t(LEVEL_KEY[readiness.data.level]),
+            confidence: formatConfidence(readiness.data.confidence_score),
+          })
+        : t("checklist_awaiting");
+
   return (
     <>
       <h3 className="my-3.5 text-[14px] font-semibold text-[var(--ink-1)]">
-        Перед отправкой на скоринг
+        {t("checklist_heading")}
       </h3>
       <div className="flex flex-col gap-2.5">
         <ChecklistRow status={innValid ? "ok" : "warn"}>
-          ИНН подтверждён в реестре ГНК
+          {t("checklist_inn_confirmed")}
         </ChecklistRow>
 
         <ChecklistRow status={readiness.data ? LEVEL_STATUS[readiness.data.level] : "warn"}>
-          {readiness.isLoading
-            ? "Оцениваем достаточность данных…"
-            : readiness.isError
-              ? "Не удалось оценить готовность данных"
-              : readiness.data
-                ? `Готовность данных: ${LEVEL_LABEL[readiness.data.level]} · доверие ${formatConfidence(readiness.data.confidence_score)}`
-                : "Готовность данных: ожидание…"}
+          {readinessLine}
         </ChecklistRow>
 
         {readiness.data?.missing_capabilities.map((cap) => (
-          <CapabilityRow key={cap} label={CAPABILITY_LABEL[cap] ?? cap} />
+          <CapabilityRow
+            key={cap}
+            label={CAPABILITY_KEY[cap] ? t(CAPABILITY_KEY[cap]) : cap}
+          />
         ))}
 
         <ChecklistRow status="warn">
-          Рекомендуется приложить контракт с покупателем (опционально)
+          {t("checklist_optional_contract")}
         </ChecklistRow>
       </div>
     </>

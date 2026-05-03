@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Controller, useFormContext, useWatch } from "react-hook-form";
 
 import { cn } from "@/lib/utils";
@@ -19,30 +20,22 @@ import { ParsedFilesDropzone } from "./parsed-files-dropzone";
 import { SoliqUpload } from "./soliq-upload";
 
 export function Step2Financials() {
+  const t = useTranslations("accountant.manual_input");
   return (
     <div className="space-y-[18px]">
       <ParsedFilesDropzone />
 
       <SoliqUpload />
 
-      <Card
-        title="Выручка по кварталам"
-        sub="Поквартальная динамика за 3 года · все суммы в UZS, без копеек"
-      >
+      <Card title={t("s2_revenue_title")} sub={t("s2_revenue_sub")}>
         <FinancialTable basePath="step2.revenue" variant="revenue" />
       </Card>
 
-      <Card
-        title="Чистая прибыль по кварталам"
-        sub="После налогообложения · UZS"
-      >
+      <Card title={t("s2_profit_title")} sub={t("s2_profit_sub")}>
         <FinancialTable basePath="step2.netProfit" variant="netProfit" />
       </Card>
 
-      <Card
-        title="Прочие финансовые показатели"
-        sub="Годовые значения по последнему отчётному периоду (2025 г.)"
-      >
+      <Card title={t("s2_annual_title")} sub={t("s2_annual_sub")}>
         <AnnualFields />
       </Card>
     </div>
@@ -76,42 +69,42 @@ function Card({
 }
 
 function AnnualFields() {
+  const t = useTranslations("accountant.manual_input");
   const {
     control,
     formState: { errors, touchedFields },
   } = useFormContext<FormValues>();
 
   const e = errors.step2;
-  const t = touchedFields.step2;
+  const touched = touchedFields.step2;
 
   return (
     <div className="space-y-[18px]">
       <div>
         <div className="mb-2 text-[12.5px] font-medium text-[var(--ink-2)]">
-          Налоги уплаченные (по годам)
+          {t("s2_taxes_heading")}
         </div>
         <p className="m-0 mb-2 text-[11.5px] text-[var(--ink-3)]">
-          Совокупная сумма налогов, уплаченных за каждый отчётный год.
-          За 2023/2024 — необязательно (используется только при наличии данных).
+          {t("s2_taxes_hint")}
         </p>
         <div className="grid grid-cols-1 gap-x-5 gap-y-[18px] md:grid-cols-3">
           <UzsField
             name="step2.taxesPaid23"
-            label="2023 г."
-            help="Если заполнено — учитывается в годовом отчёте 2023"
-            error={t?.taxesPaid23 ? e?.taxesPaid23?.message : undefined}
+            label={t("s2_taxes_y23_label")}
+            help={t("s2_taxes_y23_help")}
+            error={touched?.taxesPaid23 ? e?.taxesPaid23?.message : undefined}
           />
           <UzsField
             name="step2.taxesPaid24"
-            label="2024 г."
-            help="Если заполнено — учитывается в годовом отчёте 2024"
-            error={t?.taxesPaid24 ? e?.taxesPaid24?.message : undefined}
+            label={t("s2_taxes_y24_label")}
+            help={t("s2_taxes_y24_help")}
+            error={touched?.taxesPaid24 ? e?.taxesPaid24?.message : undefined}
           />
           <UzsField
             name="step2.taxesPaid25"
-            label="2025 г."
-            help="Обязательно — текущий отчётный период"
-            error={t?.taxesPaid25 ? e?.taxesPaid25?.message : undefined}
+            label={t("s2_taxes_y25_label")}
+            help={t("s2_taxes_y25_help")}
+            error={touched?.taxesPaid25 ? e?.taxesPaid25?.message : undefined}
           />
         </div>
       </div>
@@ -119,21 +112,21 @@ function AnnualFields() {
       <div className="grid grid-cols-1 gap-x-5 gap-y-[18px] md:grid-cols-2">
         <UzsField
           name="step2.vatDeclared"
-          label="НДС задекларированный (за год)"
-          help="По данным деклараций НДС за 2025 г."
-          error={t?.vatDeclared ? e?.vatDeclared?.message : undefined}
+          label={t("s2_vat_label")}
+          help={t("s2_vat_help")}
+          error={touched?.vatDeclared ? e?.vatDeclared?.message : undefined}
         />
         <UzsField
           name="step2.totalAssets"
-          label="Активы итого (на 31.12.2025)"
-          help="По бухгалтерскому балансу, форма №1"
-          error={t?.totalAssets ? e?.totalAssets?.message : undefined}
+          label={t("s2_assets_label")}
+          help={t("s2_assets_help")}
+          error={touched?.totalAssets ? e?.totalAssets?.message : undefined}
         />
         <UzsField
           name="step2.totalLiabilities"
-          label="Обязательства итого (на 31.12.2025)"
-          help="Краткосрочные + долгосрочные обязательства"
-          error={t?.totalLiabilities ? e?.totalLiabilities?.message : undefined}
+          label={t("s2_liabs_label")}
+          help={t("s2_liabs_help")}
+          error={touched?.totalLiabilities ? e?.totalLiabilities?.message : undefined}
         />
 
         <ComputedRow control={control} />
@@ -199,6 +192,7 @@ function ComputedRow({
 }: {
   control: import("react-hook-form").Control<FormValues>;
 }) {
+  const t = useTranslations("accountant.manual_input");
   const assets = useWatch({ control, name: "step2.totalAssets" });
   const liabilities = useWatch({ control, name: "step2.totalLiabilities" });
 
@@ -210,15 +204,15 @@ function ComputedRow({
   return (
     <div className="md:col-span-2">
       <ComputedBox
-        keyLabel="Расчётный коэффициент D/A"
-        sub="Обязательства ÷ Активы"
+        keyLabel={t("s2_da_label")}
+        sub={t("s2_da_sub")}
         value={a === 0 ? "—" : da.toFixed(2)}
         tone="neutral"
       />
       <div className="h-2.5" />
       <ComputedBox
-        keyLabel="Собственный капитал (расч.)"
-        sub="Активы − Обязательства"
+        keyLabel={t("s2_equity_label")}
+        sub={t("s2_equity_sub")}
         value={equity > 0 ? `${formatUzs(String(equity))} UZS` : "—"}
         tone="neutral"
       />

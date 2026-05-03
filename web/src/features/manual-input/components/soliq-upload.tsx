@@ -6,6 +6,7 @@
 
 import { useMutation } from "@tanstack/react-query";
 import { CheckCircle2, FileText, Trash2, TriangleAlert, Upload } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useRef, useState } from "react";
 import { Controller, useFormContext, useWatch } from "react-hook-form";
 
@@ -16,9 +17,19 @@ import { formatUzs } from "../lib/finance";
 import { getYearsRange } from "../lib/years";
 import type { FormValues, VatPeriodFromSoliq } from "../schema";
 
-const MONTHS_RU = [
-  "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
-  "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь",
+const MONTH_KEYS = [
+  "soliq_month_jan",
+  "soliq_month_feb",
+  "soliq_month_mar",
+  "soliq_month_apr",
+  "soliq_month_may",
+  "soliq_month_jun",
+  "soliq_month_jul",
+  "soliq_month_aug",
+  "soliq_month_sep",
+  "soliq_month_oct",
+  "soliq_month_nov",
+  "soliq_month_dec",
 ] as const;
 
 const YEARS = getYearsRange(15);
@@ -41,6 +52,7 @@ type FieldShape = {
 };
 
 function SoliqUploadInner({ field }: { field: FieldShape }) {
+  const t = useTranslations("accountant.manual_input");
   const { control } = useFormContext<FormValues>();
   const inn = useWatch({ control, name: "step1.inn" });
 
@@ -104,10 +116,10 @@ function SoliqUploadInner({ field }: { field: FieldShape }) {
       <header className="flex items-start justify-between gap-2.5 border-b border-[var(--border)] px-[22px] py-[18px]">
         <div>
           <h2 className="m-0 text-[15px] font-semibold text-[var(--ink-1)]">
-            Загрузить из my3.soliq.uz
+            {t("soliq_title")}
           </h2>
           <p className="m-0 mt-0.5 text-[12.5px] text-[var(--ink-3)]">
-            Расчёт НДС + ilova-приложение №4 за один налоговый период (один месяц)
+            {t("soliq_sub")}
           </p>
         </div>
         {field.value ? (
@@ -117,7 +129,7 @@ function SoliqUploadInner({ field }: { field: FieldShape }) {
             className="inline-flex items-center gap-1.5 rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-1.5 text-[12px] text-[var(--ink-2)] transition-colors hover:bg-[#FAFBFC]"
           >
             <Trash2 className="size-3.5" />
-            Сбросить
+            {t("soliq_reset")}
           </button>
         ) : null}
       </header>
@@ -130,16 +142,16 @@ function SoliqUploadInner({ field }: { field: FieldShape }) {
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <FilePicker
                 inputRef={declarationRef}
-                label="Файл 1"
-                hint="Расчёт НДС или ilova"
+                label={t("soliq_file_1_label")}
+                hint={t("soliq_file_hint")}
                 file={files[0] ?? null}
                 onChange={(f) => onAddFile(f)}
                 onRemove={() => removeFile(0)}
               />
               <FilePicker
                 inputRef={ilovaRef}
-                label="Файл 2"
-                hint="Расчёт НДС или ilova"
+                label={t("soliq_file_2_label")}
+                hint={t("soliq_file_hint")}
                 file={files[1] ?? null}
                 onChange={(f) => onAddFile(f)}
                 onRemove={() => removeFile(1)}
@@ -148,7 +160,9 @@ function SoliqUploadInner({ field }: { field: FieldShape }) {
 
             <div className="grid grid-cols-1 items-end gap-3 md:grid-cols-3">
               <div className="flex flex-col gap-1.5">
-                <label className="text-[13px] font-medium text-[var(--ink-2)]">Год</label>
+                <label className="text-[13px] font-medium text-[var(--ink-2)]">
+                  {t("soliq_year_label")}
+                </label>
                 <select
                   value={year}
                   onChange={(e) => setYear(Number(e.target.value))}
@@ -162,15 +176,17 @@ function SoliqUploadInner({ field }: { field: FieldShape }) {
                 </select>
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-[13px] font-medium text-[var(--ink-2)]">Месяц</label>
+                <label className="text-[13px] font-medium text-[var(--ink-2)]">
+                  {t("soliq_month_label")}
+                </label>
                 <select
                   value={month}
                   onChange={(e) => setMonth(Number(e.target.value))}
                   className="h-[38px] rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3 text-[14px] text-[var(--ink-1)]"
                 >
-                  {MONTHS_RU.map((label, idx) => (
+                  {MONTH_KEYS.map((mk, idx) => (
                     <option key={idx} value={idx + 1}>
-                      {label}
+                      {t(mk)}
                     </option>
                   ))}
                 </select>
@@ -186,17 +202,14 @@ function SoliqUploadInner({ field }: { field: FieldShape }) {
                     : "cursor-not-allowed bg-[#E5E8EE] text-[var(--ink-4)]",
                 )}
               >
-                {mutation.isPending ? "Распознаём…" : "Распознать"}
+                {mutation.isPending ? t("soliq_submitting") : t("soliq_submit")}
               </button>
             </div>
 
             {innMissing ? (
-              <Hint
-                tone="warn"
-                text="Заполните ИНН на Шаге 1 — он нужен для проверки соответствия декларации."
-              />
+              <Hint tone="warn" text={t("soliq_inn_missing_hint")} />
             ) : files.length < 2 ? (
-              <Hint tone="info" text="Загрузите ровно два файла: декларацию и ilova-реестр." />
+              <Hint tone="info" text={t("soliq_two_files_hint")} />
             ) : null}
 
             {mutation.isError ? <ErrorBlock error={mutation.error} /> : null}
@@ -222,6 +235,7 @@ function FilePicker({
   onChange: (file: File | null) => void;
   onRemove: () => void;
 }) {
+  const t = useTranslations("accountant.manual_input");
   return (
     <div className="rounded-md border border-dashed border-[var(--border-strong)] bg-[#FAFBFC] p-4">
       <div className="text-[12px] tracking-[0.4px] text-[var(--ink-3)] uppercase">{label}</div>
@@ -243,7 +257,7 @@ function FilePicker({
             onClick={onRemove}
             className="text-[12px] text-[var(--state-bad-fg)] hover:underline"
           >
-            Удалить
+            {t("soliq_remove_file")}
           </button>
         </div>
       ) : (
@@ -253,7 +267,7 @@ function FilePicker({
           className="mt-2 flex w-full items-center justify-center gap-2 rounded-md border border-[var(--border-strong)] bg-[var(--surface)] py-3 text-[13px] text-[var(--ink-2)] hover:bg-[#F4F6FA]"
         >
           <Upload className="size-4" />
-          Выбрать .xltx
+          {t("soliq_pick_file")}
         </button>
       )}
       <div className="mt-1.5 text-[12px] text-[var(--ink-4)]">{hint}</div>
@@ -262,7 +276,8 @@ function FilePicker({
 }
 
 function PreviewBlock({ data }: { data: VatPeriodFromSoliq }) {
-  const monthLabel = MONTHS_RU[data.month - 1];
+  const t = useTranslations("accountant.manual_input");
+  const monthLabel = t(MONTH_KEYS[data.month - 1]);
   const diffOk = data.diffPct
     ? Number(String(data.diffPct).replace("%", "").replace(",", ".")) <= 15
     : null;
@@ -272,7 +287,12 @@ function PreviewBlock({ data }: { data: VatPeriodFromSoliq }) {
       <div className="flex items-start gap-2.5 rounded-md border border-[#BFE7C8] bg-[#E9F7EE] px-[14px] py-3">
         <CheckCircle2 className="mt-px size-4 flex-none text-[var(--state-ok-fg)]" />
         <div className="text-[13px] leading-[1.5] text-[var(--ink-1)]">
-          <b className="font-semibold">Распознан период {monthLabel.toLowerCase()} {data.year}.</b>{" "}
+          <b className="font-semibold">
+            {t("soliq_preview_recognized", {
+              month: monthLabel.toLowerCase(),
+              year: data.year,
+            })}
+          </b>{" "}
           {data.organizationName ? (
             <span className="text-[var(--ink-3)]">{data.organizationName}</span>
           ) : null}
@@ -281,15 +301,15 @@ function PreviewBlock({ data }: { data: VatPeriodFromSoliq }) {
 
       <div className="grid grid-cols-1 gap-2.5 md:grid-cols-3">
         <Stat
-          label="Декларация НДС"
+          label={t("soliq_stat_vat_decl")}
           value={`${formatUzs(integerPart(data.vatDeclared))} UZS`}
         />
         <Stat
-          label="Сумма НДС из ЭСФ"
+          label={t("soliq_stat_esf")}
           value={`${formatUzs(integerPart(data.esfSellerVat))} UZS`}
         />
         <Stat
-          label="Расхождение"
+          label={t("soliq_stat_diff")}
           value={data.diffPct ?? "—"}
           tone={diffOk === null ? "neutral" : diffOk ? "good" : "warn"}
         />
@@ -297,7 +317,7 @@ function PreviewBlock({ data }: { data: VatPeriodFromSoliq }) {
 
       {data.submittedAt ? (
         <div className="text-[12px] text-[var(--ink-4)]">
-          Дата подачи: {data.submittedAt}
+          {t("soliq_submitted_at", { date: data.submittedAt })}
         </div>
       ) : null}
 
@@ -307,14 +327,15 @@ function PreviewBlock({ data }: { data: VatPeriodFromSoliq }) {
 }
 
 function ParseWarnings({ warnings, skipped }: { warnings: string[]; skipped: number }) {
+  const t = useTranslations("accountant.manual_input");
   const [open, setOpen] = useState(false);
   if (warnings.length === 0 && skipped === 0) return null;
 
   const total = warnings.length;
   const summary =
     skipped > 0
-      ? `Предупреждения парсера (${total}) · пропущено строк: ${skipped}`
-      : `Предупреждения парсера (${total})`;
+      ? t("soliq_warnings_with_skipped", { count: total, skipped })
+      : t("soliq_warnings_summary", { count: total });
 
   return (
     <details
@@ -382,6 +403,7 @@ function Hint({ tone, text }: { tone: "info" | "warn"; text: string }) {
 }
 
 function ErrorBlock({ error }: { error: unknown }) {
+  const t = useTranslations("accountant.manual_input");
   let message: string;
   if (error instanceof ApiError) {
     if (typeof error.body === "string") {
@@ -394,7 +416,7 @@ function ErrorBlock({ error }: { error: unknown }) {
   } else if (error instanceof Error) {
     message = error.message;
   } else {
-    message = "Не удалось распознать выгрузку";
+    message = t("soliq_generic_error");
   }
   return (
     <div className="flex items-start gap-2.5 rounded-md border border-[#F2BCBA] bg-[#FCE7E5] px-[14px] py-3">

@@ -2,6 +2,7 @@
 
 import { differenceInDays, parse, isValid } from "date-fns";
 import { CheckCircle2, Search, TriangleAlert } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Controller, useFormContext } from "react-hook-form";
 
 import { cn } from "@/lib/utils";
@@ -12,6 +13,7 @@ import { type FormValues, legalForms } from "../schema";
 import { Field, FieldInput, fieldInputClass } from "./field";
 
 export function Step1Borrower() {
+  const t = useTranslations("accountant.manual_input");
   const {
     register,
     control,
@@ -39,10 +41,10 @@ export function Step1Borrower() {
       <header className="flex items-center gap-2.5 border-b border-[var(--border)] px-[22px] py-[18px]">
         <div>
           <h2 className="m-0 text-[15px] font-semibold text-[var(--ink-1)]">
-            Сведения о заёмщике
+            {t("s1_section_title")}
           </h2>
           <p className="m-0 mt-0.5 text-[12.5px] text-[var(--ink-3)]">
-            Юридическое лицо · резидент Республики Узбекистан
+            {t("s1_section_sub")}
           </p>
         </div>
       </header>
@@ -51,15 +53,15 @@ export function Step1Borrower() {
         <div className="grid grid-cols-1 gap-x-5 gap-y-[18px] md:grid-cols-2">
           {/* ИНН */}
           <Field
-            label="ИНН организации"
+            label={t("s1_inn_label")}
             required
-            help="9 цифр · формат ГНК Республики Узбекистан"
+            help={t("s1_inn_help")}
             error={innTouched ? innErr : undefined}
             badge={
               innValid ? (
                 <span className="inline-flex items-center gap-1 rounded-full border border-[#BFE2D2] bg-[var(--state-ok-bg)] px-[7px] py-px text-[11.5px] font-semibold text-[var(--state-ok-fg)]">
                   <CheckCircle2 className="size-3" />
-                  Проверено в ГНК
+                  {t("s1_inn_badge_verified")}
                 </span>
               ) : null
             }
@@ -103,20 +105,20 @@ export function Step1Borrower() {
 
           {/* Наименование */}
           <Field
-            label="Наименование компании"
+            label={t("s1_name_label")}
             required
-            help="Полное наименование согласно учредительным документам"
+            help={t("s1_name_help")}
             error={nameErr}
           >
             <FieldInput
               {...register("step1.name")}
-              placeholder='ООО «Самарканд Агро Логистика»'
+              placeholder={t("s1_name_placeholder")}
               invalid={Boolean(nameErr)}
             />
           </Field>
 
           {/* ОПФ */}
-          <Field label="Организационно-правовая форма" required>
+          <Field label={t("s1_opf_label")} required>
             <Controller
               control={control}
               name="step1.legalForm"
@@ -146,9 +148,9 @@ export function Step1Borrower() {
 
           {/* Дата регистрации */}
           <Field
-            label="Дата государственной регистрации"
+            label={t("s1_reg_label")}
             required
-            help={formatBusinessAgeHint(regDate, "Срок деятельности")}
+            help={formatBusinessAgeHint(regDate, t("s1_reg_age_prefix"))}
             error={regErr}
           >
             <FieldInput
@@ -161,15 +163,15 @@ export function Step1Borrower() {
 
           {/* ОКВЭД */}
           <Field
-            label="Основной ОКВЭД"
+            label={t("s1_okved_label")}
             required
-            help="Код вида экономической деятельности"
+            help={t("s1_okved_help")}
             error={okvedErr}
           >
             <div className="relative flex items-center">
               <input
                 {...register("step1.okvedMain")}
-                placeholder="49.41 — Деятельность автомобильного грузового транспорта"
+                placeholder={t("s1_okved_placeholder")}
                 className={cn(
                   fieldInputClass,
                   "pr-[38px] font-mono",
@@ -181,23 +183,23 @@ export function Step1Borrower() {
 
           {/* Директор */}
           <Field
-            label="Директор (Ф.И.О.)"
+            label={t("s1_director_label")}
             required
-            help="В точности как указано в выписке"
+            help={t("s1_director_help")}
             error={dirErr}
           >
             <FieldInput
               {...register("step1.directorName")}
-              placeholder="Рахимов Бекзод Алишерович"
+              placeholder={t("s1_director_placeholder")}
               invalid={Boolean(dirErr)}
             />
           </Field>
 
           {/* Дата назначения */}
           <Field
-            label="Дата назначения директора"
+            label={t("s1_appt_label")}
             required
-            help={formatBusinessAgeHint(apptDate, "Срок полномочий")}
+            help={formatBusinessAgeHint(apptDate, t("s1_appt_age_prefix"))}
             error={apptErr}
           >
             <FieldInput
@@ -215,24 +217,22 @@ export function Step1Borrower() {
                 className="mt-1.5 inline-flex items-start gap-1.5 rounded-md border border-[#F1D9A6] bg-[#FFF6E5] px-2 py-1 text-[12px] text-[var(--state-warn-fg)]"
               >
                 <TriangleAlert className="mt-px size-3.5 shrink-0" />
-                <span>
-                  Назначение менее 90 дней назад — будет учтено как сигнал риска
-                </span>
+                <span>{t("s1_recent_director_warning")}</span>
               </div>
             ) : null}
           </Field>
 
           {/* Юридический адрес */}
           <Field
-            label="Юридический адрес"
+            label={t("s1_address_label")}
             required
-            help="Согласно учредительным документам"
+            help={t("s1_address_help")}
             error={addrErr}
             className="md:col-span-2"
           >
             <FieldInput
               {...register("step1.registeredAddress")}
-              placeholder="Самарканд, ул. Регистан, 12"
+              placeholder={t("s1_address_placeholder")}
               invalid={Boolean(addrErr)}
             />
           </Field>

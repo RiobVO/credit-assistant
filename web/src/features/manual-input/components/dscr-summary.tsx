@@ -2,6 +2,7 @@
 
 import { format } from "date-fns";
 import { Clock } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import {
   classifyDscrRisk,
@@ -31,6 +32,7 @@ export function DscrSummary({
   annualRevenue,
   annualNetProfit,
 }: Props) {
+  const t = useTranslations("accountant.manual_input");
   const monthly = computeAnnuityMonthly(loanAmount, ratePct, termMonths);
   const overpayment = computeOverpayment(monthly, termMonths, loanAmount);
   const dscr = computeDscr(annualNetProfit, monthly);
@@ -45,20 +47,20 @@ export function DscrSummary({
     <div className="mt-[22px] overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)]">
       <div className="flex items-center gap-2.5 border-b border-[#EFF1F5] bg-[var(--surface)] px-[22px] py-3.5">
         <span className="text-[10.5px] font-semibold tracking-[1.4px] text-[var(--ink-4)] uppercase">
-          Pre-score
+          {t("dscr_pre_score")}
         </span>
         <span className="h-3.5 w-px bg-[var(--border)]" />
         <span className="text-[14px] font-semibold tracking-[-0.1px] text-[var(--ink-1)]">
-          Предварительный расчёт по заявке
+          {t("dscr_summary_title")}
         </span>
         <div className="ml-auto flex items-center gap-3.5 font-mono text-[12px] text-[var(--ink-3)]">
           <span className="inline-flex items-center gap-1.5 text-[var(--state-ok-fg)]">
             <span className="size-1.5 rounded-full bg-[var(--state-ok-fg)] shadow-[0_0_0_3px_rgba(15,138,95,0.15)]" />
-            обновлено
+            {t("dscr_updated")}
           </span>
           <span className="inline-flex items-center gap-1">
             <Clock className="size-3" />
-            аннуитет · {todayLabel}
+            {t("dscr_annuity_today", { date: todayLabel })}
           </span>
         </div>
       </div>
@@ -67,12 +69,12 @@ export function DscrSummary({
         <div className="flex flex-col items-center gap-3.5 border-r border-[#EFF1F5] bg-gradient-to-b from-[#FAFBFC] to-white px-[22px] py-6">
           <DscrGauge value={dscr} />
           <div>
-            <RiskChip tone={risk.tone}>{risk.label}</RiskChip>
+            <RiskChip tone={risk.tone}>{t(risk.key)}</RiskChip>
           </div>
           <div className="font-mono text-[11px] text-[var(--ink-4)]">
             {dscr == null
-              ? "Загрузите Форму №2 для расчёта DSCR"
-              : `норма ≥ 1,25× · покрытие ${(dscr * 100).toFixed(0)}%`}
+              ? t("dscr_no_data")
+              : t("dscr_norm", { pct: (dscr * 100).toFixed(0) })}
           </div>
         </div>
 
@@ -80,7 +82,7 @@ export function DscrSummary({
           <div className="flex items-end justify-between gap-[18px] border-b border-dashed border-[var(--border)] pb-[18px]">
             <div>
               <div className="mb-2 text-[11px] font-medium tracking-[0.7px] text-[var(--ink-4)] uppercase">
-                Ежемесячный платёж
+                {t("dscr_monthly_label")}
               </div>
               <div className="font-mono text-[34px] leading-none font-semibold tracking-[-1px] text-[var(--ink-1)]">
                 {monthly > 0 ? formatUzs(String(monthly)) : "—"}
@@ -91,7 +93,10 @@ export function DscrSummary({
                 ) : null}
               </div>
               <div className="mt-2 font-mono text-[11.5px] text-[var(--ink-3)]">
-                аннуитет · {termMonths} платежей · ставка {ratePct.toString().replace(".", ",")}%
+                {t("dscr_monthly_hint", {
+                  months: termMonths,
+                  rate: ratePct.toString().replace(".", ","),
+                })}
               </div>
             </div>
             <Sparkbars />
@@ -99,14 +104,14 @@ export function DscrSummary({
 
           <div className="grid grid-cols-[1fr_1px_1fr_1px_1fr] items-center">
             <SecondaryMetric
-              label="Сумма кредита"
+              label={t("dscr_loan_label")}
               value={loanAmount > 0 ? formatUzs(String(loanAmount)) : "—"}
               unit={loanAmount > 0 ? "UZS" : undefined}
-              hint={`тело · ${termMonths} мес.`}
+              hint={t("dscr_loan_hint", { months: termMonths })}
             />
             <span className="h-9 w-px bg-[#EFF1F5]" />
             <SecondaryMetric
-              label="Переплата за срок"
+              label={t("dscr_overpay_label")}
               value={overpayment > 0 ? formatUzs(String(overpayment)) : "—"}
               unit={overpayment > 0 ? "UZS" : undefined}
               hint={
@@ -114,20 +119,20 @@ export function DscrSummary({
                   <span className="font-mono font-semibold text-[var(--state-ok-fg)]">
                     {overpaymentPct.toFixed(1).replace(".", ",")}%
                   </span>{" "}
-                  от тела
+                  {t("dscr_overpay_hint_suffix")}
                 </>
               }
             />
             <span className="h-9 w-px bg-[#EFF1F5]" />
             <SecondaryMetric
-              label="Долг / выручка"
+              label={t("dscr_dr_label")}
               value={
                 debtToRevenue != null
                   ? debtToRevenue.toFixed(1).replace(".", ",")
                   : "—"
               }
               unit={debtToRevenue != null ? "%" : undefined}
-              hint="от выручки 2025 г."
+              hint={t("dscr_dr_hint")}
             />
           </div>
         </div>
