@@ -3,6 +3,7 @@
 // ничего не рисует пока запрос летит — non-blocking контракт CA-035b.
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
+import { NextIntlClientProvider } from "next-intl";
 import { describe, it, expect, vi } from "vitest";
 
 vi.mock("@/lib/api", () => ({
@@ -11,6 +12,7 @@ vi.mock("@/lib/api", () => ({
 
 import { getDossierReadiness } from "@/lib/api";
 
+import ru from "../../i18n/ru.json";
 import { ReadinessBadge } from "./readiness-badge";
 
 function renderWithClient(ui: React.ReactElement) {
@@ -18,7 +20,9 @@ function renderWithClient(ui: React.ReactElement) {
     defaultOptions: { queries: { retry: false, gcTime: 0, staleTime: 0 } },
   });
   return render(
-    <QueryClientProvider client={client}>{ui}</QueryClientProvider>,
+    <NextIntlClientProvider locale="ru" messages={ru}>
+      <QueryClientProvider client={client}>{ui}</QueryClientProvider>
+    </NextIntlClientProvider>,
   );
 }
 

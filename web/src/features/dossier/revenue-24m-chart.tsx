@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import {
   Bar,
@@ -18,10 +19,10 @@ import type { DossierViewDto } from "@/lib/api";
 import { formatBigUzs, formatMonthShort } from "./format";
 
 const PERIODS = [
-  { value: 24, label: "24 месяца" },
-  { value: 12, label: "12 месяцев" },
-  { value: 6, label: "6 месяцев" },
-] as const;
+  { value: 24, key: "period_24" as const },
+  { value: 12, key: "period_12" as const },
+  { value: 6, key: "period_6" as const },
+];
 
 type Period = (typeof PERIODS)[number]["value"];
 
@@ -32,6 +33,7 @@ export function Revenue24mChart({
   data: DossierViewDto["monthly_revenue_24m"];
   hasAnnualRevenue: boolean;
 }) {
+  const t = useTranslations("dossier.revenue_chart");
   const [period, setPeriod] = useState<Period>(24);
 
   // Backend отдаёт Decimal как str — парсим один раз. Recharts работает
@@ -59,10 +61,10 @@ export function Revenue24mChart({
       <header className="flex flex-wrap items-center gap-2.5 border-b border-[var(--border)] px-[22px] py-[18px]">
         <div>
           <h2 className="m-0 text-[15px] font-semibold text-[var(--ink-1)]">
-            Выручка — {period} мес.
+            {t("title", { months: period })}
           </h2>
           <p className="m-0 mt-0.5 text-[12.5px] text-[var(--ink-3)]">
-            Помесячная динамика и 12-месячный rolling-тренд · сезонный пик в {peakLabel}
+            {t("subtitle", { peak: peakLabel })}
           </p>
         </div>
 
@@ -78,7 +80,7 @@ export function Revenue24mChart({
                   : "text-[var(--ink-3)] hover:text-[var(--ink-2)]"
               }`}
             >
-              {p.label}
+              {t(p.key)}
             </button>
           ))}
         </div>
@@ -119,7 +121,8 @@ export function Revenue24mChart({
                 }
                 formatter={(value, name) => {
                   const num = typeof value === "number" ? value : Number(value);
-                  const label = name === "revenue" ? "Выручка" : "Тренд (12 мес)";
+                  const label =
+                    name === "revenue" ? t("tooltip_revenue") : t("tooltip_trend");
                   return [formatBigUzs(num), label];
                 }}
               />
@@ -146,9 +149,9 @@ export function Revenue24mChart({
         </div>
 
         <div className="mt-3 flex items-center gap-4 px-2 text-[11.5px] text-[var(--ink-3)]">
-          <Legend color="var(--chart-grey)" label="Помесячная выручка" />
-          <Legend color="var(--chart-orange)" label="Сезонный пик" />
-          <Legend color="var(--chart-blue)" label="Тренд (12 мес. rolling)" />
+          <Legend color="var(--chart-grey)" label={t("legend_monthly")} />
+          <Legend color="var(--chart-orange)" label={t("legend_peak")} />
+          <Legend color="var(--chart-blue)" label={t("legend_trend")} />
         </div>
       </div>
     </section>
@@ -172,15 +175,16 @@ function Legend({ color, label }: { color: string; label: string }) {
 //                            помесячной разбивки (нужен ESF CSV — CA-032).
 // hasAnnualRevenue = false → INSUFFICIENT: вообще нет ни годовой, ни помесячной.
 function EmptyChart({ hasAnnualRevenue }: { hasAnnualRevenue: boolean }) {
+  const t = useTranslations("dossier.revenue_chart");
   const title = hasAnnualRevenue
-    ? "Помесячная динамика недоступна"
-    : "Нет данных о выручке";
+    ? t("empty_title_has_annual")
+    : t("empty_title_no_data");
   const subtitle = hasAnnualRevenue
-    ? "Годовая выручка есть, помесячная разбивка — нет"
-    : "Помесячная динамика и rolling-тренд";
+    ? t("empty_subtitle_has_annual")
+    : t("empty_subtitle_no_data");
   const body = hasAnnualRevenue
-    ? "Годовая выручка вычислена из Формы №2. Помесячная разбивка появится после загрузки ESF CSV (электронные счета-фактуры из my3.soliq.uz) на Шаге 2 формы."
-    : "Нет помесячных данных. Загрузите выгрузку Soliq на Шаге 2 формы или укажите помесячный оборот вручную.";
+    ? t("empty_body_has_annual")
+    : t("empty_body_no_data");
 
   return (
     <section className="rounded-[10px] border border-[var(--border)] bg-[var(--surface)] shadow-[0_1px_2px_rgba(16,24,40,0.05)]">

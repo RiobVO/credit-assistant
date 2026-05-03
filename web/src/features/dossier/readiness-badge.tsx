@@ -11,17 +11,21 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { Check, Info, TriangleAlert, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { getDossierReadiness } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 type Status = "ok" | "warn" | "pending";
 
-const LEVEL_LABEL: Record<string, string> = {
-  insufficient: "Недостаточно данных",
-  minimal: "Минимальный набор",
-  standard: "Стандартный набор",
-  comprehensive: "Полный набор",
+const LEVEL_KEY: Record<
+  string,
+  "level_insufficient" | "level_minimal" | "level_standard" | "level_comprehensive"
+> = {
+  insufficient: "level_insufficient",
+  minimal: "level_minimal",
+  standard: "level_standard",
+  comprehensive: "level_comprehensive",
 };
 
 const LEVEL_STATUS: Record<string, Status> = {
@@ -31,14 +35,21 @@ const LEVEL_STATUS: Record<string, Status> = {
   comprehensive: "ok",
 };
 
-const CAPABILITY_LABEL: Record<string, string> = {
-  yoy_trend: "Тренд YoY",
-  cagr: "CAGR",
-  balance_ratios: "Балансовые коэффициенты (FORM_1)",
-  tax_burden: "Налоговая нагрузка (ESF / Расчёт налога)",
+const CAPABILITY_KEY: Record<
+  string,
+  | "capability_yoy_trend"
+  | "capability_cagr"
+  | "capability_balance_ratios"
+  | "capability_tax_burden"
+> = {
+  yoy_trend: "capability_yoy_trend",
+  cagr: "capability_cagr",
+  balance_ratios: "capability_balance_ratios",
+  tax_burden: "capability_tax_burden",
 };
 
 export function ReadinessBadge({ dossierId }: { dossierId: string }) {
+  const t = useTranslations("dossier.readiness");
   const query = useQuery({
     queryKey: ["dossier-readiness", dossierId],
     queryFn: () => getDossierReadiness(dossierId),
@@ -61,6 +72,13 @@ export function ReadinessBadge({ dossierId }: { dossierId: string }) {
     pending: "border-[#F2BCBA] bg-[#FCE7E5] text-[var(--state-bad-fg)]",
   }[status];
 
+  const levelKey = LEVEL_KEY[data.level];
+  const levelLabel = levelKey ? t(levelKey) : data.level;
+  const missing = data.missing_capabilities.map((c) => {
+    const ck = CAPABILITY_KEY[c];
+    return ck ? t(ck) : c;
+  });
+
   return (
     <div className="mt-3 flex flex-wrap items-center gap-2">
       <span
@@ -70,16 +88,15 @@ export function ReadinessBadge({ dossierId }: { dossierId: string }) {
         )}
       >
         <Icon className="size-3.5" />
-        Готовность данных: {LEVEL_LABEL[data.level] ?? data.level} · доверие{" "}
-        {formatConfidence(data.confidence_score)}
+        {t("pill_template", {
+          level: levelLabel,
+          confidence: formatConfidence(data.confidence_score),
+        })}
       </span>
-      {data.missing_capabilities.length > 0 && (
+      {missing.length > 0 && (
         <span className="inline-flex items-center gap-1.5 text-[12px] text-[var(--ink-3)]">
           <Info className="size-3.5 text-[var(--state-warn-fg)]" />
-          Недоступно:{" "}
-          {data.missing_capabilities
-            .map((c) => CAPABILITY_LABEL[c] ?? c)
-            .join(" · ")}
+          {t("missing_prefix", { items: missing.join(" · ") })}
         </span>
       )}
     </div>

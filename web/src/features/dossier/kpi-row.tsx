@@ -1,3 +1,7 @@
+"use client";
+
+import { useTranslations } from "next-intl";
+
 import type { DossierViewDto, KpiValueDto } from "@/lib/api";
 
 import { formatBigUzs, formatPct, formatRatio } from "./format";
@@ -8,10 +12,11 @@ type Format = "uzs" | "pct" | "ratio";
 type GrowthDirection = "up_is_good" | "down_is_good";
 
 export function KpiRow({ kpis }: { kpis: DossierViewDto["kpis"] }) {
+  const t = useTranslations("dossier.kpi");
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
       <KpiSlot
-        label="Выручка LTM"
+        label={t("label_revenue_ltm")}
         kpi={kpis.revenue_ltm}
         format="uzs"
         growth="up_is_good"
@@ -36,10 +41,11 @@ function KpiSlot({
   format: Format;
   growth: GrowthDirection;
 }) {
+  const t = useTranslations("dossier.kpi");
   // == null ловит и undefined (Docker API ещё не пересобран после CA-037 rename
   // → response может прийти без ключей ebit/debt_to_ebit). Без этого слот падает.
   if (kpi == null) {
-    return <EmptyKpiCard label={label} hint="Нет данных для расчёта" />;
+    return <EmptyKpiCard label={label} hint={t("no_data_default")} />;
   }
 
   const value = parseFloat(kpi.value);
@@ -67,15 +73,16 @@ function KpiSlot({
 // ----------- CA-037: EBIT slot with tooltip ---------------------------------
 
 function EbitSlot({ kpi }: { kpi: KpiValueDto | null }) {
+  const t = useTranslations("dossier.kpi");
   // CA-037 контракт: пока depreciation/amortization недоступен, показываем EBIT
   // как прокси EBITDA. Tooltip объясняет honest scoping.
-  const label = "EBIT (прокси EBITDA)";
-  const tooltip = "D&A недоступен без формы №5 / PROFIT_TAX — показываем EBIT";
+  const label = t("label_ebit");
+  const tooltip = t("ebit_tooltip");
   if (kpi == null) {
     return (
       <EmptyKpiCard
         label={label}
-        hint="Нужны данные FORM_2 (PBT + проценты)"
+        hint={t("ebit_empty_hint")}
         tooltip={tooltip}
       />
     );
@@ -97,17 +104,13 @@ function EbitSlot({ kpi }: { kpi: KpiValueDto | null }) {
 // ----------- CA-037: ROE slot with reason on null ---------------------------
 
 function RoeSlot({ kpi }: { kpi: KpiValueDto | null }) {
-  const label = "ROE";
+  const t = useTranslations("dossier.kpi");
+  const label = t("label_roe");
   if (kpi == null) {
     // Backend возвращает null когда equity_avg ≤ 0 или компоненты отсутствуют.
     // Без отдельного флага frontend не может различить эти две причины — даём
     // составную подсказку, которая корректна в обоих случаях.
-    return (
-      <EmptyKpiCard
-        label={label}
-        hint="Нужен собственный капитал из FORM_1 (положительный)"
-      />
-    );
+    return <EmptyKpiCard label={label} hint={t("roe_empty_hint")} />;
   }
   const value = parseFloat(kpi.value);
   const yoy = kpi.yoy_pct !== null ? parseFloat(kpi.yoy_pct) : null;
@@ -132,11 +135,12 @@ function DebtToEbitSlot({
   debtToEbit: KpiValueDto | null;
   ebit: KpiValueDto | null;
 }) {
-  const label = "Долг / EBIT";
+  const t = useTranslations("dossier.kpi");
+  const label = t("label_debt_ebit");
   // Case 1: явный 0 — backend сигнализирует «нет долга» через Decimal(0).
   // == null ловит undefined тоже (если Docker API не пересобран после rename).
   if (debtToEbit != null && parseFloat(debtToEbit.value) === 0) {
-    return <NoDebtCard label={label} />;
+    return <NoDebtCard label={label} pillLabel={t("no_debt_pill")} />;
   }
   // Case 2: ratio есть и > 0 — обычный happy path.
   if (debtToEbit != null) {
@@ -155,15 +159,11 @@ function DebtToEbitSlot({
   // Case 3: ratio null + ebit известен и ≤ 0 — убыток скрывает оценку.
   if (ebit != null && parseFloat(ebit.value) <= 0) {
     return (
-      <EmptyKpiCard
-        label={label}
-        hint="Долговая нагрузка не оценима (убыток)"
-        tone="danger"
-      />
+      <EmptyKpiCard label={label} hint={t("debt_loss_hint")} tone="danger" />
     );
   }
   // Case 4 (default): нет данных FORM_1 (debt = None) или ebit неизвестен.
-  return <EmptyKpiCard label={label} hint="Загрузите Форму №1" />;
+  return <EmptyKpiCard label={label} hint={t("debt_no_data_hint")} />;
 }
 
 // ----------- Empty / no-debt cards ------------------------------------------
@@ -206,7 +206,7 @@ function EmptyKpiCard({
   );
 }
 
-function NoDebtCard({ label }: { label: string }) {
+function NoDebtCard({ label, pillLabel }: { label: string; pillLabel: string }) {
   // CA-037: total_debt = 0 — самостоятельный позитивный сигнал (нет долговой
   // нагрузки), а не «нет данных». Зелёный pill согласован с цветовой схемой
   // success в дизайне досье.
@@ -219,7 +219,7 @@ function NoDebtCard({ label }: { label: string }) {
         0,00×
       </div>
       <div className="mt-2 inline-flex items-center rounded-full bg-[var(--state-ok-fg)] px-2 py-px text-[11px] font-semibold text-white">
-        Нет долга
+        {pillLabel}
       </div>
       <div className="mt-3 h-[36px]" aria-hidden="true" />
     </div>
