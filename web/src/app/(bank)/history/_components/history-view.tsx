@@ -24,9 +24,9 @@ import {
   type ListFilter,
   listDossiers,
   recommendationBand,
-  recommendationLabel,
   scoreBand,
 } from "@/lib/bank-api";
+import type { Recommendation } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 20;
@@ -69,12 +69,13 @@ function downloadCsv(
   items: BankDossierListItem[],
   filename: string,
   headers: string[],
+  recLabel: (rec: Recommendation) => string,
 ): void {
   const rows = items.map((it) => [
     it.borrower_inn_masked,
     `"${it.borrower_name.replace(/"/g, '""')}"`,
     String(it.display_score),
-    recommendationLabel(it.recommendation),
+    recLabel(it.recommendation),
     formatRuDate(it.created_at),
     it.analyst_full_name ?? "",
   ]);
@@ -181,6 +182,7 @@ export function HistoryView() {
                     t("col_date"),
                     t("col_analyst"),
                   ],
+                  (rec) => t(`rec_${rec}`),
                 )
               }
               disabled={visibleItems.length === 0}
@@ -564,6 +566,7 @@ function ScoreBar({ score }: { score: number }) {
 }
 
 function RecBadge({ rec }: { rec: BankDossierListItem["recommendation"] }) {
+  const t = useTranslations("bank.history");
   const band = recommendationBand(rec);
   const colors: Record<"good" | "warn" | "bad", { fg: string; bg: string }> = {
     good: { fg: "var(--state-ok-fg)", bg: "var(--state-ok-bg)" },
@@ -581,7 +584,7 @@ function RecBadge({ rec }: { rec: BankDossierListItem["recommendation"] }) {
         style={{ background: c.fg }}
         aria-hidden
       />
-      {recommendationLabel(rec)}
+      {t(`rec_${rec}`)}
     </span>
   );
 }

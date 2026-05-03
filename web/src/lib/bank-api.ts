@@ -94,17 +94,6 @@ export function scoreBand(displayScore: number | null): ScoreBand | null {
   return "bad";
 }
 
-export function recommendationLabel(rec: Recommendation): string {
-  switch (rec) {
-    case "approve":
-      return "К выдаче";
-    case "review":
-      return "На проверку";
-    case "reject":
-      return "Отклонить";
-  }
-}
-
 export function recommendationBand(rec: Recommendation): ScoreBand {
   switch (rec) {
     case "approve":
