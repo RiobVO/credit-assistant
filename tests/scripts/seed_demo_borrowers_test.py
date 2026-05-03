@@ -27,8 +27,7 @@ def test_each_has_realistic_quarterly_revenue() -> None:
 def test_retail_has_q4_peak() -> None:
     borrowers = build_demo_borrowers()
     retail = next(b for b in borrowers if b["industry"] == "retail")
-    quarterly = retail["quarterly_revenue"]
-    q1, q2, q3, q4, q5, q6, q7, q8 = quarterly
+    q1, q2, q3, q4, q5, q6, q7, q8 = retail["quarterly_revenue"]
     assert q4 > q1 and q4 > q2 and q4 > q3
     assert q8 > q5 and q8 > q6 and q8 > q7
 
@@ -37,6 +36,6 @@ def test_agro_has_q2_q3_peak() -> None:
     borrowers = build_demo_borrowers()
     agro = next(b for b in borrowers if b["industry"] == "agro")
     quarterly = agro["quarterly_revenue"]
-    q1, q2, q3, q4, q5, q6, q7, q8 = quarterly
+    q1, q2, q3, q4 = quarterly[:4]
     peak = max(q2, q3)
     assert peak > q1 and peak > q4
