@@ -32,7 +32,11 @@
       "search_button": "Поиск",
       "help_aria": "Помощь",
       "bell_aria": "Уведомления",
-      "breadcrumbs_aria": "Хлебные крошки"
+      "breadcrumbs_aria": "Хлебные крошки",
+      "search_placeholder_inn": "Поиск по ИНН, заявкам…",
+      "draft_saving": "Сохраняем черновик…",
+      "draft_error": "Не удалось сохранить черновик",
+      "draft_saved": "Черновик сохранён · {time}"
     },
     "palette": {
       "placeholder": "Найти страницу или действие…",

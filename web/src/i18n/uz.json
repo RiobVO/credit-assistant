@@ -32,7 +32,11 @@
       "search_button": "Qidiruv",
       "help_aria": "Yordam",
       "bell_aria": "Bildirishnomalar",
-      "breadcrumbs_aria": "Yo'l ko'rsatkichlari"
+      "breadcrumbs_aria": "Yo'l ko'rsatkichlari",
+      "search_placeholder_inn": "STIR, arizalar bo'yicha qidiruv…",
+      "draft_saving": "Qoralama saqlanmoqda…",
+      "draft_error": "Qoralamani saqlab bo'lmadi",
+      "draft_saved": "Qoralama saqlandi · {time}"
     },
     "palette": {
       "placeholder": "Sahifa yoki amalni topish…",
