@@ -90,7 +90,7 @@
 **Final values (decided 2026-05-13):** subtle scale-up (≤+9%, card-width только +2.9%, padding unchanged). Card footprint почти оригинальный, content — title/inputs/CTA — увеличен. Все animations сохранены (drift A/B, mousemove spotlight, parallax card, pulse-dot, focus rings).
 
 Изменения (9 значений):
-- Card `max-width` 384px → **395px** (+2.9%)
+- Card `max-width` 384px → **380px** (−1%, card slightly compacted — content внутри scaled-up даёт «плотнее»)
 - Card padding 36/32 → **36/32** (unchanged)
 - Title (h1) 28px → **30px** (+7%)
 - Subtitle 13px → **13.5px** (+4%)
