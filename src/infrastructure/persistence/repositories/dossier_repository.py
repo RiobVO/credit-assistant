@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from datetime import UTC, date, datetime, time
 from uuid import UUID, uuid4
 
 from sqlalchemy import desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from application.dto.bank_dossier_summary import (
+    BankDailyStats,
     BankDossierListItem,
     BankDossierListPage,
     BorrowerSearchHit,
@@ -233,4 +235,43 @@ class SqlAlchemyDossierRepository:
             total=int(total),
             page=page,
             page_size=page_size,
+        )
+
+    async def get_bank_daily_stats(self, today: date) -> BankDailyStats:
+        """Bank-mode daily stats для live-strip на /search.
+
+        Аггрегирует bank-mode dossiers, созданные в ``today`` (UTC date),
+        в три числа: collected_today, approved_pct (целое 0..100 или None если
+        today=0), in_review_today. Один SELECT по `created_at` >= today UTC
+        midnight AND < next UTC midnight.
+
+        ``today`` обычно ``date.today()`` (UTC в проде; для тестов inject).
+        """
+        start = datetime.combine(today, time.min, tzinfo=UTC)
+        end = datetime.combine(today, time.max, tzinfo=UTC)
+
+        stmt = select(
+            func.count(DossierORM.id).label("collected"),
+            func.count(DossierORM.id)
+            .filter(DossierORM.recommendation == "approve")
+            .label("approved"),
+            func.count(DossierORM.id)
+            .filter(DossierORM.recommendation == "review")
+            .label("in_review"),
+        ).where(
+            DossierORM.source_mode == "bank",
+            DossierORM.created_at >= start,
+            DossierORM.created_at <= end,
+        )
+        row = (await self._session.execute(stmt)).one()
+        collected = int(row.collected)
+        approved = int(row.approved)
+        in_review = int(row.in_review)
+        approved_pct = (
+            round(approved * 100 / collected) if collected > 0 else None
+        )
+        return BankDailyStats(
+            collected_today=collected,
+            approved_pct=approved_pct,
+            in_review_today=in_review,
         )

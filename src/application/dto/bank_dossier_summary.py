@@ -48,3 +48,18 @@ class BankDossierListPage:
     total: int
     page: int
     page_size: int
+
+
+@dataclass(frozen=True, slots=True)
+class BankDailyStats:
+    """Bank-mode daily stats для live-strip pill на /search.
+
+    ``collected_today`` — bank-mode досье созданные сегодня (UTC date).
+    ``approved_pct`` — процент с recommendation='approve' среди today (целое
+    0..100); None если today=0 досье (избегаем деления на ноль / «0%» = false-signal).
+    ``in_review_today`` — bank-mode досье today с recommendation='review'.
+    """
+
+    collected_today: int
+    approved_pct: int | None
+    in_review_today: int
