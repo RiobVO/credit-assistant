@@ -251,6 +251,22 @@
   background: rgba(0, 0, 0, 0.45);
   box-shadow: 0 0 0 3px var(--brand-primary-ring);
 }
+/* DS-PHASE-1: Chrome autofill override — браузер по умолчанию перекрашивает
+   autofilled inputs в белый/жёлтый, ломая dark theme. Трюк с большим inset
+   box-shadow держит dark background; transition 9999s заглушает анимацию
+   autofill'а. */
+.input:-webkit-autofill,
+.input:-webkit-autofill:hover,
+.input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.32) inset;
+  -webkit-text-fill-color: #f4f1ea;
+  caret-color: #f4f1ea;
+  transition: background-color 9999s ease-in-out 0s;
+}
+.input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.45) inset,
+    0 0 0 3px var(--brand-primary-ring);
+}
 .suffix {
   position: absolute;
   right: 6px;
