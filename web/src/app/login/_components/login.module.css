@@ -171,7 +171,8 @@
 }
 .card {
   width: 100%;
-  max-width: 384px;
+  /* DS-PHASE-1: subtle scale-up — card width +2.9% (384→395), padding unchanged. */
+  max-width: 395px;
   background: linear-gradient(180deg, rgba(17, 21, 31, 0.78) 0%, rgba(13, 16, 25, 0.78) 100%);
   backdrop-filter: blur(14px) saturate(120%);
   -webkit-backdrop-filter: blur(14px) saturate(120%);
@@ -194,7 +195,8 @@
   margin-bottom: 14px;
 }
 .title {
-  font-size: 28px;
+  /* DS-PHASE-1: 28 → 30 (+7%) */
+  font-size: 30px;
   font-weight: 500;
   letter-spacing: -0.02em;
   color: #f4f1ea;
@@ -203,7 +205,8 @@
 }
 .sub {
   margin: 0 0 26px;
-  font-size: 13px;
+  /* DS-PHASE-1: 13 → 13.5 (+4%) */
+  font-size: 13.5px;
   color: var(--as-text-2);
   line-height: 1.5;
 }
@@ -211,11 +214,13 @@
 .form {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  /* DS-PHASE-1: 14 → 15 (+7%) */
+  gap: 15px;
 }
 .group { display: flex; flex-direction: column; }
 .label {
-  font-size: 10.5px;
+  /* DS-PHASE-1: 10.5 → 11 (+5%) */
+  font-size: 11px;
   font-weight: 600;
   color: var(--as-text-3);
   letter-spacing: 0.14em;
@@ -225,13 +230,15 @@
 .field { position: relative; }
 .input {
   width: 100%;
-  height: 44px;
+  /* DS-PHASE-1: 44 → 48 (+9%) */
+  height: 48px;
   padding: 0 14px;
   background: rgba(0, 0, 0, 0.32);
   border: 1px solid var(--as-line);
   border-radius: 6px;
   color: #f4f1ea;
-  font-size: 13.5px;
+  /* DS-PHASE-1: 13.5 → 14 (+4%) */
+  font-size: 14px;
   font-family: var(--font-mono, monospace);
   letter-spacing: 0.01em;
   transition: border-color 160ms var(--as-ease), box-shadow 160ms var(--as-ease), background 160ms var(--as-ease);
@@ -318,12 +325,14 @@
 .cta {
   margin-top: 14px;
   width: 100%;
-  height: 46px;
+  /* DS-PHASE-1: 46 → 50 (+9%) */
+  height: 50px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.04);
   color: #f4f1ea;
-  font-size: 13.5px;
+  /* DS-PHASE-1: 13.5 → 14 (+4%) */
+  font-size: 14px;
   font-weight: 500;
   letter-spacing: 0.04em;
   cursor: pointer;
