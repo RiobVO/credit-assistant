@@ -75,7 +75,7 @@
 | # | Phase | Status | Preview file | Commit |
 |---|---|---|---|---|
 | 1 | Login | **DONE** | `2026-05-13-login-phase1-preview.html` | `0a1c86c`..`34d97f6` |
-| 2 | Search | pending | — | — |
+| 2 | Search | **DONE** (design statement) | `2026-05-13-search-phase2-preview.html` | (committed) |
 | 3 | History | pending | — | — |
 | 4 | Help | pending | — | — |
 | 5 | Settings | pending | — | — |
@@ -116,6 +116,48 @@ Issues которые я нашёл в аудитах но user решил ос�
 - **CA-DS3 (login):** Eyebrow «AUTHENTICATION» — единственный english string в UI. CA-063b sweep пропустил.
 - **CA-DS4 (login):** `© 2026 Uzbekbank` — год + tenant hardcoded. `placeholder="имя@uzbekbank.uz"` тоже. Заменить на `getFullYear()` + brand-config + i18n.
 - **CA-DS5 (login CSS):** ~25 hex значений в `login.module.css` (dark-theme tokens), ESLint guard CSS не покрывает. Нужен dark-theme semantic слой.
+- **CA-DS-LIVE (search):** Live-strip pill «● Сегодня · 247 досье · 84% одобрено · 12 в проверке» сейчас mock (`web/src/features/search/live-strip.tsx#MOCK`). Нужен backend endpoint `/api/bank/stats/today` — daily aggregation: count(dossiers_today), avg(approve_rate_today), count(in_review_today). Cron-обновляемая агрегация (per-tenant). До бэкенда — placeholder на demo для pilot папы; на real-pilot заменить.
+
+### Phase 2 — Search (scope) — DONE 2026-05-13
+
+**Решение:** design statement (не subtle scale-up). Phase 2 переходит от косметики к premium-bank эстетике — частный банк Loewe/Brunello Cucinelli, не SaaS-стартап.
+
+**Изменения:**
+
+*Backend* — `GET /api/bank/borrowers/search` расширен `card: SearchCardData | null` (заполнено только когда есть bank-mode досье). Новые поля: `legal_form`, `recommendation`, `revenue_ltm` (Decimal-str), `yoy_pct`, `business_age_months`, `signals_total`, `signals_evaluated`, `monthly_revenue_12m: list[{month: "YYYY-MM", revenue: "..."}]`. Реализовано через `LoadDossierForView(repo).execute(dossier_id)` в `search.py` — переиспользует существующий use case + KPI calculator, никакой бизнес-логики в endpoint. +2 integration теста.
+
+*Frontend foundation:*
+- `globals.css`: bank-tenant override `--nav-bg: #FAF9F5` (warm cream) + nav-text-* для light sidebar; новые keyframes `pulse-ring-ok`, `rise`, `rise-card`, `ds-orb-drift-a/b`; utility class `.ds-grid-pattern` (40×40 квадраты с radial mask).
+- 4 новых компонента в `features/search/`: `GridPattern`, `AmbientOrbs` (two-layer wrap — JS-параллакс снаружи, CSS-keyframe drift внутри), `ScoreRing` (112px donut + 4 tick marks + count-up 0→score 1.2s + reco-pill), `RevenueSparkline` (SVG smooth Bezier + hover tooltip с реальным месяцем+value).
+- Хук `lib/use-reduced-motion.ts` — отключает count-up/sweep при OS-prefer-reduced-motion.
+
+*Sidebar (warm cream pattern):*
+- `bg: #FAF9F5` (тёплый off-white).
+- «+ Новая заявка» → **premium-card pattern**: белая карточка + brand-soft icon-tile (rotating plus 90° on hover, bouncy cubic-bezier) + dark label. **Не filled CTA**. Pattern: Linear/Notion/Mercury «Create new».
+- Active nav-item: `inset 2px 0 0 var(--brand-primary)` + white bg. Visual tie между навигацией и CTA-цветом.
+- User-card: gradient bg + online-dot (pulse-ring-ok keyframe) + «Кредитный аналитик · онлайн».
+
+*Topbar:* trust-pill «● Все системы работают» (state-ok pulse-dot) слева от bell — bank-grade reliability cue.
+
+*Search-view (полный rewrite):*
+- h1 «Поиск компании» 34px (без маркетинга про «8 секунд»).
+- LiveStrip pill: «● Сегодня · 247 · 84% · 12» (mock data, TODO[CA-DS-LIVE]).
+- Search form 56px height, terracotta CTA.
+- RecentChips — sparkline ТОЛЬКО на active chip (синхронизирован с `result.card.monthly_revenue_12m`). Inactive chips — просто моноширинный ИНН.
+- ResultCard — оркестрирует ScoreRing + 4 mini-meta KPI + RevenueSparkline. Subtle radial brand-tinted gradient в углу. Sparkline tooltip отдаёт реальный месяц + млн сум.
+- NotFound + Idle — обновлённый дизайн с radial gradient orb behind icon-tile.
+- AmbientOrbs + GridPattern — page-level decoration (только на /search, не на других экранах).
+
+*i18n* — ~20 новых ключей в `bank.search.*` (live_label, mini_*, recommendation_*, month_short_1..12, business_age_template с ICU-plural, spark_value_format) + `bank.topbar.systems_ok` + `bank.sidebar.online`. ru + uz.
+
+**Verify status:** ruff + mypy --strict (233 source files) + 55 backend integration (3 skip PDF) + tsc + eslint + vitest 77 tests (61 existing + 16 новых format.test.ts) + next build (15 routes) — все зелёные.
+
+**Files changed (16):**
+- Backend: `search.py`, `search_schema.py`, `bank_search_test.py`
+- Frontend foundation: `globals.css`, `bank-api.ts`, `lib/use-reduced-motion.ts`
+- New components: `features/search/{ambient-orbs,grid-pattern,score-ring,revenue-sparkline,result-card,recent-chips,live-strip,format}.tsx` + `format.test.ts`
+- Shell: `(bank)/_components/sidebar.tsx`, `(bank)/_components/topbar.tsx`, `(bank)/search/page.tsx`, `(bank)/search/_components/search-view.tsx`
+- i18n: `i18n/ru.json`, `i18n/uz.json`
 
 ---
 
@@ -212,6 +254,7 @@ Issues которые я нашёл в аудитах но user решил ос�
 | 2026-05-13 | post-plan | **Design-parity sweep (CA-066)** — после смотра против локального target-state-preview закрыты 4 расхождения: (1) `BrandProvider` + `useBrand()` для client surfaces — bank `Sidebar` + `BankTopbar` тянут name/tagline/logoMark из `config/brands/<id>.json` (uzbekbank tagline → «Bank Mode · Андижон»). (2) Dossier layout: новый `SubHeader` (чистый title + meta-line ИНН/ОПФ/ОКВЭД + правые [Пересобрать] [Скачать PDF]), `ReadinessBadge` → `ReadinessKpiCard` как 4-я карточка `KpiRow` (revenue_ltm выкинут), нижний `ActionBar` удалён физически (`action-bar.tsx`). (3) Manual-input `info-banner` на `--state-info-{bg,fg}` + border через `color-mix` — теперь uzbekbank-tenant даёт терракотово-коричневую плашку вместо синей. (4) ⌘K палитра: keyboard nav (↑↓Enter), `↵` kbd на active item. Bug fix во время прохода: `t.rich(key, {x: () => <b/>})` с value-плейсхолдером `{x}` падал «Functions are not valid as a React child» в `bank/history` пагинации — переделан на tag-syntax `<b>{shown}</b>` + formatter `(chunks) => <b>{chunks}</b>`. Verify: tsc + eslint + 61 vitest зелёные. |
 | 2026-05-13 | post-CA-066 | **CA-067 + CA-065** — rm orphaned `back-target.ts` (`56ada78`); `scripts/seed_demo_borrowers.py --commit` E2E писатель (`04665b1`): 3 demo bank-mode dossier'а через build_snapshot→rules→save. Dockerfile + COPY scripts/. Real smoke на real Postgres: 3 dossiers score=0/approve. **Запуск scripts:** `cd /app && PYTHONPATH=/app/src` (scripts/ это пакет в root, не в src/). |
 | 2026-05-13 | Design Sweep | **Phase 1 Login DONE** — план фаз (`6c45af3`), subtle scale-up (`0a1c86c`: title 30/inputs 48/CTA 50, +4..9%), `-webkit-autofill` override (`4997d5b`), card final 355px (`8dc74cb` 395→380, `34d97f6` 380→355 — focused-positioning, Stripe/Linear territory). 5 cross-phase tech-debt issues (CA-DS1..CA-DS5) отложены. Готово к Phase 2 Search в новой сессии. |
+| 2026-05-13 | Design Sweep | **Phase 2 Search DONE — design statement** — переход с subtle scale-up на full overhaul (premium private-bank эстетика). Backend: `/api/bank/borrowers/search` расширен `card: SearchCardData` (legal_form / recommendation / revenue_ltm / yoy_pct / business_age_months / signals_* / monthly_revenue_12m) — переиспользует `LoadDossierForView` use case. Frontend: warm-cream sidebar (#FAF9F5) + premium-card «+ Новая заявка» с rotating plus + active left-border + online-dot. Topbar trust-pill «● Все системы работают». Search-view: 34px h1, live-strip pill (mock data TODO[CA-DS-LIVE]), 56px form, recent chips с active-spark synced на result data. ResultCard: ScoreRing 112px + count-up 0→score (1.2s) + 4 tick marks + reco-pill; 4 mini-meta KPI; RevenueSparkline 12 мес с hover tooltip отдающим реальный месяц+млн сум (smooth Bezier path, draw animation 1.6s). AmbientOrbs (mouse parallax ±14px + CSS drift 36/48s) + GridPattern (40×40 squares с radial mask). Хук `useReducedMotion` отключает animations при OS preference. i18n ~20 новых ключей ru+uz. Verify: ruff/mypy/55 pytest + tsc/eslint/77 vitest + next build (15 routes) — зелёные. 16 файлов. |
 | 2026-05-13 | UI sweep | **i18n sweep — финал (CA-063b)** — 5 коммитов закрыли все оставшиеся surfaces. (1) `recommendationLabel` удалён из `bank-api.ts`, callsites на `bank.history.rec_*`. (2) shared `components/topbar.tsx` (draft-state badges). (3) bank shell: `(bank)/_components/topbar` (TITLE_MAP→keys), `settings-view` (4 секции), `help-view` (FAQ через `t.rich` с тегами `b/code/good/warn/bad`). (4) dossier sub-views: sub-header / borrower-card / kpi-row / risk-signals (19 rule labels через `t.has`+fallback) / revenue-24m-chart / score-gauge / readiness-badge (тест обёрнут в Provider). (5) manual-input wizard (14 файлов: page-head/stepper/form-footer/info-banner + step-1..3 + financial-table/dscr-summary/parsed-files-dropzone/soliq-upload/checklist). `classifyDscrRisk` теперь возвращает `key`, не `label`. ICU-plural для files/fields counts, `t.rich` для FAQ. Brand-strings (Bank Mode, DSCR, UZS, ИНН, my3.soliq.uz, ops@uzbekbank.uz) не локализованы. | `757d0ba`..`d923051` |
 
 > Сжатая история. Полные decomposition / smoke numbers / per-step rationale — в commit messages (`git log --oneline`) и `docs/adr/`.

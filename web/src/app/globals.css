@@ -171,7 +171,9 @@
   --brand-primary-ring: rgba(30, 85, 201, 0.22);
 }
 
-/* Bank-tenant overrides (когда <html data-brand="uzbekbank">). */
+/* Bank-tenant overrides (когда <html data-brand="uzbekbank">).
+   Phase 2 Design Sweep: sidebar переходит с dark navy на warm cream — private-bank
+   эстетика (Brunello Cucinelli / Loewe), не Slack-стартап. */
 :root[data-brand="uzbekbank"] {
   --surface: #FFFFFF;
   --surface-2: #F8FAFC;
@@ -181,11 +183,14 @@
   --ink-4: #94A3B8;
   --border: #E2E8F0;
   --border-strong: #CBD5E1;
-  --nav-bg-2: #0F172A;
-  --nav-bg-hover: #1E293B;
-  --nav-border: #1E293B;
-  --nav-text: #E2E8F0;
-  --nav-text-2: #94A3B8;
+  /* Sidebar — warm cream. nav-bg-hover полупрозрачный white, ложится на cream
+     без перекраски токена. */
+  --nav-bg: #FAF9F5;
+  --nav-bg-2: #FFFFFF;
+  --nav-bg-hover: rgba(255, 255, 255, 0.7);
+  --nav-border: #E8E2D2;
+  --nav-text: #0F172A;
+  --nav-text-2: #475569;
   --nav-text-3: #64748B;
   --state-ok-fg: #166534; --state-ok-bg: #DCFCE7;
   --state-warn-fg: #92400E; --state-warn-bg: #FEF3C7;
@@ -211,5 +216,51 @@
   }
   .pulse-dot {
     animation: pulse-dot 1.4s ease-in-out infinite;
+  }
+
+  /* Phase 2 — DS-PHASE-2: pulsing ring для state-ok / trust-сигналов в topbar +
+     online-dot аватара в sidebar. Ring expands 0→5px, fades to transparent. */
+  @keyframes pulse-ring-ok {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(15, 138, 95, 0.45); }
+    50% { box-shadow: 0 0 0 5px rgba(15, 138, 95, 0); }
+  }
+  .pulse-ring-ok {
+    animation: pulse-ring-ok 2.4s ease-in-out infinite;
+  }
+
+  /* Phase 2 — DS-PHASE-2: rise stagger для main content + cards в hero-зоне. */
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes rise-card {
+    from { opacity: 0; transform: translateY(14px) scale(0.995); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  /* Phase 2 — page-level grid pattern. Используется через <GridPattern />. */
+  .ds-grid-pattern {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image:
+      linear-gradient(to right, rgba(14, 21, 37, 0.035) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(14, 21, 37, 0.035) 1px, transparent 1px);
+    background-size: 40px 40px;
+    background-position: -1px -1px;
+    -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 35%, black 35%, transparent 95%);
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 35%, black 35%, transparent 95%);
+  }
+
+  /* Orb drift A/B — page-level ambient decoration. JS-параллакс — на внешнем
+     wrapper'е (см. <AmbientOrbs />), CSS drift — на inner-анимационном слое. */
+  @keyframes ds-orb-drift-a {
+    0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+    50% { transform: translate3d(-40px, 50px, 0) scale(1.04); }
+  }
+  @keyframes ds-orb-drift-b {
+    0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+    50% { transform: translate3d(50px, -40px, 0) scale(0.96); }
   }
 }

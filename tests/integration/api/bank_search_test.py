@@ -175,6 +175,62 @@ async def test_search_returns_latest_bank_dossier(
     assert body["display_score"] == 70  # 100 - 30
 
 
+async def test_search_returns_card_data_when_dossier_exists(
+    api_client: httpx.AsyncClient, pg_session: AsyncSession
+) -> None:
+    """С досье — populated ``card``: legal_form, recommendation, signals_*,
+    business_age_months, monthly_revenue_12m. Источник данных — clean_borrower
+    (3 monthly_turnover точки за 2026)."""
+    analyst = await _seed_analyst(pg_session)
+    snapshot = clean_borrower()
+    borrower_id = await SqlAlchemyBorrowerRepository(pg_session).upsert(snapshot.borrower)
+    snapshot_id = await SqlAlchemyBorrowerSnapshotRepository(pg_session).save(
+        snapshot, borrower_id
+    )
+    await SqlAlchemyDossierRepository(pg_session).save(
+        _record(score=15),  # recommendation="review" в _record
+        snapshot_id,
+        source_mode="bank",
+        created_by_analyst_id=analyst.id,
+    )
+
+    headers = await _login(api_client)
+    inn = snapshot.borrower.inn.value
+    resp = await api_client.get(
+        f"/api/bank/borrowers/search?inn={inn}", headers=headers
+    )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["card"] is not None
+    card = body["card"]
+    assert card["legal_form"] == snapshot.borrower.legal_form.value
+    assert card["recommendation"] == "review"
+    assert card["signals_total"] == 0  # _record() передаёт red_flags=()
+    assert card["signals_evaluated"] == 17
+    assert card["business_age_months"] >= 0
+    assert isinstance(card["monthly_revenue_12m"], list)
+    assert len(card["monthly_revenue_12m"]) == 3  # 3 monthly_turnover точки
+
+
+async def test_search_card_is_none_when_no_dossier(
+    api_client: httpx.AsyncClient, pg_session: AsyncSession
+) -> None:
+    """Borrower-only ветка — ``card=None`` (нечего рисовать)."""
+    await _seed_analyst(pg_session)
+    snapshot = clean_borrower()
+    await SqlAlchemyBorrowerRepository(pg_session).upsert(snapshot.borrower)
+
+    headers = await _login(api_client)
+    resp = await api_client.get(
+        f"/api/bank/borrowers/search?inn={snapshot.borrower.inn.value}",
+        headers=headers,
+    )
+
+    assert resp.status_code == 200
+    assert resp.json()["card"] is None
+
+
 async def test_search_writes_masked_audit(
     api_client: httpx.AsyncClient, pg_session: AsyncSession
 ) -> None:

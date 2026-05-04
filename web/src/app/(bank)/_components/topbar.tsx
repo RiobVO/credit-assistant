@@ -42,6 +42,23 @@ export function BankTopbar() {
       </nav>
 
       <div className="flex items-center gap-2">
+        {/* Trust-pill — Phase 2 DS-PHASE-2. Bank-grade reliability cue:
+            pulse-ring-ok dot + «Все системы работают». Statе → state-ok токены. */}
+        <span
+          className="mr-1 inline-flex items-center gap-[7px] rounded-full border px-[11px] py-[5px] text-[11.5px] font-medium"
+          style={{
+            background: "var(--state-ok-bg)",
+            color: "var(--state-ok-fg)",
+            borderColor: "var(--state-ok-border)",
+          }}
+        >
+          <span
+            aria-hidden
+            className="pulse-ring-ok size-1.5 rounded-full"
+            style={{ background: "var(--state-ok-fg)" }}
+          />
+          {t("systems_ok")}
+        </span>
         <button
           type="button"
           aria-label={tShared("bell_aria")}
