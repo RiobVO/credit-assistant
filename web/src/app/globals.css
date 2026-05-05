@@ -238,19 +238,37 @@
     to { opacity: 1; transform: translateY(0) scale(1); }
   }
 
-  /* Phase 2 — page-level grid pattern. Используется через <GridPattern />. */
+  /* Phase 2 — page-level grid pattern. Используется через <GridPattern />.
+     Opacity = 8% (unified Phase 3) — субтильно, но различимо при светлом bg. */
   .ds-grid-pattern {
     position: fixed;
     inset: 0;
     z-index: 0;
     pointer-events: none;
     background-image:
-      linear-gradient(to right, rgba(14, 21, 37, 0.035) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(14, 21, 37, 0.035) 1px, transparent 1px);
+      linear-gradient(to right, rgba(14, 21, 37, 0.045) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(14, 21, 37, 0.045) 1px, transparent 1px);
     background-size: 40px 40px;
     background-position: -1px -1px;
     -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 35%, black 35%, transparent 95%);
     mask-image: radial-gradient(ellipse 80% 60% at 50% 35%, black 35%, transparent 95%);
+  }
+
+  /* Phase 3 — brand-tinted вариант для /history. Тот же шаг и mask,
+     opacity 8% (=default), цвет линий = brand-primary — терракотовый
+     намёк (default-blue tenant → синий). */
+  .ds-grid-pattern--brand {
+    background-image:
+      linear-gradient(
+        to right,
+        color-mix(in srgb, var(--brand-primary) 8%, transparent) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        to bottom,
+        color-mix(in srgb, var(--brand-primary) 8%, transparent) 1px,
+        transparent 1px
+      );
   }
 
   /* Orb drift A/B — page-level ambient decoration. JS-параллакс — на внешнем

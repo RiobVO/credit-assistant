@@ -208,6 +208,14 @@ Issues которые я нашёл в аудитах но user решил ос�
 - `web/src/i18n/ru.json` — `bank.history` keyspace
 - `web/src/i18n/uz.json` — `bank.history` keyspace
 
+**Phase 3 follow-up (same day) — GridPattern background:**
+
+- `globals.css`: новый modifier `.ds-grid-pattern--brand` — то же 40×40 + radial mask, но color = `color-mix(in srgb, var(--brand-primary) 8%, transparent)`. Default `.ds-grid-pattern` снижен до 4.5% (`rgba(14,21,37,0.045)`) после нескольких итераций пользователя (18% → 6% → 8% → 4.5%).
+- `features/search/grid-pattern.tsx` параметризован: `tone?: "default" | "brand"`.
+- `(bank)/history/_components/history-view.tsx` — `<GridPattern tone="brand" />` через `next/dynamic({ssr:false})` (lazy decoration) + контент обёрнут в `<div className="relative z-[1]">` чтобы лежать поверх pattern.
+- **Финальные opacity:** /search 4.5% ink-1 (нейтрально-серый), /history 8% brand-primary (терракотовый намёк на uzbekbank; default-blue tenant → синий через CSS var).
+- AmbientOrbs **не** добавлены на /history — только grid (decision: orbs = hero showroom для /search, table-grid с orbs — визуальный шум).
+
 ---
 
 ## Working Agreements
