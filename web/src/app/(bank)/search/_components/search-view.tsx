@@ -16,6 +16,7 @@ import { useEffect, useState } from "react";
 import { LiveStrip } from "@/features/search/live-strip";
 import { RecentChips } from "@/features/search/recent-chips";
 import { ResultCard } from "@/features/search/result-card";
+import { ShowcaseBar, type ShowcaseKind } from "@/features/search/showcase-bar";
 
 // AmbientOrbs + GridPattern — pure decoration, не блокируют hero. Lazy-load
 // с ssr:false → не уходят в initial JS bundle. Ускоряет навигацию между
@@ -100,6 +101,7 @@ export function SearchView() {
   const [inn, setInn] = useState("");
   const [state, setState] = useState<State>({ kind: "idle" });
   const [recent, setRecent] = useState<string[]>([]);
+  const [showcase, setShowcase] = useState<ShowcaseKind | null>(null);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage post-mount load
@@ -138,6 +140,8 @@ export function SearchView() {
   const handleChange = (raw: string) => {
     const cleaned = raw.replace(/\D/g, "").slice(0, 14);
     setInn(cleaned);
+    // Ручной ввод сбрасывает showcase-режим — пользователь делает свой поиск.
+    if (showcase !== null) setShowcase(null);
     if (state.kind !== "idle" && state.kind !== "loading") {
       setState({ kind: "idle" });
     }
@@ -146,6 +150,19 @@ export function SearchView() {
   const handleChipClick = (chipInn: string) => {
     setInn(chipInn);
     void runSearch(chipInn);
+  };
+
+  const handleShowcase = (kind: ShowcaseKind, presetInn: string): void => {
+    setShowcase(kind);
+    if (kind === "idle") {
+      setInn("");
+      setState({ kind: "idle" });
+      return;
+    }
+    // Реальный flow: подставляем ИНН + запускаем search → backend ответ +
+    // все анимации (count-up, sparkline draw). Не mock data.
+    setInn(presetInn);
+    void runSearch(presetInn);
   };
 
   const isValid = inn.length === 9 || inn.length === 14;
@@ -241,6 +258,9 @@ export function SearchView() {
           <EmptyHero />
         ) : null}
       </div>
+
+      {/* Showcase-bar — быстрое переключение состояний для demo / QA. */}
+      <ShowcaseBar active={showcase} onPick={handleShowcase} />
     </>
   );
 }
