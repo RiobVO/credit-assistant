@@ -6,7 +6,7 @@
 
 ## Current Status
 
-**Phase:** 4 закрыта (Bank Mode UI) + UI Design System sweep 2026-05-13 (Phase 0-8 плана + Phase 9 partial) + post-plan design-parity sweep 2026-05-13 (CA-066) + post-CA-066 cleanup (CA-067) + CA-065 commit writer + Design Sweep 2026-05-13 (Phase 1 Login done, 9 фаз pending). Specs: `docs/superpowers/specs/2026-05-11-phase-4-bank-mode-design.md`, `docs/superpowers/plans/2026-05-13-ui-design-system.md`, ADR-0009, ADR-0011.
+**Phase:** 4 закрыта (Bank Mode UI) + UI Design System sweep 2026-05-13 (Phase 0-8 плана + Phase 9 partial) + post-plan design-parity sweep 2026-05-13 (CA-066) + post-CA-066 cleanup (CA-067) + CA-065 commit writer + Design Sweep 2026-05-13 (Phase 1 Login + Phase 2 Search + Phase 3 History done, 7 фаз pending). Specs: `docs/superpowers/specs/2026-05-11-phase-4-bank-mode-design.md`, `docs/superpowers/plans/2026-05-13-ui-design-system.md`, ADR-0009, ADR-0011.
 
 **Активная ветка:** `main`. Серия CA-060..CA-063b (один design system + brand-layer): semantic tokens, ESLint guard hex, useAppMode shells, error boundaries, GlobalTopbar + ⌘K палитра, JetBrains Mono на KPI, pulse-dot draft-save, formatBusinessAge, login sync с brand, demo-seed 3 UZ MSB, i18n infra (next-intl + ru/uz) + полный sweep всех UI surfaces (8 ключевых в CA-063 + manual-input wizard + dossier sub-views + bank shell/settings/help + shared topbar + bank-api.recommendationLabel в CA-063b). + CA-066 post-plan design-parity: brand-context client-side, info-banner на state-info токены, ⌘K keyboard nav, dossier layout aligned with target preview (clean sub-header + Готовность как 4-й KPI, ActionBar удалён). Phase 5 (E2E папы / pilot-демо) ожидает старта.
 
@@ -76,7 +76,7 @@
 |---|---|---|---|---|
 | 1 | Login | **DONE** | `2026-05-13-login-phase1-preview.html` | `0a1c86c`..`34d97f6` |
 | 2 | Search | **DONE** (design statement + 4 hotfix) | `2026-05-13-search-phase2-preview.html` | `c9afbce` → `022dfcf` |
-| 3 | History | pending | — | — |
+| 3 | History | **DONE** (design statement) | `2026-05-13-history-phase3-preview.html` | pending commit |
 | 4 | Help | pending | — | — |
 | 5 | Settings | pending | — | — |
 | 6 | Manual-input Step 1 (Borrower) | pending | — | — |
@@ -168,6 +168,45 @@ Issues которые я нашёл в аудитах но user решил ос�
 * **`022dfcf` — Next dev-indicator → bottom-left.** «Rendering…» badge в верхнем углу перекрывал hero — сдвинул в bottom-left. Production его не имеет, только dev.
 
 **Решение принципиальное:** showcase-bar и live-strip остаются в production — это product features, не debug-panel.
+
+### Phase 3 — History (scope) — DONE 2026-05-13
+
+**Решение:** design statement (full overhaul). Phase 3 — premium data-grid, не hero. Цель — уменьшить визуальный шум таблицы и поднять иерархию data → analyst.
+
+**Изменения:**
+
+*Backend* — без изменений. Переиспользуем `GET /api/bank/stats/today` (Phase 2 hotfix `610a86d`).
+
+*Frontend foundation:*
+- Новый файл `web/src/features/history/relative-time.ts` — pure helper `formatRelativeTime(iso, now)` возвращает `{key, values}` для подстановки в `t()`. Поддержка ICU-plural (минуты/часы/дни в ru+uz). «Вчера» — календарный yesterday (не «24-48 часов»), для корректного отображения 02:00→23:00. `isFreshTime()` true для сегодня/вчера → подкрашивает relative зелёным. 11 unit-тестов с inject `now` для детерминизма.
+- `LiveStrip` импортируется напрямую из `features/search/live-strip.tsx` (namespace `bank.search.live_*` переиспользуется). Если 3+ surfaces — extract в shared.
+
+*HistoryView (полный rewrite):*
+- **Page head:** убрана `+ Новая заявка` (дублировалась с premium-card sidebar CTA — pure visual noise). Осталась только `↓ Экспорт CSV`.
+- **LiveStrip** между `BankPageHead` и `Tabs` — те же 3 метрики «● Сегодня · N проверок · M% одобрено · K в проверке».
+- **Tabs** — оставлен pill-pattern; rounded-md → rounded-lg/rounded-md, ink-3 → ink-1 на hover.
+- **Toolbar:** убран dead «Ещё» filter button (mock без onClick). Search 38px→40px, rounded-md→rounded-lg.
+- **Table:**
+  - **Header (`Th`)** — чистый white bg + 10.5px uppercase letter-spacing 0.08 + ink-4 text + inset bottom-shadow 1px + sticky top:0. Без тёмной плашки, без bg-surface-2 (был мутным с row-hover).
+  - **ScoreCell** — vertical accent strip 3×22 (color = recommendation band, как ScoreRing /search) + crisp число mono 16px (color = score band). Tinkoff/Brex pattern. Без bar, без круга, без ticks.
+  - **RecBadge** — оставлен с pulse-dot; rounded → rounded-full.
+  - **DateCell** — две строки: абсолютная дата (13px, ink-2) + relative time (11px). Свежие ≤сегодня/вчера → relative подкрашен `state-ok-fg` semibold; старше → ink-4. ≥7 дней → relative не показываем.
+  - **AnalystCell** — gradient на `linear-gradient(135deg, brand-primary-soft 0%, brand-primary 100%)`. CA-066 brand-aware (был hardcoded `#D88E73 → #B5624A`). На default-blue tenant получит синий avatar, на uzbekbank — терракотовый.
+  - **Trailing chevron column** — `ChevronRight` opacity 0→1 + translate-x -4→0 на row hover. Affordance «click → open». Заменяет dead `⋯` actions cell.
+  - **Row hover** — `var(--surface-2)` + group-hover для chevron.
+- **EmptyBlock split:** `EmptyZero` (когда total=0 → "Пока никого не проверяли" + FileSearch icon) и `EmptyFiltered` (когда filtered=0 но total>0 → "Ничего не найдено" + Search icon). Оба — icon-tile 72px + radial brand-primary-soft orb + linear-gradient surface→brand-primary-soft bg.
+- **Pagination split:** `Pagination` для totalPages > 1; `PaginationFooter` (just «Показано N из M») когда totalPages = 1 — убирает мёртвый «‹ 1 ›» control.
+
+*i18n (ru+uz)* — `bank.history`: убраны `filter_more`, `row_actions`, `empty` (старый плоский); добавлены `empty_title/empty_desc` (filtered) + `empty_zero_title/empty_zero_desc` (нет вообще), `rel_just_now/rel_minutes/rel_hours/rel_yesterday/rel_days` (ICU-plural). `col_company` «Название компании» → «Компания» (короче для density). `subtitle` дополнен «Жми на строку, чтобы открыть полное досье.». `export` «Экспорт» → «Экспорт CSV».
+
+**Verify status:** tsc + eslint (no-restricted-syntax clean) + 88 vitest tests (61 → 77 после Phase 2 → 88 теперь, +11 relative-time) + next build (16 routes) + ruff (Phase 3 не трогает backend) — все зелёные.
+
+**Files changed (5):**
+- `web/src/app/(bank)/history/_components/history-view.tsx` — полный rewrite
+- `web/src/features/history/relative-time.ts` (new)
+- `web/src/features/history/relative-time.test.ts` (new, 11 tests)
+- `web/src/i18n/ru.json` — `bank.history` keyspace
+- `web/src/i18n/uz.json` — `bank.history` keyspace
 
 ---
 
@@ -266,5 +305,6 @@ Issues которые я нашёл в аудитах но user решил ос�
 | 2026-05-13 | Design Sweep | **Phase 1 Login DONE** — план фаз (`6c45af3`), subtle scale-up (`0a1c86c`: title 30/inputs 48/CTA 50, +4..9%), `-webkit-autofill` override (`4997d5b`), card final 355px (`8dc74cb` 395→380, `34d97f6` 380→355 — focused-positioning, Stripe/Linear territory). 5 cross-phase tech-debt issues (CA-DS1..CA-DS5) отложены. Готово к Phase 2 Search в новой сессии. |
 | 2026-05-13 | Design Sweep | **Phase 2 Search DONE — design statement** — переход с subtle scale-up на full overhaul (premium private-bank эстетика). Backend: `/api/bank/borrowers/search` расширен `card: SearchCardData` (legal_form / recommendation / revenue_ltm / yoy_pct / business_age_months / signals_* / monthly_revenue_12m) — переиспользует `LoadDossierForView` use case. Frontend: warm-cream sidebar (#FAF9F5) + premium-card «+ Новая заявка» с rotating plus + active left-border + online-dot. Topbar trust-pill «● Все системы работают». Search-view: 34px h1, 56px form, recent chips с active-spark synced на result data. ResultCard: ScoreRing 112px + count-up 0→score (1.2s) + reco-pill (color из recommendation); 4 mini-meta KPI; RevenueSparkline 12 мес с hover tooltip отдающим реальный месяц+млн сум (smooth Bezier path, draw animation 1.6s). AmbientOrbs (mouse parallax ±14px + CSS drift 36/48s, lazy-load) + GridPattern (40×40 squares с radial mask, lazy-load). Хук `useReducedMotion` отключает animations при OS preference. i18n ~20 новых ключей ru+uz. **Initial**: `c9afbce` (16 файлов). **Hotfix series**: ring tone+real live-strip backend `610a86d` (+5 stats tests, /api/bank/stats/today + repo + DTO + LiveStrip useQuery), BFF route + clean ring `4e9fcf0` (drop-shadow halo убран, app/api/bank/stats/today/route.ts), lazy decoration `f9d2ec5` (dynamic AmbientOrbs/GridPattern), showcase-bar `4f6ebb1` (3 кнопки внизу триггерят реальный flow с preset ИНН — product feature, не debug), dev-indicator `022dfcf` (bottom-left). Verify final: ruff/mypy strict 234 src + 60 backend integration + tsc + eslint + 77 vitest + next build (16 routes incl. /api/bank/stats/today) — зелёные. |
 | 2026-05-13 | UI sweep | **i18n sweep — финал (CA-063b)** — 5 коммитов закрыли все оставшиеся surfaces. (1) `recommendationLabel` удалён из `bank-api.ts`, callsites на `bank.history.rec_*`. (2) shared `components/topbar.tsx` (draft-state badges). (3) bank shell: `(bank)/_components/topbar` (TITLE_MAP→keys), `settings-view` (4 секции), `help-view` (FAQ через `t.rich` с тегами `b/code/good/warn/bad`). (4) dossier sub-views: sub-header / borrower-card / kpi-row / risk-signals (19 rule labels через `t.has`+fallback) / revenue-24m-chart / score-gauge / readiness-badge (тест обёрнут в Provider). (5) manual-input wizard (14 файлов: page-head/stepper/form-footer/info-banner + step-1..3 + financial-table/dscr-summary/parsed-files-dropzone/soliq-upload/checklist). `classifyDscrRisk` теперь возвращает `key`, не `label`. ICU-plural для files/fields counts, `t.rich` для FAQ. Brand-strings (Bank Mode, DSCR, UZS, ИНН, my3.soliq.uz, ops@uzbekbank.uz) не локализованы. | `757d0ba`..`d923051` |
+| 2026-05-13 | Design Sweep | **Phase 3 History DONE — design statement.** Premium data-grid: убрана `+ Новая заявка` сверху (дубль sidebar CTA), оставлен `Экспорт CSV`. `LiveStrip` из Phase 2 переиспользован между PageHead и Tabs. Table headers: white bg + 10.5px uppercase letter-spacing 0.08 + ink-4 + inset bottom-shadow + sticky top:0 (был мутный surface-2). `ScoreCell` — vertical accent strip 3×22 (color = recommendation band) + crisp число mono 16px (color = score band, Tinkoff/Brex pattern). `DateCell` 2-line: абс. дата + relative time (свежие ≤сегодня/вчера → зелёный; ≥7д → скрыт). `AnalystCell` gradient на `brand-primary-soft → brand-primary` (был hardcoded #D88E73→#B5624A). Trailing chevron column opacity 0→1 на row hover (заменил dead `⋯`). EmptyState split: `EmptyZero` (total=0 «Пока никого не проверяли») vs `EmptyFiltered` (filtered=0). Pagination split: footer-only когда totalPages=1. Toolbar: убрана dead «Ещё». Новый `features/history/relative-time.ts` + 11 unit-тестов (ICU-plural ru+uz, календарный yesterday). i18n keyspace: +`rel_*`, +`empty_zero_*`, –`filter_more`, –`row_actions`. Verify: tsc + eslint + 88 vitest + next build (16 routes) — зелёные. | pending commit |
 
 > Сжатая история. Полные decomposition / smoke numbers / per-step rationale — в commit messages (`git log --oneline`) и `docs/adr/`.
