@@ -129,7 +129,16 @@ async def challenge(
         raise HTTPException(status_code=401, detail="invalid_challenge_token") from exc
 
     orm = await analyst_repo.get_orm(claims.analyst_id)
-    if orm is None or not orm.is_active or orm.mfa_secret is None:
+    # Half-enrolled (secret есть, но enrolled_at NULL) — НЕ принимаем challenge:
+    # такой user не должен был получить challenge_token изначально (login смотрит
+    # на computed mfa_enabled = enrolled_at IS NOT NULL). Защита на случай если
+    # БД был мутирован в обход (race / прямой SQL).
+    if (
+        orm is None
+        or not orm.is_active
+        or orm.mfa_secret is None
+        or orm.mfa_enrolled_at is None
+    ):
         raise HTTPException(status_code=401, detail="invalid_challenge_token")
 
     code_ok = False
@@ -189,7 +198,10 @@ async def disable(
         raise HTTPException(status_code=401, detail="invalid_credentials")
 
     orm = await analyst_repo.get_orm(analyst.id)
-    if orm is None or orm.mfa_secret is None:
+    # Disable доступен только полностью enrolled-пользователям (verify был
+    # успешен → mfa_enrolled_at != NULL). Half-enrolled state UI не показывает
+    # «Отключить», но защита здесь дублирует invariant.
+    if orm is None or orm.mfa_secret is None or orm.mfa_enrolled_at is None:
         raise HTTPException(status_code=400, detail="mfa_not_enabled")
 
     if not verify_totp(orm.mfa_secret, payload.code):
