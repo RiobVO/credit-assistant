@@ -39,7 +39,7 @@ class EnrollmentArtifacts:
 
 
 def generate_enrollment(
-    email: str, *, _suffix_factory: "Callable[[], str] | None" = None
+    email: str, *, _suffix_factory: Callable[[], str] | None = None
 ) -> EnrollmentArtifacts:
     """Генерирует свежий TOTP secret + provisioning URI.
 
