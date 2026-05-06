@@ -7,6 +7,12 @@
 При совпадении email — обновляет password_hash, full_name, role, is_active.
 Используется для dev/POC; в production seed выполняется через защищённый
 канал банковского администратора.
+
+Флаг ``--mfa-enabled`` устарел: после Phase 5.B (real TOTP) flag в API
+вычисляется из наличия ``mfa_secret``. Без enrollment-flow через UI
+(``POST /api/bank/auth/mfa/enroll/start+verify``) chip «✓ 2FA» в Settings
+не зажжётся. Флаг оставлен для backwards-compat seed-команд, но имеет
+эффект только на stored bool в БД, не на API.
 """
 
 from __future__ import annotations
@@ -28,6 +34,7 @@ async def _upsert_analyst(
     full_name: str,
     role: str,
     is_active: bool,
+    mfa_enabled: bool,
 ) -> tuple[str, str]:
     """Upsert по email. Возвращает (action, analyst_id) где action ∈ {created, updated}."""
     hasher = PasswordHasher(rounds=12)
@@ -44,6 +51,7 @@ async def _upsert_analyst(
                 full_name=full_name,
                 role=role,
                 is_active=is_active,
+                mfa_enabled=mfa_enabled,
             )
             session.add(new)
             await session.flush()
@@ -52,6 +60,7 @@ async def _upsert_analyst(
         existing.full_name = full_name
         existing.role = role
         existing.is_active = is_active
+        existing.mfa_enabled = mfa_enabled
         await session.flush()
         return "updated", str(existing.id)
 
@@ -70,6 +79,11 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Создать/обновить как неактивного — login будет отклонён.",
     )
+    parser.add_argument(
+        "--mfa-enabled",
+        action="store_true",
+        help="Пометить как enrolled в банковский SSO/AD (UI чип «✓ 2FA активна»).",
+    )
     args = parser.parse_args(argv)
 
     if sys.platform == "win32":
@@ -83,6 +97,7 @@ def main(argv: list[str] | None = None) -> int:
                 full_name=args.full_name,
                 role=args.role,
                 is_active=not args.inactive,
+                mfa_enabled=args.mfa_enabled,
             )
         finally:
             # dispose в том же loop'е — глобальный engine привязан к нему.

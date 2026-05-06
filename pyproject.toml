@@ -25,6 +25,7 @@ dependencies = [
     "matplotlib>=3.9",
     "bcrypt>=4.2",
     "python-jose[cryptography]>=3.3.0",
+    "pyotp>=2.9",
 ]
 
 [dependency-groups]

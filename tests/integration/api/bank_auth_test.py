@@ -158,7 +158,54 @@ async def test_me_returns_analyst_with_valid_access_token(
         "/api/bank/auth/me", headers={"Authorization": f"Bearer {access}"}
     )
     assert resp.status_code == 200
-    assert resp.json()["email"] == EMAIL
+    body = resp.json()
+    assert body["email"] == EMAIL
+    # Phase 5 Settings: новые поля для UI Профиль.
+    assert "created_at" in body
+    assert "password_changed_at" in body
+    assert body["mfa_enabled"] is False
+
+
+async def test_me_returns_mfa_enabled_only_when_secret_set(
+    api_client: httpx.AsyncClient, pg_session: AsyncSession
+) -> None:
+    """Phase 5.B: mfa_enabled computed-from-secret. Stored bool=True без secret
+    игнорируется (сжигает security theater от Phase 5.A seed-flag'а)."""
+    hasher = PasswordHasher(rounds=4)
+    admin_orm = AnalystORM(
+        email="admin@bank.uz",
+        password_hash=hasher.hash(PASSWORD),
+        full_name="Admin A.",
+        role="senior_analyst",
+        is_active=True,
+        # Stored bool=True, но secret отсутствует → API должен вернуть False.
+        mfa_enabled=True,
+    )
+    pg_session.add(admin_orm)
+    await pg_session.flush()
+
+    login = (
+        await api_client.post(
+            "/api/bank/auth/login", json={"email": "admin@bank.uz", "password": PASSWORD}
+        )
+    ).json()
+    me_resp = await api_client.get(
+        "/api/bank/auth/me",
+        headers={"Authorization": f"Bearer {login['access_token']}"},
+    )
+    assert me_resp.status_code == 200
+    # Stored bool=True игнорируется — секрета нет.
+    assert me_resp.json()["mfa_enabled"] is False
+
+    # Симулируем real enrollment: ставим secret напрямую.
+    admin_orm.mfa_secret = "JBSWY3DPEHPK3PXP"
+    await pg_session.flush()
+
+    me_resp2 = await api_client.get(
+        "/api/bank/auth/me",
+        headers={"Authorization": f"Bearer {login['access_token']}"},
+    )
+    assert me_resp2.json()["mfa_enabled"] is True
 
 
 async def test_me_returns_401_without_token(api_client: httpx.AsyncClient) -> None:

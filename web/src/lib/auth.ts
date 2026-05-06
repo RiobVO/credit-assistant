@@ -10,6 +10,11 @@ export type AnalystSummary = {
   email: string;
   full_name: string;
   role: string;
+  // Phase 5 Settings: рендерятся в /settings → Профиль.
+  // ISO 8601 timestamps; UI парсит через `new Date(...)`.
+  created_at: string;
+  password_changed_at: string;
+  mfa_enabled: boolean;
 };
 
 export type LoginRequest = { email: string; password: string };

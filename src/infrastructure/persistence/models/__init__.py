@@ -10,6 +10,7 @@ from infrastructure.persistence.models.borrower import BorrowerORM
 from infrastructure.persistence.models.borrower_snapshot import BorrowerSnapshotORM
 from infrastructure.persistence.models.dossier import DossierORM
 from infrastructure.persistence.models.draft import DraftORM
+from infrastructure.persistence.models.system_uptime_day import SystemUptimeDayORM
 
 __all__ = [
     "AnalystORM",
@@ -18,4 +19,5 @@ __all__ = [
     "BorrowerSnapshotORM",
     "DossierORM",
     "DraftORM",
+    "SystemUptimeDayORM",
 ]
