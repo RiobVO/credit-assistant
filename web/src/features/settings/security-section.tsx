@@ -7,6 +7,8 @@ import { useState } from "react";
 import { useAnalyst } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
+import { MfaSection } from "./mfa-section";
+
 const PASSWORD_FRESH_THRESHOLD_DAYS = 90;
 
 type PasswordStrength = {
@@ -81,7 +83,9 @@ export function SecuritySection() {
   };
 
   return (
-    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-7">
+    <div className="flex flex-col gap-5">
+      <MfaSection />
+      <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-7">
       {analyst ? (
         <PasswordStatusRow passwordChangedAt={analyst.password_changed_at} />
       ) : null}
@@ -142,6 +146,7 @@ export function SecuritySection() {
           <span className="text-[11.5px] text-[var(--ink-4)]">{t("endpoint_wip")}</span>
         </div>
       </form>
+      </div>
     </div>
   );
 }

@@ -1,7 +1,8 @@
-// BFF proxy: POST /api/auth/login → backend /api/bank/auth/login.
-// Backend возвращает либо обычный LoginResponse (пакуем tokens в cookies,
-// отдаём AnalystSummary), либо MFA-challenge {requires_mfa, challenge_token}
-// — в этом случае cookies НЕ ставятся, и frontend переключается на step-2.
+// BFF: POST /api/auth/mfa/challenge → backend /api/bank/auth/mfa/challenge.
+// БЕЗ auth-cookie (это и есть login step-2 — у пользователя ещё нет access-token).
+// Body: {challenge_token, code, use_backup_code}.
+// При успехе backend возвращает LoginResponse — пакуем tokens в cookies,
+// frontend получает только AnalystSummary (тот же pattern что /api/auth/login).
 
 import { NextResponse } from "next/server";
 
@@ -22,11 +23,6 @@ type BackendLoginResponse = {
   };
 };
 
-type BackendMfaChallenge = {
-  requires_mfa: true;
-  challenge_token: string;
-};
-
 export async function POST(req: Request) {
   let body: unknown;
   try {
@@ -35,7 +31,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ detail: "invalid_json" }, { status: 400 });
   }
 
-  const upstream = await fetch(`${API_URL}/api/bank/auth/login`, {
+  const upstream = await fetch(`${API_URL}/api/bank/auth/mfa/challenge`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -49,21 +45,9 @@ export async function POST(req: Request) {
     });
   }
 
-  const payload = (await upstream.json()) as
-    | BackendLoginResponse
-    | BackendMfaChallenge;
-
-  // MFA-challenge: cookies НЕ ставим, токенов в ответе нет — пробрасываем как есть.
-  if ((payload as BackendMfaChallenge).requires_mfa === true) {
-    return NextResponse.json(payload);
-  }
-
-  const data = payload as BackendLoginResponse;
+  const data = (await upstream.json()) as BackendLoginResponse;
   const response = NextResponse.json(data.analyst);
 
-  // access cookie — на весь сайт, чтобы middleware /search/history его видел.
-  // TTL чуть больше backend JWT access (15м) — клиентский redirect на 401
-  // обрабатывает истечение надёжнее, чем точное совпадение TTL.
   const isProd = process.env.NODE_ENV === "production";
   response.cookies.set(ACCESS_COOKIE, data.access_token, {
     httpOnly: true,
@@ -72,7 +56,6 @@ export async function POST(req: Request) {
     path: "/",
     maxAge: 15 * 60,
   });
-  // refresh cookie — узкий path /api/auth, чтобы не утекать в каждый request.
   response.cookies.set(REFRESH_COOKIE, data.refresh_token, {
     httpOnly: true,
     secure: isProd,

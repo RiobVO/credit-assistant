@@ -1,14 +1,19 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowRight, Eye, EyeOff, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Eye, EyeOff, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
-import { AuthError, login } from "@/lib/auth";
+import {
+  AuthError,
+  isMfaChallenge,
+  login,
+  submitMfaChallenge,
+} from "@/lib/auth";
 
 import styles from "./login.module.css";
 
@@ -31,6 +36,12 @@ export function LoginView() {
   const [showPass, setShowPass] = useState(false);
   const [remember, setRemember] = useState(true);
   const [serverError, setServerError] = useState<string | null>(null);
+  // Step-2 state: backend ответил requires_mfa, нужен TOTP-код.
+  // challenge_token живёт 5 минут (см. JWT-сервис), потом backend вернёт 401
+  // и пользователь увидит «Срок сессии истёк — войдите заново».
+  const [mfaState, setMfaState] = useState<{ challengeToken: string } | null>(
+    null,
+  );
 
   const {
     register,
@@ -69,7 +80,12 @@ export function LoginView() {
   const onSubmit = async (values: FormValues) => {
     setServerError(null);
     try {
-      await login(values);
+      const result = await login(values);
+      if (isMfaChallenge(result)) {
+        // Backend требует второй фактор — переключаемся на MFA-step.
+        setMfaState({ challengeToken: result.challenge_token });
+        return;
+      }
       router.push(nextPath);
       router.refresh();
     } catch (e) {
@@ -79,6 +95,16 @@ export function LoginView() {
         setServerError(t("error_generic"));
       }
     }
+  };
+
+  const handleMfaSuccess = () => {
+    router.push(nextPath);
+    router.refresh();
+  };
+
+  const handleMfaBack = () => {
+    setMfaState(null);
+    setServerError(null);
   };
 
   return (
@@ -110,6 +136,14 @@ export function LoginView() {
 
       <main className={styles.main}>
         <div className={styles.card}>
+          {mfaState ? (
+            <MfaStep
+              challengeToken={mfaState.challengeToken}
+              onSuccess={handleMfaSuccess}
+              onBack={handleMfaBack}
+            />
+          ) : (
+            <>
           <div className={styles.eyebrow}>Authentication</div>
           <h1 className={styles.title}>{t("title")}</h1>
           <p className={styles.sub}>{t("subtitle")}</p>
@@ -211,6 +245,8 @@ export function LoginView() {
               )}
             </button>
           </form>
+            </>
+          )}
         </div>
       </main>
 
@@ -222,5 +258,157 @@ export function LoginView() {
         <span>© 2026 Uzbekbank · Все права защищены</span>
       </footer>
     </div>
+  );
+}
+
+// Step-2 после успешной верификации пароля: ввод TOTP (6 цифр) либо backup-кода
+// (8 буквенно-цифровых символов). challenge_token живёт 5 минут на backend.
+function MfaStep({
+  challengeToken,
+  onSuccess,
+  onBack,
+}: {
+  challengeToken: string;
+  onSuccess: () => void;
+  onBack: () => void;
+}) {
+  const t = useTranslations("bank.login");
+  const [useBackup, setUseBackup] = useState(false);
+  const [code, setCode] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  // Mount focus только. Reset при switch — в handleToggleBackup ниже, не в effect
+  // (избегаем react-hooks/set-state-in-effect).
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  const handleToggleBackup = () => {
+    setUseBackup((v) => !v);
+    setCode("");
+    setError(null);
+    // Перевод фокуса на input в следующем tick'е, после ре-рендера.
+    setTimeout(() => inputRef.current?.focus(), 0);
+  };
+
+  const maxLen = useBackup ? 12 : 6;
+  // TOTP — только цифры; backup-код — alphanumeric (backend генерирует base32-like).
+  const sanitize = (raw: string): string =>
+    useBackup
+      ? raw.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, maxLen)
+      : raw.replace(/\D/g, "").slice(0, maxLen);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (submitting) return;
+    const isValid = useBackup ? code.length >= 8 : code.length === 6;
+    if (!isValid) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      await submitMfaChallenge({
+        challenge_token: challengeToken,
+        code,
+        use_backup_code: useBackup,
+      });
+      onSuccess();
+    } catch (err) {
+      if (err instanceof AuthError) {
+        if (err.status === 401) {
+          setError(t("mfa_error_invalid"));
+        } else if (err.status === 403 || err.status === 400) {
+          // 400 — challenge_token expired/invalid; нужно начать с пароля.
+          setError(t("mfa_error_expired"));
+        } else {
+          setError(t("mfa_error_generic"));
+        }
+      } else {
+        setError(t("mfa_error_generic"));
+      }
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <>
+      <div className={styles.eyebrow}>Authentication · 2FA</div>
+      <h1 className={styles.title}>{t("mfa_title")}</h1>
+      <p className={styles.sub}>{t("mfa_subtitle")}</p>
+
+      <form onSubmit={handleSubmit} className={styles.form} noValidate>
+        <div className={styles.group}>
+          <label className={styles.label} htmlFor="mfa-code">
+            {useBackup ? t("mfa_backup_code_label") : t("mfa_code_label")}
+          </label>
+          <input
+            ref={inputRef}
+            id="mfa-code"
+            type="text"
+            inputMode={useBackup ? "text" : "numeric"}
+            autoComplete="one-time-code"
+            maxLength={maxLen}
+            placeholder={useBackup ? "XXXXXXXX" : "••••••"}
+            className={styles.input}
+            style={{
+              textAlign: "center",
+              fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+              letterSpacing: useBackup ? "0.18em" : "0.4em",
+              fontSize: 20,
+            }}
+            value={code}
+            onChange={(e) => setCode(sanitize(e.target.value))}
+            disabled={submitting}
+            autoFocus
+          />
+        </div>
+
+        <button
+          type="button"
+          onClick={handleToggleBackup}
+          className={styles.forgot}
+          style={{ textAlign: "left" }}
+        >
+          {useBackup ? t("mfa_use_authenticator") : t("mfa_use_backup")}
+        </button>
+
+        {error ? (
+          <p className={styles.error} role="alert">
+            {error}
+          </p>
+        ) : null}
+
+        <button
+          type="submit"
+          className={styles.cta}
+          disabled={
+            submitting || (useBackup ? code.length < 8 : code.length !== 6)
+          }
+        >
+          {submitting ? (
+            <>
+              <Loader2 size={15} className="animate-spin" />
+              {t("mfa_submitting")}
+            </>
+          ) : (
+            <>
+              {t("mfa_submit")} <ArrowRight size={15} />
+            </>
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={onBack}
+          disabled={submitting}
+          className={styles.forgot}
+          style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+        >
+          <ArrowLeft size={13} />
+          {t("mfa_back_to_password")}
+        </button>
+      </form>
+    </>
   );
 }
