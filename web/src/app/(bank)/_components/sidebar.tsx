@@ -138,8 +138,11 @@ export function BankSidebar() {
         </nav>
       </div>
 
-      {/* Secondary nav — help (внизу) */}
-      <div className="mt-auto px-3 pb-2">
+      {/* Thin divider — отделяет Workspace от Help, не громко как eyebrow */}
+      <div className="mx-6 my-1 border-t border-[color-mix(in_oklab,var(--nav-border)_60%,transparent)]" />
+
+      {/* Secondary nav — help (сразу под Workspace, не внизу) */}
+      <div className="px-3 pt-2 pb-2">
         <div className="px-3 pb-2 text-[10.5px] font-semibold tracking-[0.1em] text-[var(--nav-text-3)] uppercase">
           {tSidebar("help_section")}
         </div>
@@ -154,8 +157,8 @@ export function BankSidebar() {
         </nav>
       </div>
 
-      {/* User card — gradient bg + online-dot + role · онлайн */}
-      <div className="m-3 mt-1 flex items-center gap-3 rounded-[10px] border border-[color-mix(in_oklab,var(--ink-1)_6%,transparent)] bg-gradient-to-b from-white/60 to-white/30 p-[10px]">
+      {/* User card — gradient bg + online-dot + role · онлайн. mt-auto толкает вниз. */}
+      <div className="mt-auto m-3 flex items-center gap-3 rounded-[10px] border border-[color-mix(in_oklab,var(--ink-1)_6%,transparent)] bg-gradient-to-b from-white/60 to-white/30 p-[10px]">
         <div className="relative">
           <div className="grid size-8 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[var(--brand-primary-soft)] to-[color-mix(in_oklab,var(--brand-primary)_25%,white)] text-[12px] font-semibold text-[var(--brand-primary-ink)]">
             {analyst ? initials(analyst.full_name) : "—"}
