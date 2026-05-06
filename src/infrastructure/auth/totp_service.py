@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import secrets
 import string
+from collections.abc import Callable
 from dataclasses import dataclass
 
 import pyotp
@@ -37,9 +38,36 @@ class EnrollmentArtifacts:
     provisioning_uri: str
 
 
-def generate_enrollment(email: str) -> EnrollmentArtifacts:
+def generate_enrollment(
+    email: str, *, _suffix_factory: "Callable[[], str] | None" = None
+) -> EnrollmentArtifacts:
+    """Генерирует свежий TOTP secret + provisioning URI.
+
+    Account name в URI — это ``localpart+SUFFIX@domain`` (RFC 5233 subaddress),
+    где SUFFIX — короткий случайный hex. Это обходит quirk Microsoft Authenticator
+    + других apps c iCloud/Google-Account backup: они дедуплят добавленные
+    аккаунты по подстроке-email, а не по полному label. Если local-part
+    каждое re-enrollment отличается — MS Auth добавит как новый аккаунт без
+    диалога «уже существует».
+
+    Real-world сценарий: аналитик потерял телефон → IT отключает 2FA через
+    admin-flow → аналитик заново enroll'ится с нового телефона. Старая
+    запись в его MS-account-cloud не помешает scan'у нового QR.
+
+    Тестируемость: ``_suffix_factory`` инжектируется (для детерминизма в тестах);
+    в production — ``secrets.token_hex(3)`` → 6-char hex (~16M вариантов).
+    """
     secret = pyotp.random_base32()
-    uri = pyotp.totp.TOTP(secret).provisioning_uri(name=email, issuer_name=_ISSUER)
+    suffix = (_suffix_factory or (lambda: secrets.token_hex(3)))()
+    if "@" in email:
+        local, _, domain = email.partition("@")
+        account_name = f"{local}+{suffix}@{domain}"
+    else:
+        # email без @ — corner case (CLI seed может прислать non-email)
+        account_name = f"{email}+{suffix}"
+    uri = pyotp.totp.TOTP(secret).provisioning_uri(
+        name=account_name, issuer_name=_ISSUER
+    )
     return EnrollmentArtifacts(secret=secret, provisioning_uri=uri)
 
 
