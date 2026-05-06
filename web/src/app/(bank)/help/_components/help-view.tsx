@@ -14,7 +14,6 @@ import {
   Phone,
   RotateCcw,
   ScrollText,
-  X,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
@@ -100,8 +99,8 @@ export function HelpView() {
               </span>
             </header>
             <div>
-              {FAQ_IDS.map((id, idx) => (
-                <FaqRow key={id} id={id} defaultOpen={idx === 0} />
+              {FAQ_IDS.map((id) => (
+                <FaqRow key={id} id={id} />
               ))}
             </div>
           </section>
@@ -137,73 +136,28 @@ function StatusCard() {
   );
 }
 
-const INCIDENT_DISMISS_KEY = "ca:help-incident-dismissed";
-
 function IncidentBand() {
   const t = useTranslations("bank.help");
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    let dismissed = false;
-    try {
-      dismissed = window.localStorage.getItem(INCIDENT_DISMISS_KEY) === "1";
-    } catch {
-      dismissed = false;
-    }
-    if (dismissed) return undefined;
-    const tId = setTimeout(() => setVisible(true), 0);
-    return () => clearTimeout(tId);
-  }, []);
-
-  const onDismiss = () => {
-    try {
-      window.localStorage.setItem(INCIDENT_DISMISS_KEY, "1");
-    } catch {
-      /* ignore quota / private-mode */
-    }
-    setVisible(false);
-  };
-
   return (
-    <div
-      className={cn(
-        "grid transition-[grid-template-rows,opacity,margin-bottom] duration-300 ease-out",
-        visible
-          ? "mb-6 grid-rows-[1fr] opacity-100"
-          : "mb-0 grid-rows-[0fr] opacity-0",
-      )}
-      aria-hidden={!visible}
-    >
-      <div className="min-h-0 overflow-hidden">
-        <div className="flex items-center gap-3.5 rounded-xl border border-[var(--state-bad-border)] bg-[var(--state-bad-bg)] p-3.5 pr-2">
-          <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-[color:color-mix(in_srgb,var(--state-bad-fg)_10%,transparent)] text-[var(--state-bad-fg)]">
-            <AlertTriangle className="size-4" strokeWidth={2.2} />
-          </div>
-          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <div className="text-[13px] font-bold text-[var(--state-bad-fg)]">
-              {t("incident_title")}
-            </div>
-            <div className="text-[12.5px] leading-snug text-[color:color-mix(in_srgb,var(--state-bad-fg)_85%,var(--ink-1))]">
-              {t("incident_text")}
-            </div>
-          </div>
-          <a
-            href={HOTLINE_TEL}
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-[var(--state-bad-fg)] px-3 py-1.5 text-[12.5px] font-semibold text-white transition-opacity hover:opacity-90"
-          >
-            <Phone className="size-3.5" />
-            {t("incident_cta")}
-          </a>
-          <button
-            type="button"
-            onClick={onDismiss}
-            aria-label={t("incident_dismiss_aria")}
-            className="grid size-7 shrink-0 place-items-center rounded-md text-[color:color-mix(in_srgb,var(--state-bad-fg)_75%,transparent)] transition-colors hover:bg-[color:color-mix(in_srgb,var(--state-bad-fg)_10%,transparent)] hover:text-[var(--state-bad-fg)]"
-          >
-            <X className="size-3.5" />
-          </button>
+    <div className="mb-6 flex items-center gap-3.5 rounded-xl border border-[var(--state-bad-border)] bg-[var(--state-bad-bg)] p-3.5 pr-4">
+      <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-[color:color-mix(in_srgb,var(--state-bad-fg)_10%,transparent)] text-[var(--state-bad-fg)]">
+        <AlertTriangle className="size-4" strokeWidth={2.2} />
+      </div>
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <div className="text-[13px] font-bold text-[var(--state-bad-fg)]">
+          {t("incident_title")}
+        </div>
+        <div className="text-[12.5px] leading-snug text-[color:color-mix(in_srgb,var(--state-bad-fg)_85%,var(--ink-1))]">
+          {t("incident_text")}
         </div>
       </div>
+      <a
+        href={HOTLINE_TEL}
+        className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-[var(--state-bad-fg)] px-3 py-1.5 text-[12.5px] font-semibold text-white transition-opacity hover:opacity-90"
+      >
+        <Phone className="size-3.5" />
+        {t("incident_cta")}
+      </a>
     </div>
   );
 }
