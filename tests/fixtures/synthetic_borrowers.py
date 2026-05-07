@@ -170,12 +170,13 @@ def critical_borrower() -> BorrowerSnapshot:
             Invoice(
                 date=date(2025, 6, 1),
                 amount=Money(Decimal(500_000_000), UZS),
-                vat_amount=Money(Decimal(60_000_000), UZS),  # сумма ЭСФ (seller) << декл.
                 our_role=InvoiceRole.SELLER,
                 counterparty_inn=INN("200000030"),
                 counterparty_name="ООО Однодневка",
             ),
         ],
+        # Агрегат ЭСФ-НДС << декларации (60 млн vs 300 млн) → VAT_ESF_MISMATCH fires.
+        esf_seller_vat_total=Money(Decimal(60_000_000), UZS),
         counterparties_buyers=[shell],
         counterparties_suppliers=[shell],
         tax_events=[
