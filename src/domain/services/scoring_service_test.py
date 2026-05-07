@@ -69,10 +69,16 @@ class TestScoringServiceRecommendation:
             == Recommendation.REVIEW
         )
 
-    def test_above_50_is_reject(self) -> None:
-        # 4 critical = 60 → REJECT
-        flags = [_flag(FlagSeverity.CRITICAL)] * 4
+    def test_at_30_is_reject(self) -> None:
+        # 2 CRITICAL = 30 → REJECT (граница включительно)
+        flags = [_flag(FlagSeverity.CRITICAL)] * 2
         assert ScoringService().score(flags).recommendation == Recommendation.REJECT
+
+    def test_at_29_is_review(self) -> None:
+        # 29 — последнее значение REVIEW
+        flags = [_flag(FlagSeverity.CRITICAL), _flag(FlagSeverity.HIGH), _flag(FlagSeverity.HIGH)]
+        # 15 + 7 + 7 = 29
+        assert ScoringService().score(flags).recommendation == Recommendation.REVIEW
 
 
 class TestScoringServiceCap:
