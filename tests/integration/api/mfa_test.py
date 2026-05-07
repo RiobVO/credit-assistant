@@ -73,7 +73,8 @@ async def _login_and_token(api_client: httpx.AsyncClient) -> str:
     resp = await api_client.post(
         "/api/bank/auth/login", json={"email": EMAIL, "password": PASSWORD}
     )
-    return resp.json()["access_token"]
+    token: str = resp.json()["access_token"]
+    return token
 
 
 async def test_enroll_start_returns_secret_and_uri(
