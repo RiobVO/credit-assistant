@@ -7,6 +7,8 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 from fastapi import APIRouter, HTTPException, Request, Response, status
 
 from application.use_cases.authenticate_analyst import (
@@ -16,6 +18,7 @@ from application.use_cases.authenticate_analyst import (
 from infrastructure.auth.jwt_service import InvalidTokenError
 from interfaces.api.bank.auth_schema import (
     AnalystResponse,
+    ChangePasswordRequest,
     LoginRequest,
     LoginResponse,
     MfaRequiredResponse,
@@ -27,6 +30,7 @@ from interfaces.api.bank.dependencies import (
     AuditLogRepoDep,
     AuthnDep,
     CurrentAnalyst,
+    HasherDep,
     JwtServiceDep,
 )
 
@@ -121,6 +125,51 @@ async def logout(
     # JWT stateless: серверной инвалидации в v1 нет. Реальный logout — удаление
     # httpOnly cookie на стороне Next BFF. Здесь только аудит-запись.
     await audit_log.record(event="logout", analyst_id=analyst.id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(
+    "/change-password",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        400: {"description": "password_unchanged"},
+        401: {"description": "invalid_credentials"},
+    },
+)
+async def change_password(
+    payload: ChangePasswordRequest,
+    analyst: CurrentAnalyst,
+    authn: AuthnDep,
+    analyst_repo: AnalystRepoDep,
+    hasher: HasherDep,
+    audit_log: AuditLogRepoDep,
+) -> Response:
+    """Авторизованная смена пароля.
+
+    Pattern зеркальный `/mfa/disable`: re-auth по current через ``AuthnPort``,
+    затем mutation на ORM-инстансе. Не делаем revoke сессий — JWT в v1
+    stateless (TODO[CA-019]); access токен остаётся валидным до TTL.
+    """
+    identity = await authn.authenticate(analyst.email, payload.current_password)
+    if identity is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid_credentials"
+        )
+
+    orm = await analyst_repo.get_orm(analyst.id)
+    if orm is None:
+        # CurrentAnalyst уже подтвердил identity, поэтому это defensive;
+        # 404 здесь означал бы рассинхрон БД между двумя запросами.
+        raise HTTPException(status_code=404, detail="analyst_not_found")
+
+    # Запрет реюза текущего пароля: банковский compliance не любит «сменил на
+    # тот же». Verify ДО hash() нового, чтобы не тратить bcrypt cost зря.
+    if hasher.verify(payload.new_password, orm.password_hash):
+        raise HTTPException(status_code=400, detail="password_unchanged")
+
+    orm.password_hash = hasher.hash(payload.new_password)
+    orm.password_changed_at = datetime.now(tz=UTC)
+    await audit_log.record(event="password_changed", analyst_id=analyst.id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

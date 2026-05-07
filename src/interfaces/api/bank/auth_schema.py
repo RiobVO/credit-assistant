@@ -53,3 +53,15 @@ class RefreshRequest(BaseModel):
 class RefreshResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
+
+class ChangePasswordRequest(BaseModel):
+    """POST /api/bank/auth/change-password — авторизованная смена пароля.
+
+    `new_password` min_length=12 синхронизирован с UI strength-meter: на
+    frontend есть rich-валидация (digit/upper/special), backend гарантирует
+    минимум как defence-in-depth.
+    """
+
+    current_password: str = Field(min_length=1, max_length=200)
+    new_password: str = Field(min_length=12, max_length=200)
