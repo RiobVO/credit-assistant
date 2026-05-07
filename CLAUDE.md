@@ -10,7 +10,14 @@
 **Last completed task:** 2.4.1 ManualInput API — `interfaces/api/shared/dossier_{schema,mapper,dependencies}.py` + endpoint `POST /api/manual-input`. Pydantic v2 схема со `extra="forbid"` валидирует ИНН (9/14 цифр), Decimal-суммы, поля Borrower + опциональные financial reports / monthly turnover / quarterly reports / counterparties / invoices / tax events / shares. Mapper Pydantic ↔ domain. RuleRegistry грузится из YAML через `lru_cache`. Endpoint: payload → Borrower + ManualChunk → use case → 17 правил → ScoringService → JSON. Integration tests на TestClient покрывают 4 правила (LOAN_TO_REVENUE, DIRECTOR_CHANGED, OKVED_CHANGED, NEGATIVE_PROFIT_3Q) + invalid INN/extra field/missing borrower → 422. 264 теста passed (+10), ruff + mypy --strict зелёные.
 **Next task:** 2.4.2 ManualInput UI — `web/app/(accountant)/manual-input/page.tsx` через react-hook-form + zod, multi-step (basic info → financials → loan request). Подключить TanStack Query мутацию к `/api/manual-input`, рендерить `DossierResponse`.
 
-**Phase 2 декомпозиция (согласована):** 2.0 ✓ → 2.1 ✓ → 2.2 EsfCsvAdapter (cp1251, реальный файл папы) → 2.4 ManualInputAdapter (API+UI) → 2.5 persistence (Alembic+Postgres+repos) → 2.3 SoliqExcelAdapter (после первой реальной выгрузки) → 2.6 E2E на 5 фирмах. VAT-адаптер для активации `VAT_ESF_MISMATCH` появится в 2.x после получения сводной справки НДС.
+**Phase 2 декомпозиция (согласована):** 2.0 ✓ → 2.1 ✓ → 2.2 ✓ → 2.4.1 ✓ (API) → **2.4.2 (UI)** ← здесь → 2.5 persistence (Alembic+Postgres+repos) → 2.3 SoliqExcelAdapter (после первой реальной выгрузки) → 2.6 E2E на 5 фирмах. VAT-адаптер для активации `VAT_ESF_MISMATCH` появится в 2.x после получения сводной справки НДС.
+
+**Активная ветка:** `feat/phase-2-data-adapters` (HEAD `7408aae`, запушена в origin). Не смержена в main. После Phase 2 — PR на main.
+
+**Договорённости по Phase 2 (зафиксированы):**
+- VAT хранится отдельно от ЭСФ — агрегат на `BorrowerSnapshot.esf_seller_vat_total` (ADR 0004).
+- ИНН заёмщика приходит явно от пользователя (через UI/API), не угадывается из имени файла.
+- Реальные данные папы (полный CSV 25k строк) — локально, не в git. В repo только `*_sample.csv`-фикстуры (см. `.gitignore`).
 
 ---
 
@@ -64,3 +71,4 @@
 | 2026-05-08 | 2 | 2.1 Port + use case | `application/dto/parsed_data_chunk.py` (3 chunk-DTO + union), `application/ports/data_source_port.py` (`DataSourcePort` Protocol), `application/use_cases/build_borrower_snapshot.py` (+ `ChunkBorrowerMismatchError`). 13 use case-тестов; всего 231 passed; ruff + mypy --strict зелёные. |
 | 2026-05-08 | 2 | 2.2 EsfCsvAdapter | `infrastructure/adapters/esf_csv/{parser,errors}.py` для e-factura.uz CSV (cp1251, `;`). Регекс на дату устойчив к 3 форматам номера; десятичные суммы с запятой; ПИНФЛ-покупатели; пустой ИНН → skip. Sample-фикстура (40 строк) в repo, полный 25k файл в `.gitignore`. Sanity check: парсер усваивает 25 292 invoices папы за 2020-01–2026-05. 22 теста; всего 254 passed; ruff + mypy --strict зелёные. Удалён placeholder `esf_json/`. |
 | 2026-05-08 | 2 | 2.4.1 ManualInput API | `interfaces/api/shared/dossier_{schema,mapper,dependencies}.py` + endpoint `POST /api/manual-input` (Pydantic v2, FastAPI Annotated Depends, RuleRegistry через `lru_cache`). End-to-end: payload → Borrower+ManualChunk → use case → 17 правил → ScoringService → JSON. 10 integration-тестов покрывают 4 правила + 422-валидацию. 264 passed; ruff + mypy --strict зелёные. |
+| 2026-05-08 | 2 | **Session close** (2.0 → 2.4.1) | За одну сессию закрыто 4 атомарных шага Phase 2 на ветке `feat/phase-2-data-adapters` (`b4c0d3f` → `0ee4cf3` → `4127a3d` → `7408aae`). End-to-end pipeline работает: payload → snapshot → 17 правил → score → JSON. Реальный CSV папы (25 292 invoices, 2020–2026, 111 контрагентов) парсится без ошибок. Открытое: 2.4.2 UI — следующая сессия. |
