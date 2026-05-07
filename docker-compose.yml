@@ -66,6 +66,9 @@ services:
       # CORS — для frontend на host:3000. Pydantic Settings парсит list-поля как
       # JSON, поэтому передаём массивом, а не comma-separated.
       CORS_ALLOWED_ORIGINS: '["http://localhost:3000"]'
+      # CA-DS9: фоновый сбор uptime раз в минуту → честная статистика дней
+      # без сбоев в UI /settings → О системе, независимо от user-traffic.
+      UPTIME_COLLECTOR_ENABLED: "true"
     ports:
       - "8000:8000"
 
