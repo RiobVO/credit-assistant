@@ -12,7 +12,6 @@ def _inv() -> Invoice:
     return Invoice(
         date=date(2026, 4, 15),
         amount=Money(Decimal("1000000"), Currency.UZS),
-        vat_amount=Money(Decimal("120000"), Currency.UZS),
         our_role=InvoiceRole.SELLER,
         counterparty_inn=INN("987654321"),
         counterparty_name="ООО Покупатель",
@@ -30,6 +29,6 @@ class TestInvoiceConstruction:
         assert inv.our_role == InvoiceRole.SELLER
         assert inv.counterparty_inn.value == "987654321"
 
-    def test_amount_and_vat_in_same_currency(self) -> None:
+    def test_amount_currency_is_uzs(self) -> None:
         inv = _inv()
-        assert inv.amount.currency == inv.vat_amount.currency
+        assert inv.amount.currency == Currency.UZS
