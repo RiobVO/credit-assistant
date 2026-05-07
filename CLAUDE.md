@@ -6,7 +6,7 @@
 
 ## Current Status
 
-**Phase:** 5 закрыта целиком — Settings UI + real 2FA + **3 functional holes закрыты 2026-05-14** (CA-068 change-password `7d65e29`, CA-DS13 admin-reset 2FA `f9dc928`, CA-DS9 uptime collector cron `5e40acd`). Phase 6 (Manual-input Step 1 design sweep) unblocked. Specs: `docs/superpowers/specs/2026-05-11-phase-4-bank-mode-design.md`, ADR-0009, ADR-0011.
+**Phase:** 6 в работе — Manual-input Step 1 (Borrower) design statement DONE 2026-05-15. Phase 5 закрыта целиком (Settings UI + real 2FA + 3 functional holes — CA-068/CA-DS9/CA-DS13). Phase 7 (Manual-input Step 2 — Financial) unblocked. Specs: `docs/superpowers/specs/2026-05-11-phase-4-bank-mode-design.md`, ADR-0009, ADR-0011.
 
 **Активная ветка:** `main`. Phase 5 = Phase 5.A (Settings UI, `06f0ae4`) + Phase 5.B backend foundation (`06f0ae4`) + **Phase 5.B frontend + 3 hotfix (2026-05-14)** — real TOTP 2FA сквозной flow от UI до login. Frontend: `features/settings/{mfa-section,mfa-enroll-modal,mfa-disable-modal}.tsx` (3-stage enrollment с canvas-rendering QR через `qrcode@1.5.4` pinned + 10 backup-codes copy/download/confirm); login step-2 в `login-view.tsx` с TOTP/backup toggle. BFF: 4 новых route handlers под `/api/auth/mfa/*`. Lib: `lib/mfa.ts` + расширенный `lib/auth.ts` (union `LoginResult`). i18n: ~62 keys в `bank.{settings.mfa,login.mfa_*}` ru+uz.
 
@@ -42,6 +42,10 @@
 - TODO[CA-DS15]: рассмотреть WebAuthn/Passkeys как alternative 2FA-фактор — нет third-party app, биометрия на телефоне, нет TOTP-кодов вообще. UX-вин для non-tech аналитиков. Требует FIDO2-server в `infrastructure/auth/`.
 - TODO[CA-DS16]: убрать legacy stored bool `analysts.mfa_enabled` через миграцию. Сейчас computed-from-`enrolled_at` в API — stored bool сжигается, но колонка всё ещё в БД. Drop после подтверждения что нигде не читается (`grep mfa_enabled = ` показал только репозиторий-уровень).
 - TODO[CA-DS11]: faktura.uz API integration. Сейчас сервис в `/api/system/health` всегда `not_implemented`. После реализации — реальный ping + статус ok/degraded.
+- TODO[CA-DS17]: real OKVED-каталог из backend-endpoint `/api/system/okved-catalog` или статичный JSON. Сейчас `OKVED_UZ_MSB` хардкод в `step-1-borrower.tsx` — 16 кодов МСБ-сегмента (УзКВЭД 2024). Достаточно для папиных фирм; для pilot-банка нужна полная номенклатура.
+- TODO[CA-DS18]: реальный `case_id` с бэкенда. Сейчас clientside `Math.random()` placeholder через `useSyncExternalStore` — id меняется между вкладками, не stable через draft-resume. Когда заведём `applications` table — pull `case_id` оттуда при mount draft / start new.
+- TODO[CA-DS19]: motion cleanup pass по /search и /history. В Phase 2/3 остались pulse-ring-ok dots на trust-pill «Все системы работают» и LiveStrip — user в Phase 6 явно попросил «без вау-эффекта который горит в реальном времени, это банк». Sweep + revert pulse-* анимаций, оставить только user-card sidebar online-dot (semantic).
+- TODO[CA-DS20]: RTL-тесты на InnInput state machine (idle→checking→verified, fake timers) + OkvedAutocomplete (filter / keyboard nav / select). Сейчас mini-компоненты не extract как named exports — для теста требуется extract или integration через рендер Step1Borrower с FormProvider + i18n. Phase 6 verified manually + tsc/eslint/next-build/смежные vitest зелёные.
 - ~~TODO[CA-067]: rm orphaned `back-target.ts`~~ — **закрыт 2026-05-13** (`56ada78`). `web/src/features/dossier/back-target.ts` удалён + `rememberBackTarget("/search"|"/history")` убраны из search/history-view.
 - ~~TODO[CA-065]: `scripts/seed_demo_borrowers.py --commit`~~ — **закрыт 2026-05-13** (`04665b1`). Пишет 3 demo bank-mode dossier'а через стандартный E2E (build_borrower_snapshot → run_rules → save). 2 годовых + 24 monthly из seasonality. `source_mode='bank'`, `created_by_analyst_id=NULL`. Smoke real Postgres: 3 dossiers score=0/approve (зелёный demo-borrower). Запуск: `docker compose exec api bash -c "cd /app && PYTHONPATH=/app/src uv run --no-sync python -m scripts.seed_demo_borrowers --commit"`.
 
@@ -81,6 +85,10 @@
 - **CA-066 dossier layout (design-parity):** `features/dossier/sub-header.tsx` — чистый `<h1>` + meta-line `ИНН · ОПФ · ОКВЭД` + правые [Пересобрать] [Скачать PDF]; убраны eyebrow `application_label`, status-badge, кнопки «Документы» / «Карточка клиента». `KpiRow` теперь 4 карточки `EBIT / ROE / Долг·EBIT / Готовность данных` (revenue_ltm выкинут — отдельная карточка не нужна, число всё равно в Раздел A карточке). `ReadinessBadge` → `ReadinessKpiCard` (4-я в KPI-row), отдельный pill сверху удалён. Нижний `ActionBar` удалён физически (`action-bar.tsx`); действия только в шапке. `back-target.ts` + `rememberBackTarget()` в search/history оставлены orphaned (no-op writes в sessionStorage), могут пригодиться при возврате back-кнопки в шапку — отдельный TODO[CA-067] на удаление если решим что не вернём.
 - **CA-066 t.rich gotcha (history pagination fix):** `t.rich(key, {x: () => <b/>})` падает с «Functions are not valid as a React child» если в message используется value-плейсхолдер `{x}` (не tag-плейсхолдер `<x></x>`). next-intl пытается подставить функцию как value → React traceback. Правильно: либо value-плейсхолдер `{x}` + value-substitution через `t(key, {x: 42})` (но тогда нельзя ReactNode), либо tag-плейсхолдер `<x>{value}</x>` + `t.rich(key, {value, x: (chunks) => <b>{chunks}</b>})`. Применяй tag-syntax везде где нужна обёртка вокруг подстановки.
 - **CA-063 i18n infra:** `next-intl` 4.4.1, статичная локаль через `NEXT_PUBLIC_LOCALE` env (ru | uz), один UI-язык на инсталляцию (без routing-switcher). Keys в `web/src/i18n/{ru,uz}.json`, keyspace разбит на `shared/bank/accountant/dossier`. Loader `web/src/i18n/index.ts`, server-config `web/src/i18n/request.ts`, plugin в `next.config.ts` (`createNextIntlPlugin("./src/i18n/request.ts")`). `NextIntlClientProvider` в `RootLayout` оборачивает `<Providers>`. `<html lang>` берётся из resolved locale. **Useпаттерн:** client → `import { useTranslations } from "next-intl"; const t = useTranslations("section");`. Server → `import { getTranslations } from "next-intl/server"; const t = await getTranslations("section");`. **Тесты:** RTL-тесты на компонент с `t()` оборачивать в `<NextIntlClientProvider locale="ru" messages={ru}>` (см. `global-topbar.test.tsx`). Swept ru-strings → keys в 8 surfaces (bank sidebar, search-view, history-view, login-view, accountant sidebar, GlobalTopbar, CommandPalette, DossierError + error/not-found pages); остальное — TODO[CA-063b]. **Brand-strings типа «Uzbekbank Credit», «CreditScope», «Bank Mode · Андижон» — НЕ локализуются**, это tenant-config (`config/brands/<id>.json#name|tagline`) или ad-hoc copy.
+- **Phase 6 DatePicker (Step 1 + Step 2/3 в будущем):** `features/manual-input/components/date-picker.tsx` поверх `react-day-picker@9` + `@base-ui/react/popover`. API строковый ISO (`yyyy-MM-dd`), не Date — совместимо с zod-схемой `isoDate`. Trigger 40px моноширинный «DD.MM.YYYY». Popover 290px, RU локаль (`date-fns/locale#ru`), Mon-first (`weekStartsOn={1}`), `disabled: Matcher[]` с `{before:min}`/`{after:max}`, footer «Очистить» / «Сегодня». Тесты в `date-picker.test.tsx` (6 кейсов) — день matched по локализованному aria-label `/^DD мес YYYY/`, не по textContent (react-day-picker v9 ставит full readable label из date-fns formatter). Native `<input type="date">` запрещён — Chrome/Safari UI расходится с design tokens, локализация не контролируется.
+- **Phase 6 ИНН 3-state (Step 1):** `InnInput` внутри `step-1-borrower.tsx` — state machine `idle | checking | verified | invalid`. Triggers: onChange → reset to `idle` (через `setTimeout 0` обход react-hooks/set-state-in-effect — CA-066 паттерн); onBlur с валидным `^\d{9}$` → `checking` + setTimeout 700ms → `verified` с mock-резюме «Юр. лицо · действующий статус». Реальный лукап `/api/system/gnk/{inn}` — TODO[CA-003]. Pill «В реестре ГНК» статичная (без pulse) по Phase 6 design-tone «без motion для банка». Spinner при checking — оставлен (semantic loading, не декорация).
+- **Phase 6 OKVED autocomplete (Step 1):** `OkvedAutocomplete` — popover-listbox с 16 хардкод-кодами УзКВЭД 2024 МСБ-сегмента (`OKVED_UZ_MSB` const, descKey → i18n `accountant.manual_input.okved_*`). Фильтр по `code.startsWith(q)` + `desc.includes(q)`. Keyboard nav: ↑↓ + Enter pick + Esc close. `aria-controls={listboxId}` + `role="combobox"` (без обоих — eslint jsx-a11y/role-has-required-aria-props падает). Real OKVED endpoint — TODO[CA-DS17].
+- **Phase 6 motion-cleanup для банка:** все `animation: pulse-*` убраны из Step 1 (draft-pill в topbar, status-card в page-head, ИНН verified pill, save-hint в footer). Stepper больше не имеет `box-shadow` glow на active/done circles + connector-линия удалена физически (3 раздельных «круг + label» tile'а в grid). Оставлен только user-card sidebar online-dot (pulse-ring-ok — semantic «онлайн-аналитик»). На /search и /history pulse-* всё ещё есть — TODO[CA-DS19] на cleanup-sweep.
 
 ---
 
@@ -189,8 +197,8 @@ docker compose exec -T postgres psql -U credit -d credit_assistant -c "UPDATE an
 | 3 | History | **DONE** (design statement) | `2026-05-13-history-phase3-preview.html` | `8bbc154` |
 | 4 | Help | **DONE** (design statement + 6 hotfix) | `2026-05-13-help-phase4-preview.html` | `cb8b046`..`91c4090` |
 | 5 | Settings | **DONE** (визуально + 3 functional holes закрыты 2026-05-14) | — | `06f0ae4` + `d9387c0`/`6d625b1`/`59bb172` + `7d65e29`/`f9dc928`/`5e40acd` |
-| 6 | Manual-input Step 1 (Borrower) | pending (unblocked) | — | — |
-| 7 | Manual-input Step 2 (Financial) | pending | — | — |
+| 6 | Manual-input Step 1 (Borrower) | **DONE** 2026-05-15 (design statement) | `2026-05-15-step1-phase6-preview.html` | TBD |
+| 7 | Manual-input Step 2 (Financial) | pending (unblocked) | — | — |
 | 8 | Manual-input Step 3 (Loan) | pending | — | — |
 | 9 | Dossier view | pending | — | — |
 | 10 | PDF document | pending | — | — |
@@ -390,6 +398,44 @@ Issues которые я нашёл в аудитах но user решил ос�
 - `TODO[CA-DS6]`: вынести `support` section в `brand-config.json` (phone/email/Slack/Docs/compliance_phone) — сейчас hardcoded в `help-view.tsx`.
 - `TODO[CA-DS7]`: backend-endpoint для real operator-shift presence (`/api/bank/operators/current`). Сейчас mock `CURRENT_OPERATOR = { name: "Мадина А.", initials: "МА", status: "available" }`.
 - `TODO[CA-DS8]`: отдельный compliance-phone в brand-config + второй CTA в incident-band («Compliance» vs «Hotline»). Сейчас оба = `+998 71 200-00-00`.
+
+### Phase 6 — Manual-input Step 1 (Borrower) — DONE 2026-05-15
+
+**Решение:** design statement (full overhaul по Phase 4 паттернам). 4 итерации preview (`web/design-reference/2026-05-15-step1-phase6-preview.html`) — connector в stepper'е удалён физически (user feedback «линия не ушла думаем можем обойтись и без линции»), все pulse-* анимации убраны кроме user-card sidebar online-dot (user feedback «поменьше вау-эффекта который горит в реальном времени это всё же для банка»), добавлен кастомный date-picker (user feedback «можем добавить календарь современное когда нажимаю»).
+
+**Изменения (12 файлов):**
+
+*Deps:* `react-day-picker@^9.14.0` + `@testing-library/user-event@^14.6.1` (для RTL `userEvent.click`). `@base-ui/react` уже стояло (Popover primitives).
+
+*Новые компоненты:*
+- `features/manual-input/components/date-picker.tsx` — wrapper над `react-day-picker@9` + `@base-ui/react/popover`. API строковый ISO `yyyy-MM-dd` (совместимо с zod-схемой `isoDate`). Trigger 40px моноширинный «DD.MM.YYYY» + `data-state` атрибут. Popover 290px, RU локаль через `date-fns/locale#ru`, `weekStartsOn={1}`, `disabled: Matcher[]` с before/after, footer «Очистить» / «Сегодня». Tailwind `classNames` для react-day-picker без импорта стандартного CSS (избегаем коллизий).
+- `date-picker.test.tsx` (новый) — 6 RTL-тестов: placeholder / format / pick-day / clear / today / disabled-after-max. Дни matched по локализованному aria-label `/^DD мес YYYY/`.
+
+*Rewrites:*
+- `step-1-borrower.tsx` — полный rewrite по preview: section card с leading icon-tile + live-counter (N/8 через `useWatch`), ИНН 3-state machine (`InnInput` mini-component), OKVED autocomplete (`OkvedAutocomplete` с 16 хардкод-кодами + filter + ↑↓Enter nav + Esc close), ОПФ segmented radio (`OpfSegmented`, 3 кнопки llc/ie/jsc), custom `DirectorRecentWarning` блок с border-l-3 (Phase 4 паттерн). Сохранено: `isRecentDirectorAppointment` export для CA-039 теста; `formatBusinessAge` через `lib/duration`. Auto-clear `directorAppointedAt` если новая `registrationDate` позже него (обход zod refine).
+- `stepper.tsx` — connector удалён физически, 3 раздельных «круг + label» tile'а в `grid-cols-3`. Active circle = brand-primary fill (без glow), done = state-ok fill с галкой, pending = stroke 1.5px + ink-4. Eyebrow + title с 3-tier цветами (active brand / done state-ok / pending ink-4). Поднял rounded-[14px] для consistency с section card.
+- `page-head.tsx` — status-card pill в стиле Phase 4: 2 chunks «● ЧЕРНОВИК · CR-...» + «ШАГ N из 3», статичная зелёная точка (не pulse). Принимает новый prop `step: 1|2|3`.
+- `info-banner.tsx` — leading icon-tile 32px в rgba(white, 0.55) внутри `state-info-bg` (как FAQ row в Phase 4).
+- `form-footer.tsx` — save-hint точка из ink-4 на state-ok-fg (статичная), CTA с тонким drop-shadow brand-primary glow, h-38→40 + rounded-md→rounded-[9px] для consistency, hex disabled tokens → semantic `var(--surface-2)` / `var(--ink-4)`.
+- `field.tsx` — `inputBase` высота 38px→40px + rounded-md→rounded-[9px] (consistency с DatePicker trigger). `InputGroup` `#FAFBFC` → `var(--surface-2)`. Focus shadow rgba → `var(--brand-primary-ring)`.
+- `manual-input-view.tsx` — PageHead получил `step` prop, ErrorBanner hex (`#F2BCBA`/`#FCE7E5`) → semantic state-bad tokens.
+
+*i18n:* `accountant.manual_input.*` keyspace расширен ~45 keys × ru+uz: `s1_filled_label`/`s1_filled_value` (ICU), `s1_inn_state_{idle,checking,verified}` + `s1_inn_summary_mock`, `opf_{llc,ie,jsc}_short`, `s1_date_placeholder` + `date_clear` + `date_today`, `s1_okved_{empty,kbd_hint}` + 16 `okved_*` desc, `s1_recent_director_{title,body}`, `stepper_step_{active,done,pending}_eyebrow`, `step_position_{label,value}`. Удалены: `s1_inn_badge_verified`, `s1_recent_director_warning` (split на title+body). Brand-strings (BANK MODE, hotline номер) не локализуются.
+
+**Lessons (новые):**
+1. `react-day-picker@9` с RU локалью даёт aria-label вида «понедельник, 27 апреля 2026 г.» — `screen.getByRole("button", { name: /^25 мая 2026/ })` надёжнее чем `name: /^25$/` (последнее matches только если textContent === aria-label; при наличии aria-label v9 ставит её, textContent игнорируется).
+2. `react-day-picker@9` Matcher: `{before: Date}` и `{after: Date}` отдельные элементы массива `Matcher[]`, не один объект с обоими полями (последний — DateRange).
+3. ESLint `jsx-a11y/role-has-required-aria-props`: combobox обязан иметь `aria-controls` + `aria-expanded`. Без `aria-controls={listboxId}` — warning.
+4. ESLint `jsx-a11y/role-supports-aria-props`: button не поддерживает `aria-invalid` — заменить на `data-invalid`.
+5. CA-066 `setTimeout 0` pattern для обхода react-hooks/set-state-in-effect применён 3 раза: reset ИНН-state на value change, reset OKVED highlight на value change, setMonth в DatePicker при внешнем prefill value.
+
+**Verify status:** tsc + eslint (clean) + 101 vitest (95→101, +6 date-picker) + next build (24 routes, без новых) + frontend stack only (бэкенд не тронут — ruff/mypy/pytest не нужны).
+
+**Open TODOs from Phase 6:**
+- `TODO[CA-DS17]`: real OKVED catalog (см. шапку).
+- `TODO[CA-DS18]`: real case_id с бэкенда (см. шапку).
+- `TODO[CA-DS19]`: motion cleanup pass на /search и /history (см. шапку).
+- `TODO[CA-DS20]`: RTL-тесты на InnInput state machine + OkvedAutocomplete (extract как named exports или integration-test через Step1Borrower).
 
 ---
 
