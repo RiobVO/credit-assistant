@@ -1,0 +1,60 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+.python-version
+
+# Tooling caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+
+# --- Node / Next.js ---
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+.npm/
+.yarn/
+.pnpm-store/
+
+# --- Env & secrets ---
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# --- IDE / OS ---
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Logs & runtime ---
+*.log
+logs/
+*.pid
+
+# --- Docker volumes (если когда-то окажутся локально) ---
+pgdata/
+redisdata/
+
+# --- Local databases (Phase 0/1 SQLite) ---
+*.sqlite
+*.sqlite3
+*.db
