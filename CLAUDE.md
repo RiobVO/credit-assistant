@@ -393,6 +393,15 @@ Issues которые я нашёл в аудитах но user решил ос�
 - Никаких `TODO` без ID (`# TODO[CA-001]: описание`).
 - После `git mv` + правок (sed/Edit) обязателен `git add -u` или явный re-add — иначе modify не попадает в коммит (rename стейджится с исходным content). См. memory `feedback_git_mv_sed_gotcha.md`.
 
+### Pre-push checklist (CI lessons 2026-05-14)
+
+Перед `git push` прогнать **полный** verify, а не только то что менял. CI Phase 5.B потребовал 4 follow-up коммита (`2ac935c`, `79a9395`, `282819d`, `59c65cb`) — все можно было поймать локально:
+
+1. **`npm ci` ≠ `npm install`.** Local `npm install <pkg>` может оставить `package-lock.json` несогласованным под другую OS (Linux CI runner резолвит deps иначе). После добавления зависимости — `rm -rf node_modules package-lock.json && npm install`, потом локально проверить `npm ci` чтобы воспроизвести CI-режим. Иначе `Missing: X@version from lock file` на CI.
+2. **`ruff check`, `mypy --strict`, `pytest` — обязательны перед push.** Не доверяй «у меня файл написан красиво». UP037 на quoted annotation при `from __future__ import annotations` ловится только ruff'ом. `FromClause.delete()` ловится только mypy. Минимум: `docker compose exec -T api bash -c "cd /app && PYTHONPATH=/app/src uv run python -m ruff check . && uv run python -m mypy --strict src/ tests/ && uv run python -m pytest"`.
+3. **Меняешь computed-from-X invariant — `grep -r` все тесты на эту semantic.** Когда `mfa_enabled` поменял с `secret IS NOT NULL` на `enrolled_at IS NOT NULL`, локально прогнал mapper-tests (3/3) и забыл про integration-test `bank_auth_test.py:169` который тоже проверял эту инварианту. CI поймал на pytest. Правило: после semantic-fix'а → `grep -r "mfa_enabled\|enrolled_at\|mfa_secret"` по tests/ и убедись что все assertions согласны.
+4. **CI коммита перед твоим зелёный? Проверь!** Phase 5 backend `06f0ae4` был push'нут с уже-failing CI (test `bank_auth_test.py` и mypy `system_health_test.py` от Phase 5 backend). Когда я начал свою серию — эти tail-failures всплыли. `gh run list --branch main -L 3` перед началом работы покажет состояние baseline.
+
 ---
 
 ## Architecture Reminders
