@@ -64,3 +64,6 @@ redisdata/
 tests/fixtures/**/*_full.csv
 tests/fixtures/**/*_full.xlsx
 tests/fixtures/**/*_full.json
+
+# --- Design handoff bundles (extracted prototypes, not source) ---
+.design-bundle/
