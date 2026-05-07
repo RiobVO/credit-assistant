@@ -1,0 +1,146 @@
+version: v1
+
+# 17 red-flag правил для МСБ-заёмщиков Узбекистана.
+# Severity weights калибруем после Phase 2 на реальных кейсах.
+# Источники: ЦБ РУз, НК РУз, Базель III, Group-IB UZ fraud reports.
+
+rules:
+  # --- Структурные ---
+  - id: DIRECTOR_CHANGED_6M
+    name: "Смена директора за последние 6 месяцев"
+    category: structural
+    severity: medium
+    source: "Group-IB Uzbekistan fraud report 2024-2025; внутренние методики банков"
+    formula: "(as_of - director_appointed_at).days <= 180"
+    rationale: "Свежий директор перед заявкой — паттерн фронт-фигуры"
+
+  - id: OKVED_CHANGED_12M
+    name: "Изменение основного ОКВЭД за последние 12 месяцев"
+    category: structural
+    severity: medium
+    source: "Внутренние методики UZ-банков; Group-IB fraud patterns"
+    formula: "(as_of - okved_main_changed_at).days <= 365"
+    rationale: "Смена деятельности перед кредитом — может скрывать фрод-схему"
+
+  - id: LOAN_TO_REVENUE_RATIO
+    name: "Запрашиваемая сумма >50% годовой выручки"
+    category: structural
+    severity: high
+    source: "Внутренние методики UZ-банков; стандартная практика МСБ-кредитования"
+    formula: "loan_request_amount / latest_annual_revenue > 0.50"
+    rationale: "Перекредитованность — ведущий предиктор дефолта"
+
+  # --- Финансовые ---
+  - id: REVENUE_DROP_MOM_30
+    name: "Падение выручки >30% МоМ два месяца подряд"
+    category: financial
+    severity: high
+    source: "ЦБ РУз положение №27-п, п.4.5; Базель III IRB approach"
+    formula: "mom_pct < -0.30 for 2 consecutive months"
+    rationale: "Резкое падение выручки — сильный предиктор дефолта на 6 мес"
+
+  - id: REVENUE_DROP_YOY_50
+    name: "Падение годовой выручки >50% YoY"
+    category: financial
+    severity: high
+    source: "ЦБ РУз положение №27-п; Базель III IRB approach"
+    formula: "(curr_revenue - prev_revenue) / prev_revenue < -0.50"
+    rationale: "Стратегическое сжатие бизнеса"
+
+  - id: NEGATIVE_PROFIT_3Q
+    name: "Чистая прибыль ≤0 три квартала подряд"
+    category: financial
+    severity: high
+    source: "ЦБ РУз положение №27-п; стандартная практика МСБ-кредитования"
+    formula: "all(net_profit <= 0 for last 3 quarters)"
+    rationale: "Системная убыточность — высокий риск default"
+
+  - id: VAT_GROWTH_NO_REVENUE
+    name: "Рост НДС-обязательств без роста выручки"
+    category: financial
+    severity: medium
+    source: "НК РУз; внутренние методики Soliq + банковская практика"
+    formula: "vat_growth > 0.20 and revenue_growth <= 0"
+    rationale: "Может означать фиктивный документооборот"
+
+  - id: VAT_ESF_MISMATCH
+    name: "Разрыв декларация НДС vs ЭСФ >15%"
+    category: financial
+    severity: critical
+    source: "НК РУз ст. 256; Soliq внутренние методики"
+    formula: "abs(vat_declared - sum_seller_esf_vat) / vat_declared > 0.15"
+    rationale: "Прямое расхождение — признак фиктивной отчётности"
+
+  - id: LOW_MARGIN_HIGH_TURNOVER
+    name: "Маржа <5% при годовой выручке >5 млрд сум"
+    category: financial
+    severity: medium
+    source: "Внутренние методики UZ-банков; стандартная МСБ-практика"
+    formula: "annual_revenue > 5_000_000_000 and margin < 0.05"
+    rationale: "Большой оборот без прибыли — подозрительная схема"
+
+  # --- Платёжная дисциплина ---
+  - id: TAX_PAYMENT_DELAYS
+    name: "Задержки уплаты налогов >30 дней"
+    category: payment_discipline
+    severity: medium
+    source: "НК РУз; внутренние методики Soliq + банковская практика"
+    formula: "any(payment.delay_days > 30 for payment in tax_events)"
+    rationale: "Системные задержки — слабая платёжная дисциплина"
+
+  - id: BANK_ACCOUNT_FROZEN_12M
+    name: "Приостановка счёта Soliq за последние 12 месяцев"
+    category: payment_discipline
+    severity: high
+    source: "НК РУз; внутренние практики Soliq; банковский compliance"
+    formula: "any(ev.type == ACCOUNT_FREEZE for ev in events_last_12m)"
+    rationale: "Прямое ограничение со стороны налоговой"
+
+  - id: TAX_PENALTIES_CURRENT_YEAR
+    name: "Пеня по налогам в текущем календарном году"
+    category: payment_discipline
+    severity: medium
+    source: "НК РУз; банковская методика оценки платёжной дисциплины"
+    formula: "any(ev.type == PENALTY and ev.year == current_year)"
+    rationale: "Свежая пеня — текущая проблема с дисциплиной"
+
+  # --- Контрагентные ---
+  - id: SINGLE_BUYER_CONCENTRATION
+    name: "Концентрация >70% выручки на одном покупателе"
+    category: counterparty
+    severity: medium
+    source: "Базель III concentration risk; внутренние методики Kapitalbank"
+    formula: "max_buyer_revenue_share > 0.70"
+    rationale: "Высокий риск потери всего бизнеса при уходе клиента"
+
+  - id: SINGLE_SUPPLIER_CONCENTRATION
+    name: "Концентрация >60% закупок у одного поставщика"
+    category: counterparty
+    severity: medium
+    source: "Базель III concentration risk; supply-chain risk practice"
+    formula: "max_supplier_purchase_share > 0.60"
+    rationale: "Зависимость от единственного поставщика"
+
+  - id: NEW_COUNTERPARTY_LARGE_SHARE
+    name: "Новые контрагенты (<180 дней) дают >30% оборота"
+    category: counterparty
+    severity: high
+    source: "Group-IB Uzbekistan fraud report 2024-2025"
+    formula: "sum(share for new_counterparties) > 0.30"
+    rationale: "Типичная схема накрутки оборотов перед получением кредита"
+
+  - id: SHELL_COMPANY_PARTNERS
+    name: "Контрагенты с ИНН моложе 6 месяцев"
+    category: counterparty
+    severity: high
+    source: "Group-IB Uzbekistan fraud report 2024-2025; AML compliance"
+    formula: "any(months_since_registration(cp) < 6)"
+    rationale: "Классическая схема фиктивной отчётности"
+
+  - id: CIRCULAR_INVOICING
+    name: "Циклические ЭСФ с контрагентами"
+    category: counterparty
+    severity: high
+    source: "Group-IB UZ fraud report 2024-2025; AML — накачивание оборота"
+    formula: "exists 2-cycle: A→B and B→A within 90 days (упрощ.)"
+    rationale: "Симулированный документооборот для увеличения видимого оборота"
