@@ -6,9 +6,9 @@
 
 ## Current Status
 
-**Phase:** 1 — Domain Core (not started)
-**Last completed task:** Phase 0 Foundation — repo init, Python+uv, FastAPI `/health`, Next.js + shadcn, page с probe `/health`, Docker Compose (Postgres+Redis), CI workflow
-**Next task:** Phase 1 — entities (`Borrower`, `FinancialReport`, `Invoice`, `RedFlag`), value objects (`INN`, `Money`, `DateRange`, `FlagSeverity`), 17 red-flag правил как pure functions, YAML rules config + loader
+**Phase:** 2 — Data Adapters (not started)
+**Last completed task:** Phase 1 Domain Core — 4 value objects, 8 entities (BorrowerSnapshot — вход правил), 17 red-flag правил pure fn + ScoringService + RuleRegistry, YAML-конфиг `config/rules/v1_uz_msb.yaml`. 217 тестов passed, coverage `src/domain/rules` ≈ 99%, ADR 0003.
+**Next task:** Phase 2 — `ManualInputAdapter` (API + UI для ручного ввода), `SoliqExcelAdapter` (парсинг my3.soliq.uz Excel), `EsfJsonAdapter` (парсинг api.faktura.uz JSON), интеграционные тесты с реальными выгрузками.
 
 ---
 
@@ -57,3 +57,4 @@
 |---------|-------|-----------|-------|
 | 2026-05-08 | 0 | Foundation 0.1–0.9 | Stack: Python 3.12 + uv, FastAPI 0.136, Next 16.2 (вместо 15 — см. ADR 0002), shadcn/ui, TanStack Query, Postgres 16 + Redis 7 в compose, CI с ruff/mypy/pytest и eslint/tsc/build. |
 | 2026-05-08 | 0 | Phase 0 follow-up | Compose поднят и здоров (`credit-postgres` + `credit-redis` healthy, `pg_isready` accepting, redis `PONG`). GitHub remote `origin` → `github.com/RiobVO/credit-assistant`, main pushed (HEAD `ba401fb`). uv добавлен в User PATH через installer — в новых сессиях работает без хака. |
+| 2026-05-08 | 1 | Domain Core 1.0–1.9 | Branch `feat/phase-1-domain`. 4 value objects (INN/Money/DateRange/FlagSeverity), 8 entities, 17 правил pure fn, ScoringService (LOW=1/MED=3/HIGH=7/CRIT=15; <15 APPROVE, 15-29 REVIEW, ≥30 REJECT), YAML+loader, 5 синтетических borrowers, 217 тестов, coverage `src/domain/rules` ≈99%, ADR 0003. TODO: CA-001 (INN checksum ГНК), CA-002 (full graph CIRCULAR_INVOICING). |
