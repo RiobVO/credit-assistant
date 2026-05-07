@@ -188,12 +188,24 @@ docker compose exec -T postgres psql -U credit -d credit_assistant -c "UPDATE an
 | 2 | Search | **DONE** (design statement + 4 hotfix) | `2026-05-13-search-phase2-preview.html` | `c9afbce` → `022dfcf` |
 | 3 | History | **DONE** (design statement) | `2026-05-13-history-phase3-preview.html` | `8bbc154` |
 | 4 | Help | **DONE** (design statement + 6 hotfix) | `2026-05-13-help-phase4-preview.html` | `cb8b046`..`91c4090` |
-| 5 | Settings | **DONE** (Settings UI + real 2FA + smoke 2026-05-14) | — | `06f0ae4` + `d9387c0`/`6d625b1`/`59bb172` + CI fixes `2ac935c`..`8b1f959` |
-| 6 | Manual-input Step 1 (Borrower) | pending | — | — |
+| 5 | Settings | **DONE визуально** ⚠️ functional **3 дыры** (см. ниже) | — | `06f0ae4` + `d9387c0`/`6d625b1`/`59bb172` + CI fixes `2ac935c`..`8b1f959` |
+| 6 | Manual-input Step 1 (Borrower) | 🔒 BLOCKED — закрыть Phase 5 дыры сначала | — | — |
 | 7 | Manual-input Step 2 (Financial) | pending | — | — |
 | 8 | Manual-input Step 3 (Loan) | pending | — | — |
 | 9 | Dossier view | pending | — | — |
 | 10 | PDF document | pending | — | — |
+
+### 🔴 Phase 5 functional holes — закрыть ДО Phase 6
+
+**Правило:** Phase 6 (Manual-input Step 1) не начинаем пока эти 3 не закрыты. Иначе demo показывать со словами «а здесь оно не работает» — стыдно.
+
+1. **CA-068** — backend `POST /api/auth/change-password` отсутствует. UI в `/settings → Безопасность → Сменить пароль` работает, но показывает успех **через `setTimeout(600)` мок** — пароль реально не меняется. Это **обман пользователя**: на pilot'е стейкхолдер попробует → проверит логином → увидит что старый пароль работает. ~30 мин: bcrypt verify(current) → hash(new) → UPDATE `password_hash` + `password_changed_at = now()` + 1 integration-test + удалить TODO[CA-068] из `security-section.tsx:68-72`.
+
+2. **CA-DS13** — admin-reset 2FA endpoint отсутствует. Если аналитик потерял **телефон + бумажные backup-codes** → unrecoverable lockout (только прямой SQL через psql). Production-blocker: IT-офицер банка должен сбрасывать 2FA через UI, не через `psql`. Senior_analyst роль есть, audit-log есть — нужен `POST /api/bank/admin/analysts/{id}/reset-mfa` + кнопка в admin-panel + force-logout затронутого аналитика + 2-3 теста. ~1 час.
+
+3. **CA-DS9** — uptime collector cron отсутствует. `/settings → О системе → Uptime calendar` показывает 30 квадратов из `system_uptime_day` table, которая UPSERT'ится **только при вызове `GET /api/system/health`** (когда analyst открывает /settings). Если 3 дня никто не открывал — 3 серых квадрата → цифра «X дней без сбоев» становится враньё. Нужен ARQ cron (или systemd-timer) который пингает /health раз в минуту. Косметика, не блокер, но **на pilot стыдно**. ~30 мин: ARQ task в `infrastructure/jobs/` + schedule + добавить в docker-compose worker.
+
+**Status:** все 3 в `Открытые TODO` секции CLAUDE.md выше. Этот блок дублирует их специально как visible-reminder в Design Sweep таблице.
 
 ### Phase 1 — Login (scope) — DONE 2026-05-13
 
