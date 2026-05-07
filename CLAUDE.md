@@ -7,10 +7,10 @@
 ## Current Status
 
 **Phase:** 2 — Data Adapters (in progress)
-**Last completed task:** 2.0 Domain корректировка под реальный CSV e-factura.uz: убрано `Invoice.vat_amount`, добавлен агрегат `BorrowerSnapshot.esf_seller_vat_total: Money | None`, переписан rule `VAT_ESF_MISMATCH` (degraded mode без VAT-адаптера), ADR 0004. 218 тестов passed, ruff + mypy --strict зелёные, coverage `src/domain/rules` ≈ 99%.
-**Next task:** 2.1 Port + use case `IngestDossierData` — `application/ports/data_source_port.py`, `application/dto/parsed_data_chunk.py`, `application/use_cases/build_borrower_snapshot.py` с тестами на in-memory chunks.
+**Last completed task:** 2.1 Port + use case — `application/dto/parsed_data_chunk.py` (`EsfChunk`/`SoliqChunk`/`ManualChunk` + union), `application/ports/data_source_port.py` (`DataSourcePort` Protocol для файловых адаптеров), `application/use_cases/build_borrower_snapshot.py` с `ChunkBorrowerMismatchError` (валидация на границе). 231 тест passed (+13 use case), ruff + mypy --strict зелёные.
+**Next task:** 2.2 EsfCsvAdapter — парсер `factura_sent_<inn>_*.csv` из e-factura.uz (cp1251, `;`-delimited). Поля: `СЧЁТ-ФАКТУРА`→date через regex, `СУММА К ОПЛАТЕ`→`Money`, mathing `borrower_inn` к `ПРОДАВЕЦ ИНН`/`ПОКУПАТЕЛЬ ИНН`→`InvoiceRole`. 6+ TDD-кейсов на реальном файле + edge cases.
 
-**Phase 2 декомпозиция (согласована):** 2.0 ✓ → 2.1 ports/use case → 2.2 EsfCsvAdapter (cp1251, реальный файл папы) → 2.4 ManualInputAdapter (API+UI) → 2.5 persistence (Alembic+Postgres+repos) → 2.3 SoliqExcelAdapter (после первой реальной выгрузки) → 2.6 E2E на 5 фирмах. VAT-адаптер для активации `VAT_ESF_MISMATCH` появится в 2.x после получения сводной справки НДС.
+**Phase 2 декомпозиция (согласована):** 2.0 ✓ → 2.1 ✓ → 2.2 EsfCsvAdapter (cp1251, реальный файл папы) → 2.4 ManualInputAdapter (API+UI) → 2.5 persistence (Alembic+Postgres+repos) → 2.3 SoliqExcelAdapter (после первой реальной выгрузки) → 2.6 E2E на 5 фирмах. VAT-адаптер для активации `VAT_ESF_MISMATCH` появится в 2.x после получения сводной справки НДС.
 
 ---
 
@@ -61,3 +61,4 @@
 | 2026-05-08 | 0 | Phase 0 follow-up | Compose поднят и здоров (`credit-postgres` + `credit-redis` healthy, `pg_isready` accepting, redis `PONG`). GitHub remote `origin` → `github.com/RiobVO/credit-assistant`, main pushed (HEAD `ba401fb`). uv добавлен в User PATH через installer — в новых сессиях работает без хака. |
 | 2026-05-08 | 1 | Domain Core 1.0–1.9 | Branch `feat/phase-1-domain`. 4 value objects (INN/Money/DateRange/FlagSeverity), 8 entities, 17 правил pure fn, ScoringService (LOW=1/MED=3/HIGH=7/CRIT=15; <15 APPROVE, 15-29 REVIEW, ≥30 REJECT), YAML+loader, 5 синтетических borrowers, 217 тестов, coverage `src/domain/rules` ≈99%, ADR 0003. TODO: CA-001 (INN checksum ГНК), CA-002 (full graph CIRCULAR_INVOICING). |
 | 2026-05-08 | 2 | 2.0 Domain под реальный CSV | Убран `Invoice.vat_amount`; добавлен `BorrowerSnapshot.esf_seller_vat_total: Money \| None`; `VAT_ESF_MISMATCH` переписан под агрегат, degraded mode без VAT-адаптера. ADR 0004. 218 тестов passed, ruff + mypy --strict зелёные. Изменения: `src/domain/entities/{invoice,borrower_snapshot}.py`, `src/domain/rules/financial/vat_esf_mismatch.py`, тесты + `tests/fixtures/synthetic_borrowers.py`. |
+| 2026-05-08 | 2 | 2.1 Port + use case | `application/dto/parsed_data_chunk.py` (3 chunk-DTO + union), `application/ports/data_source_port.py` (`DataSourcePort` Protocol), `application/use_cases/build_borrower_snapshot.py` (+ `ChunkBorrowerMismatchError`). 13 use case-тестов; всего 231 passed; ruff + mypy --strict зелёные. |
