@@ -45,7 +45,18 @@ class RuleRegistry:
     def run_all(self, snapshot: BorrowerSnapshot) -> list[RedFlag]:
         fired: list[RedFlag] = []
         for rule in self._rules:
-            result = rule.fn(snapshot)
-            if result is not None:
-                fired.append(result)
+            evidence = rule.fn(snapshot)
+            if evidence is None:
+                continue
+            fired.append(
+                RedFlag(
+                    rule_id=rule.id,
+                    rule_version=rule.version,
+                    severity=rule.severity,
+                    source=rule.source,
+                    message=evidence.message,
+                    evidence=evidence.evidence,
+                    detected_at=snapshot.as_of,
+                ),
+            )
         return fired

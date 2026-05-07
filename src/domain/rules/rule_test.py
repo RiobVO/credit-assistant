@@ -1,12 +1,13 @@
-"""RuleRegistry: контейнер правил + run_all → list[RedFlag]."""
+"""RuleRegistry: контейнер правил + run_all → list[RedFlag] (упаковано из FiringEvidence)."""
 
+from collections.abc import Callable
 from datetime import date
 
 import pytest
 
 from domain.entities.borrower import Borrower, LegalForm
 from domain.entities.borrower_snapshot import BorrowerSnapshot
-from domain.entities.red_flag import RedFlag
+from domain.rules.protocol import FiringEvidence
 from domain.rules.rule import Rule, RuleRegistry, UnknownRuleError
 from domain.value_objects.flag_severity import FlagSeverity
 from domain.value_objects.inn import INN
@@ -28,19 +29,11 @@ def _snapshot() -> BorrowerSnapshot:
     )
 
 
-def _always_fires(snapshot: BorrowerSnapshot) -> RedFlag | None:
-    return RedFlag(
-        rule_id="ALWAYS_FIRES",
-        rule_version="v1",
-        severity=FlagSeverity.HIGH,
-        source="test",
-        message="fired",
-        evidence={},
-        detected_at=snapshot.as_of,
-    )
+def _always_fires(snapshot: BorrowerSnapshot) -> FiringEvidence | None:
+    return FiringEvidence(message="always fires", evidence={"hit": True})
 
 
-def _never_fires(snapshot: BorrowerSnapshot) -> RedFlag | None:
+def _never_fires(snapshot: BorrowerSnapshot) -> FiringEvidence | None:
     return None
 
 
@@ -58,39 +51,53 @@ class TestRule:
 
 
 class TestRuleRegistryRunAll:
-    def test_returns_only_fired_flags(self) -> None:
+    def test_packs_metadata_into_red_flag(self) -> None:
         registry = RuleRegistry(
             rules=[
-                Rule("FIRES", "v1", FlagSeverity.HIGH, "src", "financial", _always_fires),
-                Rule("SILENT", "v1", FlagSeverity.LOW, "src", "financial", _never_fires),
+                Rule(
+                    "ALWAYS_FIRES",
+                    "v1",
+                    FlagSeverity.HIGH,
+                    "ЦБ РУз 27-п",
+                    "financial",
+                    _always_fires,
+                ),
             ],
         )
         flags = registry.run_all(_snapshot())
         assert len(flags) == 1
-        assert flags[0].rule_id == "ALWAYS_FIRES"
+        flag = flags[0]
+        assert flag.rule_id == "ALWAYS_FIRES"
+        assert flag.severity == FlagSeverity.HIGH
+        assert flag.source == "ЦБ РУз 27-п"
+        assert flag.message == "always fires"
+        assert flag.evidence == {"hit": True}
+        assert flag.detected_at == date(2026, 5, 8)
+
+    def test_silent_rule_does_not_emit(self) -> None:
+        registry = RuleRegistry(
+            rules=[
+                Rule("SILENT", "v1", FlagSeverity.LOW, "src", "financial", _never_fires),
+            ],
+        )
+        assert registry.run_all(_snapshot()) == []
 
     def test_empty_registry_returns_empty(self) -> None:
         registry = RuleRegistry(rules=[])
         assert registry.run_all(_snapshot()) == []
 
     def test_multiple_firing_rules(self) -> None:
-        def _fire(rid: str):  # type: ignore[no-untyped-def]
-            def _fn(s: BorrowerSnapshot) -> RedFlag | None:
-                return RedFlag(
-                    rule_id=rid,
-                    rule_version="v1",
-                    severity=FlagSeverity.MEDIUM,
-                    source="test",
-                    message="fired",
-                    evidence={},
-                    detected_at=s.as_of,
-                )
+        def _make_fn(
+            label: str,
+        ) -> Callable[[BorrowerSnapshot], FiringEvidence | None]:
+            def _fn(s: BorrowerSnapshot) -> FiringEvidence | None:
+                return FiringEvidence(message=label, evidence={})
             return _fn
 
         registry = RuleRegistry(
             rules=[
-                Rule("A", "v1", FlagSeverity.MEDIUM, "s", "financial", _fire("A")),
-                Rule("B", "v1", FlagSeverity.MEDIUM, "s", "financial", _fire("B")),
+                Rule("A", "v1", FlagSeverity.MEDIUM, "s", "financial", _make_fn("a")),
+                Rule("B", "v1", FlagSeverity.MEDIUM, "s", "financial", _make_fn("b")),
             ],
         )
         flags = registry.run_all(_snapshot())
