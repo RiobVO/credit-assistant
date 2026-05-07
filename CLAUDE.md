@@ -188,7 +188,7 @@ docker compose exec -T postgres psql -U credit -d credit_assistant -c "UPDATE an
 | 2 | Search | **DONE** (design statement + 4 hotfix) | `2026-05-13-search-phase2-preview.html` | `c9afbce` → `022dfcf` |
 | 3 | History | **DONE** (design statement) | `2026-05-13-history-phase3-preview.html` | `8bbc154` |
 | 4 | Help | **DONE** (design statement + 6 hotfix) | `2026-05-13-help-phase4-preview.html` | `cb8b046`..`91c4090` |
-| 5 | Settings | **DONE** (full backend wiring) | — | (pending commit) |
+| 5 | Settings | **DONE** (Settings UI + real 2FA + smoke 2026-05-14) | — | `06f0ae4` + `d9387c0`/`6d625b1`/`59bb172` + CI fixes `2ac935c`..`8b1f959` |
 | 6 | Manual-input Step 1 (Borrower) | pending | — | — |
 | 7 | Manual-input Step 2 (Financial) | pending | — | — |
 | 8 | Manual-input Step 3 (Loan) | pending | — | — |
