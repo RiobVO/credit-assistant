@@ -57,3 +57,10 @@ redisdata/
 *.sqlite
 *.sqlite3
 *.db
+
+# --- Real borrower data (security: PROJECT_BRIEF Section 8) ---
+# В git кладём только редуцированные *_sample.* файлы.
+# Полные выгрузки реальных юрлиц — локально, не в repo.
+tests/fixtures/**/*_full.csv
+tests/fixtures/**/*_full.xlsx
+tests/fixtures/**/*_full.json
