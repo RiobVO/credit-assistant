@@ -77,3 +77,6 @@ testpaths = ["src", "tests"]
 python_files = ["test_*.py", "*_test.py"]
 pythonpath = ["src", "."]
 addopts = "-ra --strict-markers"
+markers = [
+    "integration: тесты против real Postgres из testcontainers (требуют запущенный Docker)",
+]

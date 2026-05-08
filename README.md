@@ -44,7 +44,9 @@ docker compose up -d postgres redis
 # Python
 uv run ruff check .
 uv run mypy src tests
-uv run pytest -q
+uv run pytest -q                                # unit + быстрые integration
+uv run pytest -q -m "not integration"           # без Docker (быстро)
+uv run pytest -q -m integration                 # только testcontainers (нужен Docker Desktop)
 
 # Web
 cd web
@@ -52,6 +54,10 @@ npm run lint
 npx tsc --noEmit
 npm run build
 ```
+
+`integration` маркер гонит тесты против real Postgres из `testcontainers`.
+Без поднятого Docker daemon весь пакет `tests/integration/` авто-skip-ается
+с понятным reason — основной suite остаётся зелёным.
 
 ## Layout
 
