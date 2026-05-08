@@ -31,6 +31,7 @@ import { Controller, useFormContext, useWatch } from "react-hook-form";
 
 import { cn } from "@/lib/utils";
 
+import { CounterChip, SectionCard } from "./section-card";
 import { useSourceTrail } from "../hooks/use-source-trail";
 import {
   computeDebtToAssets,
@@ -58,6 +59,7 @@ const SOURCE_KEYS: Record<string, { key: string; sourceTag: string }> = {
 };
 
 export function Step2Financials() {
+  const t = useTranslations("accountant.manual_input");
   return (
     <div className="space-y-[18px]">
       <ParsedFilesDropzone />
@@ -65,95 +67,29 @@ export function Step2Financials() {
 
       <SectionCard
         icon={<TrendingUp className="size-[18px]" />}
-        titleKey="s2_revenue_title"
-        subKey="s2_revenue_sub"
-        counter={<RevenueCounter />}
+        title={t("s2_revenue_title")}
+        sub={t("s2_revenue_sub")}
+        aux={<RevenueCounter />}
       >
         <FinancialTable basePath="step2.revenue" variant="revenue" />
       </SectionCard>
 
       <SectionCard
         icon={<Wallet className="size-[18px]" />}
-        titleKey="s2_profit_title"
-        subKey="s2_profit_sub"
-        counter={<ProfitCounter />}
+        title={t("s2_profit_title")}
+        sub={t("s2_profit_sub")}
+        aux={<ProfitCounter />}
       >
         <FinancialTable basePath="step2.netProfit" variant="netProfit" />
       </SectionCard>
 
       <SectionCard
         icon={<Calculator className="size-[18px]" />}
-        titleKey="s2_annual_title"
-        subKey="s2_annual_sub"
+        title={t("s2_annual_title")}
+        sub={t("s2_annual_sub")}
       >
         <AnnualBlock />
       </SectionCard>
-    </div>
-  );
-}
-
-// ─────────── Section card (Phase 6 pattern, icon-tile + gradient header) ──
-
-function SectionCard({
-  icon,
-  titleKey,
-  subKey,
-  counter,
-  children,
-}: {
-  icon: ReactNode;
-  titleKey: string;
-  subKey: string;
-  counter?: ReactNode;
-  children: ReactNode;
-}) {
-  const t = useTranslations("accountant.manual_input");
-  return (
-    <section className="overflow-hidden rounded-[14px] border border-[var(--border)] bg-[var(--surface)]">
-      <header className="grid grid-cols-[40px_1fr_auto] items-center gap-[14px] border-b border-[var(--border)] bg-gradient-to-b from-white to-[var(--surface-2)] px-[22px] py-[16px]">
-        <div className="grid size-9 place-items-center rounded-[10px] bg-[var(--brand-primary-soft)] text-[var(--brand-primary-ink)]">
-          {icon}
-        </div>
-        <div>
-          <h2 className="m-0 text-[15px] font-semibold tracking-[-0.005em] text-[var(--ink-1)]">
-            {t(titleKey)}
-          </h2>
-          <p className="m-0 mt-0.5 text-[12.5px] text-[var(--ink-3)]">
-            {t(subKey)}
-          </p>
-        </div>
-        {counter ? <div>{counter}</div> : <div />}
-      </header>
-      <div className="p-[22px]">{children}</div>
-    </section>
-  );
-}
-
-// ─────────── Counters (live) ─────────────────────────────────────────────
-
-function CounterChip({
-  filled,
-  total,
-}: {
-  filled: number;
-  total: number;
-}) {
-  const t = useTranslations("accountant.manual_input");
-  const pct = Math.min(100, Math.round((filled / total) * 100));
-  return (
-    <div className="text-right text-[11px] font-semibold tracking-[0.08em] text-[var(--ink-4)] uppercase">
-      <div>{t("s2_counter_filled")}</div>
-      <div className="mt-1 flex items-center gap-[6px]">
-        <div className="relative h-1 w-[70px] overflow-hidden rounded-sm bg-[var(--surface-3)]">
-          <div
-            className="absolute inset-y-0 left-0 rounded-sm bg-[var(--brand-primary)] transition-[width] duration-200 ease-out"
-            style={{ width: `${pct}%` }}
-          />
-        </div>
-        <span className="font-mono text-[11.5px] font-bold tracking-normal text-[var(--brand-primary)] normal-case">
-          {filled}/{total}
-        </span>
-      </div>
     </div>
   );
 }
@@ -170,23 +106,25 @@ function countYearsWithValue(
 }
 
 function RevenueCounter() {
+  const t = useTranslations("accountant.manual_input");
   const { control } = useFormContext<FormValues>();
   const revenue = useWatch({ control, name: "step2.revenue" });
   const filled =
     countYearsWithValue(revenue?.y2023) +
     countYearsWithValue(revenue?.y2024) +
     countYearsWithValue(revenue?.y2025);
-  return <CounterChip filled={filled} total={3} />;
+  return <CounterChip filled={filled} total={3} eyebrow={t("s2_counter_filled")} />;
 }
 
 function ProfitCounter() {
+  const t = useTranslations("accountant.manual_input");
   const { control } = useFormContext<FormValues>();
   const profit = useWatch({ control, name: "step2.netProfit" });
   const filled =
     countYearsWithValue(profit?.y2023) +
     countYearsWithValue(profit?.y2024) +
     countYearsWithValue(profit?.y2025);
-  return <CounterChip filled={filled} total={3} />;
+  return <CounterChip filled={filled} total={3} eyebrow={t("s2_counter_filled")} />;
 }
 
 // ─────────── Annual block: 3 flat groups (Налоги | НДС | Баланс) ─────────

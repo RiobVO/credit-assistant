@@ -11,7 +11,6 @@
 import { useMutation } from "@tanstack/react-query";
 import {
   CheckCircle2,
-  ChevronDown,
   FileSpreadsheet,
   FileText,
   Trash2,
@@ -19,12 +18,13 @@ import {
   Upload,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Controller, useFormContext, useWatch } from "react-hook-form";
 
 import { ApiError, uploadSoliqXltx } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
+import { CustomDropdown } from "./custom-dropdown";
 import { formatUzs } from "../lib/finance";
 import { getYearsRange } from "../lib/years";
 import type { FormValues, VatPeriodFromSoliq } from "../schema";
@@ -296,90 +296,6 @@ function FilePicker({
         </button>
       )}
       <div className="text-[11.5px] text-[var(--ink-4)]">{hint}</div>
-    </div>
-  );
-}
-
-// ─────────── Custom dropdown (year/month) ────────────────────────────────
-
-type DropdownOption<T> = { value: T; label: string };
-
-function CustomDropdown<T extends string | number>({
-  label,
-  value,
-  onChange,
-  options,
-}: {
-  label: string;
-  value: T;
-  onChange: (next: T) => void;
-  options: DropdownOption<T>[];
-}) {
-  const [open, setOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
-
-  // Close on outside click.
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
-
-  const current = options.find((o) => o.value === value);
-
-  return (
-    <div ref={rootRef} className="relative flex flex-col gap-1.5">
-      <label className="text-[12.5px] font-medium text-[var(--ink-2)]">
-        {label}
-      </label>
-      <button
-        type="button"
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
-        className="flex h-[40px] items-center justify-between gap-2 rounded-[9px] border border-[var(--border-strong)] bg-[var(--surface)] px-3 text-left text-[14px] text-[var(--ink-1)] transition-colors hover:border-[var(--brand-primary)] focus:border-[var(--brand-primary)] focus:shadow-[0_0_0_3px_var(--brand-primary-ring)] focus:outline-none"
-      >
-        <span>{current?.label ?? "—"}</span>
-        <ChevronDown
-          className={cn(
-            "size-[14px] flex-none text-[var(--ink-3)] transition-transform duration-150",
-            open && "rotate-180",
-          )}
-        />
-      </button>
-      {open ? (
-        <ul
-          role="listbox"
-          className="absolute top-[68px] right-0 left-0 z-20 max-h-[240px] overflow-y-auto rounded-[10px] border border-[var(--border-strong)] bg-[var(--surface)] shadow-[0_14px_36px_-12px_rgba(14,21,37,0.18)]"
-        >
-          {options.map((opt) => {
-            const selected = opt.value === value;
-            return (
-              <li
-                key={String(opt.value)}
-                role="option"
-                aria-selected={selected}
-                onClick={() => {
-                  onChange(opt.value);
-                  setOpen(false);
-                }}
-                className={cn(
-                  "flex cursor-pointer items-center justify-between px-3 py-2 text-[13.5px] transition-colors",
-                  selected
-                    ? "bg-[var(--brand-primary-soft)] font-semibold text-[var(--brand-primary-ink)]"
-                    : "text-[var(--ink-2)] hover:bg-[var(--surface-2)]",
-                )}
-              >
-                <span>{opt.label}</span>
-                {selected ? <span className="font-bold">✓</span> : null}
-              </li>
-            );
-          })}
-        </ul>
-      ) : null}
     </div>
   );
 }
