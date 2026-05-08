@@ -29,6 +29,13 @@ type FinancialReport = {
   liabilities?: Money;
 };
 
+type VatPeriodReport = {
+  period: DateRange;
+  vat_declared?: Money;
+  esf_seller_vat_total?: Money;
+  submitted_at?: string;
+};
+
 type LoanRequest = {
   amount: Money;
   term_months: number;
@@ -51,6 +58,7 @@ export type ManualInputPayload = {
   as_of: string;
   annual_reports: FinancialReport[];
   quarterly_reports: FinancialReport[];
+  vat_periods?: VatPeriodReport[];
   loan_request?: LoanRequest;
 };
 
@@ -130,6 +138,21 @@ export function formValuesToPayload(values: FormValues): ManualInputPayload {
     annual_reports: annual,
     quarterly_reports: quarterly,
   };
+
+  if (step2.vatPeriod) {
+    const { year, month, vatDeclared, esfSellerVat, submittedAt } = step2.vatPeriod;
+    const lastDay = new Date(year, month, 0).getDate();
+    const mm = String(month).padStart(2, "0");
+    const dd = String(lastDay).padStart(2, "0");
+    payload.vat_periods = [
+      {
+        period: { start: `${year}-${mm}-01`, end: `${year}-${mm}-${dd}` },
+        vat_declared: { amount: vatDeclared, currency: "UZS" },
+        esf_seller_vat_total: { amount: esfSellerVat, currency: "UZS" },
+        ...(submittedAt ? { submitted_at: submittedAt } : {}),
+      },
+    ];
+  }
 
   if (step3.loanAmount) {
     payload.loan_request = {
