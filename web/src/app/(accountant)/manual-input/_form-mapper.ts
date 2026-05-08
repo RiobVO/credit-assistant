@@ -3,8 +3,9 @@
 //
 // Договорённости (PROJECT_BRIEF Section 5, ADR 0004):
 //   • Step 2 квартальные данные суммируются в annual_reports — для 2025 включаем
-//     полный набор (taxes/vat/assets/liabilities). Для 2023/2024 — только revenue
-//     и net_profit, taxes_paid="0" (TODO[CA-004]: per-year taxes UI).
+//     полный набор (taxes/vat/assets/liabilities). Для 2023/2024 включаем
+//     revenue/net_profit + per-year taxes_paid (CA-004), VAT/assets/liabilities
+//     остаются только на 2025.
 //   • Помимо annual_reports эмитим quarterly_reports для квартала с любыми
 //     данными — чтобы NEGATIVE_PROFIT_3Q работал.
 //   • Step 3 → `loan_request` объект (CA-005): amount/term_months/rate_pct/
@@ -84,6 +85,12 @@ export function formValuesToPayload(values: FormValues): ManualInputPayload {
 
   const years = [2023, 2024, 2025] as const;
 
+  const taxesByYear: Record<(typeof years)[number], string> = {
+    2023: step2.taxesPaid23,
+    2024: step2.taxesPaid24,
+    2025: step2.taxesPaid25,
+  };
+
   const annual: FinancialReport[] = years
     .map((y) => {
       const yKey = `y${y}` as const;
@@ -96,7 +103,7 @@ export function formValuesToPayload(values: FormValues): ManualInputPayload {
         period: { start: `${y}-01-01`, end: `${y}-12-31` },
         revenue: money(String(revenueSum)),
         net_profit: money(String(profitSum)),
-        taxes_paid: money(isLatest ? step2.taxesPaid : "0"),
+        taxes_paid: money(taxesByYear[y]),
       };
       if (isLatest) {
         if (step2.vatDeclared) report.vat_declared = money(step2.vatDeclared);
