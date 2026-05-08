@@ -10,7 +10,7 @@ const LEGAL_FORM_LABEL: Record<DossierViewDto["borrower"]["legal_form"], string>
 
 export function BorrowerCard({ borrower }: { borrower: DossierViewDto["borrower"] }) {
   return (
-    <div className="flex h-full flex-col rounded-[10px] border border-[var(--ca-border)] bg-white shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
+    <div className="flex h-full flex-col rounded-[10px] border border-[var(--ca-border)] bg-[var(--ca-surface)] shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
       <header className="flex items-start justify-between border-b border-[var(--ca-border)] px-[22px] py-4">
         <div>
           <div className="text-[10.5px] font-semibold tracking-[1.2px] text-[var(--ca-ink-400)] uppercase">

@@ -59,7 +59,7 @@ function SecondaryAction({ icon, label }: { icon: React.ReactNode; label: string
   return (
     <button
       type="button"
-      className="inline-flex h-[34px] items-center gap-2 rounded-md border border-[var(--ca-border)] bg-white px-3 text-[12.5px] font-medium text-[var(--ca-ink-700)] transition-colors hover:bg-[#FAFBFC]"
+      className="inline-flex h-[34px] items-center gap-2 rounded-md border border-[var(--ca-border)] bg-[var(--ca-surface)] px-3 text-[12.5px] font-medium text-[var(--ca-ink-700)] transition-colors hover:bg-[#FAFBFC]"
     >
       {icon}
       {label}

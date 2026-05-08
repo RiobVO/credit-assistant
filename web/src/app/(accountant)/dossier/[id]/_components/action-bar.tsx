@@ -11,7 +11,7 @@ export function ActionBar() {
       <button
         type="button"
         onClick={() => router.push("/manual-input")}
-        className="inline-flex h-[38px] items-center gap-2 rounded-md border border-[var(--ca-border-strong)] bg-white px-4 text-[13.5px] font-semibold text-[var(--ca-ink-700)] transition-colors hover:bg-[#FAFBFC]"
+        className="inline-flex h-[38px] items-center gap-2 rounded-md border border-[var(--ca-border-strong)] bg-[var(--ca-surface)] px-4 text-[13.5px] font-semibold text-[var(--ca-ink-700)] transition-colors hover:bg-[#FAFBFC]"
       >
         <ChevronLeft className="size-4" />
         Назад к списку
