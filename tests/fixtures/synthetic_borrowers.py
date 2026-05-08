@@ -16,7 +16,19 @@ from domain.entities.monthly_turnover import MonthlyTurnover
 from domain.entities.tax_event import TaxEvent, TaxEventType
 from domain.value_objects.date_range import DateRange
 from domain.value_objects.inn import INN
+from domain.value_objects.loan_request import LoanRequest
 from domain.value_objects.money import Currency, Money
+
+
+def _loan(amount: int, *, term_months: int = 24, rate_pct: str = "22.5") -> LoanRequest:
+    """Хелпер для тестовых LoanRequest — все обязательные поля с разумными дефолтами."""
+    return LoanRequest(
+        amount=Money(Decimal(amount), UZS),
+        term_months=term_months,
+        rate_pct=Decimal(rate_pct),
+        purpose="working_capital",
+        category="standard",
+    )
 
 UZS = Currency.UZS
 AS_OF = date(2026, 5, 8)
@@ -97,7 +109,7 @@ def clean_borrower() -> BorrowerSnapshot:
             _month(2026, 3, 410_000_000),
             _month(2026, 4, 420_000_000),
         ],
-        loan_request_amount=Money(Decimal(500_000_000), UZS),  # 10% revenue
+        loan_request=_loan(500_000_000),  # 10% revenue
         buyer_revenue_share={"200000001": Decimal("0.30"), "200000002": Decimal("0.40")},
         supplier_purchase_share={"300000001": Decimal("0.50")},
     )
@@ -170,12 +182,13 @@ def critical_borrower() -> BorrowerSnapshot:
             Invoice(
                 date=date(2025, 6, 1),
                 amount=Money(Decimal(500_000_000), UZS),
-                vat_amount=Money(Decimal(60_000_000), UZS),  # сумма ЭСФ (seller) << декл.
                 our_role=InvoiceRole.SELLER,
                 counterparty_inn=INN("200000030"),
                 counterparty_name="ООО Однодневка",
             ),
         ],
+        # Агрегат ЭСФ-НДС << декларации (60 млн vs 300 млн) → VAT_ESF_MISMATCH fires.
+        esf_seller_vat_total=Money(Decimal(60_000_000), UZS),
         counterparties_buyers=[shell],
         counterparties_suppliers=[shell],
         tax_events=[
@@ -206,5 +219,5 @@ def loan_oversize_borrower() -> BorrowerSnapshot:
             _quarter(2025, 4, 200_000_000, -20_000_000),
             _quarter(2026, 1, 200_000_000, -30_000_000),
         ],
-        loan_request_amount=Money(Decimal(800_000_000), UZS),  # 80% от B годовой
+        loan_request=_loan(800_000_000),  # 80% от B годовой
     )

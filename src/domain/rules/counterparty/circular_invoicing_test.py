@@ -17,7 +17,6 @@ def _inv(when: date, role: InvoiceRole, cp_inn: str = "987654321") -> Invoice:
     return Invoice(
         date=when,
         amount=Money(Decimal("100"), UZS),
-        vat_amount=Money(Decimal("12"), UZS),
         our_role=role,
         counterparty_inn=INN(cp_inn),
         counterparty_name="ООО",
