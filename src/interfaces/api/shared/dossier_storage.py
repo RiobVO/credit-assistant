@@ -55,3 +55,7 @@ async def get_dossier_storage(session: SessionDep) -> DossierStorage:
         dossier=SqlAlchemyDossierRepository(session),
         draft=SqlAlchemyDraftRepository(session),
     )
+
+
+# Reusable dependency annotation для эндпоинтов: импортируется в dossier.py / draft.py.
+StorageDep = Annotated[DossierStorage, Depends(get_dossier_storage)]
