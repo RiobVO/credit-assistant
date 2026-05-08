@@ -86,7 +86,7 @@ function formatHm(d: Date): string {
 
 function SearchBox() {
   return (
-    <div className="flex h-[34px] w-[280px] items-center gap-2 rounded-md border border-[var(--ca-border)] bg-white px-[10px] text-[var(--ca-ink-400)]">
+    <div className="flex h-[34px] w-[280px] items-center gap-2 rounded-md border border-[var(--ca-border)] bg-[var(--ca-surface)] px-[10px] text-[var(--ca-ink-400)]">
       <Search className="size-4" />
       <input
         placeholder="Поиск по ИНН, заявкам…"
@@ -105,7 +105,7 @@ function IconButton({ title, children }: { title: string; children: ReactNode })
       type="button"
       title={title}
       aria-label={title}
-      className="grid size-[34px] place-items-center rounded-md border border-[var(--ca-border)] bg-white text-[var(--ca-ink-500)] transition-colors hover:bg-[#FAFBFC] hover:text-[var(--ca-ink-700)]"
+      className="grid size-[34px] place-items-center rounded-md border border-[var(--ca-border)] bg-[var(--ca-surface)] text-[var(--ca-ink-500)] transition-colors hover:bg-[#FAFBFC] hover:text-[var(--ca-ink-700)]"
     >
       {children}
     </button>

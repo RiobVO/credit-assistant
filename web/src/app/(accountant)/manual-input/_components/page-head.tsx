@@ -10,7 +10,7 @@ export function PageHead({ caseId }: { caseId: string | null }) {
         </p>
       </div>
 
-      <div className="ml-auto flex items-center gap-[10px] rounded-lg border border-[var(--ca-border)] bg-white px-3 py-2">
+      <div className="ml-auto flex items-center gap-[10px] rounded-lg border border-[var(--ca-border)] bg-[var(--ca-surface)] px-3 py-2">
         <span className="size-1.5 rounded-full bg-[var(--ca-warning)]" />
         <div>
           <div className="text-[11px] tracking-[0.6px] text-[var(--ca-ink-400)] uppercase">

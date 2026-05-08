@@ -56,7 +56,7 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-[10px] border border-[var(--ca-border)] bg-white shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
+    <section className="rounded-[10px] border border-[var(--ca-border)] bg-[var(--ca-surface)] shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
       <header className="flex items-center gap-2.5 border-b border-[var(--ca-border)] px-[22px] py-[18px]">
         <div>
           <h2 className="m-0 text-[15px] font-semibold text-[var(--ca-ink-900)]">
@@ -82,36 +82,70 @@ function AnnualFields() {
   const t = touchedFields.step2;
 
   return (
-    <div className="grid grid-cols-1 gap-x-5 gap-y-[18px] md:grid-cols-2">
-      <UzsField
-        name="step2.vatDeclared"
-        label="НДС задекларированный (за год)"
-        help="По данным деклараций НДС за 2025 г."
-        error={t?.vatDeclared ? e?.vatDeclared?.message : undefined}
-      />
-      <UzsField
-        name="step2.taxesPaid"
-        label="Налоги уплаченные (за год)"
-        help="Совокупная сумма уплаченных налогов"
-        error={t?.taxesPaid ? e?.taxesPaid?.message : undefined}
-      />
-      <UzsField
-        name="step2.totalAssets"
-        label="Активы итого (на 31.12.2025)"
-        help="По бухгалтерскому балансу, форма №1"
-        error={t?.totalAssets ? e?.totalAssets?.message : undefined}
-      />
-      <UzsField
-        name="step2.totalLiabilities"
-        label="Обязательства итого (на 31.12.2025)"
-        help="Краткосрочные + долгосрочные обязательства"
-        error={t?.totalLiabilities ? e?.totalLiabilities?.message : undefined}
-      />
+    <div className="space-y-[18px]">
+      <div>
+        <div className="mb-2 text-[12.5px] font-medium text-[var(--ca-ink-700)]">
+          Налоги уплаченные (по годам)
+        </div>
+        <p className="m-0 mb-2 text-[11.5px] text-[var(--ca-ink-500)]">
+          Совокупная сумма налогов, уплаченных за каждый отчётный год.
+          За 2023/2024 — необязательно (используется только при наличии данных).
+        </p>
+        <div className="grid grid-cols-1 gap-x-5 gap-y-[18px] md:grid-cols-3">
+          <UzsField
+            name="step2.taxesPaid23"
+            label="2023 г."
+            help="Если заполнено — учитывается в годовом отчёте 2023"
+            error={t?.taxesPaid23 ? e?.taxesPaid23?.message : undefined}
+          />
+          <UzsField
+            name="step2.taxesPaid24"
+            label="2024 г."
+            help="Если заполнено — учитывается в годовом отчёте 2024"
+            error={t?.taxesPaid24 ? e?.taxesPaid24?.message : undefined}
+          />
+          <UzsField
+            name="step2.taxesPaid25"
+            label="2025 г."
+            help="Обязательно — текущий отчётный период"
+            error={t?.taxesPaid25 ? e?.taxesPaid25?.message : undefined}
+          />
+        </div>
+      </div>
 
-      <ComputedRow control={control} />
+      <div className="grid grid-cols-1 gap-x-5 gap-y-[18px] md:grid-cols-2">
+        <UzsField
+          name="step2.vatDeclared"
+          label="НДС задекларированный (за год)"
+          help="По данным деклараций НДС за 2025 г."
+          error={t?.vatDeclared ? e?.vatDeclared?.message : undefined}
+        />
+        <UzsField
+          name="step2.totalAssets"
+          label="Активы итого (на 31.12.2025)"
+          help="По бухгалтерскому балансу, форма №1"
+          error={t?.totalAssets ? e?.totalAssets?.message : undefined}
+        />
+        <UzsField
+          name="step2.totalLiabilities"
+          label="Обязательства итого (на 31.12.2025)"
+          help="Краткосрочные + долгосрочные обязательства"
+          error={t?.totalLiabilities ? e?.totalLiabilities?.message : undefined}
+        />
+
+        <ComputedRow control={control} />
+      </div>
     </div>
   );
 }
+
+type UzsFieldName =
+  | "step2.vatDeclared"
+  | "step2.taxesPaid23"
+  | "step2.taxesPaid24"
+  | "step2.taxesPaid25"
+  | "step2.totalAssets"
+  | "step2.totalLiabilities";
 
 function UzsField({
   name,
@@ -119,7 +153,7 @@ function UzsField({
   help,
   error,
 }: {
-  name: "step2.vatDeclared" | "step2.taxesPaid" | "step2.totalAssets" | "step2.totalLiabilities";
+  name: UzsFieldName;
   label: string;
   help: string;
   error?: string;

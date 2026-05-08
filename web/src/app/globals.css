@@ -77,11 +77,11 @@
 }
 
 :root {
-  --background: #F6F7F9;
+  --background: #F1F5F9;
   --foreground: #0E1525;
-  --card: #FFFFFF;
+  --card: #FCFCFD;
   --card-foreground: #0E1525;
-  --popover: #FFFFFF;
+  --popover: #FCFCFD;
   --popover-foreground: #0E1525;
   --primary: #1E55C9;
   --primary-foreground: #FFFFFF;
@@ -124,8 +124,8 @@
   --ca-ink-400: #7A8497;
   --ca-border: #E4E7EC;
   --ca-border-strong: #CDD3DD;
-  --ca-surface: #FFFFFF;
-  --ca-bg: #F6F7F9;
+  --ca-surface: #FCFCFD;
+  --ca-bg: #F1F5F9;
   --ca-primary-blue: #1E55C9;
   --ca-primary-blue-700: #1947AA;
   --ca-primary-blue-50: #EAF0FB;

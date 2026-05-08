@@ -19,7 +19,7 @@ export function Stepper({ activeStep }: { activeStep: StepIdx }) {
       aria-valuenow={activeStep}
       aria-valuemin={1}
       aria-valuemax={3}
-      className="relative mb-5 grid grid-cols-3 gap-0 rounded-[10px] border border-[var(--ca-border)] bg-white px-[18px] py-[14px]"
+      className="relative mb-5 grid grid-cols-3 gap-0 rounded-[10px] border border-[var(--ca-border)] bg-[var(--ca-surface)] px-[18px] py-[14px]"
     >
       {STEPS.map(({ idx, title }) => {
         const isActive = idx === activeStep;
@@ -38,7 +38,7 @@ export function Stepper({ activeStep }: { activeStep: StepIdx }) {
                   "border-[var(--ca-primary-blue)] bg-[var(--ca-primary-blue)] text-white",
                 !isActive &&
                   !isDone &&
-                  "border-[var(--ca-border)] bg-white text-[var(--ca-ink-500)]",
+                  "border-[var(--ca-border)] bg-[var(--ca-surface)] text-[var(--ca-ink-500)]",
               )}
             >
               {isDone ? <Check className="size-3.5" /> : idx}
