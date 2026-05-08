@@ -15,6 +15,9 @@ from alembic import context
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
+# Импорт пакета моделей наполняет Base.metadata как побочный эффект.
+# Без него Alembic autogenerate не увидит таблицы.
+import infrastructure.persistence.models  # noqa: F401
 from config.settings import get_settings
 from infrastructure.persistence.database import Base
 
@@ -33,9 +36,7 @@ if config.config_file_name is not None:
 settings = get_settings()
 config.set_main_option("sqlalchemy.url", settings.database_url)
 
-# Метаданные всех ORM-моделей. Модели импортируются здесь (а не в database.py),
-# чтобы избежать циклических импортов и держать database.py минимальным.
-# 2.5.2: импорты BorrowerORM/SnapshotORM/DossierORM/DraftORM добавятся ниже.
+# target_metadata наполнена импортом пакета моделей выше — Alembic читает её для autogenerate.
 target_metadata = Base.metadata
 
 
