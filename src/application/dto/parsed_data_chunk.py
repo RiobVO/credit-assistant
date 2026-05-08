@@ -19,6 +19,7 @@ from domain.entities.invoice import Invoice
 from domain.entities.monthly_turnover import MonthlyTurnover
 from domain.entities.tax_event import TaxEvent
 from domain.value_objects.inn import INN
+from domain.value_objects.loan_request import LoanRequest
 from domain.value_objects.money import Money
 
 
@@ -71,7 +72,7 @@ class ManualChunk:
     counterparties_suppliers: list[Counterparty] = field(default_factory=list)
     buyer_revenue_share: dict[str, Decimal] = field(default_factory=dict)
     supplier_purchase_share: dict[str, Decimal] = field(default_factory=dict)
-    loan_request_amount: Money | None = None
+    loan_request: LoanRequest | None = None
 
 
 ParsedDataChunk = EsfChunk | SoliqChunk | ManualChunk
