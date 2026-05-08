@@ -23,11 +23,51 @@ export type RiskScoreDto = {
 };
 
 export type DossierResponseDto = {
+  dossier_id: string;
   borrower_inn_masked: string;
   as_of: string;
   red_flags: RedFlagDto[];
   risk_score: RiskScoreDto;
   rules_evaluated: number;
+};
+
+// Расширенный shape для страницы /dossier/[id] (Phase 3.A — UI на mock).
+// Backend GET endpoint появится в Phase 3.B; до этого момента mock-dossier.ts
+// строит этот объект на клиенте.
+export type DossierViewDto = DossierResponseDto & {
+  borrower: {
+    inn: string;
+    name: string;
+    legal_form: "llc" | "jsc" | "ie";
+    registration_date: string; // ISO YYYY-MM-DD
+    director_name: string;
+    director_appointed_at: string;
+    okved_main: string;
+    registered_address: string;
+  };
+  application: {
+    id: string; // BR-2025-XXXX
+    status: "in_review" | "approved" | "rejected" | "draft";
+  };
+  kpis: {
+    revenue_ltm: KpiValueDto;
+    ebitda: KpiValueDto;
+    roe: KpiValueDto;
+    debt_to_ebitda: KpiValueDto;
+  };
+  monthly_revenue_24m: Array<{
+    month: string; // YYYY-MM
+    revenue: number; // в UZS
+    trend: number; // 12-мес rolling в UZS
+    is_peak: boolean;
+  }>;
+};
+
+export type KpiValueDto = {
+  value: number;
+  unit: "UZS" | "PCT" | "RATIO";
+  yoy_pct: number; // знак: + рост, − падение
+  sparkline: number[]; // 12 точек
 };
 
 export type ApiErrorBody = {
