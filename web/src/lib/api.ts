@@ -95,6 +95,47 @@ export async function getDraft(draftId: string): Promise<DraftResponseDto> {
   );
 }
 
+// --- Soliq xltx upload (см. src/interfaces/api/shared/soliq_upload.py) ---
+
+export type SoliqMoneyDto = { amount: string; currency: "UZS" | "USD" };
+export type SoliqDateRangeDto = { start: string; end: string };
+
+export type SoliqUploadResponseDto = {
+  period: SoliqDateRangeDto;
+  vat_declared: SoliqMoneyDto | null;
+  esf_seller_vat_total: SoliqMoneyDto | null;
+  organization_name: string;
+  submitted_at: string | null;
+  diff_pct: string | null;
+};
+
+export async function uploadSoliqXltx(args: {
+  files: File[]; // ровно два файла: декларация + ilova (любой порядок)
+  borrowerInn: string;
+  periodMonth: number;
+}): Promise<SoliqUploadResponseDto> {
+  const fd = new FormData();
+  for (const f of args.files) fd.append("files", f, f.name);
+  fd.append("borrower_inn", args.borrowerInn);
+  fd.append("period_month", String(args.periodMonth));
+
+  const r = await fetch(`${API_URL}/api/upload/soliq-xltx`, {
+    method: "POST",
+    body: fd,
+  });
+
+  if (!r.ok) {
+    let body: ApiErrorBody | string;
+    try {
+      body = (await r.json()) as ApiErrorBody;
+    } catch {
+      body = await r.text();
+    }
+    throw new ApiError(r.status, body);
+  }
+  return (await r.json()) as SoliqUploadResponseDto;
+}
+
 async function jsonFetch<T>(path: string, init: RequestInit): Promise<T> {
   const r = await fetch(`${API_URL}${path}`, {
     ...init,
