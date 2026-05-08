@@ -40,7 +40,7 @@ export function Revenue24mChart({
   const peakLabel = formatMonthShort(slice[peakIndex].month);
 
   return (
-    <section className="rounded-[10px] border border-[var(--ca-border)] bg-white shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
+    <section className="rounded-[10px] border border-[var(--ca-border)] bg-[var(--ca-surface)] shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
       <header className="flex flex-wrap items-center gap-2.5 border-b border-[var(--ca-border)] px-[22px] py-[18px]">
         <div>
           <h2 className="m-0 text-[15px] font-semibold text-[var(--ca-ink-900)]">
@@ -51,7 +51,7 @@ export function Revenue24mChart({
           </p>
         </div>
 
-        <div className="ml-auto inline-flex rounded-md border border-[var(--ca-border)] bg-white p-0.5">
+        <div className="ml-auto inline-flex rounded-md border border-[var(--ca-border)] bg-[var(--ca-surface)] p-0.5">
           {PERIODS.map((p) => (
             <button
               key={p.value}

@@ -40,7 +40,7 @@ const RULE_LABEL: Record<string, string> = {
 
 export function RiskSignals({ flags }: { flags: RedFlagDto[] }) {
   return (
-    <section className="flex h-full flex-col rounded-[10px] border border-[var(--ca-border)] bg-white shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
+    <section className="flex h-full flex-col rounded-[10px] border border-[var(--ca-border)] bg-[var(--ca-surface)] shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
       <header className="flex items-center gap-2.5 border-b border-[var(--ca-border)] px-[22px] py-[18px]">
         <div>
           <h2 className="m-0 text-[15px] font-semibold text-[var(--ca-ink-900)]">

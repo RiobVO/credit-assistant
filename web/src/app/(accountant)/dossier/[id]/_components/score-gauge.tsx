@@ -36,7 +36,7 @@ export function ScoreGauge({
   const needleRotation = (clamped - 50) * 1.8;
 
   return (
-    <div className="rounded-[10px] border border-[var(--ca-border)] bg-white shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
+    <div className="rounded-[10px] border border-[var(--ca-border)] bg-[var(--ca-surface)] shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
       <div className="flex flex-col items-center px-6 pt-6 pb-5">
         <div className="text-[10.5px] font-semibold tracking-[1.2px] text-[var(--ca-ink-400)] uppercase">
           Скоринговый балл
