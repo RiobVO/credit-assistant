@@ -15,6 +15,8 @@ from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 
+from application.dto.brand_config import BrandConfig
+from application.services.observations_builder import Observations
 from application.use_cases.load_dossier_for_view import DossierViewBundle
 from domain.value_objects.money import Money
 
@@ -56,3 +58,12 @@ class DossierPdfBundle:
     top_buyers: tuple[CounterpartyShare, ...]
     top_suppliers: tuple[CounterpartyShare, ...]
     tax_summary: TaxSummary
+    # Phase 10 — tenant-aware brand + executive summary rationale на cover.
+    # ``brand`` пробрасывается до renderer'а одним объектом; не размазываем
+    # по куче параметров. ``observations`` — derived из snapshot+kpis+flags
+    # через ``observations_builder.build_observations``.
+    brand: BrandConfig
+    observations: Observations
+    # rule_id → human-readable name из YAML (Phase 10). Шаблон рендерит
+    # F-секцию по имени правила, не по техническому rule_id (как было в v1).
+    rule_names: dict[str, str]

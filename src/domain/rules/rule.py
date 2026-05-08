@@ -20,6 +20,11 @@ class Rule:
     source: str
     category: str
     fn: RuleFn
+    # Human-readable заголовок правила из YAML (например «Падение выручки >30% МоМ»).
+    # Используется в PDF F-секции вместо rule_id и в observations builder
+    # (Phase 10). До Phase 10 поле дропалось registry_factory'ем — теперь
+    # пробрасывается синхронно с config/rules/v*.yaml.
+    name: str = ""
 
 
 class RuleRegistry:

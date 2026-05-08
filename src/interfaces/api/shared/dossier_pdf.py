@@ -19,11 +19,13 @@ from fastapi.responses import Response
 
 from application.use_cases.load_dossier_for_view import LoadDossierForView
 from application.use_cases.render_dossier_pdf import RenderDossierPdf
+from infrastructure.brand.brand_config import load_brand
 from infrastructure.persistence.repositories.audit_log_repository import (
     SqlAlchemyAuditLogRepository,
 )
 from infrastructure.reports.pdf.pdf_renderer import WeasyPrintPdfRenderer
 from interfaces.api.bank.dependencies import OptionalAnalyst
+from interfaces.api.shared.dependencies import get_rule_registry
 from interfaces.api.shared.dossier_storage import SessionDep, StorageDep
 
 router = APIRouter(prefix="/api", tags=["dossier"])
@@ -55,6 +57,8 @@ async def download_dossier_pdf(
     use_case = RenderDossierPdf(
         loader=LoadDossierForView(storage.dossier),
         renderer=_get_pdf_renderer(),
+        rule_registry=get_rule_registry(),
+        brand_loader=load_brand,
     )
 
     try:

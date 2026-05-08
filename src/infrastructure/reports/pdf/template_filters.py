@@ -30,6 +30,21 @@ _RU_MONTHS_GENITIVE = (
     "декабря",
 )
 
+_RU_MONTHS_SHORT = (
+    "янв",
+    "фев",
+    "мар",
+    "апр",
+    "мая",
+    "июн",
+    "июл",
+    "авг",
+    "сен",
+    "окт",
+    "ноя",
+    "дек",
+)
+
 _SEVERITY_LABEL = {
     "critical": "Критический",
     "high": "Высокий",
@@ -72,6 +87,20 @@ def fmt_uzs(value: Money | Decimal | int | None, *, billions: bool = False) -> s
 
     integer = amount.quantize(Decimal("1"))
     return f"{integer:,}".replace(",", _NBSP) + f"{_NBSP}{_SUM_WORD}"
+
+
+def fmt_uzs_amount_only(value: Money | Decimal | int | None) -> str:
+    """Сумма с разрядным разделителем БЕЗ слова «сум».
+
+    Используется в шаблоне когда «сум» рендерится отдельным текстом
+    (cover decision-meta) или в табличной колонке с подписью «Суммы в сумах»
+    в footer'е (Phase 10). На ``None`` → "—".
+    """
+    if value is None:
+        return _DASH
+    amount = value.amount if isinstance(value, Money) else Decimal(value)
+    integer = amount.quantize(Decimal("1"))
+    return f"{integer:,}".replace(",", _NBSP)
 
 
 def fmt_pct(value: Decimal | None, *, with_sign: bool = False, decimals: int = 1) -> str:
@@ -122,6 +151,24 @@ def fmt_datetime_ru(value: datetime | None) -> str:
     if value is None:
         return _DASH
     return f"{fmt_date_ru(value.date())}, {value.hour:02d}:{value.minute:02d}"
+
+
+def fmt_date_ru_short(value: date | datetime | None) -> str:
+    """``date(2026, 4, 30)`` → "30 апр 2026". Для running head банковской шапки."""
+    if value is None:
+        return _DASH
+    d = value.date() if isinstance(value, datetime) else value
+    month = _RU_MONTHS_SHORT[d.month - 1]
+    return f"{d.day} {month} {d.year}"
+
+
+def fmt_date_ru_month(value: date | datetime | None) -> str:
+    """``date(2018, 3, 14)`` → "марта 2018". Для stat-tile «с марта 2018»."""
+    if value is None:
+        return _DASH
+    d = value.date() if isinstance(value, datetime) else value
+    month = _RU_MONTHS_GENITIVE[d.month - 1]
+    return f"{month} {d.year}"
 
 
 def severity_label(value: str | None) -> str:
