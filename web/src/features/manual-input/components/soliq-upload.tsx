@@ -1,13 +1,25 @@
 "use client";
 
-// Карточка «Загрузить из my3.soliq.uz»: пара xltx-файлов (Расчёт НДС +
-// ilova-приложение №4) → POST /api/upload/soliq-xltx → preview →
-// step2.vatPeriod в форме. При финальном submit уйдёт в payload.vat_periods[0].
+// Карточка «Сверить НДС с ЭСФ»: пара xltx (Расчёт НДС + ilova-приложение №4) →
+// POST /api/upload/soliq-xltx → preview → step2.vatPeriod в форме. При финальном
+// submit уйдёт в payload.vat_periods[0].
+//
+// Phase 7 polish: section card pattern Phase 6 (icon-tile + gradient header),
+// custom dropdowns для year/month вместо native <select> (premium-bank tone),
+// semantic tokens вместо hex, h-40/rounded-[9px] на кнопках.
 
 import { useMutation } from "@tanstack/react-query";
-import { CheckCircle2, FileText, Trash2, TriangleAlert, Upload } from "lucide-react";
+import {
+  CheckCircle2,
+  ChevronDown,
+  FileSpreadsheet,
+  FileText,
+  Trash2,
+  TriangleAlert,
+  Upload,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Controller, useFormContext, useWatch } from "react-hook-form";
 
 import { ApiError, uploadSoliqXltx } from "@/lib/api";
@@ -87,7 +99,11 @@ function SoliqUploadInner({ field }: { field: FieldShape }) {
 
   const innMissing = !inn || !/^\d{9}$/.test(inn);
   const canSubmit =
-    !innMissing && files.length === 2 && month >= 1 && month <= 12 && !mutation.isPending;
+    !innMissing &&
+    files.length === 2 &&
+    month >= 1 &&
+    month <= 12 &&
+    !mutation.isPending;
 
   const onAddFile = (file: File | null) => {
     if (!file) return;
@@ -111,11 +127,20 @@ function SoliqUploadInner({ field }: { field: FieldShape }) {
     if (ilovaRef.current) ilovaRef.current.value = "";
   };
 
+  const monthOptions = MONTH_KEYS.map((mk, idx) => ({
+    value: idx + 1,
+    label: t(mk),
+  }));
+  const yearOptions = YEARS.map((y) => ({ value: y, label: String(y) }));
+
   return (
-    <section className="rounded-[10px] border border-[var(--border)] bg-[var(--surface)] shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
-      <header className="flex items-start justify-between gap-2.5 border-b border-[var(--border)] px-[22px] py-[18px]">
+    <section className="overflow-hidden rounded-[14px] border border-[var(--border)] bg-[var(--surface)]">
+      <header className="grid grid-cols-[40px_1fr_auto] items-center gap-[14px] border-b border-[var(--border)] bg-gradient-to-b from-white to-[var(--surface-2)] px-[22px] py-[16px]">
+        <div className="grid size-9 place-items-center rounded-[10px] bg-[var(--brand-primary-soft)] text-[var(--brand-primary-ink)]">
+          <FileSpreadsheet className="size-[18px]" />
+        </div>
         <div>
-          <h2 className="m-0 text-[15px] font-semibold text-[var(--ink-1)]">
+          <h2 className="m-0 text-[15px] font-semibold tracking-[-0.005em] text-[var(--ink-1)]">
             {t("soliq_title")}
           </h2>
           <p className="m-0 mt-0.5 text-[12.5px] text-[var(--ink-3)]">
@@ -126,12 +151,14 @@ function SoliqUploadInner({ field }: { field: FieldShape }) {
           <button
             type="button"
             onClick={reset}
-            className="inline-flex items-center gap-1.5 rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-1.5 text-[12px] text-[var(--ink-2)] transition-colors hover:bg-[#FAFBFC]"
+            className="inline-flex items-center gap-1.5 rounded-[8px] border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-1.5 text-[12px] text-[var(--ink-2)] transition-colors hover:bg-[var(--surface-2)]"
           >
             <Trash2 className="size-3.5" />
             {t("soliq_reset")}
           </button>
-        ) : null}
+        ) : (
+          <div />
+        )}
       </header>
 
       <div className="space-y-4 p-[22px]">
@@ -143,7 +170,7 @@ function SoliqUploadInner({ field }: { field: FieldShape }) {
               <FilePicker
                 inputRef={declarationRef}
                 label={t("soliq_file_1_label")}
-                hint={t("soliq_file_hint")}
+                hint={t("soliq_file_1_hint")}
                 file={files[0] ?? null}
                 onChange={(f) => onAddFile(f)}
                 onRemove={() => removeFile(0)}
@@ -151,7 +178,7 @@ function SoliqUploadInner({ field }: { field: FieldShape }) {
               <FilePicker
                 inputRef={ilovaRef}
                 label={t("soliq_file_2_label")}
-                hint={t("soliq_file_hint")}
+                hint={t("soliq_file_2_hint")}
                 file={files[1] ?? null}
                 onChange={(f) => onAddFile(f)}
                 onRemove={() => removeFile(1)}
@@ -159,47 +186,27 @@ function SoliqUploadInner({ field }: { field: FieldShape }) {
             </div>
 
             <div className="grid grid-cols-1 items-end gap-3 md:grid-cols-3">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[13px] font-medium text-[var(--ink-2)]">
-                  {t("soliq_year_label")}
-                </label>
-                <select
-                  value={year}
-                  onChange={(e) => setYear(Number(e.target.value))}
-                  className="h-[38px] rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3 text-[14px] text-[var(--ink-1)]"
-                >
-                  {YEARS.map((y) => (
-                    <option key={y} value={y}>
-                      {y}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[13px] font-medium text-[var(--ink-2)]">
-                  {t("soliq_month_label")}
-                </label>
-                <select
-                  value={month}
-                  onChange={(e) => setMonth(Number(e.target.value))}
-                  className="h-[38px] rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3 text-[14px] text-[var(--ink-1)]"
-                >
-                  {MONTH_KEYS.map((mk, idx) => (
-                    <option key={idx} value={idx + 1}>
-                      {t(mk)}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <CustomDropdown
+                label={t("soliq_year_label")}
+                value={year}
+                onChange={setYear}
+                options={yearOptions}
+              />
+              <CustomDropdown
+                label={t("soliq_month_label")}
+                value={month}
+                onChange={setMonth}
+                options={monthOptions}
+              />
               <button
                 type="button"
                 disabled={!canSubmit}
                 onClick={() => mutation.mutate()}
                 className={cn(
-                  "h-[38px] rounded-md px-4 text-[13px] font-semibold transition-colors",
+                  "h-[40px] rounded-[9px] px-4 text-[13.5px] font-semibold transition-colors",
                   canSubmit
-                    ? "bg-[var(--brand-primary)] text-white hover:opacity-90"
-                    : "cursor-not-allowed bg-[#E5E8EE] text-[var(--ink-4)]",
+                    ? "bg-[var(--brand-primary)] text-white shadow-[0_4px_14px_-5px_var(--brand-primary)] hover:bg-[var(--brand-primary-hover)]"
+                    : "cursor-not-allowed bg-[var(--surface-2)] text-[var(--ink-4)]",
                 )}
               >
                 {mutation.isPending ? t("soliq_submitting") : t("soliq_submit")}
@@ -220,6 +227,8 @@ function SoliqUploadInner({ field }: { field: FieldShape }) {
   );
 }
 
+// ─────────── FilePicker ──────────────────────────────────────────────────
+
 function FilePicker({
   inputRef,
   label,
@@ -237,8 +246,22 @@ function FilePicker({
 }) {
   const t = useTranslations("accountant.manual_input");
   return (
-    <div className="rounded-md border border-dashed border-[var(--border-strong)] bg-[#FAFBFC] p-4">
-      <div className="text-[12px] tracking-[0.4px] text-[var(--ink-3)] uppercase">{label}</div>
+    <div
+      className={cn(
+        "flex flex-col gap-2.5 rounded-[11px] border border-dashed p-4 transition-colors",
+        file
+          ? "border-[var(--state-ok-border)] bg-gradient-to-b from-[var(--state-ok-bg)]/40 to-white"
+          : "border-[var(--border-strong)] bg-[var(--surface-2)]",
+      )}
+    >
+      <div
+        className={cn(
+          "text-[10.5px] font-bold tracking-[0.08em] uppercase",
+          file ? "text-[var(--state-ok-fg)]" : "text-[var(--ink-3)]",
+        )}
+      >
+        {label}
+      </div>
       <input
         ref={inputRef}
         type="file"
@@ -247,10 +270,12 @@ function FilePicker({
         onChange={(e) => onChange(e.target.files?.[0] ?? null)}
       />
       {file ? (
-        <div className="mt-2 flex items-center justify-between gap-3 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2">
+        <div className="flex items-center justify-between gap-3 rounded-[8px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2">
           <div className="flex min-w-0 items-center gap-2">
             <FileText className="size-4 shrink-0 text-[var(--ink-3)]" />
-            <span className="truncate text-[13px] text-[var(--ink-2)]">{file.name}</span>
+            <span className="truncate text-[13px] text-[var(--ink-2)]">
+              {file.name}
+            </span>
           </div>
           <button
             type="button"
@@ -264,16 +289,102 @@ function FilePicker({
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
-          className="mt-2 flex w-full items-center justify-center gap-2 rounded-md border border-[var(--border-strong)] bg-[var(--surface)] py-3 text-[13px] text-[var(--ink-2)] hover:bg-[#F4F6FA]"
+          className="flex w-full items-center justify-center gap-2 rounded-[9px] border border-[var(--border-strong)] bg-[var(--surface)] py-2.5 text-[13px] text-[var(--ink-2)] transition-colors hover:border-[var(--brand-primary)] hover:bg-[var(--brand-primary-soft)] hover:text-[var(--brand-primary-ink)]"
         >
           <Upload className="size-4" />
           {t("soliq_pick_file")}
         </button>
       )}
-      <div className="mt-1.5 text-[12px] text-[var(--ink-4)]">{hint}</div>
+      <div className="text-[11.5px] text-[var(--ink-4)]">{hint}</div>
     </div>
   );
 }
+
+// ─────────── Custom dropdown (year/month) ────────────────────────────────
+
+type DropdownOption<T> = { value: T; label: string };
+
+function CustomDropdown<T extends string | number>({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: T;
+  onChange: (next: T) => void;
+  options: DropdownOption<T>[];
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  // Close on outside click.
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  const current = options.find((o) => o.value === value);
+
+  return (
+    <div ref={rootRef} className="relative flex flex-col gap-1.5">
+      <label className="text-[12.5px] font-medium text-[var(--ink-2)]">
+        {label}
+      </label>
+      <button
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        className="flex h-[40px] items-center justify-between gap-2 rounded-[9px] border border-[var(--border-strong)] bg-[var(--surface)] px-3 text-left text-[14px] text-[var(--ink-1)] transition-colors hover:border-[var(--brand-primary)] focus:border-[var(--brand-primary)] focus:shadow-[0_0_0_3px_var(--brand-primary-ring)] focus:outline-none"
+      >
+        <span>{current?.label ?? "—"}</span>
+        <ChevronDown
+          className={cn(
+            "size-[14px] flex-none text-[var(--ink-3)] transition-transform duration-150",
+            open && "rotate-180",
+          )}
+        />
+      </button>
+      {open ? (
+        <ul
+          role="listbox"
+          className="absolute top-[68px] right-0 left-0 z-20 max-h-[240px] overflow-y-auto rounded-[10px] border border-[var(--border-strong)] bg-[var(--surface)] shadow-[0_14px_36px_-12px_rgba(14,21,37,0.18)]"
+        >
+          {options.map((opt) => {
+            const selected = opt.value === value;
+            return (
+              <li
+                key={String(opt.value)}
+                role="option"
+                aria-selected={selected}
+                onClick={() => {
+                  onChange(opt.value);
+                  setOpen(false);
+                }}
+                className={cn(
+                  "flex cursor-pointer items-center justify-between px-3 py-2 text-[13.5px] transition-colors",
+                  selected
+                    ? "bg-[var(--brand-primary-soft)] font-semibold text-[var(--brand-primary-ink)]"
+                    : "text-[var(--ink-2)] hover:bg-[var(--surface-2)]",
+                )}
+              >
+                <span>{opt.label}</span>
+                {selected ? <span className="font-bold">✓</span> : null}
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
+// ─────────── Preview block (после успешного parse) ───────────────────────
 
 function PreviewBlock({ data }: { data: VatPeriodFromSoliq }) {
   const t = useTranslations("accountant.manual_input");
@@ -284,7 +395,7 @@ function PreviewBlock({ data }: { data: VatPeriodFromSoliq }) {
 
   return (
     <div className="space-y-2.5">
-      <div className="flex items-start gap-2.5 rounded-md border border-[#BFE7C8] bg-[#E9F7EE] px-[14px] py-3">
+      <div className="flex items-start gap-2.5 rounded-[10px] border border-[var(--state-ok-border)] bg-[var(--state-ok-bg)] px-[14px] py-3">
         <CheckCircle2 className="mt-px size-4 flex-none text-[var(--state-ok-fg)]" />
         <div className="text-[13px] leading-[1.5] text-[var(--ink-1)]">
           <b className="font-semibold">
@@ -321,12 +432,21 @@ function PreviewBlock({ data }: { data: VatPeriodFromSoliq }) {
         </div>
       ) : null}
 
-      <ParseWarnings warnings={data.parseWarnings ?? []} skipped={data.skippedRowsCount ?? 0} />
+      <ParseWarnings
+        warnings={data.parseWarnings ?? []}
+        skipped={data.skippedRowsCount ?? 0}
+      />
     </div>
   );
 }
 
-function ParseWarnings({ warnings, skipped }: { warnings: string[]; skipped: number }) {
+function ParseWarnings({
+  warnings,
+  skipped,
+}: {
+  warnings: string[];
+  skipped: number;
+}) {
   const t = useTranslations("accountant.manual_input");
   const [open, setOpen] = useState(false);
   if (warnings.length === 0 && skipped === 0) return null;
@@ -341,10 +461,15 @@ function ParseWarnings({ warnings, skipped }: { warnings: string[]; skipped: num
     <details
       open={open}
       onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)}
-      className="rounded-md border border-[#F2DBA1] bg-[#FCF4DD] px-[14px] py-2.5"
+      className="rounded-[10px] border border-[var(--state-warn-border)] bg-[var(--state-warn-bg)] px-[14px] py-2.5"
     >
       <summary className="cursor-pointer list-none text-[12.5px] font-medium text-[var(--ink-2)]">
-        <span className="mr-1 inline-block transition-transform" style={{ transform: open ? "rotate(90deg)" : "rotate(0deg)" }}>▸</span>
+        <span
+          className="mr-1 inline-block transition-transform"
+          style={{ transform: open ? "rotate(90deg)" : "rotate(0deg)" }}
+        >
+          ▸
+        </span>
         {summary}
       </summary>
       {warnings.length > 0 ? (
@@ -370,8 +495,10 @@ function Stat({
   tone?: "good" | "warn" | "neutral";
 }) {
   return (
-    <div className="rounded-lg border border-dashed border-[var(--border-strong)] bg-[#FAFBFC] px-[14px] py-3">
-      <div className="text-[12px] tracking-[0.6px] text-[var(--ink-3)] uppercase">{label}</div>
+    <div className="rounded-[11px] border border-dashed border-[var(--border-strong)] bg-[var(--surface-2)] px-[14px] py-3">
+      <div className="text-[12px] tracking-[0.6px] text-[var(--ink-3)] uppercase">
+        {label}
+      </div>
       <div
         className={cn(
           "mt-1 font-mono text-[14px] font-semibold",
@@ -390,11 +517,11 @@ function Hint({ tone, text }: { tone: "info" | "warn"; text: string }) {
   return (
     <div
       className={cn(
-        "rounded-md border px-[14px] py-2.5 text-[12.5px]",
+        "rounded-[10px] border px-[14px] py-2.5 text-[12.5px]",
         tone === "info" &&
-          "border-[var(--border)] bg-[#F4F6FA] text-[var(--ink-3)]",
+          "border-[var(--border)] bg-[var(--surface-2)] text-[var(--ink-3)]",
         tone === "warn" &&
-          "border-[#F2DBA1] bg-[#FCF4DD] text-[var(--ink-2)]",
+          "border-[var(--state-warn-border)] bg-[var(--state-warn-bg)] text-[var(--ink-2)]",
       )}
     >
       {text}
@@ -419,9 +546,11 @@ function ErrorBlock({ error }: { error: unknown }) {
     message = t("soliq_generic_error");
   }
   return (
-    <div className="flex items-start gap-2.5 rounded-md border border-[#F2BCBA] bg-[#FCE7E5] px-[14px] py-3">
+    <div className="flex items-start gap-2.5 rounded-[10px] border border-[var(--state-bad-border)] bg-[var(--state-bad-bg)] px-[14px] py-3">
       <TriangleAlert className="mt-px size-4 flex-none text-[var(--state-bad-fg)]" />
-      <div className="text-[13px] leading-[1.5] text-[var(--state-bad-fg)]">{message}</div>
+      <div className="text-[13px] leading-[1.5] text-[var(--state-bad-fg)]">
+        {message}
+      </div>
     </div>
   );
 }

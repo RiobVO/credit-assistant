@@ -84,11 +84,13 @@ export function ParsedFilesDropzone() {
         : null;
 
   return (
-    <section className="rounded-[10px] border border-[var(--border)] bg-[var(--surface)] shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
-      <header className="flex items-center gap-2.5 border-b border-[var(--border)] px-[22px] py-[18px]">
-        <Upload className="size-4 text-[var(--brand-primary)]" />
+    <section className="overflow-hidden rounded-[14px] border border-[var(--border)] bg-[var(--surface)]">
+      <header className="grid grid-cols-[40px_1fr] items-center gap-[14px] border-b border-[var(--border)] bg-gradient-to-b from-white to-[var(--surface-2)] px-[22px] py-[16px]">
+        <div className="grid size-9 place-items-center rounded-[10px] bg-[var(--brand-primary-soft)] text-[var(--brand-primary-ink)]">
+          <Upload className="size-[18px]" />
+        </div>
         <div>
-          <h2 className="m-0 text-[15px] font-semibold text-[var(--ink-1)]">
+          <h2 className="m-0 text-[15px] font-semibold tracking-[-0.005em] text-[var(--ink-1)]">
             {t("dropzone_title")}
           </h2>
           <p className="m-0 mt-0.5 text-[12.5px] text-[var(--ink-3)]">
@@ -115,7 +117,7 @@ export function ParsedFilesDropzone() {
                   type="button"
                   aria-label={t("dropzone_remove_aria", { name: f.name })}
                   onClick={() => removeFile(i)}
-                  className="rounded p-1 text-[var(--ink-4)] transition-colors hover:bg-[#FCE7E5] hover:text-[var(--state-bad-fg)]"
+                  className="rounded p-1 text-[var(--ink-4)] transition-colors hover:bg-[var(--state-bad-bg)] hover:text-[var(--state-bad-fg)]"
                 >
                   <Trash2 className="size-4" />
                 </button>
@@ -135,10 +137,10 @@ export function ParsedFilesDropzone() {
             disabled={!canSubmit}
             onClick={() => mutation.mutate()}
             className={cn(
-              "inline-flex h-[38px] items-center gap-2 rounded-md px-5 text-[13.5px] font-semibold transition-colors",
+              "inline-flex h-[40px] items-center gap-2 rounded-[9px] px-5 text-[13.5px] font-semibold transition-colors",
               canSubmit
-                ? "bg-[var(--brand-primary)] text-white hover:bg-[var(--brand-primary-hover)]"
-                : "cursor-not-allowed bg-[#E5E9EF] text-[var(--ink-4)]",
+                ? "bg-[var(--brand-primary)] text-white shadow-[0_4px_14px_-5px_var(--brand-primary)] hover:bg-[var(--brand-primary-hover)]"
+                : "cursor-not-allowed bg-[var(--surface-2)] text-[var(--ink-4)]",
             )}
           >
             {mutation.isPending ? t("dropzone_submitting") : t("dropzone_submit")}
@@ -146,7 +148,7 @@ export function ParsedFilesDropzone() {
         </div>
 
         {errorMessage && (
-          <div className="flex items-start gap-2 rounded-md border border-[#F2BCBA] bg-[#FCE7E5] px-3 py-2 text-[12.5px] text-[var(--state-bad-fg)]">
+          <div className="flex items-start gap-2 rounded-md border border-[var(--state-bad-border)] bg-[var(--state-bad-bg)] px-3 py-2 text-[12.5px] text-[var(--state-bad-fg)]">
             <TriangleAlert className="size-4 flex-none" />
             <span>{errorMessage}</span>
           </div>
@@ -186,10 +188,10 @@ function DropZone({
         onSelect(e.dataTransfer.files);
       }}
       className={cn(
-        "flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-md border-2 border-dashed px-6 py-7 transition-colors",
+        "flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-[12px] border-2 border-dashed px-6 py-7 transition-colors",
         over
-          ? "border-[var(--brand-primary)] bg-[#F4F8FF]"
-          : "border-[var(--border-strong)] bg-[#FAFBFC] hover:bg-[#F4F6F9]",
+          ? "border-[var(--brand-primary)] bg-[var(--brand-primary-soft)]"
+          : "border-[var(--border-strong)] bg-[var(--surface-2)] hover:bg-[var(--surface-3)]",
       )}
     >
       <Upload className="size-5 text-[var(--ink-3)]" />
@@ -214,7 +216,7 @@ function DropZone({
 function AutofilledSummary({ entries }: { entries: Source[] }) {
   const t = useTranslations("accountant.manual_input");
   return (
-    <div className="rounded-md border border-[#BFE2D2] bg-[var(--state-ok-bg)] px-3 py-2.5">
+    <div className="rounded-md border border-[var(--state-ok-border)] bg-[var(--state-ok-bg)] px-3 py-2.5">
       <div className="mb-1.5 flex items-center gap-1.5 text-[12.5px] font-semibold text-[var(--state-ok-fg)]">
         <CheckCircle2 className="size-4" />
         {t("dropzone_autofilled_heading", { count: entries.length })}
@@ -237,7 +239,7 @@ function AutofilledSummary({ entries }: { entries: Source[] }) {
 function WarningsBlock({ warnings }: { warnings: string[] }) {
   const t = useTranslations("accountant.manual_input");
   return (
-    <details className="rounded-md border border-[#F1D9A6] bg-[#FFF6E5] px-3 py-2">
+    <details className="rounded-md border border-[var(--state-warn-border)] bg-[var(--state-warn-bg)] px-3 py-2">
       <summary className="cursor-pointer text-[12.5px] font-semibold text-[var(--state-warn-fg)]">
         {t("dropzone_warnings_summary", { count: warnings.length })}
       </summary>
