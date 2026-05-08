@@ -13,6 +13,7 @@ from domain.entities.financial_report import FinancialReport
 from domain.entities.invoice import Invoice, InvoiceRole
 from domain.entities.monthly_turnover import MonthlyTurnover
 from domain.entities.tax_event import TaxEvent, TaxEventType
+from domain.entities.vat_period_report import VatPeriodReport
 from domain.value_objects.date_range import DateRange
 from domain.value_objects.inn import INN
 from domain.value_objects.loan_request import LoanRequest
@@ -112,7 +113,14 @@ def _full_snapshot() -> BorrowerSnapshot:
                 duration_days=30,
             ),
         ],
-        esf_seller_vat_total=_money(60_000_000),
+        vat_periods=[
+            VatPeriodReport(
+                period=DateRange(start=date(2026, 3, 1), end=date(2026, 3, 31)),
+                vat_declared=_money(300_000_000),
+                esf_seller_vat_total=_money(60_000_000),
+                submitted_at=date(2026, 4, 25),
+            ),
+        ],
         loan_request=LoanRequest(
             amount=_money(1_500_000_000),
             term_months=24,
