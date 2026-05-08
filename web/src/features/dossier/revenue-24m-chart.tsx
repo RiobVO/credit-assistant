@@ -14,6 +14,7 @@ import {
   YAxis,
 } from "recharts";
 
+import { SectionCard } from "@/components/section-card";
 import type { DossierViewDto } from "@/lib/api";
 
 import { formatBigUzs, formatMonthShort } from "./format";
@@ -56,105 +57,98 @@ export function Revenue24mChart({
   );
   const peakLabel = formatMonthShort(slice[peakIndex].month);
 
+  const periodSelector = (
+    <div className="inline-flex rounded-md border border-[var(--border)] bg-[var(--surface)] p-0.5">
+      {PERIODS.map((p) => (
+        <button
+          key={p.value}
+          type="button"
+          onClick={() => setPeriod(p.value)}
+          className={`px-2.5 py-1 text-[12px] font-medium transition-colors ${
+            period === p.value
+              ? "rounded-[5px] bg-[var(--brand-primary-soft)] text-[var(--brand-primary-hover)]"
+              : "text-[var(--ink-3)] hover:text-[var(--ink-2)]"
+          }`}
+        >
+          {t(p.key)}
+        </button>
+      ))}
+    </div>
+  );
+
   return (
-    <section className="rounded-[10px] border border-[var(--border)] bg-[var(--surface)] shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
-      <header className="flex flex-wrap items-center gap-2.5 border-b border-[var(--border)] px-[22px] py-[18px]">
-        <div>
-          <h2 className="m-0 text-[15px] font-semibold text-[var(--ink-1)]">
-            {t("title", { months: period })}
-          </h2>
-          <p className="m-0 mt-0.5 text-[12.5px] text-[var(--ink-3)]">
-            {t("subtitle", { peak: peakLabel })}
-          </p>
-        </div>
-
-        <div className="ml-auto inline-flex rounded-md border border-[var(--border)] bg-[var(--surface)] p-0.5">
-          {PERIODS.map((p) => (
-            <button
-              key={p.value}
-              type="button"
-              onClick={() => setPeriod(p.value)}
-              className={`px-2.5 py-1 text-[12px] font-medium transition-colors ${
-                period === p.value
-                  ? "rounded-[5px] bg-[var(--brand-primary-soft)] text-[var(--brand-primary-hover)]"
-                  : "text-[var(--ink-3)] hover:text-[var(--ink-2)]"
-              }`}
-            >
-              {t(p.key)}
-            </button>
-          ))}
-        </div>
-      </header>
-
-      <div className="px-[14px] pt-3 pb-4">
-        <div className="h-[260px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart
-              data={slice}
-              margin={{ top: 8, right: 14, bottom: 0, left: 8 }}
-            >
-              <CartesianGrid stroke="var(--chart-grid)" vertical={false} />
-              <XAxis
-                dataKey="month"
-                tickFormatter={formatMonthShort}
-                tick={{ fontSize: 11, fill: "var(--ink-4)" }}
-                axisLine={{ stroke: "var(--border)" }}
-                tickLine={false}
-                interval={Math.max(0, Math.floor(slice.length / 12) - 1)}
-              />
-              <YAxis
-                tickFormatter={(v: number) => `${(v / 1_000_000_000).toFixed(1)}`}
-                tick={{ fontSize: 11, fill: "var(--ink-4)" }}
-                axisLine={false}
-                tickLine={false}
-                width={40}
-              />
-              <Tooltip
-                cursor={{ fill: "var(--surface-2)" }}
-                contentStyle={{
-                  borderRadius: 8,
-                  border: "1px solid var(--border)",
-                  fontSize: 12,
-                }}
-                labelFormatter={(label) =>
-                  typeof label === "string" ? formatMonthShort(label) : String(label)
-                }
-                formatter={(value, name) => {
-                  const num = typeof value === "number" ? value : Number(value);
-                  const label =
-                    name === "revenue" ? t("tooltip_revenue") : t("tooltip_trend");
-                  return [formatBigUzs(num), label];
-                }}
-              />
-              <Bar dataKey="revenue" barSize={Math.min(22, 600 / slice.length)}>
-                {slice.map((entry, i) => (
-                  <Cell
-                    key={i}
-                    fill={
-                      entry.is_peak ? "var(--chart-orange)" : "var(--chart-grey)"
-                    }
-                  />
-                ))}
-              </Bar>
-              <Line
-                type="monotone"
-                dataKey="trend"
-                stroke="var(--chart-blue)"
-                strokeWidth={2}
-                dot={false}
-                isAnimationActive={false}
-              />
-            </ComposedChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className="mt-3 flex items-center gap-4 px-2 text-[11.5px] text-[var(--ink-3)]">
-          <Legend color="var(--chart-grey)" label={t("legend_monthly")} />
-          <Legend color="var(--chart-orange)" label={t("legend_peak")} />
-          <Legend color="var(--chart-blue)" label={t("legend_trend")} />
-        </div>
+    <SectionCard
+      title={t("title", { months: period })}
+      sub={t("subtitle", { peak: peakLabel })}
+      aux={periodSelector}
+    >
+      <div className="h-[260px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <ComposedChart
+            data={slice}
+            margin={{ top: 8, right: 14, bottom: 0, left: 8 }}
+          >
+            <CartesianGrid stroke="var(--chart-grid)" vertical={false} />
+            <XAxis
+              dataKey="month"
+              tickFormatter={formatMonthShort}
+              tick={{ fontSize: 11, fill: "var(--ink-4)" }}
+              axisLine={{ stroke: "var(--border)" }}
+              tickLine={false}
+              interval={Math.max(0, Math.floor(slice.length / 12) - 1)}
+            />
+            <YAxis
+              tickFormatter={(v: number) => `${(v / 1_000_000_000).toFixed(1)}`}
+              tick={{ fontSize: 11, fill: "var(--ink-4)" }}
+              axisLine={false}
+              tickLine={false}
+              width={40}
+            />
+            <Tooltip
+              cursor={{ fill: "var(--surface-2)" }}
+              contentStyle={{
+                borderRadius: 8,
+                border: "1px solid var(--border)",
+                fontSize: 12,
+              }}
+              labelFormatter={(label) =>
+                typeof label === "string" ? formatMonthShort(label) : String(label)
+              }
+              formatter={(value, name) => {
+                const num = typeof value === "number" ? value : Number(value);
+                const label =
+                  name === "revenue" ? t("tooltip_revenue") : t("tooltip_trend");
+                return [formatBigUzs(num), label];
+              }}
+            />
+            <Bar dataKey="revenue" barSize={Math.min(22, 600 / slice.length)}>
+              {slice.map((entry, i) => (
+                <Cell
+                  key={i}
+                  fill={
+                    entry.is_peak ? "var(--chart-orange)" : "var(--chart-grey)"
+                  }
+                />
+              ))}
+            </Bar>
+            <Line
+              type="monotone"
+              dataKey="trend"
+              stroke="var(--chart-blue)"
+              strokeWidth={2}
+              dot={false}
+              isAnimationActive={false}
+            />
+          </ComposedChart>
+        </ResponsiveContainer>
       </div>
-    </section>
+
+      <div className="mt-3 flex items-center gap-4 px-2 text-[11.5px] text-[var(--ink-3)]">
+        <Legend color="var(--chart-grey)" label={t("legend_monthly")} />
+        <Legend color="var(--chart-orange)" label={t("legend_peak")} />
+        <Legend color="var(--chart-blue)" label={t("legend_trend")} />
+      </div>
+    </SectionCard>
   );
 }
 
@@ -187,18 +181,10 @@ function EmptyChart({ hasAnnualRevenue }: { hasAnnualRevenue: boolean }) {
     : t("empty_body_no_data");
 
   return (
-    <section className="rounded-[10px] border border-[var(--border)] bg-[var(--surface)] shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
-      <header className="border-b border-[var(--border)] px-[22px] py-[18px]">
-        <h2 className="m-0 text-[15px] font-semibold text-[var(--ink-1)]">
-          {title}
-        </h2>
-        <p className="m-0 mt-0.5 text-[12.5px] text-[var(--ink-3)]">
-          {subtitle}
-        </p>
-      </header>
-      <div className="flex h-[200px] items-center justify-center px-6 text-center text-[13px] text-[var(--ink-3)]">
+    <SectionCard title={title} sub={subtitle}>
+      <div className="flex h-[160px] items-center justify-center px-2 text-center text-[13px] text-[var(--ink-3)]">
         {body}
       </div>
-    </section>
+    </SectionCard>
   );
 }

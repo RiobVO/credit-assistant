@@ -732,13 +732,14 @@
       "meta_inn": "ИНН {inn}",
       "meta_legal_form": "ОПФ {form}",
       "meta_okved": "ОКВЭД {code}",
-      "action_rebuild": "Пересобрать",
+      "eyebrow_application": "ЗАЯВКА {id}",
+      "eyebrow_as_of": "ДАННЫЕ НА {date}",
+      "action_rebuild": "Пересобрать с дополнениями",
       "action_download_pdf": "Скачать PDF"
     },
     "borrower_card": {
-      "title": "Карточка заёмщика",
-      "inn_prefix": "ИНН {inn}",
-      "verified": "Проверено в ГНК",
+      "section_title": "Карточка клиента",
+      "section_sub": "Юридические реквизиты, директор и адрес",
       "row_legal_form": "ОПФ",
       "row_registration": "Регистрация",
       "row_director": "Директор",
@@ -766,8 +767,9 @@
       "no_debt_pill": "Нет долга"
     },
     "risk": {
-      "title": "Сигналы риска",
-      "subtitle": "{count, plural, one {# сигнал} few {# сигнала} many {# сигналов} other {# сигналов}} из {evaluated} проверенных",
+      "title": "Красные флаги",
+      "subtitle": "Сработало {count, plural, one {# правило} few {# правила} many {# правил} other {# правил}} из {evaluated} в реестре",
+      "counter_eyebrow": "Сигналов",
       "empty": "Все проверки пройдены.",
       "field_rule": "Правило",
       "field_severity": "Severity",
@@ -818,10 +820,11 @@
       "empty_body_no_data": "Нет помесячных данных. Загрузите выгрузку Soliq на Шаге 2 формы или укажите помесячный оборот вручную."
     },
     "score": {
-      "label": "Скоринговый балл",
-      "rec_approve": "Рекомендация: одобрить",
-      "rec_review": "Рекомендация: на проверку",
-      "rec_reject": "Рекомендация: отказ"
+      "section_title": "Скоринговая оценка",
+      "section_sub": "100-балльная шкала · банковский UX (выше = лучше)",
+      "rec_approve": "К одобрению",
+      "rec_review": "На проверку",
+      "rec_reject": "Отказ"
     },
     "readiness": {
       "level_insufficient": "Недостаточно данных",

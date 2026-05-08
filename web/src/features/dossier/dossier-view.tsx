@@ -54,7 +54,12 @@ export function DossierView({ dossierId }: { dossierId: string }) {
 
   return (
     <div className="mx-auto w-full max-w-[1280px] px-8 pt-7 pb-12">
-      <SubHeader dossierId={dossierId} borrower={data.borrower} />
+      <SubHeader
+        dossierId={dossierId}
+        borrower={data.borrower}
+        application={data.application}
+        asOf={data.as_of}
+      />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[320px_1fr]">
         <ScoreGauge

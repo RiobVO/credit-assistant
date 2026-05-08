@@ -19,10 +19,10 @@ import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
+import { CounterChip, SectionCard } from "@/components/section-card";
 import { assessReadiness, type DataReadinessRequest } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
-import { CounterChip, SectionCard } from "./section-card";
 import { useSourceTrail } from "../hooks/use-source-trail";
 import { digitsOnly, hasAnyQuarterValue, yearTotal } from "../lib/finance";
 import type { FormValues } from "../schema";

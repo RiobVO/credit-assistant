@@ -24,11 +24,12 @@ import { Controller, useFormContext, useWatch } from "react-hook-form";
 
 import { cn } from "@/lib/utils";
 
+import { CounterChip, SectionCard } from "@/components/section-card";
+
 import { Checklist } from "./checklist";
 import { CustomDropdown } from "./custom-dropdown";
 import { DscrSummary } from "./dscr-summary";
 import { Field, fieldInputClass } from "./field";
-import { CounterChip, SectionCard } from "./section-card";
 import {
   digitsOnly,
   formatUzs,

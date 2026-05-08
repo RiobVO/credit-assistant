@@ -21,10 +21,10 @@ export function DossierSkeleton() {
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Card className="h-[120px]" />
-        <Card className="h-[120px]" />
-        <Card className="h-[120px]" />
-        <Card className="h-[120px]" />
+        <Card className="h-[100px]" />
+        <Card className="h-[100px]" />
+        <Card className="h-[100px]" />
+        <Card className="h-[100px]" />
       </div>
 
       <div className="mt-4">

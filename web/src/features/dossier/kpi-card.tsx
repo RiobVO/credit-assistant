@@ -1,7 +1,6 @@
 "use client";
 
 import { TrendingDown, TrendingUp } from "lucide-react";
-import { Area, AreaChart, ResponsiveContainer } from "recharts";
 
 import { cn } from "@/lib/utils";
 
@@ -19,12 +18,16 @@ const LEVEL_STRIPE_CLASS: Record<LevelTone, string> = {
   bad: "border-l-4 border-l-[var(--state-bad-fg)]",
 };
 
+// Phase 9 design statement: sparkline блок удалён физически. Backend никогда
+// не заполнял KpiValueOutput.sparkline для EBIT/ROE/Debt — годовых точек FORM_2
+// (3) слишком мало для волны. Когда подключится monthly-проекция EBIT (см.
+// TODO[CA-DS25]) — вернётся отдельным компонентом. Сейчас 36+12 px высвобождены
+// для плотного KPI row.
 export function KpiCard({
   label,
   value,
   yoyPct,
   changeTone,
-  sparkline,
   tooltip,
   levelTone,
 }: {
@@ -32,7 +35,6 @@ export function KpiCard({
   value: string;
   yoyPct: number | null; // null когда нет предыдущего периода для сравнения
   changeTone: ChangeTone;
-  sparkline: number[];
   // CA-037: опциональный подсказывающий title на карточке (для EBIT-прокси
   // объясняет, что D&A недоступен и величина — EBIT, не EBITDA).
   tooltip?: string;
@@ -40,15 +42,11 @@ export function KpiCard({
   // stripe (для KPI без universal threshold — revenue_ltm, ebit).
   levelTone?: LevelTone;
 }) {
-  const data = sparkline.map((y, i) => ({ i, y }));
-
   const tone =
     changeTone === "positive"
       ? "border-[var(--state-ok-border)] bg-[var(--state-ok-bg)] text-[var(--state-ok-fg)]"
       : "border-[var(--state-bad-border)] bg-[var(--state-bad-bg)] text-[var(--state-bad-fg)]";
 
-  const sparkColor =
-    changeTone === "positive" ? "var(--chart-green)" : "var(--chart-red)";
   const Icon = changeTone === "positive" ? TrendingUp : TrendingDown;
 
   return (
@@ -78,27 +76,6 @@ export function KpiCard({
             {formatYoy(yoyPct)}
           </span>
         )}
-      </div>
-
-      <div className="mt-3 h-[36px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data} margin={{ top: 2, right: 0, bottom: 2, left: 0 }}>
-            <defs>
-              <linearGradient id={`spark-${label}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={sparkColor} stopOpacity={0.35} />
-                <stop offset="100%" stopColor={sparkColor} stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <Area
-              type="monotone"
-              dataKey="y"
-              stroke={sparkColor}
-              strokeWidth={1.6}
-              fill={`url(#spark-${label})`}
-              isAnimationActive={false}
-            />
-          </AreaChart>
-        </ResponsiveContainer>
       </div>
     </div>
   );

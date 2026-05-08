@@ -52,7 +52,6 @@ function EbitSlot({ kpi }: { kpi: KpiValueDto | null }) {
       value={formatBigUzs(value)}
       yoyPct={yoy}
       changeTone={yoy === null || yoy >= 0 ? "positive" : "negative"}
-      sparkline={[]}
       tooltip={tooltip}
     />
   );
@@ -77,7 +76,6 @@ function RoeSlot({ kpi }: { kpi: KpiValueDto | null }) {
       value={formatPct(value)}
       yoyPct={yoy}
       changeTone={yoy === null || yoy >= 0 ? "positive" : "negative"}
-      sparkline={[]}
       levelTone={kpi.level_tone ?? undefined}
     />
   );
@@ -108,7 +106,6 @@ function DebtToEbitSlot({
         value={formatRatio(value)}
         yoyPct={null}
         changeTone="negative"
-        sparkline={[]}
         levelTone={debtToEbit.level_tone ?? undefined}
       />
     );
@@ -158,7 +155,6 @@ function EmptyKpiCard({
         —
       </div>
       <div className={`mt-2 text-[11.5px] ${hintColor}`}>{hint}</div>
-      <div className="mt-3 h-[36px]" aria-hidden="true" />
     </div>
   );
 }
@@ -178,7 +174,6 @@ function NoDebtCard({ label, pillLabel }: { label: string; pillLabel: string }) 
       <div className="mt-2 inline-flex items-center rounded-full bg-[var(--state-ok-fg)] px-2 py-px text-[11px] font-semibold text-white">
         {pillLabel}
       </div>
-      <div className="mt-3 h-[36px]" aria-hidden="true" />
     </div>
   );
 }

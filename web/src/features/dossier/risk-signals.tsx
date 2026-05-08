@@ -4,6 +4,7 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
+import { CounterChip, SectionCard } from "@/components/section-card";
 import type { RedFlagDto, Severity } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -11,18 +12,26 @@ const SEVERITY_DOT: Record<Severity, string> = {
   low: "bg-[var(--state-ok-fg)]",
   medium: "bg-[var(--state-warn-fg)]",
   high: "bg-[var(--state-bad-fg)]",
-  critical: "bg-[var(--state-bad-fg)]",
+  // critical — тот же fg + ring через box-shadow, чтобы отличать от high.
+  critical: "bg-[var(--state-bad-fg)] shadow-[0_0_0_3px_var(--state-bad-bg)]",
 };
 
 const SEVERITY_PILL: Record<Severity, string> = {
-  low: "border-[#BFE2D2] bg-[var(--state-ok-bg)] text-[var(--state-ok-fg)]",
-  medium: "border-[#F1D9A6] bg-[#FFF6E5] text-[var(--state-warn-fg)]",
-  high: "border-[#F2BCBA] bg-[#FCE7E5] text-[var(--state-bad-fg)]",
-  critical: "border-[var(--state-bad-fg)] bg-[#FCE7E5] text-[var(--state-bad-fg)]",
+  low: "border-[var(--state-ok-border)] bg-[var(--state-ok-bg)] text-[var(--state-ok-fg)]",
+  medium:
+    "border-[var(--state-warn-border)] bg-[var(--state-warn-bg)] text-[var(--state-warn-fg)]",
+  high: "border-[var(--state-bad-border)] bg-[var(--state-bad-bg)] text-[var(--state-bad-fg)]",
+  critical:
+    "border-[var(--state-bad-fg)] bg-[var(--state-bad-bg)] text-[var(--state-bad-fg)]",
 };
 
 // CA-050: accordion-rows + actual rules_evaluated count из API
 // (вместо хардкода 17 — реестр после CA-049 содержит 19 правил).
+//
+// Phase 9: SectionCard shell + CounterChip в aux ({count}/{evaluated}), severity
+// pills через semantic state-tokens, hover на surface-2 (не hardcode #FAFBFC),
+// accordion expanded-block — чистый border-l-2 brand-primary без gradient (был
+// rich для evidence-dl, см. Phase 9 reality-check).
 export function RiskSignals({
   flags,
   rulesEvaluated,
@@ -31,31 +40,31 @@ export function RiskSignals({
   rulesEvaluated: number;
 }) {
   const t = useTranslations("dossier.risk");
+  const counter = (
+    <CounterChip
+      filled={flags.length}
+      total={rulesEvaluated}
+      eyebrow={t("counter_eyebrow")}
+    />
+  );
   return (
-    <section className="flex h-full flex-col rounded-[10px] border border-[var(--border)] bg-[var(--surface)] shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
-      <header className="flex items-center gap-2.5 border-b border-[var(--border)] px-[22px] py-[18px]">
-        <div>
-          <h2 className="m-0 text-[15px] font-semibold text-[var(--ink-1)]">
-            {t("title")}
-          </h2>
-          <p className="m-0 mt-0.5 text-[12.5px] text-[var(--ink-3)]">
-            {t("subtitle", { count: flags.length, evaluated: rulesEvaluated })}
-          </p>
-        </div>
-      </header>
-
+    <SectionCard
+      title={t("title")}
+      sub={t("subtitle", { count: flags.length, evaluated: rulesEvaluated })}
+      aux={counter}
+    >
       {flags.length === 0 ? (
-        <div className="flex-1 px-[22px] py-10 text-center text-[13px] text-[var(--ink-3)]">
+        <div className="px-2 py-8 text-center text-[13px] text-[var(--ink-3)]">
           {t("empty")}
         </div>
       ) : (
-        <ul className="divide-y divide-[var(--border)]">
+        <ul className="-mx-[22px] -my-[22px] divide-y divide-[var(--border)]">
           {flags.map((f) => (
             <SignalRow key={`${f.rule_id}-${f.detected_at}`} flag={f} />
           ))}
         </ul>
       )}
-    </section>
+    </SectionCard>
   );
 }
 
@@ -76,7 +85,7 @@ function SignalRow({ flag }: { flag: RedFlagDto }) {
         type="button"
         onClick={() => setExpanded((v) => !v)}
         aria-expanded={expanded}
-        className="flex w-full items-center gap-3 py-3 text-left transition-colors hover:bg-[#FAFBFC] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/40"
+        className="flex w-full items-center gap-3 py-3 text-left transition-colors hover:bg-[var(--surface-2)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary-ring)]"
       >
         <span
           className={cn("size-2 flex-none rounded-full", SEVERITY_DOT[flag.severity])}
@@ -102,7 +111,7 @@ function SignalRow({ flag }: { flag: RedFlagDto }) {
       </button>
 
       {expanded && (
-        <div className="ml-5 border-l-2 border-[var(--border)] pl-4 pb-4 text-[12.5px] text-[var(--ink-2)]">
+        <div className="mb-3 ml-5 rounded-r-[9px] border-l-2 border-[var(--brand-primary)] bg-[var(--surface-2)] px-4 py-3 text-[12.5px] text-[var(--ink-2)]">
           <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5">
             <dt className="text-[var(--ink-3)]">{t("field_rule")}</dt>
             <dd className="font-mono text-[11.5px]">{flag.rule_id}</dd>
@@ -131,6 +140,11 @@ function SignalRow({ flag }: { flag: RedFlagDto }) {
               </>
             )}
           </dl>
+          {flag.source ? (
+            <div className="mt-2 border-t border-dashed border-[var(--border)] pt-2 text-[11.5px] text-[var(--ink-4)]">
+              {flag.source}
+            </div>
+          ) : null}
         </div>
       )}
     </li>

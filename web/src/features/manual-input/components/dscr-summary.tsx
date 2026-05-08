@@ -25,8 +25,9 @@ import {
   formatUzs,
 } from "../lib/finance";
 
+import { SectionCard, StaticPill } from "@/components/section-card";
+
 import { DscrGauge } from "./dscr-gauge";
-import { SectionCard, StaticPill } from "./section-card";
 
 type Props = {
   loanAmount: number;
