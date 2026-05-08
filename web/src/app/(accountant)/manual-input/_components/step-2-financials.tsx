@@ -15,10 +15,13 @@ import type { FormValues } from "../_schema";
 
 import { Field, fieldInputClass } from "./field";
 import { FinancialTable } from "./financial-table";
+import { SoliqUpload } from "./soliq-upload";
 
 export function Step2Financials() {
   return (
     <div className="space-y-[18px]">
+      <SoliqUpload />
+
       <Card
         title="Выручка по кварталам"
         sub="Поквартальная динамика за 3 года · все суммы в UZS, без копеек"

@@ -20,6 +20,7 @@ from domain.entities.invoice import Invoice, InvoiceRole
 from domain.entities.monthly_turnover import MonthlyTurnover
 from domain.entities.red_flag import RedFlag
 from domain.entities.tax_event import TaxEvent, TaxEventType
+from domain.entities.vat_period_report import VatPeriodReport
 from domain.services.scoring_service import RiskScore
 from domain.value_objects.date_range import DateRange
 from domain.value_objects.inn import INN
@@ -38,6 +39,7 @@ from interfaces.api.shared.dossier_schema import (
     RiskScoreOutput,
     SeverityCode,
     TaxEventInput,
+    VatPeriodInput,
 )
 
 
@@ -116,6 +118,15 @@ def _to_tax_event(p: TaxEventInput) -> TaxEvent:
     )
 
 
+def _to_vat_period(p: VatPeriodInput) -> VatPeriodReport:
+    return VatPeriodReport(
+        period=DateRange(p.period.start, p.period.end),
+        vat_declared=_to_money_optional(p.vat_declared),
+        esf_seller_vat_total=_to_money_optional(p.esf_seller_vat_total),
+        submitted_at=p.submitted_at,
+    )
+
+
 def to_manual_chunk(payload: ManualInputRequest, borrower_inn: INN) -> ManualChunk:
     return ManualChunk(
         borrower_inn=borrower_inn,
@@ -139,6 +150,7 @@ def to_manual_chunk(payload: ManualInputRequest, borrower_inn: INN) -> ManualChu
         supplier_purchase_share={
             s.inn: s.share for s in payload.supplier_purchase_share
         },
+        vat_periods=[_to_vat_period(v) for v in payload.vat_periods],
         loan_request=_to_loan_request(payload.loan_request),
     )
 

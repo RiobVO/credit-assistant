@@ -87,6 +87,19 @@ class MonthlyTurnoverInput(_StrictModel):
     vat_obligations: MoneyInput | None = None
 
 
+class VatPeriodInput(_StrictModel):
+    """НДС-отчёт за один налоговый период (обычно месяц).
+
+    Оба денежных поля опциональны: правило ``VAT_ESF_MISMATCH`` срабатывает
+    только когда заполнены оба. См. ADR 0006.
+    """
+
+    period: DateRangeInput
+    vat_declared: MoneyInput | None = None
+    esf_seller_vat_total: MoneyInput | None = None
+    submitted_at: date | None = None
+
+
 class CounterpartyInput(_StrictModel):
     inn: str
     name: str
@@ -165,7 +178,7 @@ class ManualInputRequest(_StrictModel):
     buyer_revenue_share: list[ShareEntry] = Field(default_factory=list)
     supplier_purchase_share: list[ShareEntry] = Field(default_factory=list)
 
-    esf_seller_vat_total: MoneyInput | None = None
+    vat_periods: list[VatPeriodInput] = Field(default_factory=list)
     loan_request: LoanRequestInput | None = None
 
 

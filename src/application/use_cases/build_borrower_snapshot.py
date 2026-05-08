@@ -30,9 +30,9 @@ from domain.entities.financial_report import FinancialReport
 from domain.entities.invoice import Invoice
 from domain.entities.monthly_turnover import MonthlyTurnover
 from domain.entities.tax_event import TaxEvent
+from domain.entities.vat_period_report import VatPeriodReport
 from domain.value_objects.inn import INN
 from domain.value_objects.loan_request import LoanRequest
-from domain.value_objects.money import Money
 
 
 class ChunkBorrowerMismatchError(ValueError):
@@ -64,7 +64,7 @@ def build_borrower_snapshot(
     suppliers: list[Counterparty] = []
     buyer_share: dict[str, Decimal] = {}
     supplier_share: dict[str, Decimal] = {}
-    esf_seller_vat: Money | None = None
+    vat_periods: list[VatPeriodReport] = []
     loan: LoanRequest | None = loan_request
 
     for chunk in chunks:
@@ -77,8 +77,7 @@ def build_borrower_snapshot(
             quarterly.extend(chunk.quarterly_reports)
             monthly.extend(chunk.monthly_turnover)
             tax_events.extend(chunk.tax_events)
-            if chunk.esf_seller_vat_total is not None:
-                esf_seller_vat = chunk.esf_seller_vat_total
+            vat_periods.extend(chunk.vat_periods)
         elif isinstance(chunk, ManualChunk):
             annual.extend(chunk.annual_reports)
             quarterly.extend(chunk.quarterly_reports)
@@ -89,6 +88,7 @@ def build_borrower_snapshot(
             suppliers.extend(chunk.counterparties_suppliers)
             buyer_share.update(chunk.buyer_revenue_share)
             supplier_share.update(chunk.supplier_purchase_share)
+            vat_periods.extend(chunk.vat_periods)
             if loan is None and chunk.loan_request is not None:
                 loan = chunk.loan_request
 
@@ -104,7 +104,7 @@ def build_borrower_snapshot(
         counterparties_suppliers=suppliers,
         buyer_revenue_share=buyer_share,
         supplier_purchase_share=supplier_share,
-        esf_seller_vat_total=esf_seller_vat,
+        vat_periods=vat_periods,
         loan_request=loan,
     )
 
