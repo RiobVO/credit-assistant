@@ -7,9 +7,9 @@
 
 ## Current Status
 
-**Phase 9 (Dossier view) закрыта 2026-05-14** (`bcde558`). SectionCard перенесён в global `web/src/components/section-card.tsx` с optional `icon` prop. 4 dossier-сабвью обёрнуты в SectionCard без icon-tile (banking-минимализм для read-only). KpiCard sparkline удалён физически (backend никогда не заполнял). SubHeader status-eyebrow в ink-4. RiskSignals: CounterChip + semantic severity-pills + clean accordion. ГНК pill убран до CA-DS28. CI `25888968381` → 1m1s.
+**Phase 10 (PDF document) закрыта 2026-05-15** (`a8f2b66`). Финальная фаза Design Sweep — credit memorandum aesthetic для banking output. Cover: hero decision-block (gauge 200pt + recommendation 28pt + signal breakdown inline) + decision-meta full-width + observations pros/cons split (3 strengths + 3 risks). Section A redesign: identity hero с auto-derived avatar (initials) + 3 stat tiles (Возраст · Регион · ОКВЭД) + clean detail rows. Brand-tenant: `BRAND_ID` env → `config/brands/<id>.json` через `infrastructure/brand/`. ГНК pill убран физически (Phase 9 lesson). F-секция: human-readable `rule.name` из YAML вместо rule_id. Observations builder (`application/services/`) — strengths из позитивных KPI + risks из top-3 red flags severity-sorted. CI `25934169074` → ~1m.
 
-**Next:** Phase 10 (PDF document) — финальная фаза Design Sweep, unblocked.
+**Дизайн-pass завершён:** все 10 фаз DONE. Следующие итерации — backlog TODO (CA-DS6/7/8/14-25/28, CA-003/015/019-020/028/029b/064/DS11).
 
 **Активная ветка:** `main`.
 
@@ -88,6 +88,9 @@
 - **CA-066** `t.rich` gotcha: для ReactNode-обёртки message **обязан** иметь tag-плейсхолдер `<x></x>`, не value `{x}`. Иначе «Functions are not valid as a React child».
 - **Phase 8 SectionCard / CounterChip / StaticPill** (`web/src/components/section-card.tsx`): shared shell — wizard передаёт `icon`, dossier нет (header grid схлопывается). Visual-only, без i18n bindings. **Не дублировать pattern локально** — 10+ consumer'ов через shared.
 - **Phase 7 source-trail UI** (Step 2): 2-state — `auto` (зелёный borderbar) / `manual` (серый), плюс спец `manual-required` (amber для taxesPaid). Borderbar реализован как `absolute span` (не CSS-border — мешает UZS-suffix).
+- **Phase 10 PDF brand-tenant**: `BRAND_ID` env → `config/brands/<id>.json` через `infrastructure/brand/`. `BrandConfig` dataclass в `application/dto/` (clean architecture — pure), loader в `infrastructure/`. Backend mirror фронтового `resolveBrand()`, single source of truth — JSON в `config/brands/`. Шрифты PDF строго bundled 400/500/600/700 (no 800 — fallback в WeasyPrint).
+- **Phase 10 Observations builder** (`application/services/observations_builder.py`): cover bottom half. Strengths derived from positive KPI: revenue growth · ROE≥GOOD · positive net profit · low debt (cap 3). Risks = top-3 red flags by severity (critical → high → medium → low). Rule name lookup через `RuleRegistry.by_id(rule_id).name` из YAML.
+- **Phase 10 Rule.name field**: добавлено в `domain/rules/rule.py`, пробрасывается через `registry_factory` синхронно с `config/rules/v*.yaml`. PDF F-секция рендерит human-readable name; rule_id остаётся в `.src` строке как technical reference для аудитора.
 
 ---
 
@@ -104,7 +107,7 @@
 | 7 | Manual-input Step 2 (Financial) | DONE | `40c770d` |
 | 8 | Manual-input Step 3 (Loan) | DONE | `94229e8` |
 | 9 | Dossier view | DONE | `bcde558` |
-| 10 | PDF document | pending | — |
+| 10 | PDF document | DONE | `a8f2b66` |
 
 Подробности по каждой фазе — `docs/design-sweep-archive.md`.
 
