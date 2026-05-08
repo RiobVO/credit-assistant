@@ -18,6 +18,8 @@ dependencies = [
     "asyncpg>=0.30",
     "alembic>=1.14",
     "tzdata>=2024.2",
+    "openpyxl>=3.1",
+    "python-multipart>=0.0.27",
 ]
 
 [dependency-groups]
@@ -30,6 +32,7 @@ dev = [
     "mypy>=1.13",
     "types-pyyaml>=6.0",
     "testcontainers[postgres]>=4.8",
+    "types-openpyxl>=3.1.5.20260508",
 ]
 
 # --- Tooling configuration ---
@@ -55,7 +58,7 @@ select = [
 ignore = ["RUF001", "RUF002", "RUF003"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["domain", "application", "infrastructure", "interfaces", "config"]
+known-first-party = ["domain", "application", "infrastructure", "interfaces", "config", "tests"]
 
 [tool.mypy]
 python_version = "3.12"

@@ -16,6 +16,7 @@ from domain.entities.financial_report import FinancialReport
 from domain.entities.invoice import Invoice, InvoiceRole
 from domain.entities.monthly_turnover import MonthlyTurnover
 from domain.entities.tax_event import TaxEvent, TaxEventType
+from domain.entities.vat_period_report import VatPeriodReport
 from domain.value_objects.date_range import DateRange
 from domain.value_objects.inn import INN
 from domain.value_objects.loan_request import LoanRequest
@@ -73,6 +74,24 @@ def _annual(year: int, revenue: int) -> FinancialReport:
     )
 
 
+def _vat_period(
+    year: int,
+    month: int,
+    *,
+    declared: int | None = None,
+    esf_seller: int | None = None,
+) -> VatPeriodReport:
+    last_day = {1: 31, 2: 28, 3: 31, 4: 30, 5: 31, 6: 30,
+                7: 31, 8: 31, 9: 30, 10: 31, 11: 30, 12: 31}[month]
+    return VatPeriodReport(
+        period=DateRange(date(year, month, 1), date(year, month, last_day)),
+        vat_declared=Money(Decimal(declared), UZS) if declared is not None else None,
+        esf_seller_vat_total=(
+            Money(Decimal(esf_seller), UZS) if esf_seller is not None else None
+        ),
+    )
+
+
 class TestBorrowerAndAsOf:
     def test_passes_borrower_and_as_of_through(self) -> None:
         snap = build_borrower_snapshot(borrower=_borrower(), as_of=AS_OF, chunks=[])
@@ -84,7 +103,7 @@ class TestBorrowerAndAsOf:
         assert snap.invoices == []
         assert snap.annual_reports == []
         assert snap.tax_events == []
-        assert snap.esf_seller_vat_total is None
+        assert snap.vat_periods == []
         assert snap.loan_request is None
 
 
@@ -106,11 +125,11 @@ class TestEsfChunk:
             borrower=_borrower(), as_of=AS_OF, chunks=[chunk],
         )
         assert snap.annual_reports == []
-        assert snap.esf_seller_vat_total is None
+        assert snap.vat_periods == []
 
 
 class TestSoliqChunk:
-    def test_populates_financial_reports_tax_events_and_vat(self) -> None:
+    def test_populates_financial_reports_tax_events_and_vat_periods(self) -> None:
         chunk = SoliqChunk(
             borrower_inn=BORROWER_INN,
             annual_reports=[_annual(2025, 5_000_000_000)],
@@ -129,7 +148,7 @@ class TestSoliqChunk:
                 TaxEvent(date=date(2025, 7, 1), type=TaxEventType.PAYMENT,
                          amount=Money(Decimal(50_000), UZS)),
             ],
-            esf_seller_vat_total=Money(Decimal(60_000_000), UZS),
+            vat_periods=[_vat_period(2026, 3, declared=300_000_000, esf_seller=60_000_000)],
         )
         snap = build_borrower_snapshot(
             borrower=_borrower(), as_of=AS_OF, chunks=[chunk],
@@ -138,15 +157,16 @@ class TestSoliqChunk:
         assert len(snap.quarterly_reports) == 1
         assert len(snap.monthly_turnover) == 1
         assert len(snap.tax_events) == 1
-        assert snap.esf_seller_vat_total is not None
-        assert snap.esf_seller_vat_total.amount == Decimal(60_000_000)
+        assert len(snap.vat_periods) == 1
+        assert snap.vat_periods[0].vat_declared is not None
+        assert snap.vat_periods[0].vat_declared.amount == Decimal(300_000_000)
 
-    def test_vat_aggregate_remains_none_when_chunk_omits_it(self) -> None:
+    def test_vat_periods_remain_empty_when_chunk_omits_them(self) -> None:
         chunk = SoliqChunk(borrower_inn=BORROWER_INN)
         snap = build_borrower_snapshot(
             borrower=_borrower(), as_of=AS_OF, chunks=[chunk],
         )
-        assert snap.esf_seller_vat_total is None
+        assert snap.vat_periods == []
 
 
 class TestManualChunk:
@@ -179,6 +199,16 @@ class TestManualChunk:
         assert snap.loan_request is not None
         assert snap.loan_request.amount.amount == Decimal(100_000_000)
 
+    def test_vat_periods_passthrough(self) -> None:
+        chunk = ManualChunk(
+            borrower_inn=BORROWER_INN,
+            vat_periods=[_vat_period(2026, 2, declared=100, esf_seller=80)],
+        )
+        snap = build_borrower_snapshot(
+            borrower=_borrower(), as_of=AS_OF, chunks=[chunk],
+        )
+        assert len(snap.vat_periods) == 1
+
 
 class TestLoanAmountPriority:
     def test_explicit_param_wins_over_manual_chunk(self) -> None:
@@ -210,12 +240,28 @@ class TestMerge:
         soliq = SoliqChunk(
             borrower_inn=BORROWER_INN,
             annual_reports=[_annual(2025, 2)],
+            vat_periods=[_vat_period(2026, 3, declared=100, esf_seller=98)],
         )
         snap = build_borrower_snapshot(
             borrower=_borrower(), as_of=AS_OF, chunks=[esf, manual, soliq],
         )
         assert len(snap.invoices) == 2
         assert len(snap.annual_reports) == 2  # дубликаты не resolve, см. ADR (TODO)
+        assert len(snap.vat_periods) == 1
+
+    def test_vat_periods_concatenate_across_chunks(self) -> None:
+        manual = ManualChunk(
+            borrower_inn=BORROWER_INN,
+            vat_periods=[_vat_period(2026, 1, declared=100, esf_seller=90)],
+        )
+        soliq = SoliqChunk(
+            borrower_inn=BORROWER_INN,
+            vat_periods=[_vat_period(2026, 2, declared=200, esf_seller=180)],
+        )
+        snap = build_borrower_snapshot(
+            borrower=_borrower(), as_of=AS_OF, chunks=[manual, soliq],
+        )
+        assert len(snap.vat_periods) == 2
 
 
 class TestBorrowerMismatch:

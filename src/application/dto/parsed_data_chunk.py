@@ -18,9 +18,9 @@ from domain.entities.financial_report import FinancialReport
 from domain.entities.invoice import Invoice
 from domain.entities.monthly_turnover import MonthlyTurnover
 from domain.entities.tax_event import TaxEvent
+from domain.entities.vat_period_report import VatPeriodReport
 from domain.value_objects.inn import INN
 from domain.value_objects.loan_request import LoanRequest
-from domain.value_objects.money import Money
 
 
 @dataclass(frozen=True, slots=True)
@@ -38,11 +38,12 @@ class EsfChunk:
 
 @dataclass(frozen=True, slots=True)
 class SoliqChunk:
-    """Выход парсера Soliq Excel / выписок личного кабинета.
+    """Выход парсера Soliq Excel / xltx-выгрузок личного кабинета my3.soliq.uz.
 
-    Сюда же приходит агрегат ``esf_seller_vat_total`` от VAT-адаптера (см. ADR
-    0004). Технически это отдельный источник, но в Phase 2 объединяем — оба
-    приходят из my3.soliq.uz.
+    ``vat_periods`` — НДС-отчётность по налоговым периодам (обычно помесячно).
+    Заполняется маппером ``soliq_xltx/snapshot_mapper.py``, который объединяет
+    пару (Расчёт НДС + ilova-приложение №4) в один ``VatPeriodReport``. См. ADR
+    0006 — заменяет одиночный agg ``esf_seller_vat_total`` из ADR 0004.
     """
 
     borrower_inn: INN
@@ -50,7 +51,7 @@ class SoliqChunk:
     quarterly_reports: list[FinancialReport] = field(default_factory=list)
     monthly_turnover: list[MonthlyTurnover] = field(default_factory=list)
     tax_events: list[TaxEvent] = field(default_factory=list)
-    esf_seller_vat_total: Money | None = None
+    vat_periods: list[VatPeriodReport] = field(default_factory=list)
 
 
 @dataclass(frozen=True, slots=True)
@@ -72,6 +73,7 @@ class ManualChunk:
     counterparties_suppliers: list[Counterparty] = field(default_factory=list)
     buyer_revenue_share: dict[str, Decimal] = field(default_factory=dict)
     supplier_purchase_share: dict[str, Decimal] = field(default_factory=dict)
+    vat_periods: list[VatPeriodReport] = field(default_factory=list)
     loan_request: LoanRequest | None = None
 
 
