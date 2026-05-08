@@ -14,6 +14,7 @@ from domain.entities.financial_report import FinancialReport
 from domain.entities.invoice import Invoice
 from domain.entities.monthly_turnover import MonthlyTurnover
 from domain.entities.tax_event import TaxEvent
+from domain.value_objects.loan_request import LoanRequest
 from domain.value_objects.money import Money
 
 
@@ -40,4 +41,4 @@ class BorrowerSnapshot:
     # CSV-выгрузка из e-factura.uz его не содержит — оставляем None. См. ADR 0004.
     esf_seller_vat_total: Money | None = None
 
-    loan_request_amount: Money | None = None
+    loan_request: LoanRequest | None = None

@@ -7,8 +7,8 @@
 //     и net_profit, taxes_paid="0" (TODO[CA-004]: per-year taxes UI).
 //   • Помимо annual_reports эмитим quarterly_reports для квартала с любыми
 //     данными — чтобы NEGATIVE_PROFIT_3Q работал.
-//   • loanTermMonths / loanRatePct / loanPurpose / loanCategory не маппятся —
-//     API схема пока не имеет этих полей (TODO[CA-005]: расширить ManualInputRequest).
+//   • Step 3 → `loan_request` объект (CA-005): amount/term_months/rate_pct/
+//     purpose/category. Ставка из формы "18,5" → "18.5" (Decimal-friendly).
 
 import { format, parse } from "date-fns";
 
@@ -29,6 +29,14 @@ type FinancialReport = {
   liabilities?: Money;
 };
 
+type LoanRequest = {
+  amount: Money;
+  term_months: number;
+  rate_pct: string; // Decimal как строка
+  purpose: string;
+  category: string;
+};
+
 export type ManualInputPayload = {
   borrower: {
     inn: string;
@@ -43,7 +51,7 @@ export type ManualInputPayload = {
   as_of: string;
   annual_reports: FinancialReport[];
   quarterly_reports: FinancialReport[];
-  loan_request_amount?: Money;
+  loan_request?: LoanRequest;
 };
 
 const QUARTER_RANGES = {
@@ -124,7 +132,13 @@ export function formValuesToPayload(values: FormValues): ManualInputPayload {
   };
 
   if (step3.loanAmount) {
-    payload.loan_request_amount = money(step3.loanAmount);
+    payload.loan_request = {
+      amount: money(step3.loanAmount),
+      term_months: step3.loanTermMonths,
+      rate_pct: step3.loanRatePct.replace(",", "."),
+      purpose: step3.loanPurpose,
+      category: step3.loanCategory,
+    };
   }
 
   return payload;
