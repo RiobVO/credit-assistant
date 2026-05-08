@@ -9,6 +9,7 @@ from domain.entities.financial_report import FinancialReport
 from domain.entities.monthly_turnover import MonthlyTurnover
 from domain.value_objects.date_range import DateRange
 from domain.value_objects.inn import INN
+from domain.value_objects.loan_request import LoanRequest
 from domain.value_objects.money import Currency, Money
 
 UZS = Currency.UZS
@@ -47,15 +48,22 @@ class TestBorrowerSnapshotConstruction:
         assert s.tax_events == []
         assert s.buyer_revenue_share == {}
         assert s.supplier_purchase_share == {}
-        assert s.loan_request_amount is None
+        assert s.loan_request is None
 
     def test_carries_loan_request(self) -> None:
         s = BorrowerSnapshot(
             borrower=_borrower(),
             as_of=date(2026, 5, 8),
-            loan_request_amount=Money(Decimal("2000000000"), UZS),
+            loan_request=LoanRequest(
+                amount=Money(Decimal("2000000000"), UZS),
+                term_months=24,
+                rate_pct=Decimal("22.5"),
+                purpose="working_capital",
+                category="standard",
+            ),
         )
-        assert s.loan_request_amount is not None
+        assert s.loan_request is not None
+        assert s.loan_request.amount.amount == Decimal("2000000000")
 
     def test_holds_annual_reports(self) -> None:
         report = FinancialReport(

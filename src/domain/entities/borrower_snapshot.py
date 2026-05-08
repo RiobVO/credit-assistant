@@ -14,6 +14,7 @@ from domain.entities.financial_report import FinancialReport
 from domain.entities.invoice import Invoice
 from domain.entities.monthly_turnover import MonthlyTurnover
 from domain.entities.tax_event import TaxEvent
+from domain.value_objects.loan_request import LoanRequest
 from domain.value_objects.money import Money
 
 
@@ -35,4 +36,9 @@ class BorrowerSnapshot:
     invoices: list[Invoice] = field(default_factory=list)
     tax_events: list[TaxEvent] = field(default_factory=list)
 
-    loan_request_amount: Money | None = None
+    # Агрегат НДС из ЭСФ как продавец за период последнего годового отчёта.
+    # Заполняется отдельным VAT-адаптером (источник содержит разбивку НДС);
+    # CSV-выгрузка из e-factura.uz его не содержит — оставляем None. См. ADR 0004.
+    esf_seller_vat_total: Money | None = None
+
+    loan_request: LoanRequest | None = None
