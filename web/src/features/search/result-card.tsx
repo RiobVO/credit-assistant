@@ -87,9 +87,10 @@ export function ResultCard({
                 borderColor: "var(--state-ok-border)",
               }}
             >
+              {/* CA-DS19: pulse убран — banking tone требует static индикаторы. */}
               <span
                 aria-hidden
-                className="pulse-ring-ok size-1.5 rounded-full"
+                className="size-1.5 rounded-full"
                 style={{ background: "var(--state-ok-fg)" }}
               />
               {t("found_pill")}
