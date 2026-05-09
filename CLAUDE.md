@@ -13,7 +13,9 @@
 
 **Batch 1B закрыт 2026-05-16** (`9b38422`, CI `25936424479` ~1m). CA-DS18 Level 1 — deterministic case_id из `draft.id`, format `BR-YYYY-XXXX` (mirror PDF `_format_application_id`), XXXX = first 4 hex chars UUID uppercased. До auto-save draft → pill «—», после → `BR-2026-A3F7`. Hydration-safe (без `useSyncExternalStore`/`Math.random`). Banking-grade monotonic sequence через application entity → CA-DS18b после Phase 4 application creation flow.
 
-**Дизайн-pass завершён:** все 10 фаз DONE. Следующие итерации — backlog TODO (CA-DS6/7/8/14-23/25/28/29, CA-003/015/019-020/024b/028/029b/064/DS11).
+**Batch 2 закрыт 2026-05-16** (`d243c0f`, CI `25936896669` ~1m). CA-DS20 + CA-DS23 — RTL backfill testing-debt: 32 теста на `InnInput` state machine (8), `OkvedAutocomplete` (10), `Step2Financials` source-trail = `SourceHint` + `UzsInputShell` borderbar (14). Минимальные code-changes — три named export'а для testability (InnInput, OkvedAutocomplete, UzsInputShell), семантика не тронута. Frontend стек: 18 test files, 141 vitest tests.
+
+**Дизайн-pass завершён:** все 10 фаз DONE. Следующие итерации — backlog TODO (CA-DS6/7/8/14-16/19/21/22/25/28/29, CA-003/015/019-020/024b/028/029b/064/DS11).
 
 **Активная ветка:** `main`.
 
@@ -41,10 +43,8 @@
 - **CA-DS15**: рассмотреть WebAuthn/Passkeys как alternative 2FA-фактор.
 - **CA-DS16**: убрать legacy stored bool `analysts.mfa_enabled` через миграцию.
 - **CA-DS19**: motion cleanup pass по /search и /history (pulse-* на trust-pill + LiveStrip).
-- **CA-DS20**: RTL-тесты на InnInput state machine + OkvedAutocomplete.
 - **CA-DS21**: `auto-edited` 3-state в source-trail (Step 2). Сейчас 2-state.
 - **CA-DS22**: keyboard nav в `CustomDropdown` (Soliq year/month). Сейчас только mouse.
-- **CA-DS23**: RTL-тесты на `Step2Financials` source-trail rendering.
 - **CA-DS25**: real backend sparkline для KPI (EBIT/ROE/Debt-to-EBIT). Нужна monthly-проекция EBIT.
 - **CA-DS28**: real ГНК lookup для CA-003 (hybrid: public lookup `soliq.uz/services/search/` + manual upload справки). **Legal review обязателен** (уз-юрист 30 мин + robots.txt check). Pre-condition для CA-003 закрытия.
 - **CA-DS29**: runtime locale switcher (UI dropdown в topbar + cookie persistence + middleware locale detection + RSC revalidation strategy + PDF `?lang=` query param). Backend уже готов — OKVED catalog отдаёт RU+UZ. Scope: ~15 файлов, ~3 ч с design-review. Brand-strings (имена банков) НЕ локализуются — это tenant-config.
