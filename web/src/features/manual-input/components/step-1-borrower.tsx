@@ -1,5 +1,6 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { differenceInDays, isValid, parse } from "date-fns";
 import {
   Building2,
@@ -8,7 +9,7 @@ import {
   Loader2,
   TriangleAlert,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import {
   useCallback,
   useEffect,
@@ -22,6 +23,7 @@ import {
   useWatch,
 } from "react-hook-form";
 
+import { getOkvedCatalog, type OkvedItemDto } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 import { formatBusinessAge } from "../lib/duration";
@@ -32,37 +34,14 @@ import { Field, FieldInput } from "./field";
 
 // Phase 6 Step 1 design statement: section-card в стиле Phase 4 (leading
 // icon-tile + counter), ИНН 3-state (idle/checking/verified) с mock GNK
-// lookup, OKVED autocomplete (поверх hardcoded списка — TODO[CA-DS17] на
-// real catalog endpoint), ОПФ как segmented radio, custom date picker для
-// дат (без native <input type="date">).
+// lookup, OKVED autocomplete (источник — backend catalog GET /api/system/okved,
+// CA-DS17), ОПФ как segmented radio, custom date picker для дат (без native
+// <input type="date">).
 //
 // Сохранено: CA-038 (≥15 симв + цифра), CA-039 (isRecentDirectorAppointment
 // + amber warning), CA-058 prefill через sessionStorage.
 
 const CHECK_DELAY_MS = 700;
-
-// TODO[CA-DS17]: вынести каталог ОКВЭД (УзКВЭД 2024 редакция) в backend-
-// endpoint /api/system/okved-catalog или статичный JSON в config/. Сейчас
-// 16 наиболее частых для МСБ-сегмента кодов хардкодом — этого хватает для
-// papa-фирм (ритейл / общепит / производство / IT-услуги).
-const OKVED_UZ_MSB: ReadonlyArray<{ code: string; descKey: string }> = [
-  { code: "47.11", descKey: "okved_47_11" },
-  { code: "47.19", descKey: "okved_47_19" },
-  { code: "10.71", descKey: "okved_10_71" },
-  { code: "13.10", descKey: "okved_13_10" },
-  { code: "14.13", descKey: "okved_14_13" },
-  { code: "41.20", descKey: "okved_41_20" },
-  { code: "43.39", descKey: "okved_43_39" },
-  { code: "45.20", descKey: "okved_45_20" },
-  { code: "46.31", descKey: "okved_46_31" },
-  { code: "49.41", descKey: "okved_49_41" },
-  { code: "52.10", descKey: "okved_52_10" },
-  { code: "56.10", descKey: "okved_56_10" },
-  { code: "62.01", descKey: "okved_62_01" },
-  { code: "68.20", descKey: "okved_68_20" },
-  { code: "85.10", descKey: "okved_85_10" },
-  { code: "86.21", descKey: "okved_86_21" },
-];
 
 const OPF_OPTIONS = [
   { code: "llc" as const, shortKey: "opf_llc_short" },
@@ -475,21 +454,46 @@ function OkvedAutocomplete({
   invalid: boolean;
 }) {
   const t = useTranslations("accountant.manual_input");
+  const locale = useLocale();
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(0);
   const popoverRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const listboxId = "okved-listbox";
 
+  // CA-DS17: catalog грузится один раз на mount. staleTime=∞ — reference data,
+  // обновление только через restart api контейнера. Hydration-safe: queryFn
+  // не вызывается на сервере (React Query SSR-friendly defaults).
+  const catalogQuery = useQuery({
+    queryKey: ["okved-catalog"],
+    queryFn: getOkvedCatalog,
+    staleTime: Infinity,
+    gcTime: Infinity,
+  });
+  // Стабильная reference (избегаем re-create массива при каждом рендере —
+  // иначе useMemo ниже теряет смысл, react-hooks/exhaustive-deps warning).
+  const catalog = useMemo<OkvedItemDto[]>(
+    () => catalogQuery.data?.items ?? [],
+    [catalogQuery.data],
+  );
+
+  // CA-DS17: выбираем full label по локали — готовность к runtime switcher
+  // (CA-DS29). Сейчас locale статичен через NEXT_PUBLIC_LOCALE, но useLocale()
+  // вернёт правильное значение когда switcher появится.
+  const labelFor = useCallback(
+    (item: OkvedItemDto) => (locale === "uz" ? item.full_uz : item.full_ru),
+    [locale],
+  );
+
   const filtered = useMemo(() => {
     const q = value.trim().toLowerCase();
-    if (!q) return OKVED_UZ_MSB;
-    return OKVED_UZ_MSB.filter(
+    if (!q) return catalog;
+    return catalog.filter(
       (o) =>
         o.code.startsWith(q) ||
-        t(o.descKey).toLowerCase().includes(q),
+        labelFor(o).toLowerCase().includes(q),
     );
-  }, [value, t]);
+  }, [value, catalog, labelFor]);
 
   // См. комментарий в InnInput — обход react-hooks/set-state-in-effect.
   useEffect(() => {
@@ -574,7 +578,12 @@ function OkvedAutocomplete({
           role="listbox"
           className="absolute top-[calc(100%+6px)] left-0 right-0 z-30 max-h-[260px] overflow-y-auto rounded-[10px] border border-[var(--border-strong)] bg-[var(--surface)] shadow-[0_14px_36px_-12px_rgba(14,21,37,0.18)]"
         >
-          {filtered.length === 0 ? (
+          {catalogQuery.isPending ? (
+            <div className="flex items-center gap-2 px-3 py-2 text-[12.5px] text-[var(--ink-4)]">
+              <Loader2 className="size-3.5 animate-spin" />
+              {t("s1_okved_loading")}
+            </div>
+          ) : filtered.length === 0 ? (
             <div className="px-3 py-2 text-[12.5px] text-[var(--ink-4)]">
               {t("s1_okved_empty")}
             </div>
@@ -606,7 +615,7 @@ function OkvedAutocomplete({
                       : "text-[var(--ink-3)]",
                   )}
                 >
-                  {t(opt.descKey)}
+                  {labelFor(opt)}
                 </span>
               </button>
             ))

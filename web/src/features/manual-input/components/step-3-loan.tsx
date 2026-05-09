@@ -14,14 +14,17 @@
 // не трогается — это UI-only rewrite. Counter «N/5» обновляется по
 // useWatch + 5 предикатов «filled» (см. countFilled).
 //
-// TODO[CA-DS24]: USD-конвертация (USD_RATE_UZS = 12575) — hardcoded.
-// Заменить на real endpoint /api/system/cbu/usd-rate когда понадобится.
+// CA-DS24: USD-конвертация — backend ``GET /api/system/usd-rate`` (config-driven
+// + env override). Loading state — пустой USD-блок в hint, fallback rate не
+// показывается (честный «—» вместо stale). CBU API integration → CA-DS24b.
 
+import { useQuery } from "@tanstack/react-query";
 import { addMonths, format } from "date-fns";
 import { Banknote } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Controller, useFormContext, useWatch } from "react-hook-form";
 
+import { getUsdRate } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 import { CounterChip, SectionCard } from "@/components/section-card";
@@ -43,9 +46,6 @@ import {
   loanCategories,
   loanTerms,
 } from "../schema";
-
-// TODO[CA-DS24]: real /api/system/cbu/usd-rate
-const USD_RATE_UZS = 12575;
 
 export function Step3Loan() {
   const t = useTranslations("accountant.manual_input");
@@ -80,8 +80,20 @@ export function Step3Loan() {
   const loanAmount = parseAmount(loanAmountStr ?? "");
   const ratePct = parseRate(ratePctStr ?? "");
 
+  // CA-DS24: курс приходит с бэка. До завершения query — null → UI-блок
+  // показывает default-help без USD-эквивалента (честно вместо stale rate).
+  const usdRateQuery = useQuery({
+    queryKey: ["usd-uzs-rate"],
+    queryFn: getUsdRate,
+    staleTime: 60 * 60 * 1000, // 1 час: курс меняется раз в день
+  });
+  const usdRate = usdRateQuery.data
+    ? Number.parseFloat(usdRateQuery.data.rate)
+    : null;
   const usdEquivalent =
-    loanAmount > 0 ? Math.round(loanAmount / USD_RATE_UZS) : 0;
+    loanAmount > 0 && usdRate && usdRate > 0
+      ? Math.round(loanAmount / usdRate)
+      : 0;
   const repaymentDate =
     termMonths > 0 ? format(addMonths(new Date(), termMonths), "dd.MM.yyyy") : "—";
 
@@ -113,10 +125,10 @@ export function Step3Loan() {
             label={t("s3_amount_label")}
             required
             help={
-              loanAmount > 0
+              loanAmount > 0 && usdRate && usdRate > 0
                 ? t("s3_amount_help_with_usd", {
                     usd: formatUzs(String(usdEquivalent)),
-                    rate: formatUzs(String(USD_RATE_UZS)),
+                    rate: formatUzs(String(Math.round(usdRate))),
                   })
                 : t("s3_amount_help_default")
             }

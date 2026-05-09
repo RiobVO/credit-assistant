@@ -37,3 +37,29 @@ class UptimeHistoryResponse(BaseModel):
     # «до запуска» серые квадраты.
     first_seen_day: date_type | None
     days: list[UptimeDayItem]
+
+
+class OkvedItem(BaseModel):
+    # CA-DS17: одна запись OKVED catalog. ``short_*``/``full_*`` — для compact
+    # vs detailed display. Frontend выбирает локаль (next-intl), сейчас
+    # использует ``full_ru``/``full_uz`` в autocomplete и ``short_*`` в chip.
+    code: str
+    short_ru: str
+    full_ru: str
+    short_uz: str
+    full_uz: str
+
+
+class OkvedCatalogResponse(BaseModel):
+    # CA-DS17: список МСБ OKVED-кодов из ``config/okved/uz_msb.json``.
+    # Sorted by ``code`` ascending для стабильного UI rendering.
+    items: list[OkvedItem]
+
+
+class UsdRateResponse(BaseModel):
+    # CA-DS24: USD/UZS rate для UI-конвертации в loan-wizard.
+    # ``rate`` строкой — сохраняем Decimal-точность через JSON wire.
+    # ``source`` ∈ {manual, env, cbu (CA-DS24b)} — UI может показать badge.
+    rate: str
+    asof: date_type
+    source: str
