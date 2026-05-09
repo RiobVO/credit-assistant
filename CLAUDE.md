@@ -15,7 +15,9 @@
 
 **Batch 2 закрыт 2026-05-16** (`d243c0f`, CI `25936896669` ~1m). CA-DS20 + CA-DS23 — RTL backfill testing-debt: 32 теста на `InnInput` state machine (8), `OkvedAutocomplete` (10), `Step2Financials` source-trail = `SourceHint` + `UzsInputShell` borderbar (14). Минимальные code-changes — три named export'а для testability (InnInput, OkvedAutocomplete, UzsInputShell), семантика не тронута. Frontend стек: 18 test files, 141 vitest tests.
 
-**Дизайн-pass завершён:** все 10 фаз DONE. Следующие итерации — backlog TODO (CA-DS6/7/8/14-16/19/21/22/25/28/29, CA-003/015/019-020/024b/028/029b/064/DS11).
+**Batch 3 закрыт 2026-05-16** (`27e8365`, CI `25937533073` ~1m). CA-DS22 — full keyboard nav в `CustomDropdown` (ArrowDown/Up clamp, Home/End, Enter/Space commit, Escape close, role=combobox + aria-activedescendant ARIA 1.2). Initial highlight на open = currently-selected, не 0. CA-DS19 — pulse-ring-ok dot убран на `/search` (live-strip + result-card «найдено» pill) → static. Pulse в `/help`/`/sidebar`/`/topbar` оставлен — там contextual live state, не decoration. CA-DS21 (auto-edited 3-state) **отложен** — требует расширение `SourceTrailContext` хранить parsed values для diff с current value, scope ~1.5-2 ч с rework data flow. 11 RTL-тестов на CustomDropdown. Frontend стек: 19 test files, 152 vitest tests.
+
+**Дизайн-pass завершён:** все 10 фаз DONE. Следующие итерации — backlog TODO (CA-DS6/7/8/14-16/21/25/28/29, CA-003/015/019-020/024b/028/029b/064/DS11).
 
 **Активная ветка:** `main`.
 
@@ -42,9 +44,7 @@
 - **CA-DS14**: `/help` секция «Что делать при смене телефона» — MS Authenticator iCloud-cache scenario.
 - **CA-DS15**: рассмотреть WebAuthn/Passkeys как alternative 2FA-фактор.
 - **CA-DS16**: убрать legacy stored bool `analysts.mfa_enabled` через миграцию.
-- **CA-DS19**: motion cleanup pass по /search и /history (pulse-* на trust-pill + LiveStrip).
-- **CA-DS21**: `auto-edited` 3-state в source-trail (Step 2). Сейчас 2-state.
-- **CA-DS22**: keyboard nav в `CustomDropdown` (Soliq year/month). Сейчас только mouse.
+- **CA-DS21**: `auto-edited` 3-state в source-trail (Step 2). Сейчас 2-state. **Pre-condition**: расширить `SourceTrailContext` хранить parsed values (parallel `Record<fieldName, parsedValue>` map) → diff с current value. Scope ~1.5-2 ч с rework `ParsedFilesDropzone` + `SoliqUpload` data flow.
 - **CA-DS25**: real backend sparkline для KPI (EBIT/ROE/Debt-to-EBIT). Нужна monthly-проекция EBIT.
 - **CA-DS28**: real ГНК lookup для CA-003 (hybrid: public lookup `soliq.uz/services/search/` + manual upload справки). **Legal review обязателен** (уз-юрист 30 мин + robots.txt check). Pre-condition для CA-003 закрытия.
 - **CA-DS29**: runtime locale switcher (UI dropdown в topbar + cookie persistence + middleware locale detection + RSC revalidation strategy + PDF `?lang=` query param). Backend уже готов — OKVED catalog отдаёт RU+UZ. Scope: ~15 файлов, ~3 ч с design-review. Brand-strings (имена банков) НЕ локализуются — это tenant-config.
