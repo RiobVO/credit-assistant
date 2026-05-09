@@ -340,7 +340,7 @@ function UzsRow({
   );
 }
 
-function UzsInputShell({
+export function UzsInputShell({
   state,
   invalid,
   children,

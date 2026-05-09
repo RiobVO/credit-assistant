@@ -282,7 +282,7 @@ type InnState =
   | { kind: "verified"; summaryKey: "s1_inn_summary_mock" }
   | { kind: "invalid" };
 
-function InnInput({
+export function InnInput({
   value,
   onChange,
   onBlur,
@@ -442,7 +442,7 @@ function OpfSegmented({
 // ОКВЭД autocomplete
 // ─────────────────────────────────────────────────────────────────
 
-function OkvedAutocomplete({
+export function OkvedAutocomplete({
   value,
   onChange,
   onBlur,
