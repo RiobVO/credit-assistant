@@ -569,6 +569,8 @@
       "s2_annual_group_balance_sub": "Активы и обязательства из формы №1. Капитал и Долг ÷ Активы — вычисляются автоматически.",
       "s2_source_auto": "Из",
       "s2_source_auto_hint": "поправь если не так",
+      "s2_source_auto_edited": "Поправлено вручную",
+      "s2_source_auto_edited_hint": "было от парсера",
       "s2_source_manual": "Вводится руками",
       "s2_source_manual_required": "Руками",
       "s2_source_manual_required_hint": "PROFIT_TAX-парсер пока не реализован",

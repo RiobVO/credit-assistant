@@ -6,14 +6,19 @@
 //   2. UzsInputShell — borderbar (3px absolute span слева) + UZS-suffix
 //      tone в зависимости от source state и invalid prop.
 
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
+import { useLayoutEffect, useRef } from "react";
+import { FormProvider, useForm, type UseFormReturn } from "react-hook-form";
 import { describe, expect, it } from "vitest";
 
 import ru from "../../../i18n/ru.json";
+import { SourceTrailProvider, useSourceTrail } from "../hooks/use-source-trail";
+import type { FormValues } from "../schema";
 import {
   SourceHint,
   UzsInputShell,
+  useFieldSourceState,
   type SourceState,
 } from "./step-2-financials";
 
@@ -94,6 +99,42 @@ describe("SourceHint (CA-DS23)", () => {
     );
     expect(screen.queryByText("FORM_2")).not.toBeInTheDocument();
   });
+
+  // CA-DS21 — auto-edited 3-state
+  it("auto-edited state → info hint с «s2_source_auto_edited»", () => {
+    render(withIntl(<SourceHint state="auto-edited" />));
+    expect(
+      screen.getByText(ru.accountant.manual_input.s2_source_auto_edited),
+    ).toBeInTheDocument();
+    const hint = screen
+      .getByText(ru.accountant.manual_input.s2_source_auto_edited)
+      .closest("div");
+    expect(hint?.className).toContain("text-[var(--state-info-fg)]");
+  });
+
+  it("auto-edited + fieldName → SourceTag «FORM_2» (info-tone)", () => {
+    render(
+      withIntl(
+        <SourceHint
+          state="auto-edited"
+          fieldName="step2.revenue.y2025.annual"
+        />,
+      ),
+    );
+    const tag = screen.getByText("FORM_2");
+    expect(tag).toBeInTheDocument();
+    expect(tag.className).toContain("bg-[var(--state-info-bg)]");
+    expect(tag.className).toContain("text-[var(--state-info-fg)]");
+  });
+
+  it("auto-edited hint показывает auto_edited_hint suffix", () => {
+    render(withIntl(<SourceHint state="auto-edited" />));
+    expect(
+      screen.getByText(
+        new RegExp(ru.accountant.manual_input.s2_source_auto_edited_hint),
+      ),
+    ).toBeInTheDocument();
+  });
 });
 
 describe("UzsInputShell borderbar (CA-DS23)", () => {
@@ -152,5 +193,178 @@ describe("UzsInputShell borderbar (CA-DS23)", () => {
     const tile = suffix.closest("div");
     expect(tile?.className).toContain("bg-[var(--state-ok-bg)]");
     expect(tile?.className).not.toContain("bg-[var(--state-bad-bg)]");
+  });
+
+  // CA-DS21 — auto-edited borderbar + suffix
+  it("state=auto-edited → borderbar info-синий (state-info-fg)", () => {
+    const { borderbar } = shellOf("auto-edited");
+    expect(borderbar?.className).toContain("bg-[var(--state-info-fg)]");
+  });
+
+  it("state=auto-edited → UZS-suffix нейтральный (без ok-bg)", () => {
+    // Дизайн-инвариант: borderbar — единственный info-marker, suffix
+    // остаётся нейтральным чтобы не перегружать визуал.
+    const { suffix } = shellOf("auto-edited");
+    const tile = suffix.closest("div");
+    expect(tile?.className).not.toContain("bg-[var(--state-ok-bg)]");
+    expect(tile?.className).toContain("bg-[var(--surface-2)]");
+  });
+
+  it("invalid + auto-edited → suffix bad (parser-cap снят правкой)", () => {
+    // Когда пользователь поправил parser-ское значение, parser-validated
+    // invariant больше не действует — invalid prop должен показаться как
+    // обычно (в отличие от auto, где invalid игнорируется).
+    const { suffix } = shellOf("auto-edited", true);
+    const tile = suffix.closest("div");
+    expect(tile?.className).toContain("bg-[var(--state-bad-bg)]");
+  });
+});
+
+// ─────────── CA-DS21: useFieldSourceState integration ───────────────────
+//
+// Покрываем цепочку: parsedValues + form value → SourceState. Через
+// HookProbe component получаем состояние из data-testid и проверяем
+// reactivity (mergeParsedValues, form.setValue → re-evaluation).
+
+describe("useFieldSourceState (CA-DS21)", () => {
+  type ProbeProps = {
+    fieldName: string;
+    forceManualRequired?: boolean;
+  };
+  type HarnessHandle = {
+    form: UseFormReturn<FormValues>;
+    trail: ReturnType<typeof useSourceTrail> | null;
+  };
+
+  function HookProbe({ fieldName, forceManualRequired }: ProbeProps) {
+    const state = useFieldSourceState(fieldName, { forceManualRequired });
+    return <div data-testid="state-probe">{state}</div>;
+  }
+
+  function TrailCapture({ handle }: { handle: HarnessHandle }) {
+    handle.trail = useSourceTrail();
+    return null;
+  }
+
+  function ParsedSeeder({ seed }: { seed: Record<string, string> }) {
+    const { mergeParsedValues } = useSourceTrail();
+    const seededRef = useRef(false);
+    useLayoutEffect(() => {
+      if (seededRef.current) return;
+      seededRef.current = true;
+      if (Object.keys(seed).length > 0) mergeParsedValues(seed);
+    }, [mergeParsedValues, seed]);
+    return null;
+  }
+
+  function renderHarness(
+    initialValue: string,
+    parsedSeed: Record<string, string>,
+    probeProps: ProbeProps,
+  ): HarnessHandle {
+    const handle: HarnessHandle = {
+      form: undefined as never as UseFormReturn<FormValues>,
+      trail: null,
+    };
+    function Inner() {
+      const form = useForm<FormValues>({
+        // Только нужное поле — react-hook-form допускает sparse defaults.
+        defaultValues: {
+          step2: { totalAssets: initialValue },
+        } as Partial<FormValues> as FormValues,
+      });
+      handle.form = form;
+      return (
+        <NextIntlClientProvider locale="ru" messages={ru}>
+          <SourceTrailProvider>
+            <FormProvider {...form}>
+              <TrailCapture handle={handle} />
+              <ParsedSeeder seed={parsedSeed} />
+              <HookProbe {...probeProps} />
+            </FormProvider>
+          </SourceTrailProvider>
+        </NextIntlClientProvider>
+      );
+    }
+    render(<Inner />);
+    return handle;
+  }
+
+  it("parsed[fieldName] === current → auto", () => {
+    renderHarness(
+      "5000000",
+      { "step2.totalAssets": "5000000" },
+      { fieldName: "step2.totalAssets" },
+    );
+    expect(screen.getByTestId("state-probe").textContent).toBe("auto");
+  });
+
+  it("parsed[fieldName] !== current → auto-edited", () => {
+    renderHarness(
+      "5000001",
+      { "step2.totalAssets": "5000000" },
+      { fieldName: "step2.totalAssets" },
+    );
+    expect(screen.getByTestId("state-probe").textContent).toBe("auto-edited");
+  });
+
+  it("parsed[fieldName] === '5000000', user clears → auto-edited (Q2)", () => {
+    renderHarness(
+      "",
+      { "step2.totalAssets": "5000000" },
+      { fieldName: "step2.totalAssets" },
+    );
+    expect(screen.getByTestId("state-probe").textContent).toBe("auto-edited");
+  });
+
+  it("parsedValues пустой + value присутствует → manual", () => {
+    renderHarness(
+      "1000000",
+      {},
+      { fieldName: "step2.totalAssets" },
+    );
+    expect(screen.getByTestId("state-probe").textContent).toBe("manual");
+  });
+
+  it("parsedValues пустой + value пустой → waiting", () => {
+    renderHarness("", {}, { fieldName: "step2.totalAssets" });
+    expect(screen.getByTestId("state-probe").textContent).toBe("waiting");
+  });
+
+  it("forceManualRequired перевешивает всё → manual-required", () => {
+    renderHarness(
+      "5000000",
+      { "step2.totalAssets": "5000000" },
+      { fieldName: "step2.totalAssets", forceManualRequired: true },
+    );
+    expect(screen.getByTestId("state-probe").textContent).toBe(
+      "manual-required",
+    );
+  });
+
+  it("transition auto → auto-edited при правке value", () => {
+    const handle = renderHarness(
+      "5000000",
+      { "step2.totalAssets": "5000000" },
+      { fieldName: "step2.totalAssets" },
+    );
+    expect(screen.getByTestId("state-probe").textContent).toBe("auto");
+    act(() => {
+      handle.form.setValue("step2.totalAssets" as never, "5000001" as never);
+    });
+    expect(screen.getByTestId("state-probe").textContent).toBe("auto-edited");
+  });
+
+  it("transition waiting → auto при mergeParsedValues + matching value", () => {
+    const handle = renderHarness(
+      "7000000",
+      {},
+      { fieldName: "step2.totalAssets" },
+    );
+    expect(screen.getByTestId("state-probe").textContent).toBe("manual");
+    act(() => {
+      handle.trail?.mergeParsedValues({ "step2.totalAssets": "7000000" });
+    });
+    expect(screen.getByTestId("state-probe").textContent).toBe("auto");
   });
 });

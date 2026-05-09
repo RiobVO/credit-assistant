@@ -569,6 +569,8 @@
       "s2_annual_group_balance_sub": "1-shakldagi aktivlar va majburiyatlar. Kapital va Qarz ÷ Aktivlar — avtomatik hisoblanadi.",
       "s2_source_auto": "Manba",
       "s2_source_auto_hint": "kerak bo'lsa to'g'rila",
+      "s2_source_auto_edited": "Qo'lda tuzatildi",
+      "s2_source_auto_edited_hint": "parserdan kelgan edi",
       "s2_source_manual": "Qo'lda kiritiladi",
       "s2_source_manual_required": "Qo'lda",
       "s2_source_manual_required_hint": "PROFIT_TAX parser hozircha tayyor emas",

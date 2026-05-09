@@ -39,7 +39,7 @@ type Source = { fieldLabel: string; year?: number; sourceLabel: string };
 export function ParsedFilesDropzone() {
   const t = useTranslations("accountant.manual_input");
   const { setValue } = useFormContext<FormValues>();
-  const { mergeSourceTrail } = useSourceTrail();
+  const { mergeSourceTrail, mergeParsedValues } = useSourceTrail();
   const [files, setFiles] = useState<File[]>([]);
   const [autofilled, setAutofilled] = useState<Source[]>([]);
   const [warnings, setWarnings] = useState<string[]>([]);
@@ -48,13 +48,17 @@ export function ParsedFilesDropzone() {
   const mutation = useMutation({
     mutationFn: () => parseManualInputFiles(files),
     onSuccess: (data) => {
-      const filled = applyToForm(data, setValue, t);
+      const { filled, parsed } = applyToForm(data, setValue, t);
       setAutofilled(filled);
       setWarnings(data.parse_warnings ?? []);
       // CA-035: source_trail в context, чтобы Checklist (Шаг 3) знал какие
       // парсеры дали данные. Merge, не replace — каждый upload добавляет
       // свои ключи, ранее загруженные файлы остаются известны.
       mergeSourceTrail(data.source_trail ?? {});
+      // CA-DS21: parallel map (form-path → normalized digits) для
+      // 3-state source-trail. Используется useFieldSourceState чтобы
+      // отличать auto от auto-edited.
+      mergeParsedValues(parsed);
     },
   });
 
@@ -261,7 +265,9 @@ function formatApiError(err: ApiError, t: Translator): string {
 
 /**
  * Hydrate form fields from parsed response.
- * Возвращает список заполненных полей для сводки.
+ * Возвращает список заполненных полей для сводки + parsed map для CA-DS21
+ * (form-path → normalized digits, чтобы useFieldSourceState мог отличать
+ * `auto` от `auto-edited`).
  *
  * Целит в `step2.{revenue,netProfit}.yXXXX.annual` и `step2.vatDeclared`.
  * Десятичные .00 у Decimal-строки урезаются (UZS-форма не показывает копейки).
@@ -270,8 +276,9 @@ function applyToForm(
   data: ParsedFinancialsDto,
   setValue: SetValueFn,
   t: Translator,
-): Source[] {
+): { filled: Source[]; parsed: Record<string, string> } {
   const filled: Source[] = [];
+  const parsed: Record<string, string> = {};
   const sourceFile = t("dropzone_source_fallback_file");
   const sourceAutofill = t("dropzone_source_fallback_autofill");
 
@@ -285,7 +292,9 @@ function applyToForm(
     if (!KNOWN_YEARS.includes(year as (typeof KNOWN_YEARS)[number])) return;
     const path =
       `step2.${section}.y${year}.annual` as FieldPath<FormValues>;
-    setValue(path, normalizeDigits(value), { shouldValidate: true });
+    const normalized = normalizeDigits(value);
+    setValue(path, normalized, { shouldValidate: true });
+    parsed[path] = normalized;
     filled.push({ fieldLabel, year, sourceLabel });
   };
 
@@ -311,9 +320,9 @@ function applyToForm(
   // Если в DTO есть 2025 — кладём в step2.vatDeclared. Прочие годы пока игнор
   // (форма поддерживает один период).
   if (data.vat_declared_by_year["2025"]) {
-    setValue("step2.vatDeclared", normalizeDigits(data.vat_declared_by_year["2025"]), {
-      shouldValidate: true,
-    });
+    const normalized = normalizeDigits(data.vat_declared_by_year["2025"]);
+    setValue("step2.vatDeclared", normalized, { shouldValidate: true });
+    parsed["step2.vatDeclared"] = normalized;
     filled.push({
       fieldLabel: t("dropzone_field_vat_2025"),
       sourceLabel: data.source_trail["vat_declared_2025"] ?? sourceFile,
@@ -322,18 +331,18 @@ function applyToForm(
 
   // CA-041: FORM_1 → assets/liabilities на конец отчётного периода (column E).
   if (data.assets_total) {
-    setValue("step2.totalAssets", normalizeDigits(data.assets_total), {
-      shouldValidate: true,
-    });
+    const normalized = normalizeDigits(data.assets_total);
+    setValue("step2.totalAssets", normalized, { shouldValidate: true });
+    parsed["step2.totalAssets"] = normalized;
     filled.push({
       fieldLabel: t("dropzone_field_assets_end"),
       sourceLabel: data.source_trail["form1.assets_total"] ?? "FORM_1",
     });
   }
   if (data.liabilities_total) {
-    setValue("step2.totalLiabilities", normalizeDigits(data.liabilities_total), {
-      shouldValidate: true,
-    });
+    const normalized = normalizeDigits(data.liabilities_total);
+    setValue("step2.totalLiabilities", normalized, { shouldValidate: true });
+    parsed["step2.totalLiabilities"] = normalized;
     filled.push({
       fieldLabel: t("dropzone_field_liabs_end"),
       sourceLabel: data.source_trail["form1.liabilities_total"] ?? "FORM_1",
@@ -413,16 +422,16 @@ function applyToForm(
   ];
   for (const entry of ca037Hidden) {
     if (entry.value === null || entry.value === "") continue;
-    setValue(entry.field, normalizeDigits(entry.value), {
-      shouldValidate: true,
-    });
+    const normalized = normalizeDigits(entry.value);
+    setValue(entry.field, normalized, { shouldValidate: true });
+    parsed[entry.field] = normalized;
     filled.push({
       fieldLabel: entry.label,
       sourceLabel: data.source_trail[entry.sourceKey] ?? sourceAutofill,
     });
   }
 
-  return filled;
+  return { filled, parsed };
 }
 
 function normalizeDigits(decimalStr: string): string {
