@@ -9,7 +9,9 @@
 
 **Phase 10 (PDF document) закрыта 2026-05-15** (`a8f2b66`). Финальная фаза Design Sweep — credit memorandum aesthetic для banking output. Cover: hero decision-block (gauge 200pt + recommendation 28pt + signal breakdown inline) + decision-meta full-width + observations pros/cons split (3 strengths + 3 risks). Section A redesign: identity hero с auto-derived avatar (initials) + 3 stat tiles (Возраст · Регион · ОКВЭД) + clean detail rows. Brand-tenant: `BRAND_ID` env → `config/brands/<id>.json` через `infrastructure/brand/`. ГНК pill убран физически (Phase 9 lesson). F-секция: human-readable `rule.name` из YAML вместо rule_id. Observations builder (`application/services/`) — strengths из позитивных KPI + risks из top-3 red flags severity-sorted. CI `25934169074` → ~1m.
 
-**Дизайн-pass завершён:** все 10 фаз DONE. Следующие итерации — backlog TODO (CA-DS6/7/8/14-25/28, CA-003/015/019-020/028/029b/064/DS11).
+**Direction B (Design Sweep tail) — Batch 1A закрыт 2026-05-16** (`680005e`, CI `25935954333` ~1m). CA-DS17 (OKVED catalog) + CA-DS24 (USD/UZS rate) — config-driven. Pattern `infrastructure/catalog/` (DTO в `application/dto/` + loader в `infrastructure/catalog/` + JSON в `config/<topic>/`) зеркалит `infrastructure/brand/`. Backend single source: PDF читает напрямую через singleton catalog, frontend через React Query (`/api/system/okved`, `/api/system/usd-rate`), i18n keys `okved_XX_YY` (16 × 2) удалены — labels теперь в JSON. Готовность к runtime locale switcher (CA-DS29): `useLocale()` уже выбирает `full_ru`/`full_uz`.
+
+**Дизайн-pass завершён:** все 10 фаз DONE. Следующие итерации — backlog TODO (CA-DS6/7/8/14-23/25/28/29, CA-003/015/019-020/024b/028/029b/064/DS11).
 
 **Активная ветка:** `main`.
 
@@ -22,6 +24,7 @@
 - **CA-015**: уточнить `vat_declaration_parser.py` под живые xltx 10006_45/10006_47.
 - **CA-019**: refresh-token rotation + denylist (Redis) — в v1 stateless 7д.
 - **CA-020**: LDAP/OAuth AuthnAdapter для production-банка. `AuthnPort` готов.
+- **CA-024b**: real CBU API integration (`cbu.uz/services/`) для USD/UZS rate. **Legal review обязателен** (mirror CA-DS28 паттерну: уз-юрист 30 мин + robots.txt check). Pre-condition для замены `config/exchange/rates.json` static на live feed.
 - **CA-028**: dynamic unit detection для FORM_2 — сейчас hardcoded ×1000.
 - **CA-029b**: парсер PROFIT_TAX (taxes_paid, 15 листов). Adapter raises UnsupportedFormatError.
 - **CA-064**: ship `error.tsx` в real observability (Sentry / posthog).
@@ -34,16 +37,15 @@
 - **CA-DS14**: `/help` секция «Что делать при смене телефона» — MS Authenticator iCloud-cache scenario.
 - **CA-DS15**: рассмотреть WebAuthn/Passkeys как alternative 2FA-фактор.
 - **CA-DS16**: убрать legacy stored bool `analysts.mfa_enabled` через миграцию.
-- **CA-DS17**: real OKVED-каталог из backend-endpoint или статичный JSON. Сейчас 16 кодов хардкод.
-- **CA-DS18**: реальный `case_id` с бэкенда. Сейчас clientside `Math.random()` placeholder.
+- **CA-DS18**: реальный `case_id` с бэкенда. Сейчас clientside `Math.random()` placeholder. Level 1 (deterministic from `draft.id`) — Batch 1B; Level 2 (Postgres sequence) → CA-DS18b после Phase 4 application entity.
 - **CA-DS19**: motion cleanup pass по /search и /history (pulse-* на trust-pill + LiveStrip).
 - **CA-DS20**: RTL-тесты на InnInput state machine + OkvedAutocomplete.
 - **CA-DS21**: `auto-edited` 3-state в source-trail (Step 2). Сейчас 2-state.
 - **CA-DS22**: keyboard nav в `CustomDropdown` (Soliq year/month). Сейчас только mouse.
 - **CA-DS23**: RTL-тесты на `Step2Financials` source-trail rendering.
-- **CA-DS24**: real `/api/system/cbu/usd-rate` или config-driven course вместо hardcoded `USD_RATE_UZS = 12575`.
 - **CA-DS25**: real backend sparkline для KPI (EBIT/ROE/Debt-to-EBIT). Нужна monthly-проекция EBIT.
 - **CA-DS28**: real ГНК lookup для CA-003 (hybrid: public lookup `soliq.uz/services/search/` + manual upload справки). **Legal review обязателен** (уз-юрист 30 мин + robots.txt check). Pre-condition для CA-003 закрытия.
+- **CA-DS29**: runtime locale switcher (UI dropdown в topbar + cookie persistence + middleware locale detection + RSC revalidation strategy + PDF `?lang=` query param). Backend уже готов — OKVED catalog отдаёт RU+UZ. Scope: ~15 файлов, ~3 ч с design-review. Brand-strings (имена банков) НЕ локализуются — это tenant-config.
 
 ---
 
@@ -91,6 +93,7 @@
 - **Phase 10 PDF brand-tenant**: `BRAND_ID` env → `config/brands/<id>.json` через `infrastructure/brand/`. `BrandConfig` dataclass в `application/dto/` (clean architecture — pure), loader в `infrastructure/`. Backend mirror фронтового `resolveBrand()`, single source of truth — JSON в `config/brands/`. Шрифты PDF строго bundled 400/500/600/700 (no 800 — fallback в WeasyPrint).
 - **Phase 10 Observations builder** (`application/services/observations_builder.py`): cover bottom half. Strengths derived from positive KPI: revenue growth · ROE≥GOOD · positive net profit · low debt (cap 3). Risks = top-3 red flags by severity (critical → high → medium → low). Rule name lookup через `RuleRegistry.by_id(rule_id).name` из YAML.
 - **Phase 10 Rule.name field**: добавлено в `domain/rules/rule.py`, пробрасывается через `registry_factory` синхронно с `config/rules/v*.yaml`. PDF F-секция рендерит human-readable name; rule_id остаётся в `.src` строке как technical reference для аудитора.
+- **Batch 1A catalog pattern (CA-DS17/CA-DS24)**: reference-данные (OKVED, USD rate) — JSON в `config/<topic>/`, DTO в `application/dto/<topic>.py` (pure dataclass), loader в `infrastructure/catalog/<topic>.py`. Backend (PDF, services) читает через singleton catalog (`@lru_cache(maxsize=1)`), frontend через React Query на public endpoint `GET /api/system/<topic>` (catch-all BFF проксирует). **Не плодить hardcode**: новый reference-каталог → JSON + DTO + loader, не словарь в feature-модуле. **i18n keys для catalog labels** запрещены — labels внутри JSON `name_ru`/`name_uz`, frontend выбирает через `useLocale()`. Brand-tenant strings (имена банков) живут в `config/brands/`, не локализуются.
 
 ---
 
