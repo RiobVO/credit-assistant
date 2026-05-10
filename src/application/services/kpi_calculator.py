@@ -21,7 +21,12 @@ from __future__ import annotations
 from collections.abc import Sequence
 from decimal import Decimal
 
-from application.dto.kpi_bundle import KpiBundle, KpiUnit, KpiValue
+from application.dto.kpi_bundle import (
+    KpiBundle,
+    KpiUnit,
+    KpiValue,
+    MonthlyRevenuePoint,
+)
 from domain.entities.borrower_snapshot import BorrowerSnapshot
 from domain.entities.financial_report import FinancialReport
 from domain.entities.monthly_turnover import MonthlyTurnover
@@ -104,3 +109,47 @@ def _ltm_from_annual(annual: Sequence[FinancialReport]) -> KpiValue:
         yoy_pct=yoy_pct,
         sparkline=(),  # годовые не дают полезной sparkline
     )
+
+
+def compute_monthly_revenue_24m(
+    snapshot: BorrowerSnapshot,
+) -> tuple[MonthlyRevenuePoint, ...]:
+    """Чарт «Выручка 24 мес» для экрана досье.
+
+    Берёт последние 24 ``MonthlyTurnover`` (UZS-only) в хронологическом порядке.
+    Для каждой точки вычисляет 12-мес rolling average (тренд) — по доступным
+    предыдущим точкам (если до текущей меньше 12, average по тому что есть).
+
+    Top-3 по revenue в выборке помечаются ``is_peak=True`` — UI рисует
+    акцентным цветом. Если данных меньше 24 — отдаём что есть; пустой массив,
+    если monthly_turnover пустой или не содержит UZS.
+    """
+    monthly_uzs = sorted(
+        _filter_uzs_monthly(snapshot.monthly_turnover),
+        key=lambda m: m.month_start,
+    )
+    last_24 = monthly_uzs[-24:]
+    if not last_24:
+        return ()
+
+    revenues = [m.revenue.amount for m in last_24]
+
+    # Top-3 индексы по revenue: устойчивая сортировка → если несколько с равной
+    # суммой, peak становится первый по дате.
+    top_indices = set(
+        sorted(range(len(revenues)), key=lambda i: revenues[i], reverse=True)[:3]
+    )
+
+    points: list[MonthlyRevenuePoint] = []
+    for i, m in enumerate(last_24):
+        window = revenues[max(0, i - 11) : i + 1]
+        trend = sum(window, Decimal(0)) / Decimal(len(window))
+        points.append(
+            MonthlyRevenuePoint(
+                month_start=m.month_start,
+                revenue=m.revenue.amount,
+                trend=trend,
+                is_peak=i in top_indices,
+            )
+        )
+    return tuple(points)
