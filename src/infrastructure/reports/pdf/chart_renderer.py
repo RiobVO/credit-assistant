@@ -27,6 +27,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
+from matplotlib.patches import Rectangle
 
 from application.dto.kpi_bundle import MonthlyRevenuePoint
 
@@ -90,20 +91,40 @@ def render_revenue_24m(
                 "Загрузите выгрузку Soliq на Шаге 2 формы или укажите\n"
                 "помесячный оборот вручную."
             )
+        # Light-grey placeholder rect — даёт PNG полную ширину и визуальную
+        # границу чарта (как .chart-placeholder в design-reference). Без него
+        # ``bbox_inches="tight"`` обрезал PNG до bounding-box центрированного
+        # текста, и шаблон отрисовывал узкий лоскут 200×80px.
+        ax.add_patch(
+            Rectangle(
+                (0, 0), 1, 1,
+                transform=ax.transAxes,
+                facecolor="#FAFBFC",
+                edgecolor=COLOR_GRID,
+                linewidth=0.8,
+                zorder=0,
+            ),
+        )
         ax.text(
             0.5, 0.62, title,
             ha="center", va="center",
             transform=ax.transAxes,
             color=COLOR_AXIS, fontsize=11, fontweight="semibold",
+            zorder=1,
         )
         ax.text(
             0.5, 0.36, hint,
             ha="center", va="center",
             transform=ax.transAxes,
             color=COLOR_AXIS, fontsize=9,
+            zorder=1,
         )
+        ax.set_xlim(0, 1)
+        ax.set_ylim(0, 1)
         ax.set_axis_off()
-        return _figure_to_png(fig)
+        # tight=False: rect-границы держат полный canvas-bbox, иначе всё равно
+        # обрезается до текста при empty-axes (matplotlib ≥3.7 quirk).
+        return _figure_to_png(fig, tight=False)
 
     revenues = [float(p.revenue) for p in points]
     trend = [float(p.trend) for p in points]
