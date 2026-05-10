@@ -360,17 +360,20 @@
   <div class="summary">
     <div class="gauge-wrap">
       {# Полудуга score-gauge inline SVG (повторяет frontend score-gauge.tsx).
+         Центр (100, 110), r=90, 4 сектора по 45°: 180°→135°→90°→45°→0°.
+         Конечные точки рассчитаны на окружности (важно для WeasyPrint, который
+         строго проверяет «A» path — endpoints не на радиусе ⇒ кривая «гуляет»).
          Стрелка вращается на угол (display_score - 50) * 1.8 °. #}
       <svg viewBox="0 0 200 130" width="180" height="118">
-        <path d="M 20 110 A 90 90 0 0 1 46.36 46.36"   fill="none" stroke="#B42318" stroke-width="14" />
-        <path d="M 46.36 46.36 A 90 90 0 0 1 100 20"   fill="none" stroke="#B8730E" stroke-width="14" />
-        <path d="M 100 20 A 90 90 0 0 1 153.64 46.36"  fill="none" stroke="#C9A227" stroke-width="14" />
-        <path d="M 153.64 46.36 A 90 90 0 0 1 180 110" fill="none" stroke="#0F8A5F" stroke-width="14" />
+        <path d="M 10 110 A 90 90 0 0 1 36.36 46.36"   fill="none" stroke="#B42318" stroke-width="14" />
+        <path d="M 36.36 46.36 A 90 90 0 0 1 100 20"   fill="none" stroke="#E07A2A" stroke-width="14" />
+        <path d="M 100 20 A 90 90 0 0 1 163.64 46.36"  fill="none" stroke="#D4A815" stroke-width="14" />
+        <path d="M 163.64 46.36 A 90 90 0 0 1 190 110" fill="none" stroke="#0F8A5F" stroke-width="14" />
         <g transform="rotate({{ gauge_angle_deg }} 100 110)">
           <line x1="100" y1="110" x2="100" y2="32" stroke="#0E1525" stroke-width="2.4" stroke-linecap="round" />
           <circle cx="100" cy="110" r="6" fill="#0E1525" />
         </g>
-        <text x="14"  y="125" font-size="9" fill="#7A8497">0</text>
+        <text x="4"   y="125" font-size="9" fill="#7A8497">0</text>
         <text x="178" y="125" font-size="9" fill="#7A8497">100</text>
       </svg>
       <div class="gauge-score">{{ display_score }}<small>&nbsp;/ 100</small></div>
