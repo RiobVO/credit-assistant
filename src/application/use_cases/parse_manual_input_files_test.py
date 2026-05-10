@@ -1,0 +1,164 @@
+"""Тесты ParseManualInputFilesUseCase.
+
+Best-effort оркестратор: классифицирует пачку файлов, мерджит результаты в
+``ParsedFinancials``. Не raises — только warnings.
+"""
+
+from __future__ import annotations
+
+from decimal import Decimal
+from io import BytesIO
+
+import pytest
+
+from application.use_cases.parse_manual_input_files import (
+    NamedFile,
+    ParseManualInputFilesUseCase,
+)
+from infrastructure.adapters.soliq_xltx.parser import SoliqXltxAdapter
+from tests.fixtures.soliq_xltx._factories import (
+    build_form1_balance_sheet_wb,
+    build_form2_income_statement_wb,
+    build_vat_declaration_wb,
+    build_vat_registry_wb,
+)
+
+
+def _bytes(wb: object) -> bytes:
+    buf = BytesIO()
+    wb.save(buf)  # type: ignore[attr-defined]
+    buf.seek(0)
+    return buf.read()
+
+
+@pytest.fixture
+def usecase() -> ParseManualInputFilesUseCase:
+    return ParseManualInputFilesUseCase(adapter=SoliqXltxAdapter())
+
+
+def test_single_form2_q4_fills_two_years_annual(usecase: ParseManualInputFilesUseCase) -> None:
+    """FORM_2 за Q4 2025 → revenue/net_profit заполняются за 2025 и 2024 (prior column)."""
+    content = _bytes(
+        build_form2_income_statement_wb(
+            period_year=2025,
+            period_quarter=4,
+            revenue_current=5973686.0,  # тыс. сум
+            revenue_prior=6559649.0,
+            net_profit_current=(43697.0, 0.0),
+            net_profit_prior=(0.0, 136022.0),  # убыток в прошлом году
+        )
+    )
+
+    result = usecase.execute([NamedFile(name="form2.xltx", content=content)])
+
+    assert result.revenue_by_year == {
+        2025: Decimal("5973686000"),
+        2024: Decimal("6559649000"),
+    }
+    assert result.net_profit_by_year == {
+        2025: Decimal("43697000"),
+        2024: Decimal("-136022000"),
+    }
+    assert "revenue_2025" in result.source_trail
+    assert "FORM_2 Q4 2025" in result.source_trail["revenue_2025"]
+    assert result.parse_warnings == []
+
+
+def test_form2_non_q4_skipped_with_warning(usecase: ParseManualInputFilesUseCase) -> None:
+    """FORM_2 за Q1/Q2/Q3 — YTD меньше года, в CA-027 не используется."""
+    content = _bytes(build_form2_income_statement_wb(period_year=2025, period_quarter=2))
+
+    result = usecase.execute([NamedFile(name="form2_q2.xltx", content=content)])
+
+    assert result.revenue_by_year == {}
+    assert any("Q2" in w and "пропуск" in w for w in result.parse_warnings)
+
+
+def test_vat_declaration_fills_vat_declared_by_year(usecase: ParseManualInputFilesUseCase) -> None:
+    content = _bytes(
+        build_vat_declaration_wb(
+            period_year=2026,
+            sales_total_vat=62799985.69,
+        )
+    )
+
+    result = usecase.execute([NamedFile(name="vat.xltx", content=content)])
+
+    # Decimal сохраняет дробную часть (vat_charged_total не округляется)
+    assert 2026 in result.vat_declared_by_year
+    assert "vat_declared_2026" in result.source_trail
+
+
+def test_unsupported_format_form1_warns(usecase: ParseManualInputFilesUseCase) -> None:
+    """FORM_1 распознан, но парсера нет (TODO[CA-029]) → warning, файл скип."""
+    content = _bytes(build_form1_balance_sheet_wb())
+
+    result = usecase.execute([NamedFile(name="form1.xltx", content=content)])
+
+    assert result.revenue_by_year == {}
+    assert any("CA-029" in w and "form1.xltx" in w for w in result.parse_warnings)
+
+
+def test_unknown_garbage_file_warns(usecase: ParseManualInputFilesUseCase) -> None:
+    """Битый бинарник → warning «не удалось открыть», use case не падает."""
+    result = usecase.execute([NamedFile(name="trash.bin", content=b"\x00\x01junk")])
+
+    assert any("trash.bin" in w for w in result.parse_warnings)
+
+
+def test_mixed_batch_form2_and_vat(usecase: ParseManualInputFilesUseCase) -> None:
+    """FORM_2 Q4 2025 + VAT 2025 — оба сливаются в один ParsedFinancials."""
+    form2 = _bytes(build_form2_income_statement_wb(period_year=2025, period_quarter=4))
+    vat = _bytes(build_vat_declaration_wb(period_year=2025))
+
+    result = usecase.execute(
+        [
+            NamedFile(name="form2.xltx", content=form2),
+            NamedFile(name="vat.xltx", content=vat),
+        ]
+    )
+
+    assert 2025 in result.revenue_by_year
+    assert 2025 in result.vat_declared_by_year
+    assert "FORM_2" in result.source_trail["revenue_2025"]
+    assert "VAT_DECLARATION" in result.source_trail["vat_declared_2025"]
+
+
+def test_duplicate_year_form2_keeps_first(usecase: ParseManualInputFilesUseCase) -> None:
+    """Две FORM_2 за один год → первая побеждает, конфликт-warning."""
+    first = _bytes(
+        build_form2_income_statement_wb(period_year=2025, revenue_current=100.0)
+    )
+    second = _bytes(
+        build_form2_income_statement_wb(period_year=2025, revenue_current=999.0)
+    )
+
+    result = usecase.execute(
+        [
+            NamedFile(name="first.xltx", content=first),
+            NamedFile(name="second.xltx", content=second),
+        ]
+    )
+
+    # Первый файл выиграл — 100 тыс. → 100_000 UZS
+    assert result.revenue_by_year[2025] == Decimal("100000")
+    assert any("уже было заполнено" in w for w in result.parse_warnings)
+
+
+def test_vat_registry_ilova_quietly_skipped(usecase: ParseManualInputFilesUseCase) -> None:
+    """Реестр счетов-фактур не несёт financial-полей — скип без warning."""
+    content = _bytes(build_vat_registry_wb())
+
+    result = usecase.execute([NamedFile(name="ilova.xltx", content=content)])
+
+    assert result.revenue_by_year == {}
+    # Реестр валиден, не должно быть warnings (тихий скип).
+    assert result.parse_warnings == []
+
+
+def test_empty_input_returns_empty_parsed(usecase: ParseManualInputFilesUseCase) -> None:
+    result = usecase.execute([])
+
+    assert result.revenue_by_year == {}
+    assert result.parse_warnings == []
+    assert result.source_trail == {}
