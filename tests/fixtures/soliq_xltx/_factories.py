@@ -200,8 +200,41 @@ def build_form2_income_statement_wb(
     organization_name: str = '"AZ RUHDIL SAVDO" MCHJ',
     period_year: int = 2025,
     period_quarter: int = 4,
+    # Все суммы в тыс. сум. (как в реальном файле). 'x' = неприменимо.
+    # Defaults — реальные числа из form2_q4_2025_full.xltx (AZ RUHDIL SAVDO).
+    # row 6 (010 Чистая выручка): D=prior, F=current. E/G всегда 'x'.
+    revenue_prior: Any = 6559649.0,
+    revenue_current: Any = 5973686.0,
+    # row 7 (020 Себестоимость): E=prior expense, G=current expense.
+    cost_prior: Any = 5820702.0,
+    cost_current: Any = 5037111.0,
+    # row 8 (030 Валовая прибыль): D=prior income, F=current income.
+    gross_profit_prior: Any = 738947.0,
+    gross_profit_current: Any = 936575.0,
+    # row 15 (100 Прибыль от основной): (D, E) prior, (F, G) current.
+    operating_profit_prior: tuple[Any, Any] = (27390.0, 0.0),
+    operating_profit_current: tuple[Any, Any] = (87086.0, 0.0),
+    # row 23 (180 Расходы в виде процентов): E=prior, G=current (expense only).
+    interest_expense_prior: Any = 158407.0,
+    interest_expense_current: Any = 40088.0,
+    # row 29 (240 Прибыль до уплаты налога): (D, E) prior, (F, G) current.
+    profit_before_tax_prior: tuple[Any, Any] = (0.0, 124633.0),
+    profit_before_tax_current: tuple[Any, Any] = (63358.0, 0.0),
+    # row 30 (250 Налог на прибыль): E=prior, G=current.
+    profit_tax_prior: Any = 11389.0,
+    profit_tax_current: Any = 19661.0,
+    # row 32 (270 Чистая прибыль): (D, E) prior, (F, G) current. Signed via pair.
+    net_profit_prior: tuple[Any, Any] = (0.0, 136022.0),
+    net_profit_current: tuple[Any, Any] = (43697.0, 0.0),
 ) -> WorkbookT:
-    """Форма №2 (Отчёт о финрезультатах). 3 листа. Минимум для format_detector."""
+    """Форма №2 (Отчёт о финрезультатах). 3 листа.
+
+    Координаты сверены с реальной выгрузкой Q4 2025 (form2_q4_2025_full.xltx,
+    ИНН 306399449 AZ RUHDIL SAVDO). list02 — табличные данные, list03 пустой.
+
+    Используй ``Any``-параметры с ``'x'`` или ``None``, чтобы прогнать парсер
+    через best-effort cell-skipping ветки (CA-014).
+    """
     wb = Workbook()
     ws1 = wb.active
     assert ws1 is not None
@@ -216,7 +249,52 @@ def build_form2_income_statement_wb(
     ws1["C8"] = organization_name
     ws1["H18"] = "ИНН"
     ws1["I18"] = inn
-    wb.create_sheet("list02")
+    ws1["B24"] = "Единица измерения, тыс. сум."
+
+    ws2 = wb.create_sheet("list02")
+    # row 6 (010 Чистая выручка): E/G всегда 'x' (только income column)
+    ws2["C6"] = "010"
+    ws2["D6"] = revenue_prior
+    ws2["E6"] = "x"
+    ws2["F6"] = revenue_current
+    ws2["G6"] = "x"
+    # row 7 (020 Себестоимость): D/F всегда 'x' (только expense column)
+    ws2["C7"] = "020"
+    ws2["D7"] = "x"
+    ws2["E7"] = cost_prior
+    ws2["F7"] = "x"
+    ws2["G7"] = cost_current
+    # row 8 (030 Валовая прибыль): income only (E/G обычно 0 в реальном файле)
+    ws2["C8"] = "030"
+    ws2["D8"] = gross_profit_prior
+    ws2["E8"] = 0.0
+    ws2["F8"] = gross_profit_current
+    ws2["G8"] = 0.0
+    # row 15 (100 Прибыль от основной деятельности): signed pair
+    ws2["C15"] = "100"
+    ws2["D15"], ws2["E15"] = operating_profit_prior
+    ws2["F15"], ws2["G15"] = operating_profit_current
+    # row 23 (180 Расходы в виде процентов): D/F 'x', E/G — expense
+    ws2["C23"] = "180"
+    ws2["D23"] = "x"
+    ws2["E23"] = interest_expense_prior
+    ws2["F23"] = "x"
+    ws2["G23"] = interest_expense_current
+    # row 29 (240 Прибыль до уплаты налога): signed pair
+    ws2["C29"] = "240"
+    ws2["D29"], ws2["E29"] = profit_before_tax_prior
+    ws2["F29"], ws2["G29"] = profit_before_tax_current
+    # row 30 (250 Налог на прибыль): D/F 'x', E/G — expense
+    ws2["C30"] = "250"
+    ws2["D30"] = "x"
+    ws2["E30"] = profit_tax_prior
+    ws2["F30"] = "x"
+    ws2["G30"] = profit_tax_current
+    # row 32 (270 Чистая прибыль): signed pair
+    ws2["C32"] = "270"
+    ws2["D32"], ws2["E32"] = net_profit_prior
+    ws2["F32"], ws2["G32"] = net_profit_current
+
     wb.create_sheet("list03")
     return wb
 
