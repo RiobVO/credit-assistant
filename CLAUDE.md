@@ -9,7 +9,7 @@
 
 **Phase 10 (PDF document) закрыта 2026-05-15** (`a8f2b66`, CI `25934169074`). Финальная фаза Design Sweep — credit memorandum aesthetic: hero decision-block, observations pros/cons split, Section A identity hero с avatar + 3 stat tiles, brand-tenant через `BRAND_ID` env → `config/brands/<id>.json`, F-секция рендерит `rule.name` из YAML.
 
-**Direction B (Design Sweep tail) — 7 batch'ей закрыто 2026-05-16:**
+**Direction B (Design Sweep tail) — 8 batch'ей закрыто 2026-05-16:**
 - **Batch 1A** (`680005e`) CA-DS17 + CA-DS24 — config-driven OKVED catalog + USD/UZS rate. Pattern `infrastructure/catalog/` зеркалит `infrastructure/brand/`. PDF/frontend single source через `GET /api/system/{okved,usd-rate}`, i18n keys `okved_XX_YY` удалены.
 - **Batch 1B** (`9b38422`) CA-DS18 Level 1 — deterministic case_id `BR-YYYY-XXXX` из `draft.id` (4 hex). Hydration-safe, без `Math.random`. Banking-grade sequence → CA-DS18b после Phase 4 application entity.
 - **Batch 2** (`d243c0f`) CA-DS20 + CA-DS23 — RTL backfill 32 теста на `InnInput`/`OkvedAutocomplete`/`SourceHint`/`UzsInputShell`. 3 named export'а для testability, семантика не тронута.
@@ -18,8 +18,9 @@
 - **Batch 5** (`2a99f24`) Hygiene — `default_usd_uzs_rate()` singleton (`@lru_cache(maxsize=1)`) mirror OKVED. Endpoint `/api/system/usd-rate` через singleton, `load_usd_uzs_rate(path)` остался uncached для path-override unit-тестов. Integration-test получил autouse `cache_clear` fixture. +2 pytest (singleton identity + env-cache lifecycle).
 - **Batch 6** (`2c249f4`) CA-DS6/7/8 — `support` + `businessHours` секции в `config/brands/<id>.json`. Backend `SupportConfig`/`BusinessHours` nested dataclasses (default=None). Frontend `brandSchema` zod расширен, `BrandClient` пробрасывает оба поля; `useBrand().support` единственный источник для `help-view.tsx`. `business-hours.ts` принимает schedule param (fallback default). Persona block («Мадина А., available» mock) удалён — `feedback_mock_ui_on_decision_screens` паттерн. Compliance phone (CA-DS8) добавлен как отдельная строка в `HotlinePrimaryCard`. +5 pytest (brand_config support/businessHours parsing + invalid sections) +5 vitest (brand schema + custom schedule).
 - **Batch 7** (`675e3f9`) CA-DS29 (UI part) — runtime locale switcher через cookie. `ca_locale` cookie (path=/, sameSite=lax, maxAge=1y, secure-в-проде, не httpOnly). `LocaleSwitcher` в `GlobalTopbar` (CustomDropdown RU/UZ) → server action `setLocaleAction` → `revalidatePath('/', 'layout')`. Server reads через `next/headers cookies()` в `layout.tsx` и `i18n/request.ts`. Fallback chain: cookie → `NEXT_PUBLIC_LOCALE` env → `DEFAULT_LOCALE`. Trade-off: cookies() делает все routes dynamic (ƒ вместо ○ в build output) — acceptable для bank-internal tool. PDF `?lang=` отложен в **CA-DS29-pdf** (pre-condition — UZ-translation PDF templates). +13 vitest (cookie parser + switcher RTL).
+- **Batch 8** (`6680405`) CA-DS14/15/16 — 2FA tail cleanup. **CA-DS14**: новая phone_change FAQ в `/help` про MS Authenticator iCloud-cache scenario (self-recovery vs compliance escalation). **CA-DS15**: ADR-0012 `WebAuthn/Passkeys как alternative 2FA factor` с defer-decision (TOTP остаётся primary до post-pilot Phase 5+ когда CB РУз методики поддержат), implementation sketch + security checklist. **CA-DS16**: drop legacy stored bool `analysts.mfa_enabled` (миграция `c4f8a1d3e0b2`, upgrade drop + downgrade backfill из `mfa_enrolled_at IS NOT NULL`); cleanup в `analyst_repository.add`, `seed_analysts` (`--mfa-enabled` flag удалён), `bank/mfa.py` + `bank/admin.py`. API DTO `mfa_enabled` остаётся (computed), frontend contract не тронут. **Heads-up CA-DS16**: при applying новой миграции на existing prod-БД stored bool sync с `enrolled_at` уже идентичен (mapper computed-only), data-loss нулевой.
 
-Закрыто 12 из 15 Design Sweep tail items: CA-DS6/7/8/17/18/19/20/21/22/23/24/29 (UI part). Frontend stack: 21 test files, 184 vitest tests. Backend: 839 pytest, 5 skipped (WeasyPrint GTK runtime).
+Закрыто 15 из 15 Design Sweep tail items 🎉. Frontend stack: 21 test files, 184 vitest tests. Backend: 839 pytest, 5 skipped (WeasyPrint GTK runtime). Открытые TODO с pre-conditions: **CA-003** (real ГНК lookup ждёт CA-DS28 legal review), **CA-024b** (CBU API ждёт legal review), **CA-DS18b** (Postgres sequence case_id ждёт Phase 4 application entity), **CA-DS18c** (formatCaseId year edge ждёт `draft.created_at` через useFormDraft), **CA-DS25** (KPI sparkline ждёт CA-029b cashflow parser), **CA-DS28** (ГНК ждёт legal review), **CA-DS29-pdf** (PDF `?lang=` ждёт UZ-перевод templates).
 
 **Активная ветка:** `main`.
 
@@ -40,11 +41,8 @@
 - **CA-064**: ship `error.tsx` в real observability (Sentry / posthog).
 - **CA-DS11**: faktura.uz API integration. Сейчас сервис в `/api/system/health` всегда `not_implemented`.
 
-### Design Sweep tail
-- **CA-DS14**: `/help` секция «Что делать при смене телефона» — MS Authenticator iCloud-cache scenario.
-- **CA-DS15**: рассмотреть WebAuthn/Passkeys как alternative 2FA-фактор.
-- **CA-DS16**: убрать legacy stored bool `analysts.mfa_enabled` через миграцию.
-- **CA-DS25**: real backend sparkline для KPI (EBIT/ROE/Debt-to-EBIT). Нужна monthly-проекция EBIT.
+### Design Sweep tail (заблокированные pre-conditions)
+- **CA-DS25**: real backend sparkline для KPI (EBIT/ROE/Debt-to-EBIT). Нужна monthly-проекция EBIT — **blocked CA-029b** (FORM_5 cashflow parser).
 - **CA-DS28**: real ГНК lookup для CA-003 (hybrid: public lookup `soliq.uz/services/search/` + manual upload справки). **Legal review обязателен** (уз-юрист 30 мин + robots.txt check). Pre-condition для CA-003 закрытия.
 - **CA-DS29-pdf**: PDF `?lang=` query param для UZ-локализованного дossier. **Pre-condition**: WeasyPrint templates переведены на UZ (сейчас RU-hardcoded — заголовки секций, F-секция rule names через YAML, F-секция severity-labels, KPI tile labels). `dossier_pdf.py` endpoint принимает `lang: Locale` query, прокидывает в `RenderDossierPdf.execute(dossier_id, lang)`, renderer передаёт в Jinja2 context. Scope ~2-3 ч после перевода templates.
 
