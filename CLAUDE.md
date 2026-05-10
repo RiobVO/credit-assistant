@@ -9,15 +9,16 @@
 
 **Phase 10 (PDF document) закрыта 2026-05-15** (`a8f2b66`, CI `25934169074`). Финальная фаза Design Sweep — credit memorandum aesthetic: hero decision-block, observations pros/cons split, Section A identity hero с avatar + 3 stat tiles, brand-tenant через `BRAND_ID` env → `config/brands/<id>.json`, F-секция рендерит `rule.name` из YAML.
 
-**Direction B (Design Sweep tail) — 5 batch'ей закрыто 2026-05-16:**
+**Direction B (Design Sweep tail) — 6 batch'ей закрыто 2026-05-16:**
 - **Batch 1A** (`680005e`) CA-DS17 + CA-DS24 — config-driven OKVED catalog + USD/UZS rate. Pattern `infrastructure/catalog/` зеркалит `infrastructure/brand/`. PDF/frontend single source через `GET /api/system/{okved,usd-rate}`, i18n keys `okved_XX_YY` удалены.
 - **Batch 1B** (`9b38422`) CA-DS18 Level 1 — deterministic case_id `BR-YYYY-XXXX` из `draft.id` (4 hex). Hydration-safe, без `Math.random`. Banking-grade sequence → CA-DS18b после Phase 4 application entity.
 - **Batch 2** (`d243c0f`) CA-DS20 + CA-DS23 — RTL backfill 32 теста на `InnInput`/`OkvedAutocomplete`/`SourceHint`/`UzsInputShell`. 3 named export'а для testability, семантика не тронута.
 - **Batch 3** (`27e8365`) CA-DS22 + CA-DS19 — full keyboard nav в `CustomDropdown` (ARIA 1.2 combobox, Home/End/PgUp clamp, initial highlight = selected) + pulse cleanup на `/search` (live-strip + result-card). 11 RTL тестов.
 - **Batch 4** (`c40e636`) CA-DS21 — `auto-edited` 3-state в source-trail. `SourceTrailContext` расширен parallel `parsedValues: Record<formPath, normalizedDigits>` map. `useFieldSourceState` сравнивает current с parsedValues — совпадает → `auto`, отличается (включая clear-to-empty) → `auto-edited` (info-tone borderbar, нейтральный suffix). `ParsedFilesDropzone.applyToForm` параллельно с `setValue` зовёт `mergeParsedValues`. +13 RTL тестов (SourceHint info-tone, borderbar, integration через HookProbe + parsedValues seeding + form.setValue transition).
 - **Batch 5** (`2a99f24`) Hygiene — `default_usd_uzs_rate()` singleton (`@lru_cache(maxsize=1)`) mirror OKVED. Endpoint `/api/system/usd-rate` через singleton, `load_usd_uzs_rate(path)` остался uncached для path-override unit-тестов. Integration-test получил autouse `cache_clear` fixture. +2 pytest (singleton identity + env-cache lifecycle).
+- **Batch 6** (`2c249f4`) CA-DS6/7/8 — `support` + `businessHours` секции в `config/brands/<id>.json`. Backend `SupportConfig`/`BusinessHours` nested dataclasses (default=None). Frontend `brandSchema` zod расширен, `BrandClient` пробрасывает оба поля; `useBrand().support` единственный источник для `help-view.tsx`. `business-hours.ts` принимает schedule param (fallback default). Persona block («Мадина А., available» mock) удалён — `feedback_mock_ui_on_decision_screens` паттерн. Compliance phone (CA-DS8) добавлен как отдельная строка в `HotlinePrimaryCard`. +5 pytest (brand_config support/businessHours parsing + invalid sections) +5 vitest (brand schema + custom schedule).
 
-Закрыто 8 из 15 Design Sweep tail items: CA-DS17/18/19/20/21/22/23/24. Frontend stack: 19 test files, 166 vitest tests. Backend: 834 pytest, 5 skipped (WeasyPrint GTK runtime).
+Закрыто 11 из 15 Design Sweep tail items: CA-DS6/7/8/17/18/19/20/21/22/23/24. Frontend stack: 19 test files, 171 vitest tests. Backend: 839 pytest, 5 skipped (WeasyPrint GTK runtime).
 
 **Активная ветка:** `main`.
 
@@ -39,9 +40,6 @@
 - **CA-DS11**: faktura.uz API integration. Сейчас сервис в `/api/system/health` всегда `not_implemented`.
 
 ### Design Sweep tail
-- **CA-DS6** (help): вынести `support` section в `brand-config.json` (phone/email/Slack/Docs/compliance_phone).
-- **CA-DS7** (help): backend-endpoint для real operator-shift presence.
-- **CA-DS8** (help): отдельный compliance-phone в brand-config.
 - **CA-DS14**: `/help` секция «Что делать при смене телефона» — MS Authenticator iCloud-cache scenario.
 - **CA-DS15**: рассмотреть WebAuthn/Passkeys как alternative 2FA-фактор.
 - **CA-DS16**: убрать legacy stored bool `analysts.mfa_enabled` через миграцию.
@@ -88,7 +86,7 @@
 - **CA-061** mode-conditional (ADR-0011): `if (mode === "bank")` запрещён глубже top-level shells. Хук `useAppMode()` (`web/src/lib/use-app-mode.ts`) — единственная точка для client-shells.
 - **CA-062** ESLint hex guard: `no-restricted-syntax` для `src/features/**` + `src/components/**`. **Не ловит** Tailwind utility `bg-[#XXXXXX]` — ручная гигиена.
 - **CA-063** i18n infra: `next-intl` 4.4.1, статичная локаль через `NEXT_PUBLIC_LOCALE`, keys в `web/src/i18n/{ru,uz}.json` (keyspace `shared/bank/accountant/dossier`). RTL-тесты обёртывать в `<NextIntlClientProvider locale="ru" messages={ru}>`. **Brand-strings (имена, теглайны) не локализуются** — это tenant-config.
-- **CA-066** brand-context client-side: server `resolveBrand()` + `<html data-brand>` + `BrandProvider` + `useBrand()` (`web/src/lib/brand-context.tsx`). Tagline в brand-config — **полная** строка.
+- **CA-066** brand-context client-side: server `resolveBrand()` + `<html data-brand>` + `BrandProvider` + `useBrand()` (`web/src/lib/brand-context.tsx`). Tagline в brand-config — **полная** строка. **CA-DS6/7/8** добавили optional `support` (phone/email/slack/docs/compliancePhone) + `businessHours` (timezone + weekdays.start/end) — `useBrand().support` / `.businessHours` рендерятся в `/help`. Backend `SupportConfig`/`BusinessHours` живут только в brand-config, **PDF их не использует** — это frontend-only расширение.
 - **CA-066** `t.rich` gotcha: для ReactNode-обёртки message **обязан** иметь tag-плейсхолдер `<x></x>`, не value `{x}`. Иначе «Functions are not valid as a React child».
 - **Phase 8 SectionCard / CounterChip / StaticPill** (`web/src/components/section-card.tsx`): shared shell — wizard передаёт `icon`, dossier нет (header grid схлопывается). Visual-only, без i18n bindings. **Не дублировать pattern локально** — 10+ consumer'ов через shared.
 - **Phase 7 source-trail UI** (Step 2, расширено CA-DS21): 3-state — `auto` (зелёный borderbar + suffix), `auto-edited` (info-синий borderbar, нейтральный suffix — parser-cap снят правкой), `manual` (серый), плюс спец `manual-required` (amber для taxesPaid). Borderbar реализован как `absolute span` (не CSS-border — мешает UZS-suffix). `useFieldSourceState` читает `parsedValues[fieldName]` из `SourceTrailContext` и сравнивает с current digits; fallback на legacy `sourceTrail[mapping.key]` для не-CA-DS21 источников.
