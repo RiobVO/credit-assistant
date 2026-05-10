@@ -39,8 +39,24 @@ class DossierORM(Base):
     rules_version: Mapped[str] = mapped_column(String(20), nullable=False)
     rules_evaluated: Mapped[int] = mapped_column(Integer, nullable=False)
 
+    # Phase 4: разделение по режиму создания + аудит-trail на аналитика.
+    # source_mode='accountant' для всех записей до Phase 4 (backfill в миграции).
+    # created_by_analyst_id null для accountant-mode и legacy записей.
+    source_mode: Mapped[str] = mapped_column(
+        String(20), nullable=False, server_default="accountant"
+    )
+    created_by_analyst_id: Mapped[UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("analysts.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
-    __table_args__ = (Index("ix_dossiers_snapshot_id", "snapshot_id"),)
+    __table_args__ = (
+        Index("ix_dossiers_snapshot_id", "snapshot_id"),
+        Index("ix_dossiers_source_mode_created_at", "source_mode", "created_at"),
+        Index("ix_dossiers_created_by_analyst_id", "created_by_analyst_id"),
+    )
