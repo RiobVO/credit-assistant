@@ -98,13 +98,19 @@ function SignalRow({ flag }: { flag: RedFlagDto }) {
 }
 
 // Достаём «главное число» из evidence по rule_id, чтобы показать его в pill.
+// Числовые evidence приходят как `Decimal`-строки (ADR-0007), без округления
+// дают хвост из 18+ цифр в UI — поэтому всё через formatEvidenceNumber.
 function renderEvidenceValue(flag: RedFlagDto): string | null {
   const e = flag.evidence;
   switch (flag.rule_id) {
-    case "LOAN_TO_REVENUE_RATIO":
-      return e.ratio ? `${e.ratio}x` : null;
-    case "TAX_PAYMENT_DELAYS":
-      return e.yoy_pct ? `${e.yoy_pct}%` : null;
+    case "LOAN_TO_REVENUE_RATIO": {
+      const v = formatEvidenceNumber(e.ratio);
+      return v ? `${v}x` : null;
+    }
+    case "TAX_PAYMENT_DELAYS": {
+      const v = formatEvidenceNumber(e.yoy_pct);
+      return v ? `${v}%` : null;
+    }
     case "SINGLE_BUYER_CONCENTRATION":
     case "SINGLE_SUPPLIER_CONCENTRATION":
     case "RECEIVABLES_CONCENTRATION":
@@ -117,6 +123,13 @@ function renderEvidenceValue(flag: RedFlagDto): string | null {
     default:
       return null;
   }
+}
+
+function formatEvidenceNumber(raw: unknown): string | null {
+  if (typeof raw !== "string" && typeof raw !== "number") return null;
+  const n = typeof raw === "number" ? raw : parseFloat(raw);
+  if (!Number.isFinite(n)) return null;
+  return n.toFixed(2).replace(".", ",");
 }
 
 function pluralFlags(n: number): string {
