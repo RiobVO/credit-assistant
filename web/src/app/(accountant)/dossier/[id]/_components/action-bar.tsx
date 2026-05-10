@@ -3,8 +3,15 @@
 import { ChevronLeft, Download } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-export function ActionBar() {
+import { API_URL } from "@/lib/config";
+
+type Props = {
+  dossierId: string;
+};
+
+export function ActionBar({ dossierId }: Props) {
   const router = useRouter();
+  const pdfHref = `${API_URL}/api/dossier/${dossierId}/pdf`;
 
   return (
     <div className="mt-7 flex items-center justify-between border-t border-[var(--ca-border)] pt-5">
@@ -17,15 +24,15 @@ export function ActionBar() {
         Назад к списку
       </button>
 
-      <button
-        type="button"
-        disabled
-        title="Скачивание PDF будет доступно после Phase 3.C"
-        className="inline-flex h-[38px] items-center gap-2 rounded-md bg-[var(--ca-primary-blue)] px-5 text-[13.5px] font-semibold text-white transition-colors hover:bg-[var(--ca-primary-blue-700)] disabled:cursor-not-allowed disabled:opacity-55"
+      <a
+        href={pdfHref}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex h-[38px] items-center gap-2 rounded-md bg-[var(--ca-primary-blue)] px-5 text-[13.5px] font-semibold text-white transition-colors hover:bg-[var(--ca-primary-blue-700)]"
       >
         <Download className="size-4" />
         Скачать PDF
-      </button>
+      </a>
     </div>
   );
 }
