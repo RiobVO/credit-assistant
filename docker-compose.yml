@@ -1,5 +1,12 @@
-# Локальная инфраструктура для dev. Backend и frontend пока запускаются вне контейнеров.
-# Production-вариант (с Caddy и backend image) — отдельным compose-файлом, не сейчас.
+# Локальная инфраструктура для dev.
+#
+# - postgres / redis — общие для всех сред.
+# - api — backend в контейнере (Phase 3.C: WeasyPrint требует Pango/HarfBuzz,
+#   на Windows нативный uvicorn не запустит PDF-рендер — см. ADR 0008).
+#
+# Подъём:
+#   docker compose up -d postgres redis  # только инфра, бэкенд локально
+#   docker compose up -d                 # с api в контейнере (для PDF и интеграции)
 
 services:
   postgres:
@@ -35,6 +42,26 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: credit-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # Внутри compose-сети postgres резолвится по имени сервиса на порт 5432.
+      DATABASE_URL: postgresql+asyncpg://credit:credit@postgres:5432/credit_assistant
+      APP_ENV: dev
+      LOG_LEVEL: INFO
+      # CORS — для frontend на host:3000. Pydantic Settings парсит list-поля как
+      # JSON, поэтому передаём массивом, а не comma-separated.
+      CORS_ALLOWED_ORIGINS: '["http://localhost:3000"]'
+    ports:
+      - "8000:8000"
 
 volumes:
   pgdata:

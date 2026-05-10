@@ -1,0 +1,40 @@
+# Версионирование и IDE
+.git
+.gitignore
+.github
+.idea
+.vscode
+
+# Окружения и кеши Python
+.venv
+__pycache__
+*.pyc
+*.pyo
+.pytest_cache
+.ruff_cache
+.mypy_cache
+htmlcov
+.coverage*
+dist
+build
+*.egg-info
+
+# Frontend (api-образ его не нужен)
+web/node_modules
+web/.next
+web/.turbo
+web/out
+
+# Большие фикстуры и dev-утилиты
+tests/fixtures/**/*_full.*
+scripts/_smoke_*.py
+scripts/_smoke_*
+
+# Локальные секреты и переменные
+.env
+.env.*
+!.env.example
+
+# Документация и дизайн (не нужны в runtime)
+docs/
+*.md
