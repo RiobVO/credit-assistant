@@ -49,7 +49,7 @@ export function DscrGauge({
           DSCR
         </div>
         <div className="font-mono text-[34px] leading-none font-bold tracking-[-1px] text-[var(--ca-ink-900)]">
-          {safeValue > 0 ? safeValue.toFixed(2).replace(".", ",") : "—"}
+          {safeValue > 0 ? formatDscrLabel(safeValue) : "—"}
           {safeValue > 0 ? (
             <span className="ml-0.5 text-[18px] font-medium text-[var(--ca-ink-500)]">
               ×
@@ -59,4 +59,12 @@ export function DscrGauge({
       </div>
     </div>
   );
+}
+
+// При большом долге DSCR может выйти за разумные пределы (видели 152152,00x —
+// переполняет круг). Аналогично слишком маленькие значения теряют смысл.
+function formatDscrLabel(value: number): string {
+  if (value > 999) return ">999";
+  if (value < 0.01) return "<0,01";
+  return value.toFixed(2).replace(".", ",");
 }
