@@ -7,6 +7,7 @@ from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 AppEnv = Literal["local", "dev", "staging", "prod"]
+AppMode = Literal["bank", "accountant"]
 
 
 class Settings(BaseSettings):
@@ -22,12 +23,24 @@ class Settings(BaseSettings):
     app_env: AppEnv = "local"
     log_level: str = "INFO"
 
+    # Phase 4: режим инсталляции. Одна установка = один режим (PROJECT_BRIEF Section 2).
+    # На bank install accountant-роуты не подключаются и наоборот (реализуется в 4.D).
+    app_mode: AppMode = "accountant"
+
     # Postgres connection. Async URL with asyncpg driver — используется и приложением,
     # и Alembic (через async engine + run_sync в env.py).
     database_url: str = "postgresql+asyncpg://credit:credit@localhost:5433/credit_assistant"
 
     # Draft form retention. По умолчанию 30 дней; в проде регулируется через .env.
     draft_ttl_days: int = 30
+
+    # Auth (Phase 4.B). Дефолт намеренно небезопасный — на dev/local работает,
+    # в проде обязан быть переопределён через .env (валидация в проде — задача
+    # деплоя, не приложения). Для тестов hardcoded достаточен.
+    jwt_secret: str = "dev-only-insecure-secret-change-me"
+    jwt_algorithm: str = "HS256"
+    jwt_access_ttl_minutes: int = 15
+    jwt_refresh_ttl_days: int = 7
 
     # CORS: либо JSON-массив в .env, либо comma-separated — поддерживаем оба
     cors_allowed_origins: list[str] = Field(

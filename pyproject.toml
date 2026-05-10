@@ -23,6 +23,8 @@ dependencies = [
     "weasyprint>=63",
     "jinja2>=3.1",
     "matplotlib>=3.9",
+    "bcrypt>=4.2",
+    "python-jose[cryptography]>=3.3.0",
 ]
 
 [dependency-groups]
@@ -91,6 +93,12 @@ ignore_missing_imports = true
 module = ["docker", "docker.*"]
 ignore_missing_imports = true
 follow_imports = "skip"
+
+[[tool.mypy.overrides]]
+# jose не публикует py.typed; bcrypt типизирован, но pyright/mypy могут
+# не дотягивать стабы — оборачиваем оба в тонкие сервисы с явным cast.
+module = ["jose", "jose.*", "bcrypt"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
