@@ -10,6 +10,7 @@ endpoint вернёт 503. Эти тесты идут в общем integration-
 
 from __future__ import annotations
 
+import sys
 from collections.abc import AsyncIterator
 from typing import Any
 from uuid import UUID
@@ -23,7 +24,13 @@ from infrastructure.persistence.database import get_session
 from interfaces.api.app import create_app
 from interfaces.api.shared.dependencies import get_rule_registry, get_scoring_service
 
-pytestmark = pytest.mark.integration
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.skipif(
+        sys.platform == "win32",
+        reason="WeasyPrint требует GTK runtime — запускайте в Docker (credit-api)",
+    ),
+]
 
 POST_ENDPOINT = "/api/manual-input"
 PDF_ENDPOINT_TEMPLATE = "/api/dossier/{dossier_id}/pdf"

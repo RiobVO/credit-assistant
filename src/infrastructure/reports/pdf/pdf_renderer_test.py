@@ -1,14 +1,13 @@
 """Smoke-тесты WeasyPrintPdfRenderer.
 
 WeasyPrint требует Pango/HarfBuzz нативно. На Windows-хосте без GTK runtime
-импорт падает — поэтому тесты помечены ``@pytest.mark.integration`` и идут
-вместе с testcontainers-набором (внутри ``credit-api`` Docker они работают).
-
-Локально на dev-машине: ``pytest -m "not integration"`` — эти тесты skip.
+импорт падает — поэтому тесты помечены ``@pytest.mark.integration`` и
+дополнительно skip'аются на ``win32`` (запускайте в credit-api контейнере).
 """
 
 from __future__ import annotations
 
+import sys
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from uuid import UUID
@@ -24,9 +23,13 @@ from domain.entities.borrower import Borrower, LegalForm
 from domain.entities.borrower_snapshot import BorrowerSnapshot
 from domain.value_objects.inn import INN
 
-# Импорт renderer тоже под markом — внутри он импортит weasyprint лениво,
-# но мы хотим один skip-маркер на весь файл.
-pytestmark = pytest.mark.integration
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.skipif(
+        sys.platform == "win32",
+        reason="WeasyPrint требует GTK runtime — запускайте в Docker (credit-api)",
+    ),
+]
 
 
 PDF_MAGIC = b"%PDF-"
