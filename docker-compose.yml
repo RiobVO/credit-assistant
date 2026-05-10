@@ -57,6 +57,12 @@ services:
       DATABASE_URL: postgresql+asyncpg://credit:credit@postgres:5432/credit_assistant
       APP_ENV: dev
       LOG_LEVEL: INFO
+      # Phase 4: режим инсталляции (bank | accountant). Один режим на инсталляцию.
+      # Override через `.env` для compose: `APP_MODE=bank docker compose up -d --build api`.
+      APP_MODE: ${APP_MODE:-accountant}
+      # Phase 4: JWT для bank-auth. ДЛЯ DEV ТОЛЬКО — в проде передавать через
+      # секреты банка (Vault/SOPS). Pydantic Settings читает JWT_SECRET case-insensitively.
+      JWT_SECRET: ${JWT_SECRET:-dev-compose-insecure-change-me-32bytes-minimum}
       # CORS — для frontend на host:3000. Pydantic Settings парсит list-поля как
       # JSON, поэтому передаём массивом, а не comma-separated.
       CORS_ALLOWED_ORIGINS: '["http://localhost:3000"]'
