@@ -7,9 +7,12 @@
 CBU API (cbu.uz/services/) → CA-DS24b с pre-condition legal review (по
 аналогии с CA-DS28 ГНК lookup). Сейчас только static + env.
 
-Singleton НЕТ — endpoint вызывается редко, JSON парсится дёшево, env
-override должен подхватываться без рестарта (хотя в compose это всё
-равно требует redeploy с новым ENV).
+Singleton-доступ через ``default_usd_uzs_rate()`` — mirror
+``okved_catalog.default_catalog()``. JSON парсится один раз при первом
+обращении; env override фиксируется в этот момент. Для re-evaluation
+после env change (тесты или ops-rotation) — ``cache_clear()`` на
+singleton-функции. Тесты с path-override используют ``load_usd_uzs_rate``
+напрямую (он остался uncached).
 """
 
 from __future__ import annotations
@@ -18,6 +21,7 @@ import json
 import os
 from datetime import date as date_type
 from decimal import Decimal, InvalidOperation
+from functools import lru_cache
 from pathlib import Path
 
 from application.dto.exchange_rate import UsdUzsRate
@@ -33,6 +37,10 @@ class ExchangeRateError(ValueError):
 
 def load_usd_uzs_rate(path: Path | None = None) -> UsdUzsRate:
     """Резолвит USD/UZS rate. Env override > JSON file.
+
+    Без кэширования — каждый вызов читает env и JSON заново. Тесты с
+    ``tmp_path`` используют эту функцию напрямую; runtime endpoint —
+    через ``default_usd_uzs_rate`` (singleton).
 
     Raises ``ExchangeRateError`` если ни env, ни файл не дают валидного rate.
     """
@@ -63,3 +71,14 @@ def load_usd_uzs_rate(path: Path | None = None) -> UsdUzsRate:
         return UsdUzsRate(rate=env_rate, asof=file_asof, source="env")
 
     return UsdUzsRate(rate=file_rate, asof=file_asof, source=file_source)
+
+
+@lru_cache(maxsize=1)
+def default_usd_uzs_rate() -> UsdUzsRate:
+    """Process-wide singleton. Используется ``GET /api/system/usd-rate``.
+
+    Кэширует первый успешный resolve. После change ``USD_UZS_RATE`` env
+    в runtime (редкий ops-сценарий) или в тестах нужно вызвать
+    ``default_usd_uzs_rate.cache_clear()``.
+    """
+    return load_usd_uzs_rate()

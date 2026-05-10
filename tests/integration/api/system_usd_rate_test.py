@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Iterator
 from decimal import Decimal
 
 import httpx
@@ -11,11 +11,21 @@ import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from config.settings import Settings
+from infrastructure.catalog.exchange_rates import default_usd_uzs_rate
 from infrastructure.persistence.database import get_session
 from interfaces.api.app import create_app
 from interfaces.api.shared.dependencies import get_rule_registry, get_scoring_service
 
 pytestmark = pytest.mark.integration
+
+
+@pytest.fixture(autouse=True)
+def _clear_usd_rate_singleton() -> Iterator[None]:
+    """USD rate теперь singleton (mirror OKVED). В тестах с monkeypatch
+    env-override это даёт false positives — clear до/после."""
+    default_usd_uzs_rate.cache_clear()
+    yield
+    default_usd_uzs_rate.cache_clear()
 
 
 @pytest_asyncio.fixture

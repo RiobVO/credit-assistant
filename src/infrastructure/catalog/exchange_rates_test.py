@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterator
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
@@ -11,8 +12,18 @@ import pytest
 
 from infrastructure.catalog.exchange_rates import (
     ExchangeRateError,
+    default_usd_uzs_rate,
     load_usd_uzs_rate,
 )
+
+
+@pytest.fixture(autouse=True)
+def _clear_singleton() -> Iterator[None]:
+    """default_usd_uzs_rate кэширует первый resolve. В тестах с
+    monkeypatch'енным env это даёт false positives — clear до/после."""
+    default_usd_uzs_rate.cache_clear()
+    yield
+    default_usd_uzs_rate.cache_clear()
 
 
 def test_load_default_rate_from_file() -> None:
@@ -86,3 +97,32 @@ def test_load_invalid_asof_in_file_raises(tmp_path: Path) -> None:
     )
     with pytest.raises(ExchangeRateError, match="invalid rate fields"):
         load_usd_uzs_rate(bad)
+
+
+def test_default_usd_uzs_rate_singleton() -> None:
+    """``default_usd_uzs_rate()`` должен возвращать один и тот же instance
+    (lru_cache singleton — mirror OKVED catalog pattern)."""
+    a = default_usd_uzs_rate()
+    b = default_usd_uzs_rate()
+    assert a is b
+
+
+def test_default_usd_uzs_rate_caches_env_first_value(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Env override фиксируется при первом resolve; последующее
+    переопределение env видно только после ``cache_clear()``."""
+    monkeypatch.setenv("USD_UZS_RATE", "13000")
+    first = default_usd_uzs_rate()
+    assert first.rate == Decimal("13000")
+    assert first.source == "env"
+
+    monkeypatch.setenv("USD_UZS_RATE", "14000")
+    second = default_usd_uzs_rate()
+    # Без cache_clear — старое значение.
+    assert second.rate == Decimal("13000")
+    assert second is first
+
+    default_usd_uzs_rate.cache_clear()
+    third = default_usd_uzs_rate()
+    assert third.rate == Decimal("14000")
