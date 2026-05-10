@@ -7,15 +7,15 @@ export function formatBigUzs(amount: number): string {
   if (!Number.isFinite(amount)) return "—";
   const abs = Math.abs(amount);
   if (abs >= 1_000_000_000) {
-    return `${formatRu(amount / 1_000_000_000, 1)}${NBSP}млрд${NBSP}₽`;
+    return `${formatRu(amount / 1_000_000_000, 1)}${NBSP}млрд${NBSP}сум`;
   }
   if (abs >= 1_000_000) {
-    return `${formatRu(amount / 1_000_000, 1)}${NBSP}млн${NBSP}₽`;
+    return `${formatRu(amount / 1_000_000, 1)}${NBSP}млн${NBSP}сум`;
   }
   if (abs >= 1_000) {
-    return `${formatRu(amount / 1_000, 1)}${NBSP}тыс${NBSP}₽`;
+    return `${formatRu(amount / 1_000, 1)}${NBSP}тыс${NBSP}сум`;
   }
-  return `${formatRu(amount, 0)}${NBSP}₽`;
+  return `${formatRu(amount, 0)}${NBSP}сум`;
 }
 
 export function formatPct(value: number, fractionDigits: number = 1): string {
