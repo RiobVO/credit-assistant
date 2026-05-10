@@ -1,6 +1,6 @@
 import type { DossierViewDto, KpiValueDto } from "@/lib/api";
 
-import { formatBigUzs, formatPct, formatRatio } from "../_lib/format";
+import { formatBigUzs, formatPct, formatRatio } from "./format";
 
 import { KpiCard } from "./kpi-card";
 
