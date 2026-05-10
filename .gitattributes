@@ -1,0 +1,8 @@
+# Защита окончаний строк для файлов, которые исполняются в Linux-контейнере.
+# Без этого Git с core.autocrlf=true (Windows default) подменяет LF→CRLF
+# при checkout, и bash в credit-api контейнере падает на shebang `#!/usr/bin/env bash\r`.
+
+*.sh text eol=lf
+Dockerfile text eol=lf
+*.dockerfile text eol=lf
+docker/** text eol=lf
