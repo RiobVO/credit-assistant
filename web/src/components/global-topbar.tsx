@@ -5,6 +5,8 @@ import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useEffect } from "react";
 
+import { LocaleSwitcher } from "./locale-switcher";
+
 export type Crumb = { label: string; href?: string; current?: boolean };
 
 export function GlobalTopbar({
@@ -75,6 +77,7 @@ export function GlobalTopbar({
             ⌘K
           </kbd>
         </button>
+        <LocaleSwitcher />
         <Link
           href="/help"
           aria-label={t("help_aria")}

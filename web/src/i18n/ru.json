@@ -36,7 +36,10 @@
       "search_placeholder_inn": "Поиск по ИНН, заявкам…",
       "draft_saving": "Сохраняем черновик…",
       "draft_error": "Не удалось сохранить черновик",
-      "draft_saved": "Черновик сохранён · {time}"
+      "draft_saved": "Черновик сохранён · {time}",
+      "locale_switcher_aria": "Язык интерфейса",
+      "locale_ru": "RU",
+      "locale_uz": "UZ"
     },
     "palette": {
       "placeholder": "Найти страницу или действие…",

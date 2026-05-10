@@ -36,7 +36,10 @@
       "search_placeholder_inn": "STIR, arizalar bo'yicha qidiruv…",
       "draft_saving": "Qoralama saqlanmoqda…",
       "draft_error": "Qoralamani saqlab bo'lmadi",
-      "draft_saved": "Qoralama saqlandi · {time}"
+      "draft_saved": "Qoralama saqlandi · {time}",
+      "locale_switcher_aria": "Interfeys tili",
+      "locale_ru": "RU",
+      "locale_uz": "UZ"
     },
     "palette": {
       "placeholder": "Sahifa yoki amalni topish…",
