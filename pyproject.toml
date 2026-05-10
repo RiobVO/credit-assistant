@@ -76,6 +76,13 @@ plugins = ["pydantic.mypy"]
 module = ["tests.*"]
 disallow_untyped_decorators = false
 
+[[tool.mypy.overrides]]
+# WeasyPrint не публикует стабы и не помечен py.typed — у нас тонкая
+# обёртка ``WeasyPrintPdfRenderer``, ловящая ImportError при отсутствии
+# нативных Pango/HarfBuzz, тип ``bytes`` форсируем вручную.
+module = ["weasyprint", "weasyprint.*"]
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 # domain тесты живут рядом с кодом (`*_test.py`); integration — в `tests/`
