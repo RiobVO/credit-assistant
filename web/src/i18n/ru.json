@@ -297,11 +297,7 @@
       "incident_title": "Срочные инциденты",
       "incident_text": "Если данные клиента стали видны другому аналитику — немедленно позвоните в compliance.",
       "incident_cta": "Позвонить compliance",
-      "operator_eyebrow": "Сейчас на смене",
-      "operator_role_senior": "Старший оператор",
-      "operator_status_available": "Доступен",
-      "operator_status_on_call": "На звонке",
-      "operator_status_break": "Перерыв"
+      "compliance_phone_eyebrow": "Compliance линия"
     },
     "sidebar": {
       "workspace": "Рабочее пространство",

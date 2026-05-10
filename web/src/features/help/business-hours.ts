@@ -1,14 +1,30 @@
+// CA-DS7: расписание hotline — из brand-config (опционально), fallback на
+// 09-18 Asia/Tashkent. Tenant-aware: разные банки могут иметь разные часы
+// работы поддержки. ``schedule`` приходит из ``useBrand().businessHours``
+// в HelpView; null/undefined — берём default. Минутная гранулярность
+// сейчас обрезается до часа (HH:MM → H) — для smoke достаточно; полная
+// поддержка минут потребует i18n update (``hour`` → ``time``).
+
+import type { BrandBusinessHours } from "@/lib/brand";
+
 export type HotlineStatus =
   | { open: true; untilHour: number }
   | { open: false; opensAtHour: number };
 
-const TZ = "Asia/Tashkent";
-const OPEN_HOUR = 9;
-const CLOSE_HOUR = 18;
+const DEFAULT_SCHEDULE: BrandBusinessHours = {
+  timezone: "Asia/Tashkent",
+  weekdays: { start: "09:00", end: "18:00" },
+};
 
-function getTashkentParts(now: Date): { weekday: number; hour: number } {
+function hourOf(hhmm: string): number {
+  const [h] = hhmm.split(":");
+  const parsed = parseInt(h ?? "0", 10);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function getParts(now: Date, tz: string): { weekday: number; hour: number } {
   const fmt = new Intl.DateTimeFormat("en-US", {
-    timeZone: TZ,
+    timeZone: tz,
     weekday: "short",
     hour: "2-digit",
     hour12: false,
@@ -31,11 +47,17 @@ function getTashkentParts(now: Date): { weekday: number; hour: number } {
   };
 }
 
-export function getHotlineStatus(now: Date): HotlineStatus {
-  const { weekday, hour } = getTashkentParts(now);
+export function getHotlineStatus(
+  now: Date,
+  schedule?: BrandBusinessHours | null,
+): HotlineStatus {
+  const cfg = schedule ?? DEFAULT_SCHEDULE;
+  const { weekday, hour } = getParts(now, cfg.timezone);
+  const openHour = hourOf(cfg.weekdays.start);
+  const closeHour = hourOf(cfg.weekdays.end);
   const isWeekday = weekday >= 1 && weekday <= 5;
-  if (isWeekday && hour >= OPEN_HOUR && hour < CLOSE_HOUR) {
-    return { open: true, untilHour: CLOSE_HOUR };
+  if (isWeekday && hour >= openHour && hour < closeHour) {
+    return { open: true, untilHour: closeHour };
   }
-  return { open: false, opensAtHour: OPEN_HOUR };
+  return { open: false, opensAtHour: openHour };
 }
