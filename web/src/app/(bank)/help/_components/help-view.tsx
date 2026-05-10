@@ -334,40 +334,49 @@ function HotlinePrimaryCard() {
 
   if (!support) return null;
 
+  // Анкоры разделены — карточка-shell это div, а main-phone и compliance-phone
+  // каждый свой <a>. Раньше outer был <a> и compliancePhone <a> вкладывался
+  // внутри — это nested anchors (HTML/ARIA запрещают), Next hydration warning.
+  // Семантически: hotline и compliance — два разных номера = два action; одна
+  // обёрточная ссылка их склеивала и теряла compliance-target в screen-reader
+  // (вложенный <a> игнорится). Trade-off: «click anywhere on card → call»
+  // больше не работает; main-number сам по себе крупный tap-target.
   return (
-    <a
-      href={support.phoneTel}
-      className="group relative block overflow-hidden rounded-2xl border border-[var(--brand-primary-soft)] bg-gradient-to-b from-[var(--brand-primary-soft)] to-[var(--surface)] p-[18px] transition-all hover:-translate-y-px hover:shadow-[0_14px_36px_-16px_var(--brand-primary-ring)]"
-    >
-      <div className="mb-2 inline-flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-[var(--brand-primary-ink)]">
-        <Phone className="size-3" />
-        {t("contact_hotline")}
-      </div>
-      <div className="mb-1.5 font-mono text-[18px] font-semibold tracking-[-0.01em] text-[var(--ink-1)] [font-variant-numeric:tabular-nums]">
-        {support.phone}
-      </div>
-      {status ? (
-        status.open ? (
-          <div className="inline-flex items-center gap-1.5 text-[11.5px] font-medium text-[var(--state-ok-fg)]">
-            <span
-              aria-hidden
-              className="pulse-ring-ok size-1.5 rounded-full bg-[var(--state-ok-fg)]"
-            />
-            {t("contact_hotline_status_open", { hour: status.untilHour })}
-          </div>
-        ) : (
-          <div className="inline-flex items-center gap-1.5 text-[11.5px] font-medium text-[var(--ink-3)]">
-            <span
-              aria-hidden
-              className="size-1.5 rounded-full bg-[var(--ink-4)]"
-            />
-            {t("contact_hotline_status_closed", { hour: status.opensAtHour })}
-          </div>
-        )
-      ) : null}
-      <div className="mt-1.5 text-[11.5px] leading-snug text-[var(--ink-3)]">
-        {t("contact_hotline_hours_note")}
-      </div>
+    <div className="group relative overflow-hidden rounded-2xl border border-[var(--brand-primary-soft)] bg-gradient-to-b from-[var(--brand-primary-soft)] to-[var(--surface)] p-[18px] transition-all hover:-translate-y-px hover:shadow-[0_14px_36px_-16px_var(--brand-primary-ring)]">
+      <a
+        href={support.phoneTel}
+        className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary-ring)] rounded-md"
+      >
+        <div className="mb-2 inline-flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-[var(--brand-primary-ink)]">
+          <Phone className="size-3" />
+          {t("contact_hotline")}
+        </div>
+        <div className="mb-1.5 font-mono text-[18px] font-semibold tracking-[-0.01em] text-[var(--ink-1)] [font-variant-numeric:tabular-nums]">
+          {support.phone}
+        </div>
+        {status ? (
+          status.open ? (
+            <div className="inline-flex items-center gap-1.5 text-[11.5px] font-medium text-[var(--state-ok-fg)]">
+              <span
+                aria-hidden
+                className="pulse-ring-ok size-1.5 rounded-full bg-[var(--state-ok-fg)]"
+              />
+              {t("contact_hotline_status_open", { hour: status.untilHour })}
+            </div>
+          ) : (
+            <div className="inline-flex items-center gap-1.5 text-[11.5px] font-medium text-[var(--ink-3)]">
+              <span
+                aria-hidden
+                className="size-1.5 rounded-full bg-[var(--ink-4)]"
+              />
+              {t("contact_hotline_status_closed", { hour: status.opensAtHour })}
+            </div>
+          )
+        ) : null}
+        <div className="mt-1.5 text-[11.5px] leading-snug text-[var(--ink-3)]">
+          {t("contact_hotline_hours_note")}
+        </div>
+      </a>
       <div className="mt-3.5 flex items-center justify-between gap-3 border-t border-dashed border-[color:color-mix(in_srgb,var(--brand-primary)_25%,transparent)] pt-3 text-[11px] text-[var(--ink-3)]">
         <span className="text-[10.5px] font-medium uppercase tracking-[0.06em] text-[var(--brand-primary-ink)]">
           {t("compliance_phone_eyebrow")}
@@ -379,6 +388,6 @@ function HotlinePrimaryCard() {
           {support.compliancePhone}
         </a>
       </div>
-    </a>
+    </div>
   );
 }
