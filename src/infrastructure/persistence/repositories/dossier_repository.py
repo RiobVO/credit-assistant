@@ -4,9 +4,14 @@ from __future__ import annotations
 
 from uuid import UUID, uuid4
 
-from sqlalchemy import select
+from sqlalchemy import desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from application.dto.bank_dossier_summary import (
+    BankDossierListItem,
+    BankDossierListPage,
+    BorrowerSearchHit,
+)
 from application.dto.dossier_record import DossierRecord
 from application.dto.dossier_view_record import DossierViewRecord
 from infrastructure.persistence.mappers.borrower_mapper import borrower_from_orm
@@ -15,6 +20,7 @@ from infrastructure.persistence.mappers.dossier_mapper import (
     red_flags_to_jsonb,
 )
 from infrastructure.persistence.mappers.snapshot_mapper import snapshot_from_payload
+from infrastructure.persistence.models.analyst import AnalystORM
 from infrastructure.persistence.models.borrower import BorrowerORM
 from infrastructure.persistence.models.borrower_snapshot import BorrowerSnapshotORM
 from infrastructure.persistence.models.dossier import DossierORM
@@ -101,4 +107,130 @@ class SqlAlchemyDossierRepository:
             dossier=dossier_record,
             snapshot=snapshot,
             created_at=dossier_orm.created_at,
+        )
+
+    async def find_search_hit_by_inn(self, inn: str) -> BorrowerSearchHit:
+        """Bank search: lookup borrower по INN + последнее bank-mode досье.
+
+        Возвращает три варианта:
+        * borrower не найден → ``found=False``, всё None
+        * borrower найден, bank-mode досье нет → ``found=True``, ``dossier_id=None``
+        * borrower найден, есть bank-mode досье → полный hit
+        """
+        borrower_orm = (
+            await self._session.execute(
+                select(BorrowerORM).where(BorrowerORM.inn == inn)
+            )
+        ).scalar_one_or_none()
+        if borrower_orm is None:
+            return BorrowerSearchHit(
+                found=False,
+                borrower_id=None,
+                borrower_name=None,
+                dossier_id=None,
+                score=None,
+                created_at=None,
+            )
+
+        # Последнее bank-mode досье. JOIN на snapshots (FK borrower_id), фильтр
+        # по source_mode='bank'. Если папа загружал в accountant-mode — здесь не показываем.
+        latest = (
+            await self._session.execute(
+                select(DossierORM)
+                .join(
+                    BorrowerSnapshotORM,
+                    DossierORM.snapshot_id == BorrowerSnapshotORM.id,
+                )
+                .where(
+                    BorrowerSnapshotORM.borrower_id == borrower_orm.id,
+                    DossierORM.source_mode == "bank",
+                )
+                .order_by(desc(DossierORM.created_at))
+                .limit(1)
+            )
+        ).scalar_one_or_none()
+
+        if latest is None:
+            return BorrowerSearchHit(
+                found=True,
+                borrower_id=borrower_orm.id,
+                borrower_name=borrower_orm.name,
+                dossier_id=None,
+                score=None,
+                created_at=None,
+            )
+        return BorrowerSearchHit(
+            found=True,
+            borrower_id=borrower_orm.id,
+            borrower_name=borrower_orm.name,
+            dossier_id=latest.id,
+            score=latest.score,
+            created_at=latest.created_at,
+        )
+
+    async def list_bank_dossiers(
+        self,
+        *,
+        analyst_id: UUID,
+        only_mine: bool,
+        query: str | None,
+        page: int,
+        page_size: int,
+    ) -> BankDossierListPage:
+        """Пагинированная история bank-mode досье с опциональным фильтром.
+
+        ``only_mine``: ограничивает ``created_by_analyst_id = analyst_id``.
+        ``query``: ILIKE по borrower.inn ИЛИ borrower.name. None/пусто — без фильтра.
+        """
+        base_filters = [DossierORM.source_mode == "bank"]
+        if only_mine:
+            base_filters.append(DossierORM.created_by_analyst_id == analyst_id)
+        if query:
+            pattern = f"%{query.strip()}%"
+            base_filters.append(
+                or_(BorrowerORM.inn.ilike(pattern), BorrowerORM.name.ilike(pattern))
+            )
+
+        count_stmt = (
+            select(func.count(DossierORM.id))
+            .join(
+                BorrowerSnapshotORM, DossierORM.snapshot_id == BorrowerSnapshotORM.id
+            )
+            .join(BorrowerORM, BorrowerSnapshotORM.borrower_id == BorrowerORM.id)
+            .where(*base_filters)
+        )
+        total = (await self._session.execute(count_stmt)).scalar_one()
+
+        offset = (page - 1) * page_size
+        items_stmt = (
+            select(DossierORM, BorrowerORM, AnalystORM)
+            .join(
+                BorrowerSnapshotORM, DossierORM.snapshot_id == BorrowerSnapshotORM.id
+            )
+            .join(BorrowerORM, BorrowerSnapshotORM.borrower_id == BorrowerORM.id)
+            .outerjoin(AnalystORM, DossierORM.created_by_analyst_id == AnalystORM.id)
+            .where(*base_filters)
+            .order_by(desc(DossierORM.created_at))
+            .offset(offset)
+            .limit(page_size)
+        )
+        rows = (await self._session.execute(items_stmt)).all()
+        items = tuple(
+            BankDossierListItem(
+                dossier_id=d.id,
+                inn=b.inn,
+                borrower_name=b.name,
+                score=d.score,
+                recommendation=d.recommendation,
+                created_at=d.created_at,
+                analyst_id=a.id if a is not None else None,
+                analyst_full_name=a.full_name if a is not None else None,
+            )
+            for d, b, a in rows
+        )
+        return BankDossierListPage(
+            items=items,
+            total=int(total),
+            page=page,
+            page_size=page_size,
         )
