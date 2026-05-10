@@ -115,12 +115,15 @@ class TestErrors:
 class TestTolerantParsing:
     """CA-014: row-level ошибки → skip + warn, не падение всего парсинга."""
 
-    def test_garbage_seq_no_skipped(self) -> None:
+    def test_garbage_seq_no_kept_with_zero(self) -> None:
+        # seq_no — не critical поле (это №п/п). Bad value → 0, row парсится дальше.
         wb = build_vat_registry_wb(sales=[("A", "200000000", "1", "01.03.2026", 100.0, 12.0)])
         wb["list02"].cell(row=15, column=2).value = "не число"
         data = parse_vat_registry(wb)
-        assert data.sales == []
-        assert data.skipped_rows_count == 1
+        assert len(data.sales) == 1
+        assert data.sales[0].seq_no == 0
+        assert data.sales[0].counterparty_name == "A"
+        assert data.skipped_rows_count == 0
 
     def test_invalid_date_format_skipped(self) -> None:
         wb = build_vat_registry_wb(
@@ -161,17 +164,19 @@ class TestTolerantParsing:
             sales=[("A", "200000000", "1", "01.03.2026", 1000.0, 120.0)],
             purchases=[("X", "200000099", "9", "09.03.2026", 9000.0, 1080.0)],
         )
-        wb["list01"].cell(row=15, column=3).value = None  # испортить purchase
-        wb["list02"].cell(row=15, column=2).value = "abc"  # испортить sale
+        wb["list01"].cell(row=15, column=3).value = None  # испортить purchase (name)
+        wb["list02"].cell(row=15, column=3).value = None  # испортить sale (name)
         data = parse_vat_registry(wb)
         assert data.sales == []
         assert data.purchases == []
         assert data.skipped_rows_count == 2
+        assert len(data.parse_warnings) == 2
 
     def test_empty_registry_has_zero_skipped(self) -> None:
         wb = build_vat_registry_wb()
         data = parse_vat_registry(wb)
         assert data.skipped_rows_count == 0
+        assert data.parse_warnings == []
 
     def test_skip_logged_with_structured_context(self, caplog: pytest.LogCaptureFixture) -> None:
         # Проверяем что про каждую пропущенную строку идёт WARNING с (sheet, row, reason).
@@ -180,5 +185,32 @@ class TestTolerantParsing:
         wb = build_vat_registry_wb(sales=[("A", "200000000", "1", "01.03.2026", 100.0, 12.0)])
         wb["list02"].cell(row=15, column=6).value = "broken-date"
         with caplog.at_level(logging.WARNING):
-            parse_vat_registry(wb)
-        assert any("xltx.row_skipped" in r.getMessage() for r in caplog.records)
+            data = parse_vat_registry(wb)
+        assert any("xltx.registry_row_skipped" in r.getMessage() for r in caplog.records)
+        # И сам warning виден в DTO для UI
+        assert any("list02" in w and "15" in w for w in data.parse_warnings)
+
+    def test_warnings_include_row_and_reason(self) -> None:
+        wb = build_vat_registry_wb(
+            sales=[
+                ("A", "200000000", "1", "01.03.2026", 1000.0, 120.0),
+                ("B", "200000001", "2", "02.03.2026", 2000.0, 240.0),
+            ]
+        )
+        wb["list02"].cell(row=16, column=6).value = "garbage-date"
+        data = parse_vat_registry(wb)
+        assert data.skipped_rows_count == 1
+        assert len(data.parse_warnings) == 1
+        msg = data.parse_warnings[0]
+        assert "list02" in msg
+        assert "16" in msg
+
+    def test_optional_inn_empty_keeps_row(self) -> None:
+        # Пустой ИНН (ПИНФЛ-розница) уже корректно поддерживался — не ломаем.
+        wb = build_vat_registry_wb(
+            sales=[("ABDURAXMONOVA NARGIZA", None, "1461", "29.03.2026", 464285.71, 55714.29)]
+        )
+        data = parse_vat_registry(wb)
+        assert len(data.sales) == 1
+        assert data.sales[0].counterparty_inn is None
+        assert data.parse_warnings == []

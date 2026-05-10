@@ -28,8 +28,8 @@ def _money(amount: str | int) -> Money:
 
 def _header(
     *,
-    inn: INN = INN_OK,
-    year: int = 2026,
+    inn: INN | None = INN_OK,
+    year: int | None = 2026,
     submitted_at: date | None = date(2026, 4, 25),
 ) -> SoliqXltxHeader:
     return SoliqXltxHeader(
@@ -44,8 +44,8 @@ def _header(
 
 def _declaration(
     *,
-    inn: INN = INN_OK,
-    year: int = 2026,
+    inn: INN | None = INN_OK,
+    year: int | None = 2026,
     vat_charged: int | None = 62_799_985,
     submitted_at: date | None = date(2026, 4, 25),
 ) -> VatDeclarationData:
@@ -81,7 +81,7 @@ def _registry(*, sales_vat_total: int = 63_550_200) -> VatRegistryData:
 
 class TestPeriodRange:
     def test_march_31_days(self) -> None:
-        chunk = to_soliq_chunk(
+        chunk, _ = to_soliq_chunk(
             declaration=_declaration(year=2026),
             registry=_registry(),
             borrower_inn=INN_OK,
@@ -93,7 +93,7 @@ class TestPeriodRange:
         )
 
     def test_february_non_leap(self) -> None:
-        chunk = to_soliq_chunk(
+        chunk, _ = to_soliq_chunk(
             declaration=_declaration(year=2026),
             registry=_registry(),
             borrower_inn=INN_OK,
@@ -104,7 +104,7 @@ class TestPeriodRange:
         )
 
     def test_february_leap_year(self) -> None:
-        chunk = to_soliq_chunk(
+        chunk, _ = to_soliq_chunk(
             declaration=_declaration(year=2024),
             registry=_registry(),
             borrower_inn=INN_OK,
@@ -118,7 +118,7 @@ class TestPeriodRange:
 class TestVatPeriodFields:
     def test_propagates_real_data_amounts(self) -> None:
         # Реальные числа из smoke папы (март 2026).
-        chunk = to_soliq_chunk(
+        chunk, _ = to_soliq_chunk(
             declaration=_declaration(vat_charged=62_799_985),
             registry=_registry(sales_vat_total=63_550_200),
             borrower_inn=INN_OK,
@@ -131,7 +131,7 @@ class TestVatPeriodFields:
         assert period.esf_seller_vat_total.amount == Decimal(63_550_200)
 
     def test_passes_submitted_at_through(self) -> None:
-        chunk = to_soliq_chunk(
+        chunk, _ = to_soliq_chunk(
             declaration=_declaration(submitted_at=date(2026, 4, 20)),
             registry=_registry(),
             borrower_inn=INN_OK,
@@ -140,9 +140,7 @@ class TestVatPeriodFields:
         assert chunk.vat_periods[0].submitted_at == date(2026, 4, 20)
 
     def test_vat_declared_none_when_declaration_total_missing(self) -> None:
-        # Декларация без vat_charged_total — ситуация пустой декларации; правило
-        # потом просто молчит, но маппер должен пропустить None без ошибки.
-        chunk = to_soliq_chunk(
+        chunk, _ = to_soliq_chunk(
             declaration=_declaration(vat_charged=None),
             registry=_registry(),
             borrower_inn=INN_OK,
@@ -153,7 +151,7 @@ class TestVatPeriodFields:
 
 class TestBorrowerInn:
     def test_chunk_carries_borrower_inn(self) -> None:
-        chunk = to_soliq_chunk(
+        chunk, _ = to_soliq_chunk(
             declaration=_declaration(),
             registry=_registry(),
             borrower_inn=INN_OK,
@@ -162,6 +160,7 @@ class TestBorrowerInn:
         assert chunk.borrower_inn == INN_OK
 
     def test_mismatch_raises(self) -> None:
+        # parsed-INN существует и не равен ожидаемому → структурная защита, raise.
         other = INN("123456789")
         with pytest.raises(XltxBorrowerMismatchError) as exc:
             to_soliq_chunk(
@@ -172,6 +171,55 @@ class TestBorrowerInn:
             )
         assert exc.value.expected == INN_OK
         assert exc.value.actual == other
+
+    def test_missing_inn_does_not_raise_mismatch(self) -> None:
+        # Header не смог разобрать ИНН → не сравниваем, chunk собирается.
+        chunk, warnings = to_soliq_chunk(
+            declaration=_declaration(inn=None),
+            registry=_registry(),
+            borrower_inn=INN_OK,
+            period_month=3,
+        )
+        assert chunk.borrower_inn == INN_OK
+        assert any("ИНН" in w for w in warnings)
+
+
+class TestParseWarnings:
+    """Mapper агрегирует warnings из header + declaration + registry."""
+
+    def test_returns_aggregated_warnings(self) -> None:
+        decl = _declaration()
+        decl.parse_warnings = ["list01!D3: invalid INN"]
+        reg = _registry()
+        reg.parse_warnings = ["list02!row 16: invalid date"]
+        _, warnings = to_soliq_chunk(
+            declaration=decl,
+            registry=reg,
+            borrower_inn=INN_OK,
+            period_month=3,
+        )
+        assert any("D3" in w for w in warnings)
+        assert any("row 16" in w for w in warnings)
+
+    def test_missing_year_falls_back_with_warning(self) -> None:
+        # Без year mapper берёт current calendar year как fallback и warn'ит.
+        chunk, warnings = to_soliq_chunk(
+            declaration=_declaration(year=None),
+            registry=_registry(),
+            borrower_inn=INN_OK,
+            period_month=3,
+        )
+        assert chunk.vat_periods[0].period.start.month == 3
+        assert any("year" in w.lower() for w in warnings)
+
+    def test_no_warnings_on_clean_input(self) -> None:
+        _, warnings = to_soliq_chunk(
+            declaration=_declaration(),
+            registry=_registry(),
+            borrower_inn=INN_OK,
+            period_month=3,
+        )
+        assert warnings == []
 
 
 class TestPeriodMonthValidation:

@@ -64,9 +64,11 @@ function SoliqUploadInner({ field }: { field: FieldShape }) {
         month,
         vatDeclared: data.vat_declared?.amount ?? "0",
         esfSellerVat: data.esf_seller_vat_total?.amount ?? "0",
-        organizationName: data.organization_name,
+        organizationName: data.organization_name ?? undefined,
         submittedAt: data.submitted_at ?? undefined,
         diffPct: data.diff_pct ?? undefined,
+        parseWarnings: data.parse_warnings ?? [],
+        skippedRowsCount: data.skipped_rows_count ?? 0,
       });
     },
   });
@@ -298,7 +300,42 @@ function PreviewBlock({ data }: { data: VatPeriodFromSoliq }) {
           Дата подачи: {data.submittedAt}
         </div>
       ) : null}
+
+      <ParseWarnings warnings={data.parseWarnings ?? []} skipped={data.skippedRowsCount ?? 0} />
     </div>
+  );
+}
+
+function ParseWarnings({ warnings, skipped }: { warnings: string[]; skipped: number }) {
+  const [open, setOpen] = useState(false);
+  if (warnings.length === 0 && skipped === 0) return null;
+
+  const total = warnings.length;
+  const summary =
+    skipped > 0
+      ? `Предупреждения парсера (${total}) · пропущено строк: ${skipped}`
+      : `Предупреждения парсера (${total})`;
+
+  return (
+    <details
+      open={open}
+      onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)}
+      className="rounded-md border border-[#F2DBA1] bg-[#FCF4DD] px-[14px] py-2.5"
+    >
+      <summary className="cursor-pointer list-none text-[12.5px] font-medium text-[var(--ca-ink-700)]">
+        <span className="mr-1 inline-block transition-transform" style={{ transform: open ? "rotate(90deg)" : "rotate(0deg)" }}>▸</span>
+        {summary}
+      </summary>
+      {warnings.length > 0 ? (
+        <ul className="mt-2 space-y-1 text-[12px] leading-[1.5] text-[var(--ca-ink-700)]">
+          {warnings.map((w, i) => (
+            <li key={i} className="font-mono break-all">
+              · {w}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </details>
   );
 }
 
