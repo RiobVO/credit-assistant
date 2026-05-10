@@ -30,6 +30,10 @@ export function formatRatio(value: number): string {
 
 export function formatYoy(pct: number): string {
   if (!Number.isFinite(pct)) return "—";
+  // Экстремальные значения (например, рост с 0 → деление на ε) ломают вёрстку
+  // KPI-карточки. Точное число там не имеет смысла, важен сам факт «зашкаливает».
+  if (pct > 999) return ">+999%";
+  if (pct < -999) return "<−999%";
   const sign = pct > 0 ? "+" : "";
   return `${sign}${formatRu(pct, 1)}%`;
 }
