@@ -47,12 +47,9 @@ class AnalystORM(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
-    # `mfa_enabled` остался от Phase 5.A как stored bool, но **используется
-    # только репозиторием для backward-compat** — в API mfa_enabled
-    # вычисляется из ``bool(mfa_secret)``. Без real secret — нет TOTP enrollment.
-    # Reseed admin'а с --mfa-enabled теперь no-op для UI; настоящее enrollment
-    # делается через POST /api/bank/auth/mfa/enroll/start+verify.
-    mfa_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # CA-DS16: legacy `mfa_enabled` stored bool удалён (миграция
+    # 20260516_2030). API `AnalystIdentity.mfa_enabled` остаётся как
+    # computed = bool(mfa_enrolled_at) — единственный источник truth.
 
     # Phase 5.B — real TOTP 2FA (RFC 6238). См. миграцию 9a4d2e1f8b67.
     # `mfa_secret`: base32 shared secret, plain в БД (POC; production → vault, TODO[CA-DS12]).

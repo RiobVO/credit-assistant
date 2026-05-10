@@ -22,7 +22,6 @@ def test_analyst_from_orm_strips_password_hash() -> None:
         created_at=now,
         updated_at=now,
         password_changed_at=now,
-        mfa_enabled=False,
         mfa_secret=None,
         mfa_enrolled_at=None,
         mfa_backup_codes_hash=None,
@@ -59,8 +58,7 @@ def test_analyst_from_orm_mfa_enabled_when_enrolled() -> None:
         created_at=now,
         updated_at=now,
         password_changed_at=now,
-        # stored bool остался False — но computed flag True потому что enrolled.
-        mfa_enabled=False,
+        # CA-DS16: stored bool удалён, computed flag = bool(enrolled_at).
         mfa_secret="JBSWY3DPEHPK3PXP",
         mfa_enrolled_at=now,
         mfa_backup_codes_hash=None,
@@ -91,7 +89,6 @@ def test_analyst_from_orm_mfa_disabled_when_half_enrolled() -> None:
         created_at=now,
         updated_at=now,
         password_changed_at=now,
-        mfa_enabled=False,
         mfa_secret="JBSWY3DPEHPK3PXP",  # secret записан /enroll/start
         mfa_enrolled_at=None,  # но verify не прошёл — enrolled_at NULL
         mfa_backup_codes_hash=None,

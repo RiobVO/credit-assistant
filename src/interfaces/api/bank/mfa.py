@@ -109,7 +109,8 @@ async def enroll_verify(
     backup_plain = generate_backup_codes()
     orm.mfa_backup_codes_hash = hash_backup_codes(backup_plain, hasher)
     orm.mfa_enrolled_at = datetime.now(tz=UTC)
-    orm.mfa_enabled = True  # stored bool — sync с computed flag для будущего legacy.
+    # CA-DS16: stored bool `orm.mfa_enabled` удалён — enrolled_at теперь
+    # единственный источник truth для computed mfa_enabled.
 
     await audit_log.record(event="mfa_enrolled", analyst_id=analyst.id)
     return EnrollVerifyResponse(backup_codes=backup_plain)
@@ -210,5 +211,5 @@ async def disable(
     orm.mfa_secret = None
     orm.mfa_enrolled_at = None
     orm.mfa_backup_codes_hash = None
-    orm.mfa_enabled = False
+    # CA-DS16: stored bool удалён.
     await audit_log.record(event="mfa_disabled", analyst_id=analyst.id)
