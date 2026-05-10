@@ -18,7 +18,7 @@ export function KpiCard({
 }: {
   label: string;
   value: string;
-  yoyPct: number;
+  yoyPct: number | null; // null когда нет предыдущего периода для сравнения
   changeTone: ChangeTone;
   sparkline: number[];
 }) {
@@ -42,15 +42,17 @@ export function KpiCard({
         <span className="font-mono text-[24px] leading-none font-semibold tracking-[-0.6px] text-[var(--ca-ink-900)]">
           {value}
         </span>
-        <span
-          className={cn(
-            "inline-flex items-center gap-1 rounded-full border px-2 py-px text-[11px] font-semibold",
-            tone,
-          )}
-        >
-          <Icon className="size-3" />
-          {formatYoy(yoyPct)}
-        </span>
+        {yoyPct !== null && (
+          <span
+            className={cn(
+              "inline-flex items-center gap-1 rounded-full border px-2 py-px text-[11px] font-semibold",
+              tone,
+            )}
+          >
+            <Icon className="size-3" />
+            {formatYoy(yoyPct)}
+          </span>
+        )}
       </div>
 
       <div className="mt-3 h-[36px]">
