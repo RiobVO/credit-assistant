@@ -13,15 +13,25 @@ export function ActionBar({ dossierId }: Props) {
   const router = useRouter();
   const pdfHref = `${API_URL}/api/dossier/${dossierId}/pdf`;
 
+  // Списка досье ещё нет (Phase 4) — пока что back возвращает к источнику
+  // навигации (manual-input или внешний open-in-new-tab); fallback на форму.
+  const handleBack = () => {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push("/manual-input");
+    }
+  };
+
   return (
     <div className="mt-7 flex items-center justify-between border-t border-[var(--ca-border)] pt-5">
       <button
         type="button"
-        onClick={() => router.push("/manual-input")}
+        onClick={handleBack}
         className="inline-flex h-[38px] items-center gap-2 rounded-md border border-[var(--ca-border-strong)] bg-[var(--ca-surface)] px-4 text-[13.5px] font-semibold text-[var(--ca-ink-700)] transition-colors hover:bg-[#FAFBFC]"
       >
         <ChevronLeft className="size-4" />
-        Назад к списку
+        Назад
       </button>
 
       <a
