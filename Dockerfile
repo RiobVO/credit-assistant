@@ -36,8 +36,9 @@ WORKDIR /app
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
 
-# Теперь исходники + конфиг Alembic.
+# Теперь исходники + конфиг Alembic + YAML-правила (registry грузит на старте).
 COPY src/ ./src/
+COPY config/ ./config/
 COPY alembic.ini ./
 
 # Финальная установка проекта (после COPY src — иначе уплыл бы в кеш).
