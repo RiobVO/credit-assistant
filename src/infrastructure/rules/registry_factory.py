@@ -26,6 +26,7 @@ from domain.rules.financial.revenue_drop_mom_30 import revenue_drop_mom_30
 from domain.rules.financial.revenue_drop_yoy_50 import revenue_drop_yoy_50
 from domain.rules.financial.vat_esf_mismatch import vat_esf_mismatch
 from domain.rules.financial.vat_growth_no_revenue import vat_growth_no_revenue
+from domain.rules.meta.insufficient_data import insufficient_data
 from domain.rules.payment_discipline.bank_account_frozen_12m import (
     bank_account_frozen_12m,
 )
@@ -63,6 +64,7 @@ CODE_RULES: dict[str, RuleFn] = {
     "NEW_COUNTERPARTY_LARGE_SHARE": new_counterparty_large_share,
     "SHELL_COMPANY_PARTNERS": shell_company_partners,
     "CIRCULAR_INVOICING": circular_invoicing,
+    "INSUFFICIENT_DATA": insufficient_data,
 }
 
 

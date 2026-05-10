@@ -3,13 +3,14 @@
 from datetime import date
 
 from domain.entities.red_flag import RedFlag
+from domain.rules.meta.insufficient_data import INSUFFICIENT_DATA_RULE_ID
 from domain.services.scoring_service import Recommendation, ScoringService
 from domain.value_objects.flag_severity import FlagSeverity
 
 
-def _flag(severity: FlagSeverity) -> RedFlag:
+def _flag(severity: FlagSeverity, *, rule_id: str | None = None) -> RedFlag:
     return RedFlag(
-        rule_id=f"R_{severity.value.upper()}",
+        rule_id=rule_id or f"R_{severity.value.upper()}",
         rule_version="v1",
         severity=severity,
         source="test",
@@ -17,6 +18,10 @@ def _flag(severity: FlagSeverity) -> RedFlag:
         evidence={},
         detected_at=date(2026, 5, 8),
     )
+
+
+def _insufficient_data_flag() -> RedFlag:
+    return _flag(FlagSeverity.HIGH, rule_id=INSUFFICIENT_DATA_RULE_ID)
 
 
 class TestScoringServiceEmpty:
@@ -100,3 +105,50 @@ class TestScoringServiceBreakdown:
         assert result.severity_breakdown[FlagSeverity.HIGH] == 1
         assert result.severity_breakdown[FlagSeverity.MEDIUM] == 0
         assert result.severity_breakdown[FlagSeverity.CRITICAL] == 0
+
+
+class TestInsufficientDataPolicy:
+    """CA-016: INSUFFICIENT_DATA принудительно даёт score floor 50 + REVIEW.
+
+    Защита от ложно-оптимистичного APPROVE (display=100) при пустом снапшоте.
+    """
+
+    def test_only_insufficient_data_forces_score_50_review(self) -> None:
+        # Без policy: HIGH (=7) → APPROVE, display=93. С policy: floor 50, REVIEW.
+        result = ScoringService().score([_insufficient_data_flag()])
+        assert result.score == 50
+        assert result.recommendation == Recommendation.REVIEW
+
+    def test_insufficient_data_overrides_approve_low_score(self) -> None:
+        # Один LOW-флаг (=1) обычно APPROVE; добавление INSUFFICIENT_DATA → REVIEW + 50.
+        result = ScoringService().score([_flag(FlagSeverity.LOW), _insufficient_data_flag()])
+        assert result.score == 50
+        assert result.recommendation == Recommendation.REVIEW
+
+    def test_insufficient_data_overrides_reject(self) -> None:
+        # Высокий риск (2 CRITICAL = 30 → REJECT) + INSUFFICIENT_DATA → всё равно REVIEW.
+        flags = [_flag(FlagSeverity.CRITICAL)] * 2 + [_insufficient_data_flag()]
+        result = ScoringService().score(flags)
+        # Реальный total_weight = 30+7=37, floor 50 → score=50; recommendation forced REVIEW.
+        assert result.score == 50
+        assert result.recommendation == Recommendation.REVIEW
+
+    def test_insufficient_data_does_not_lower_score_above_floor(self) -> None:
+        # Если других флагов хватает на >50 score, floor не уменьшает — берём max.
+        flags = [_flag(FlagSeverity.CRITICAL)] * 5 + [_insufficient_data_flag()]
+        # 5*15 + 7 = 82 (cap 100). max(82, 50) = 82.
+        result = ScoringService().score(flags)
+        assert result.score == 82
+        assert result.recommendation == Recommendation.REVIEW
+
+    def test_other_flags_without_insufficient_data_unchanged(self) -> None:
+        # Контроль: без INSUFFICIENT_DATA политика не применяется.
+        result = ScoringService().score([_flag(FlagSeverity.HIGH)])
+        assert result.score == 7
+        assert result.recommendation == Recommendation.APPROVE
+
+    def test_empty_flags_still_zero_and_approve(self) -> None:
+        # Контроль: нет ни одного флага → старое поведение (нет триггера policy).
+        result = ScoringService().score([])
+        assert result.score == 0
+        assert result.recommendation == Recommendation.APPROVE
