@@ -179,3 +179,93 @@ class TestValidationErrors:
             data={"borrower_inn": "abc", "period_month": "3"},
         )
         assert resp.status_code == 422
+
+
+class TestBestEffortResponse:
+    """CA-014: парсер не валит endpoint на грязных данных — 200 + parse_warnings."""
+
+    def test_clean_pair_has_zero_warnings(self, client: TestClient) -> None:
+        decl = _decl_bytes()
+        ilova = _ilova_bytes(
+            sales=[("ООО А", "200000020", "1", "15.03.2026", 100.0, 12.0)]
+        )
+        resp = client.post(
+            "/api/upload/soliq-xltx",
+            files=[
+                ("files", ("decl.xltx", decl, "application/octet-stream")),
+                ("files", ("ilova.xltx", ilova, "application/octet-stream")),
+            ],
+            data={"borrower_inn": "306399449", "period_month": "3"},
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["parse_warnings"] == []
+        assert body["skipped_rows_count"] == 0
+
+    def test_garbage_row_in_ilova_returns_warnings_not_500(
+        self, client: TestClient
+    ) -> None:
+        # 3 валидных продажи + одну затираем (битое name) → endpoint всё равно отдаёт 200.
+        wb = build_vat_registry_wb(
+            sales=(
+                ("A", "200000020", "1", "01.03.2026", 1000.0, 120.0),
+                ("B", "200000021", "2", "02.03.2026", 2000.0, 240.0),
+                ("C", "200000022", "3", "03.03.2026", 3000.0, 360.0),
+            )
+        )
+        wb["list02"].cell(row=16, column=3).value = None  # сломать вторую строку
+        ilova = _wb_bytes(wb)
+        decl = _decl_bytes()
+        resp = client.post(
+            "/api/upload/soliq-xltx",
+            files=[
+                ("files", ("decl.xltx", decl, "application/octet-stream")),
+                ("files", ("ilova.xltx", ilova, "application/octet-stream")),
+            ],
+            data={"borrower_inn": "306399449", "period_month": "3"},
+        )
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        assert body["skipped_rows_count"] == 1
+        assert len(body["parse_warnings"]) >= 1
+        # Totals считаются по valid only
+        assert body["esf_seller_vat_total"]["amount"] == "480"  # 120 + 360
+
+    def test_garbage_money_in_declaration_returns_warnings_not_500(
+        self, client: TestClient
+    ) -> None:
+        wb = build_vat_declaration_wb()
+        wb["list02"]["G6"].value = "broken"
+        decl = _wb_bytes(wb)
+        ilova = _ilova_bytes()
+        resp = client.post(
+            "/api/upload/soliq-xltx",
+            files=[
+                ("files", ("decl.xltx", decl, "application/octet-stream")),
+                ("files", ("ilova.xltx", ilova, "application/octet-stream")),
+            ],
+            data={"borrower_inn": "306399449", "period_month": "3"},
+        )
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        assert body["vat_declared"] is None
+        assert any("G6" in w for w in body["parse_warnings"])
+
+    def test_missing_inn_in_header_returns_warning_not_500(
+        self, client: TestClient
+    ) -> None:
+        wb = build_vat_declaration_wb()
+        wb["list01"]["D3"].value = None
+        decl = _wb_bytes(wb)
+        ilova = _ilova_bytes()
+        resp = client.post(
+            "/api/upload/soliq-xltx",
+            files=[
+                ("files", ("decl.xltx", decl, "application/octet-stream")),
+                ("files", ("ilova.xltx", ilova, "application/octet-stream")),
+            ],
+            data={"borrower_inn": "306399449", "period_month": "3"},
+        )
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        assert any("ИНН" in w or "D3" in w for w in body["parse_warnings"])
