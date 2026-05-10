@@ -17,7 +17,8 @@ export type RedFlagDto = {
 };
 
 export type RiskScoreDto = {
-  score: number;
+  score: number; // raw domain (lower=better)
+  display_score: number; // 100 − score (banking-style higher=better)
   recommendation: Recommendation;
   severity_breakdown: Partial<Record<Severity, number>>;
 };
@@ -31,43 +32,45 @@ export type DossierResponseDto = {
   rules_evaluated: number;
 };
 
-// Расширенный shape для страницы /dossier/[id] (Phase 3.A — UI на mock).
-// Backend GET endpoint появится в Phase 3.B; до этого момента mock-dossier.ts
-// строит этот объект на клиенте.
+// Зеркалит ``DossierViewResponse`` из backend (interfaces/api/shared/dossier_schema.py).
+// Все Decimal-поля приходят строкой — защита от потери точности на больших
+// UZS-суммах. Frontend парсит через parseFloat в местах отображения.
 export type DossierViewDto = DossierResponseDto & {
   borrower: {
     inn: string;
     name: string;
-    legal_form: "llc" | "jsc" | "ie";
+    legal_form: "llc" | "pe" | "ltd" | "jsc" | "ie" | "other";
     registration_date: string; // ISO YYYY-MM-DD
     director_name: string;
     director_appointed_at: string;
     okved_main: string;
     registered_address: string;
+    okved_main_changed_at: string | null;
+    charter_capital: { amount: string; currency: "UZS" | "USD" } | null;
   };
   application: {
-    id: string; // BR-2025-XXXX
+    id: string; // BR-YYYY-XXXX
     status: "in_review" | "approved" | "rejected" | "draft";
   };
   kpis: {
-    revenue_ltm: KpiValueDto;
-    ebitda: KpiValueDto;
-    roe: KpiValueDto;
-    debt_to_ebitda: KpiValueDto;
+    revenue_ltm: KpiValueDto | null;
+    ebitda: KpiValueDto | null;
+    roe: KpiValueDto | null;
+    debt_to_ebitda: KpiValueDto | null;
   };
   monthly_revenue_24m: Array<{
     month: string; // YYYY-MM
-    revenue: number; // в UZS
-    trend: number; // 12-мес rolling в UZS
+    revenue: string; // Decimal как str
+    trend: string; // Decimal как str
     is_peak: boolean;
   }>;
 };
 
 export type KpiValueDto = {
-  value: number;
+  value: string; // Decimal как str
   unit: "UZS" | "PCT" | "RATIO";
-  yoy_pct: number; // знак: + рост, − падение
-  sparkline: number[]; // 12 точек
+  yoy_pct: string | null; // Decimal как str; null если сравнивать не с чем
+  sparkline: string[]; // точки oldest→newest, может быть пустой
 };
 
 export type ApiErrorBody = {
@@ -92,6 +95,13 @@ export async function postManualInput(
     method: "POST",
     body: JSON.stringify(payload),
   });
+}
+
+export async function getDossier(dossierId: string): Promise<DossierViewDto> {
+  return jsonFetch<DossierViewDto>(
+    `/api/dossier/${encodeURIComponent(dossierId)}`,
+    { method: "GET" },
+  );
 }
 
 // --- Drafts API (см. src/interfaces/api/shared/draft.py) ---

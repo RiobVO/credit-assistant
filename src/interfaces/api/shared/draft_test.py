@@ -58,6 +58,9 @@ class _NoopRepo:
     async def get_by_inn(self, *_: Any, **__: Any) -> None:
         return None
 
+    async def get_view_by_id(self, *_: Any, **__: Any) -> None:
+        return None
+
 
 @pytest.fixture
 def client() -> Iterator[TestClient]:
