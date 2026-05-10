@@ -2,10 +2,15 @@
 
 Тонкий interfaces-слой: парсит payload, конвертирует в domain, прогоняет use
 case + rules + scoring, persistит результат и возвращает structured response.
-Authentication пока нет (2.x — SSO/JWT).
 
 GET /api/dossier/{dossier_id} (Phase 3.B) — read-модель экрана досье:
 borrower + KPIs + 24-мес чарт + red flags. 404 если запись не найдена.
+
+Phase 4.D: оба endpoint'а принимают optional analyst. На bank install
+mode-gating в `app.py` навешивает строгий guard через router-level
+``dependencies=[Depends(get_current_analyst)]`` → unauth получит 401 до
+handler'а. Внутри handler оптонал используется для audit + проставления
+``source_mode``/``created_by_analyst_id`` на новых досье.
 """
 
 from typing import Annotated
@@ -18,6 +23,10 @@ from application.use_cases.build_borrower_snapshot import build_borrower_snapsho
 from application.use_cases.load_dossier_for_view import LoadDossierForView
 from domain.rules.rule import RuleRegistry
 from domain.services.scoring_service import ScoringService
+from infrastructure.persistence.repositories.audit_log_repository import (
+    SqlAlchemyAuditLogRepository,
+)
+from interfaces.api.bank.dependencies import OptionalAnalyst
 from interfaces.api.shared.dependencies import get_rule_registry, get_scoring_service
 from interfaces.api.shared.dossier_mapper import (
     build_dossier_response,
@@ -30,7 +39,7 @@ from interfaces.api.shared.dossier_schema import (
     DossierViewResponse,
     ManualInputRequest,
 )
-from interfaces.api.shared.dossier_storage import StorageDep
+from interfaces.api.shared.dossier_storage import SessionDep, StorageDep
 
 router = APIRouter(prefix="/api", tags=["dossier"])
 
@@ -48,6 +57,8 @@ async def manual_input_dossier(
     registry: RuleRegistryDep,
     scoring: ScoringServiceDep,
     storage: StorageDep,
+    session: SessionDep,
+    analyst: OptionalAnalyst,
 ) -> DossierResponse:
     borrower = to_borrower(payload.borrower)
     manual_chunk = to_manual_chunk(payload, borrower.inn)
@@ -74,7 +85,22 @@ async def manual_input_dossier(
         rules_version=RULES_VERSION,
         rules_evaluated=len(registry.rules),
     )
-    dossier_id = await storage.dossier.save(record, snapshot_id)
+    source_mode = "bank" if analyst is not None else "accountant"
+    dossier_id = await storage.dossier.save(
+        record,
+        snapshot_id,
+        source_mode=source_mode,
+        created_by_analyst_id=analyst.id if analyst is not None else None,
+    )
+
+    if analyst is not None:
+        await SqlAlchemyAuditLogRepository(session).record(
+            event="generate_dossier",
+            analyst_id=analyst.id,
+            target_type="dossier",
+            target_id=dossier_id,
+            payload={"masked_inn": borrower.inn.masked, "source": "manual_input"},
+        )
 
     return build_dossier_response(
         dossier_id=dossier_id,
@@ -90,9 +116,21 @@ async def manual_input_dossier(
 async def get_dossier(
     dossier_id: UUID,
     storage: StorageDep,
+    session: SessionDep,
+    analyst: OptionalAnalyst,
 ) -> DossierViewResponse:
     use_case = LoadDossierForView(storage.dossier)
     bundle = await use_case.execute(dossier_id)
     if bundle is None:
         raise HTTPException(status_code=404, detail="Досье не найдено")
+
+    if analyst is not None:
+        await SqlAlchemyAuditLogRepository(session).record(
+            event="view_dossier",
+            analyst_id=analyst.id,
+            target_type="dossier",
+            target_id=dossier_id,
+            payload={"masked_inn": bundle.view.snapshot.borrower.inn.masked},
+        )
+
     return build_dossier_view_response(bundle)

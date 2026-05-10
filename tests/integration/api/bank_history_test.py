@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from application.dto.dossier_record import DossierRecord
 from domain.value_objects.inn import INN
+from config.settings import Settings
 from infrastructure.auth.password_hasher import PasswordHasher
 from infrastructure.persistence.database import get_session
 from infrastructure.persistence.models.analyst import AnalystORM
@@ -70,7 +71,7 @@ async def api_client(pg_session: AsyncSession) -> AsyncIterator[httpx.AsyncClien
     def _fast_hasher() -> PasswordHasher:
         return PasswordHasher(rounds=4)
 
-    app = create_app()
+    app = create_app(Settings(app_mode="bank"))
     app.dependency_overrides[get_session] = _override_get_session
     app.dependency_overrides[get_password_hasher] = _fast_hasher
     transport = httpx.ASGITransport(app=app)
