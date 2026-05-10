@@ -13,6 +13,7 @@ import { ApiError, uploadSoliqXltx } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 import { formatUzs } from "../_lib/finance";
+import { getYearsRange } from "../_lib/years";
 import type { FormValues, VatPeriodFromSoliq } from "../_schema";
 
 const MONTHS_RU = [
@@ -20,7 +21,7 @@ const MONTHS_RU = [
   "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь",
 ] as const;
 
-const YEARS = [2024, 2025, 2026] as const;
+const YEARS = getYearsRange(15);
 const ACCEPT = ".xltx,application/vnd.ms-excel.template.macroEnabled.12";
 
 export function SoliqUpload() {
@@ -44,7 +45,7 @@ function SoliqUploadInner({ field }: { field: FieldShape }) {
   const inn = useWatch({ control, name: "step1.inn" });
 
   const [files, setFiles] = useState<File[]>([]);
-  const [year, setYear] = useState<number>(2026);
+  const [year, setYear] = useState<number>(YEARS[0]);
   const [month, setMonth] = useState<number>(3);
 
   const declarationRef = useRef<HTMLInputElement>(null);

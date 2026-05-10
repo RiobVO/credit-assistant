@@ -23,6 +23,7 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from decimal import Decimal
@@ -40,6 +41,8 @@ from infrastructure.adapters.soliq_xltx.format_detector import (
     SoliqXltxFormat,
     detect_format,
 )
+
+_logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -59,6 +62,12 @@ class VatRegistryData:
 
     ``sales_vat_total`` — сумма НДС по всем строкам ``sales`` (агрегат за период).
     Это и есть ``esf_seller_vat_total`` для домена в Day 2.
+
+    ``skipped_rows_count`` — счётчик строк, которые tolerant-парсер пропустил из-за
+    row-level ошибок (бракованные cells, неверный формат даты, пустое имя контрагента
+    и т.п.). Каждая такая строка идёт в логи WARN-уровня с (sheet, row, reason).
+    Структурные ошибки (отсутствие листов, неверный формат файла) по-прежнему
+    бросают исключения — глотаем только row-level.
     """
 
     sales: list[VatRegistryRow] = field(default_factory=list)
@@ -67,19 +76,26 @@ class VatRegistryData:
     purchases_vat_total: Money = field(default_factory=lambda: Money(Decimal(0), Currency.UZS))
     sales_amount_total: Money = field(default_factory=lambda: Money(Decimal(0), Currency.UZS))
     purchases_amount_total: Money = field(default_factory=lambda: Money(Decimal(0), Currency.UZS))
+    skipped_rows_count: int = 0
 
 
 _DATA_START_ROW = 15
 
 
 def parse_vat_registry(wb: Workbook) -> VatRegistryData:
-    """Прочитать ilova-реестр (list01 + list02) с детализацией ЭСФ."""
+    """Прочитать ilova-реестр (list01 + list02) с детализацией ЭСФ.
+
+    Tolerant: row-level ошибки (CA-014) логируются и пропускаются; structural
+    (не тот формат) — пробрасываются.
+    """
     fmt = detect_format(wb)
     if fmt is not SoliqXltxFormat.VAT_REGISTRY_ILOVA:
         raise UnsupportedFormatError(wb.sheetnames, f"expected VAT_REGISTRY_ILOVA, got {fmt}")
 
-    purchases = _read_rows(wb["list01"]) if "list01" in wb.sheetnames else []
-    sales = _read_rows(wb["list02"]) if "list02" in wb.sheetnames else []
+    purchases, purchases_skipped = (
+        _read_rows(wb["list01"]) if "list01" in wb.sheetnames else ([], 0)
+    )
+    sales, sales_skipped = _read_rows(wb["list02"]) if "list02" in wb.sheetnames else ([], 0)
 
     sales_vat_total = _sum_money([r.vat_amount for r in sales])
     purchases_vat_total = _sum_money([r.vat_amount for r in purchases])
@@ -93,27 +109,40 @@ def parse_vat_registry(wb: Workbook) -> VatRegistryData:
         purchases_vat_total=purchases_vat_total,
         sales_amount_total=sales_amount_total,
         purchases_amount_total=purchases_amount_total,
+        skipped_rows_count=sales_skipped + purchases_skipped,
     )
 
 
-def _read_rows(ws: Worksheet) -> list[VatRegistryRow]:
+def _read_rows(ws: Worksheet) -> tuple[list[VatRegistryRow], int]:
     """Прочитать data rows реестра начиная с _DATA_START_ROW.
 
     Останавливается на первой пустой строке (B-cell None и C-cell None) — Soliq
     кладёт пустые строки-заполнители в конце листа.
+
+    Best-effort: если row не парсится (MalformedXltxError), пишем WARN со
+    структурным контекстом и идём дальше — лучше частичные данные, чем 500.
+    Возвращает (валидные строки, число пропущенных).
     """
     rows: list[VatRegistryRow] = []
+    skipped = 0
     max_row = ws.max_row
     for r in range(_DATA_START_ROW, max_row + 1):
         seq_raw = ws.cell(row=r, column=2).value
         name_raw = ws.cell(row=r, column=3).value
         if seq_raw is None and name_raw is None:
-            # Пустая строка — пропуск (не break, потому что Soliq иногда оставляет
-            # пробелы между блоками; но если оба cells подряд пустые — break).
-            # На практике пустых блоков не встречалось — break безопасен.
+            # Пустая строка-конец списка — break (на практике без пустых блоков внутри).
             break
-        rows.append(_parse_row(ws, r))
-    return rows
+        try:
+            rows.append(_parse_row(ws, r))
+        except MalformedXltxError as exc:
+            skipped += 1
+            _logger.warning(
+                "xltx.row_skipped sheet=%s row=%d reason=%s",
+                ws.title,
+                r,
+                exc.reason,
+            )
+    return rows, skipped
 
 
 def _parse_row(ws: Worksheet, r: int) -> VatRegistryRow:
