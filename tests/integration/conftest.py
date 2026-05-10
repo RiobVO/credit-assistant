@@ -43,7 +43,7 @@ def _docker_alive() -> tuple[bool, str]:
     висит в внутренних таймаутах — лучше дать понятный skip-reason сразу.
     """
     try:
-        import docker  # type: ignore[import-untyped]
+        import docker
 
         client = docker.from_env()
         client.ping()

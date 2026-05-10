@@ -81,7 +81,7 @@ export function DossierView({ dossierId }: { dossierId: string }) {
           <RiskSignals flags={data.red_flags} />
         </div>
 
-        <ActionBar />
+        <ActionBar dossierId={dossierId} />
       </div>
     </>
   );
