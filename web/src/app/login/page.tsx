@@ -3,6 +3,7 @@
 // чтобы случайные ссылки на /login не показывали несущественный для режима экран.
 
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 
 import { APP_MODE } from "@/lib/config";
 
@@ -41,7 +42,9 @@ export default function LoginPage() {
           <p className="mb-6 text-[12.5px] text-[var(--ca-muted-dark)]">
             Используйте корпоративную учётную запись банка
           </p>
-          <LoginForm />
+          <Suspense fallback={null}>
+            <LoginForm />
+          </Suspense>
         </div>
 
         <p className="mt-6 text-center text-[11px] text-[var(--ca-muted-dark-2)]">
