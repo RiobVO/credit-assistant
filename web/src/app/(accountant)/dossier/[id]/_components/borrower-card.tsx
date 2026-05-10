@@ -4,8 +4,11 @@ import type { DossierViewDto } from "@/lib/api";
 
 const LEGAL_FORM_LABEL: Record<DossierViewDto["borrower"]["legal_form"], string> = {
   llc: "ООО / МЧЖ",
+  pe: "Частное предприятие",
+  ltd: "ООО",
   jsc: "АО",
   ie: "ИП",
+  other: "Иная форма",
 };
 
 export function BorrowerCard({ borrower }: { borrower: DossierViewDto["borrower"] }) {

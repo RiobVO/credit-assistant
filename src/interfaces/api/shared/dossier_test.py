@@ -14,6 +14,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from application.dto.dossier_record import DossierRecord
+from application.dto.dossier_view_record import DossierViewRecord
 from domain.entities.borrower import Borrower
 from domain.entities.borrower_snapshot import BorrowerSnapshot
 from domain.value_objects.inn import INN
@@ -49,6 +50,11 @@ class _InMemoryDossierRepo:
         return uuid4()
 
     async def get_by_id(self, dossier_id: UUID) -> DossierRecord | None:
+        return None
+
+    async def get_view_by_id(
+        self, dossier_id: UUID
+    ) -> DossierViewRecord | None:
         return None
 
 
