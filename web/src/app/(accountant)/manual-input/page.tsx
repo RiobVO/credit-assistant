@@ -16,7 +16,7 @@ import { FormProvider, useForm } from "react-hook-form";
 
 import { ApiError, postManualInput } from "@/lib/api";
 
-import { Topbar, type DraftIndicator } from "../_components/topbar";
+import { Topbar, type DraftIndicator } from "@/components/topbar";
 
 import { FormFooter } from "./_components/form-footer";
 import { InfoBanner } from "./_components/info-banner";

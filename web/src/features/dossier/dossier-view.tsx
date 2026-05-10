@@ -7,7 +7,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 
-import { Topbar } from "../../../_components/topbar";
+import { Topbar } from "@/components/topbar";
 
 import { ActionBar } from "./action-bar";
 import { BorrowerCard } from "./borrower-card";
@@ -20,6 +20,14 @@ import { ScoreGauge } from "./score-gauge";
 import { SubHeader } from "./sub-header";
 
 import { getDossier } from "@/lib/api";
+import { APP_MODE } from "@/lib/config";
+
+// Префикс хлебных крошек: в bank-режиме приходим из «Истории» (Phase 4.F),
+// в accountant — из формы «Заявок». Сам текст одинаковый, отличие — entry point.
+const CRUMB_PREFIX =
+  APP_MODE === "bank"
+    ? [{ label: "История" }, { label: "Досье" }]
+    : [{ label: "Заявки" }, { label: "Досье" }];
 
 export function DossierView({ dossierId }: { dossierId: string }) {
   const query = useQuery({
@@ -48,8 +56,7 @@ export function DossierView({ dossierId }: { dossierId: string }) {
     <>
       <Topbar
         crumbs={[
-          { label: "Заявки" },
-          { label: "Досье" },
+          ...CRUMB_PREFIX,
           { label: data.application.id, current: true },
         ]}
       />

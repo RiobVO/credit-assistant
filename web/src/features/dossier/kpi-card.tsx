@@ -5,7 +5,7 @@ import { Area, AreaChart, ResponsiveContainer } from "recharts";
 
 import { cn } from "@/lib/utils";
 
-import { formatYoy } from "../_lib/format";
+import { formatYoy } from "./format";
 
 type ChangeTone = "positive" | "negative";
 
