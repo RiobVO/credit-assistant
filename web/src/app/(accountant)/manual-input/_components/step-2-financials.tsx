@@ -15,11 +15,14 @@ import type { FormValues } from "../_schema";
 
 import { Field, fieldInputClass } from "./field";
 import { FinancialTable } from "./financial-table";
+import { ParsedFilesDropzone } from "./parsed-files-dropzone";
 import { SoliqUpload } from "./soliq-upload";
 
 export function Step2Financials() {
   return (
     <div className="space-y-[18px]">
+      <ParsedFilesDropzone />
+
       <SoliqUpload />
 
       <Card

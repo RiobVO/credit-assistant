@@ -37,11 +37,15 @@ const uzsAmountOptional = z
   .regex(AMOUNT_RE, "Только цифры")
   .or(z.literal(""));
 
+// CA-027: `annual` — fallback годового total если квартальная разбивка
+// недоступна (один FORM_2 Q4 даёт annual без quarters). Если quarters
+// заполнены — annual игнорируется при сборке payload (sum quarters важнее).
 const quarter = z.object({
   q1: uzsAmountOptional,
   q2: uzsAmountOptional,
   q3: uzsAmountOptional,
   q4: uzsAmountOptional,
+  annual: uzsAmountOptional,
 });
 
 const yearlyQuarters = z.object({
@@ -185,14 +189,14 @@ export function defaultFormValues(): FormValues {
     },
     step2: {
       revenue: {
-        y2023: { q1: "", q2: "", q3: "", q4: "" },
-        y2024: { q1: "", q2: "", q3: "", q4: "" },
-        y2025: { q1: "", q2: "", q3: "", q4: "" },
+        y2023: { q1: "", q2: "", q3: "", q4: "", annual: "" },
+        y2024: { q1: "", q2: "", q3: "", q4: "", annual: "" },
+        y2025: { q1: "", q2: "", q3: "", q4: "", annual: "" },
       },
       netProfit: {
-        y2023: { q1: "", q2: "", q3: "", q4: "" },
-        y2024: { q1: "", q2: "", q3: "", q4: "" },
-        y2025: { q1: "", q2: "", q3: "", q4: "" },
+        y2023: { q1: "", q2: "", q3: "", q4: "", annual: "" },
+        y2024: { q1: "", q2: "", q3: "", q4: "", annual: "" },
+        y2025: { q1: "", q2: "", q3: "", q4: "", annual: "" },
       },
       vatDeclared: "",
       taxesPaid23: "",

@@ -7,7 +7,7 @@ import {
   computeMarginPct,
   digitsOnly,
   formatUzs,
-  parseAmount,
+  yearTotal,
 } from "../_lib/finance";
 import type { FormValues } from "../_schema";
 
@@ -16,7 +16,6 @@ type SectionPath = "step2.revenue" | "step2.netProfit";
 const QUARTERS = ["q1", "q2", "q3", "q4"] as const;
 const YEARS = [2023, 2024, 2025] as const;
 
-type QuarterKey = (typeof QUARTERS)[number];
 type YearKey = `y${(typeof YEARS)[number]}`;
 
 export function FinancialTable({
@@ -48,9 +47,8 @@ export function FinancialTable({
         <tbody>
           {YEARS.map((year) => {
             const yKey = `y${year}` as YearKey;
-            const yearTotal = watched
-              ? sumYear(watched[yKey])
-              : 0;
+            // CA-027: total = sum квартальных, либо annual (если quarters пустые).
+            const total = watched ? yearTotal(watched[yKey]) : 0;
             return (
               <tr key={year}>
                 <FirstCell>{year} г.</FirstCell>
@@ -60,7 +58,7 @@ export function FinancialTable({
                     name={`${basePath}.${yKey}.${q}` as const}
                   />
                 ))}
-                <ReadOnlyTotalCell value={yearTotal} />
+                <ReadOnlyTotalCell value={total} />
               </tr>
             );
           })}
@@ -141,9 +139,10 @@ function Footer({
     | undefined;
 }) {
   if (!watched) return null;
-  const total2023 = sumYear(watched.y2023);
-  const total2024 = sumYear(watched.y2024);
-  const total2025 = sumYear(watched.y2025);
+  // Footer-агрегаты тоже учитывают annual-fallback (CA-027).
+  const total2023 = yearTotal(watched.y2023);
+  const total2024 = yearTotal(watched.y2024);
+  const total2025 = yearTotal(watched.y2025);
   const totalAll = total2023 + total2024 + total2025;
 
   if (variant === "revenue") {
@@ -198,15 +197,10 @@ function MarginCell() {
   const { control } = useFormContext<FormValues>();
   const revenue = useWatch({ control, name: "step2.revenue.y2025" });
   const profit = useWatch({ control, name: "step2.netProfit.y2025" });
-  const r = revenue ? sumYear(revenue) : 0;
-  const p = profit ? sumYear(profit) : 0;
+  const r = revenue ? yearTotal(revenue) : 0;
+  const p = profit ? yearTotal(profit) : 0;
   if (r === 0) return <>—</>;
   return <>{computeMarginPct(p, r).toFixed(1)}%</>;
-}
-
-function sumYear(y: Record<QuarterKey, string> | undefined): number {
-  if (!y) return 0;
-  return parseAmount(y.q1) + parseAmount(y.q2) + parseAmount(y.q3) + parseAmount(y.q4);
 }
 
 function DeltaPill({
