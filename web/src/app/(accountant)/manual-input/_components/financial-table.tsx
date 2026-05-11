@@ -141,22 +141,16 @@ function Footer({
   if (!watched) return null;
   // Footer-агрегаты тоже учитывают annual-fallback (CA-027).
   const total2023 = yearTotal(watched.y2023);
-  const total2024 = yearTotal(watched.y2024);
   const total2025 = yearTotal(watched.y2025);
-  const totalAll = total2023 + total2024 + total2025;
 
   if (variant === "revenue") {
     const cagr = computeCagrPct(total2023, total2025, 2);
-    const cagrSign = cagr > 0 ? "+" : "";
     return (
       <tfoot>
         <tr>
           <td className="rounded-bl-lg border-r border-b border-l border-t-[1px] border-[var(--ca-border-strong)] bg-[#F4F6F9] px-3 py-2.5 text-left font-semibold text-[var(--ca-ink-700)]">
             CAGR 2023→2025
-            <DeltaPill positive={cagr > 0}>
-              {cagrSign}
-              {cagr.toFixed(1)}%
-            </DeltaPill>
+            <RatioPill tone={cagrTone(cagr)}>{formatRatioPct(cagr)}</RatioPill>
           </td>
           <td
             colSpan={4}
@@ -164,20 +158,20 @@ function Footer({
           >
             Совокупный среднегодовой темп роста выручки
           </td>
-          <td className="rounded-br-lg border-r border-b border-t-[1px] border-[var(--ca-border-strong)] bg-[#F4F6F9] px-3 py-2.5 text-right font-mono text-[13px] font-semibold text-[var(--ca-ink-900)]">
-            {totalAll > 0 ? formatUzs(String(totalAll)) : "—"}
-          </td>
+          <RatioTotalCell />
         </tr>
       </tfoot>
     );
   }
 
-  // Margin footer: net profit / revenue for 2025
+  // Margin footer: net profit / revenue for 2025. CA-034: pill в col1
+  // (как у CAGR), col6 = "—" — маржа коэффициент, не годовая сумма.
   return (
     <tfoot>
       <tr>
         <td className="rounded-bl-lg border-r border-b border-l border-t-[1px] border-[var(--ca-border-strong)] bg-[#F4F6F9] px-3 py-2.5 text-left font-semibold text-[var(--ca-ink-700)]">
           Маржа 2025
+          <MarginPill />
         </td>
         <td
           colSpan={4}
@@ -185,38 +179,57 @@ function Footer({
         >
           Рентабельность по чистой прибыли
         </td>
-        <td className="rounded-br-lg border-r border-b border-t-[1px] border-[var(--ca-border-strong)] bg-[#F4F6F9] px-3 py-2.5 text-right font-mono text-[13px] font-semibold text-[var(--ca-ink-900)]">
-          <MarginCell />
-        </td>
+        <RatioTotalCell />
       </tr>
     </tfoot>
   );
 }
 
-function MarginCell() {
+function MarginPill() {
   const { control } = useFormContext<FormValues>();
   const revenue = useWatch({ control, name: "step2.revenue.y2025" });
   const profit = useWatch({ control, name: "step2.netProfit.y2025" });
   const r = revenue ? yearTotal(revenue) : 0;
   const p = profit ? yearTotal(profit) : 0;
-  if (r === 0) return <>—</>;
-  return <>{computeMarginPct(p, r).toFixed(1)}%</>;
+  const margin = computeMarginPct(p, r);
+  return <RatioPill tone={cagrTone(margin)}>{formatRatioPct(margin)}</RatioPill>;
 }
 
-function DeltaPill({
+function RatioTotalCell() {
+  return (
+    <td className="rounded-br-lg border-r border-b border-t-[1px] border-[var(--ca-border-strong)] bg-[#F4F6F9] px-3 py-2.5 text-right font-mono text-[13px] font-semibold text-[var(--ca-ink-500)]">
+      —
+    </td>
+  );
+}
+
+function formatRatioPct(value: number | null): string {
+  if (value == null) return "N/A";
+  const sign = value > 0 ? "+" : "";
+  return `${sign}${value.toFixed(1)}%`;
+}
+
+function cagrTone(value: number | null): "success" | "danger" | "neutral" {
+  if (value == null) return "neutral";
+  return value > 0 ? "success" : "danger";
+}
+
+function RatioPill({
   children,
-  positive,
+  tone,
 }: {
   children: React.ReactNode;
-  positive: boolean;
+  tone: "success" | "danger" | "neutral";
 }) {
+  const palette =
+    tone === "success"
+      ? "bg-[var(--ca-success-50)] text-[var(--ca-success)]"
+      : tone === "danger"
+        ? "bg-[#FCE7E5] text-[var(--ca-danger)]"
+        : "bg-[#F4F6F9] text-[var(--ca-ink-500)] border border-[var(--ca-border)]";
   return (
     <span
-      className={`ml-2 rounded-full px-1.5 py-px font-mono text-[11.5px] font-semibold ${
-        positive
-          ? "bg-[var(--ca-success-50)] text-[var(--ca-success)]"
-          : "bg-[#FCE7E5] text-[var(--ca-danger)]"
-      }`}
+      className={`ml-2 rounded-full px-1.5 py-px font-mono text-[11.5px] font-semibold ${palette}`}
     >
       {children}
     </span>
