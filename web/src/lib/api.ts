@@ -56,6 +56,9 @@ export type DossierViewDto = DossierResponseDto & {
   application: {
     id: string; // BR-YYYY-XXXX
     status: "in_review" | "approved" | "rejected" | "draft";
+    // CA-059: заглушка под documents endpoint. null = endpoint ещё не подключён —
+    // UI скрывает кнопку «Документы».
+    documents_count: number | null;
   };
   kpis: {
     revenue_ltm: KpiValueDto | null;
