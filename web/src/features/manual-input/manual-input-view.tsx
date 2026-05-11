@@ -75,6 +75,12 @@ function ManualInputPageInner() {
   const [initialDraftId] = useState<string | null>(
     () => searchParams?.get("draft") ?? null,
   );
+  // CA-056: pre-fill ИНН из ?inn= (search-result «Пересобрать» / dossier
+  // «Пересобрать» прокидывают). Только при отсутствии draft — draft.payload
+  // сам содержит ИНН и приоритетнее.
+  const [initialInn] = useState<string | null>(
+    () => searchParams?.get("inn") ?? null,
+  );
 
   const [step, setStep] = useState<Step>(1);
 
@@ -94,6 +100,16 @@ function ManualInputPageInner() {
   });
 
   const draft = useFormDraft({ form, initialDraftId });
+
+  // CA-056: pre-fill ИНН из query, только если нет draft (draft сам несёт ИНН).
+  // Используем setValue, а не form.reset — не сбиваем другие defaults и
+  // не перетираем уже введённые поля при перерендере.
+  useEffect(() => {
+    if (initialDraftId !== null) return;
+    if (!initialInn) return;
+    if (!/^\d{9}$/.test(initialInn)) return;
+    form.setValue("step1.inn", initialInn, { shouldDirty: false });
+  }, [form, initialDraftId, initialInn]);
 
   // Битый/просроченный draft — чистим query, чтобы reload не подбирал его снова.
   useEffect(() => {
