@@ -328,6 +328,28 @@ function applyToForm(
     });
   }
 
+  // CA-041: FORM_1 → assets/liabilities на конец отчётного периода (column E).
+  // period_start (column D) приходит в DTO, но в UI не используется — нужен
+  // для будущего ROE-расчёта (CA-037), а не для заполнения формы.
+  if (data.assets_total) {
+    setValue("step2.totalAssets", normalizeDigits(data.assets_total), {
+      shouldValidate: true,
+    });
+    filled.push({
+      fieldLabel: "Активы (всего, на конец периода)",
+      sourceLabel: data.source_trail["form1.assets_total"] ?? "FORM_1",
+    });
+  }
+  if (data.liabilities_total) {
+    setValue("step2.totalLiabilities", normalizeDigits(data.liabilities_total), {
+      shouldValidate: true,
+    });
+    filled.push({
+      fieldLabel: "Обязательства (всего, на конец периода)",
+      sourceLabel: data.source_trail["form1.liabilities_total"] ?? "FORM_1",
+    });
+  }
+
   return filled;
 }
 

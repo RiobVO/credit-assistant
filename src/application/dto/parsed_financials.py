@@ -30,12 +30,22 @@ class ParsedFinancials:
     ``vat_declared_by_year`` — НДС начисленный за период (vat_charged_total из
     VAT_DECLARATION). Если файл — Q4 deklaratsiya, period_year полагается на header.
 
-    ``taxes_paid_by_year`` / ``assets_total`` / ``liabilities_total`` — пока None,
-    пока не написаны парсеры PROFIT_TAX/FORM_1 (TODO[CA-029]). Сохранены в DTO
-    чтобы frontend мог не менять контракт после их появления.
+    ``taxes_paid_by_year`` — пока None, парсер PROFIT_TAX не реализован
+    (TODO[CA-029b]). Сохранён в DTO чтобы frontend не менял контракт.
+
+    ``assets_total`` / ``liabilities_total`` — Итого по активу/пассиву на
+    конец отчётного периода (column E xltx — «На конец отчётного периода»).
+    Заполняются FORM_1 wiring'ом (CA-041).
+
+    ``assets_total_period_start`` / ``liabilities_total_period_start`` —
+    те же показатели на начало периода (column D xltx). Frontend пока не
+    использует, но нужны для будущего CA-037 (ROE с average_equity =
+    (BoY+EoY)/2 — стандарт финансового анализа: усреднённый equity).
 
     ``source_trail`` — field_name → human-readable source ("FORM_2 Q4 2025
     form2_q4_2025.xltx"). UI читает для chip-подписей под read-only fields.
+    FORM_1 ключи используют префикс ``form1.*`` — согласовано с CA-035
+    ``assess_draft_readiness`` mapper'ом.
 
     ``parse_warnings`` — best-effort cell-level и file-level замечания.
     """
@@ -46,5 +56,7 @@ class ParsedFinancials:
     taxes_paid_by_year: dict[int, Decimal] = field(default_factory=dict)
     assets_total: Decimal | None = None
     liabilities_total: Decimal | None = None
+    assets_total_period_start: Decimal | None = None
+    liabilities_total_period_start: Decimal | None = None
     source_trail: dict[str, str] = field(default_factory=dict)
     parse_warnings: list[str] = field(default_factory=list)

@@ -6,10 +6,10 @@
 
 Best-effort семантика (CA-014):
 * нераспознанный формат → warning, файл скипается;
-* поддерживаемый формат с парсером (VAT_DECLARATION, FORM_2) → данные мерджатся,
-  cell-level warnings от парсера агрегируются;
-* поддерживаемый формат без парсера (FORM_1, PROFIT_TAX) → warning «парсер не
-  реализован», файл скипается (TODO[CA-029]);
+* поддерживаемый формат с парсером (VAT_DECLARATION, FORM_2, FORM_1) — данные
+  мерджатся, cell-level warnings от парсера агрегируются;
+* поддерживаемый формат без парсера (PROFIT_TAX) → warning «парсер не
+  реализован», файл скипается (TODO[CA-029b]);
 * file-level exception (битый xltx, openpyxl raise) → warning + skip, остальные
   файлы продолжают обработку.
 
@@ -20,9 +20,13 @@ CA-027 scope (option b): только annual суммы. FORM_2 за Q4 → annu
 года). Файлы за Q1/Q2/Q3 (промежуточные YTD) пишут warning и не используются
 в этой итерации — дельты будут отдельным TODO.
 
-Конфликт источников: если два FORM_2-файла за один и тот же год покрывают
-один и тот же показатель — побеждает первый (predictable). Между разными
-формами конфликта быть не должно (FORM_2 даёт revenue, VAT — vat_declared).
+Конфликт источников:
+* FORM_2 / VAT_DECLARATION — first wins per year (TODO[CA-042] заменит на
+  latest-period priority);
+* FORM_1 (CA-041) — latest-period wins: balance sheet это срез на дату,
+  для autofill «текущее состояние заёмщика» свежий снимок authoritative.
+  Snapshot-целиком: победивший файл даёт все 4 поля; не дополняем None'ы из
+  старых. Тот же (year, quarter) → first wins + conflict warning.
 """
 
 from __future__ import annotations
@@ -68,6 +72,9 @@ class ParseManualInputFilesUseCase:
         vat_declared_by_year: dict[int, Decimal] = {}
         source_trail: dict[str, str] = {}
         warnings: list[str] = []
+        # FORM_1 dispatch — latest-period wins (см. модульный docstring).
+        # Откладываем merge до конца цикла: храним кандидат + (year, quarter).
+        form1_winner: _Form1Candidate | None = None
 
         for f in files:
             try:
@@ -116,25 +123,31 @@ class ParseManualInputFilesUseCase:
                     warnings,
                 )
             elif isinstance(parsed, Form1BalanceSheetData):
-                # FORM_1 парсер реализован (CA-029a), но wiring в form autofill
-                # (assets/liabilities) — отдельный TODO. Эмитим явный warning,
-                # чтобы фронт показал «загрузили, но не использовали».
-                warnings.append(
-                    f"{f.name}: FORM_1 распознан, парсер реализован, но "
-                    f"автозаполнение полей активов/обязательств пока не подключено "
-                    f"(см. TODO[CA-029] wiring)"
+                form1_winner = _consider_form1(
+                    parsed, f.name, form1_winner, warnings,
                 )
             else:
                 # VAT_REGISTRY_ILOVA — не несёт financials, тихо скипаем.
                 continue
+
+        assets_end: Decimal | None = None
+        liab_end: Decimal | None = None
+        assets_start: Decimal | None = None
+        liab_start: Decimal | None = None
+        if form1_winner is not None:
+            assets_end, liab_end, assets_start, liab_start = _apply_form1(
+                form1_winner, source_trail, warnings,
+            )
 
         return ParsedFinancials(
             revenue_by_year=revenue_by_year,
             net_profit_by_year=net_profit_by_year,
             vat_declared_by_year=vat_declared_by_year,
             taxes_paid_by_year={},
-            assets_total=None,
-            liabilities_total=None,
+            assets_total=assets_end,
+            liabilities_total=liab_end,
+            assets_total_period_start=assets_start,
+            liabilities_total_period_start=liab_start,
             source_trail=source_trail,
             parse_warnings=warnings,
         )
@@ -232,3 +245,106 @@ def _set_once(
         return
     target[year] = value.amount
     source_trail[f"{field_name}_{year}"] = source_label
+
+
+@dataclass(frozen=True, slots=True)
+class _Form1Candidate:
+    """Победитель в гонке latest-period для FORM_1. Snapshot-целиком."""
+
+    parsed: Form1BalanceSheetData
+    filename: str
+    period: tuple[int, int]  # (year, quarter); неизвестные значения → (-1, 0)
+
+
+def _form1_period_key(parsed: Form1BalanceSheetData) -> tuple[int, int]:
+    """(year, quarter) для сравнения свежести снимка. None → минимум.
+
+    None'ы возможны при битой шапке xltx; они проигрывают любому файлу с
+    распознанным периодом. При равенстве (включая «оба None») победитель
+    выбирается first-wins выше.
+    """
+    year = parsed.header.period_year if parsed.header.period_year is not None else -1
+    quarter = parsed.header.period_index if parsed.header.period_index is not None else 0
+    return year, quarter
+
+
+def _consider_form1(
+    parsed: Form1BalanceSheetData,
+    filename: str,
+    current: _Form1Candidate | None,
+    warnings: list[str],
+) -> _Form1Candidate:
+    """Latest-period dispatch. Возвращает обновлённого победителя.
+
+    Свежий снимок (большее (year, quarter)) вытесняет старого без warning —
+    это ожидаемое поведение для balance sheet. Если периоды равны — first wins
+    + warning (дубликат отчёта). Если новый старее — игнор + warning «пропуск
+    более старого среза».
+    """
+    new_period = _form1_period_key(parsed)
+    candidate = _Form1Candidate(parsed=parsed, filename=filename, period=new_period)
+    if current is None:
+        return candidate
+
+    if new_period > current.period:
+        return candidate
+    if new_period == current.period:
+        warnings.append(
+            f"{filename}: FORM_1 за тот же период {new_period[0]} Q{new_period[1]} "
+            f"уже был загружен ({current.filename}) — оставляем первый"
+        )
+        return current
+    # new_period < current.period: старее → пропуск
+    warnings.append(
+        f"{filename}: FORM_1 за {new_period[0]} Q{new_period[1]} старее "
+        f"свежего снимка {current.period[0]} Q{current.period[1]} — пропуск"
+    )
+    return current
+
+
+def _apply_form1(
+    winner: _Form1Candidate,
+    source_trail: dict[str, str],
+    warnings: list[str],
+) -> tuple[Decimal | None, Decimal | None, Decimal | None, Decimal | None]:
+    """Развернуть победителя в (assets_end, liab_end, assets_start, liab_start).
+
+    Source_trail обогащается ключами ``form1.*`` — согласовано с CA-035
+    ``assess_draft_readiness`` префикс-mapper'ом. Cell-level warnings парсера
+    прокидываются с указанием filename.
+    """
+    parsed = winner.parsed
+    label = _form1_label(parsed, winner.filename)
+
+    assets_end = _money_amount(parsed.total_assets_period_end)
+    liab_end = _money_amount(parsed.total_liabilities_period_end)
+    assets_start = _money_amount(parsed.total_assets_period_start)
+    liab_start = _money_amount(parsed.total_liabilities_period_start)
+
+    if assets_end is not None:
+        source_trail["form1.assets_total"] = label
+    if liab_end is not None:
+        source_trail["form1.liabilities_total"] = label
+    if assets_start is not None:
+        source_trail["form1.assets_total_period_start"] = label
+    if liab_start is not None:
+        source_trail["form1.liabilities_total_period_start"] = label
+
+    for w in parsed.parse_warnings:
+        warnings.append(f"{winner.filename}: {w}")
+
+    return assets_end, liab_end, assets_start, liab_start
+
+
+def _form1_label(parsed: Form1BalanceSheetData, filename: str) -> str:
+    year = parsed.header.period_year
+    quarter = parsed.header.period_index
+    if year is not None and quarter is not None:
+        return f"FORM_1 Q{quarter} {year} ({filename})"
+    if year is not None:
+        return f"FORM_1 {year} ({filename})"
+    return f"FORM_1 ({filename})"
+
+
+def _money_amount(value: Money | None) -> Decimal | None:
+    return value.amount if value is not None else None

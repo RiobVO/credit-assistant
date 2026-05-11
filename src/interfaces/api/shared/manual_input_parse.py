@@ -45,8 +45,13 @@ class ParsedFinancialsResponse(BaseModel):
     net_profit_by_year: dict[int, str]
     vat_declared_by_year: dict[int, str]
     taxes_paid_by_year: dict[int, str]
+    # CA-041: column E xltx, «На конец отчётного периода» — текущий срез.
     assets_total: str | None
     liabilities_total: str | None
+    # column D xltx, «На начало отчётного периода». Frontend пока не использует,
+    # сохраняем для CA-037 (ROE с average_equity = (BoY+EoY)/2).
+    assets_total_period_start: str | None
+    liabilities_total_period_start: str | None
     source_trail: dict[str, str]
     parse_warnings: list[str]
 
@@ -87,6 +92,16 @@ async def parse_files(
         assets_total=str(parsed.assets_total) if parsed.assets_total is not None else None,
         liabilities_total=(
             str(parsed.liabilities_total) if parsed.liabilities_total is not None else None
+        ),
+        assets_total_period_start=(
+            str(parsed.assets_total_period_start)
+            if parsed.assets_total_period_start is not None
+            else None
+        ),
+        liabilities_total_period_start=(
+            str(parsed.liabilities_total_period_start)
+            if parsed.liabilities_total_period_start is not None
+            else None
         ),
         source_trail=parsed.source_trail,
         parse_warnings=parsed.parse_warnings,
