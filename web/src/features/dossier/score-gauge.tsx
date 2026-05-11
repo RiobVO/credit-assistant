@@ -20,9 +20,9 @@ const RECOMMENDATION_LABEL: Record<Recommendation, string> = {
 };
 
 const RECOMMENDATION_TONE: Record<Recommendation, string> = {
-  approve: "border-[#BFE2D2] bg-[var(--ca-success-50)] text-[var(--ca-success)]",
-  review: "border-[#F1D9A6] bg-[#FFF6E5] text-[var(--ca-warning)]",
-  reject: "border-[#F2BCBA] bg-[#FCE7E5] text-[var(--ca-danger)]",
+  approve: "border-[#BFE2D2] bg-[var(--ub-ok-bg)] text-[var(--ub-ok-fg)]",
+  review: "border-[#F1D9A6] bg-[#FFF6E5] text-[var(--ub-warn-fg)]",
+  reject: "border-[#F2BCBA] bg-[#FCE7E5] text-[var(--ub-bad-fg)]",
 };
 
 export function ScoreGauge({
@@ -36,9 +36,9 @@ export function ScoreGauge({
   const needleRotation = (clamped - 50) * 1.8;
 
   return (
-    <div className="rounded-[10px] border border-[var(--ca-border)] bg-[var(--ca-surface)] shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
+    <div className="rounded-[10px] border border-[var(--ub-hairline)] bg-[var(--ub-surface)] shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
       <div className="flex flex-col items-center px-6 pt-6 pb-5">
-        <div className="text-[10.5px] font-semibold tracking-[1.2px] text-[var(--ca-ink-400)] uppercase">
+        <div className="text-[10.5px] font-semibold tracking-[1.2px] text-[var(--ub-ink-4)] uppercase">
           Скоринговый балл
         </div>
 
@@ -71,10 +71,10 @@ export function ScoreGauge({
         </svg>
 
         <div className="mt-3 flex items-baseline gap-1.5">
-          <span className="font-mono text-[56px] leading-none font-bold tracking-[-2px] text-[var(--ca-ink-900)]">
+          <span className="font-mono text-[56px] leading-none font-bold tracking-[-2px] text-[var(--ub-ink)]">
             {clamped}
           </span>
-          <span className="font-mono text-[18px] font-semibold text-[var(--ca-ink-400)]">
+          <span className="font-mono text-[18px] font-semibold text-[var(--ub-ink-4)]">
             / 100
           </span>
         </div>
