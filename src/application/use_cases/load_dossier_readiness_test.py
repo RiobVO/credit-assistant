@@ -26,6 +26,7 @@ from domain.entities.financial_report import FinancialReport
 from domain.entities.invoice import Invoice, InvoiceRole
 from domain.entities.vat_period_report import VatPeriodReport
 from domain.services.data_readiness import ParserSource
+from domain.value_objects.balance_snapshot import BalanceSnapshot
 from domain.value_objects.date_range import DateRange
 from domain.value_objects.inn import INN
 from domain.value_objects.money import Currency, Money
@@ -54,13 +55,29 @@ def _borrower() -> Borrower:
     )
 
 
-def _annual(year: int, **kwargs: object) -> FinancialReport:
+def _annual(
+    year: int,
+    *,
+    profit_before_tax: Money | None = None,
+    interest_expense: Money | None = None,
+    equity: Money | None = None,
+    total_debt: Money | None = None,
+    equity_period_start: Money | None = None,
+) -> FinancialReport:
+    """CA-047: balance fields теперь группируются в BalanceSnapshot. Хелпер
+    принимает прежний flat-API для удобства теста, упаковывает внутри.
+    """
+    balance_end = BalanceSnapshot(equity=equity, total_debt=total_debt)
+    balance_start = BalanceSnapshot(equity=equity_period_start)
     return FinancialReport(
         period=DateRange(date(year, 1, 1), date(year, 12, 31)),
         revenue=Money(Decimal(1_000_000_000), UZS),
         net_profit=Money(Decimal(100_000_000), UZS),
         taxes_paid=Money(Decimal(0), UZS),
-        **kwargs,  # type: ignore[arg-type]
+        profit_before_tax=profit_before_tax,
+        interest_expense=interest_expense,
+        balance_end=balance_end if not balance_end.is_empty() else None,
+        balance_start=balance_start if not balance_start.is_empty() else None,
     )
 
 

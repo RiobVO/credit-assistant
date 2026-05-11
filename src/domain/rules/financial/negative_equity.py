@@ -24,9 +24,9 @@ def negative_equity(snapshot: BorrowerSnapshot) -> FiringEvidence | None:
     if not snapshot.annual_reports:
         return None
     latest = max(snapshot.annual_reports, key=lambda r: r.period.end)
-    if latest.equity is None:
+    if latest.balance_end is None or latest.balance_end.equity is None:
         return None
-    equity = latest.equity.amount
+    equity = latest.balance_end.equity.amount
     if equity > Decimal(0):
         return None
     # CA-021: округляем evidence до 2 знаков — Decimal-хвост ломает PDF/UI.
