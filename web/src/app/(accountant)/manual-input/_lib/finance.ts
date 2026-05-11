@@ -151,20 +151,25 @@ export function computeEquity(
   return totalAssets - totalLiabilities;
 }
 
+// CA-034: null-семантика — null = «недостаточно данных». Явные числа
+// (включая 0 и отрицательные) — валидные сигналы.
 export function computeMarginPct(
   netProfit: number,
   revenue: number,
-): number {
-  if (revenue <= 0) return 0;
+): number | null {
+  if (revenue <= 0) return null;
   return (netProfit / revenue) * 100;
 }
 
+// CA-034: null когда базовый год пустой (start <= 0) или years <= 0.
+// Деление на ноль / Infinity не должно рендериться как «0.0%» — это
+// семантически «нет данных», а не нулевой рост.
 export function computeCagrPct(
   startValue: number,
   endValue: number,
   years: number,
-): number {
-  if (startValue <= 0 || years <= 0) return 0;
+): number | null {
+  if (startValue <= 0 || years <= 0) return null;
   return (Math.pow(endValue / startValue, 1 / years) - 1) * 100;
 }
 
