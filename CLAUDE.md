@@ -22,7 +22,17 @@
 
 Закрыто 15 из 15 Design Sweep tail items 🎉. Frontend stack: 21 test files, 184 vitest tests. Backend: 839 pytest, 5 skipped (WeasyPrint GTK runtime). Открытые TODO с pre-conditions: **CA-003** (real ГНК lookup ждёт CA-DS28 legal review), **CA-024b** (CBU API ждёт legal review), **CA-DS18b** (Postgres sequence case_id ждёт Phase 4 application entity), **CA-DS18c** (formatCaseId year edge ждёт `draft.created_at` через useFormDraft), **CA-DS25** (KPI sparkline ждёт CA-029b cashflow parser), **CA-DS28** (ГНК ждёт legal review), **CA-DS29-pdf** (PDF `?lang=` ждёт UZ-перевод templates).
 
+**Hotfixes 2026-05-16 после live-browser walkthrough:**
+- **PDF polish** для реального BR-2026-0081 — 7 дефектов закрыты разом: id-details переверстаны с CSS Grid на `display: table` (WeasyPrint 68 grid vertical-align glitch); sev-pill padding/font подкручены (tight `1pt` снэпил background в ноль); flag.evidence border 0.5pt → 1pt; region-tile `.long` класс для длинных regional имён + `_parse_region` обрабатывает адреса без запятых; `_format_evidence_value` whitelist primary-keys с типизированным форматтером (закрывает Python repr leak `['2026-03-01', '2026-03-31']` → `23%`); chart fallback PNG с background-rect + `tight=False` (вместо обрезанного 200×80 лоскута).
+- **Help nested-anchor** hydration error (`<a>` inside `<a>` в `HotlinePrimaryCard`, родилось в `2c249f4` CA-DS8 — никогда не работало, RTL stale). Outer обёртка → `<div>`, два независимых anchors (main hotline + compliance phone). Lesson `feedback_nested_anchor_rtl_blind`: RTL/jsdom не ловят HTML-validity, live-browser обязательно перед мержем.
+
 **Активная ветка:** `main`.
+
+---
+
+## Next Up
+
+**Dark theme + 3-theme switcher** — Phase 0 закрыт (решения зафиксированы в `docs/internal/NEXT_SESSION_DARK_THEME.md`). Палитра slate/anthracite, PDF light forever (ADR-0013), System mode live через matchMedia. 8 фаз декомпозиции готовы; следующая сессия стартует с Phase 1 (concrete hex-values по семантик-токенам).
 
 ---
 
