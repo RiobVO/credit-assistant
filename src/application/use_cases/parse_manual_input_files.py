@@ -34,6 +34,7 @@ from decimal import Decimal
 from application.dto.parsed_financials import ParsedFinancials
 from domain.value_objects.money import Money
 from infrastructure.adapters.soliq_xltx.errors import UnsupportedFormatError
+from infrastructure.adapters.soliq_xltx.form1_parser import Form1BalanceSheetData
 from infrastructure.adapters.soliq_xltx.form2_parser import Form2IncomeStatementData
 from infrastructure.adapters.soliq_xltx.format_detector import SoliqXltxFormat
 from infrastructure.adapters.soliq_xltx.parser import SoliqXltxAdapter
@@ -113,6 +114,15 @@ class ParseManualInputFilesUseCase:
                     vat_declared_by_year,
                     source_trail,
                     warnings,
+                )
+            elif isinstance(parsed, Form1BalanceSheetData):
+                # FORM_1 парсер реализован (CA-029a), но wiring в form autofill
+                # (assets/liabilities) — отдельный TODO. Эмитим явный warning,
+                # чтобы фронт показал «загрузили, но не использовали».
+                warnings.append(
+                    f"{f.name}: FORM_1 распознан, парсер реализован, но "
+                    f"автозаполнение полей активов/обязательств пока не подключено "
+                    f"(см. TODO[CA-029] wiring)"
                 )
             else:
                 # VAT_REGISTRY_ILOVA — не несёт financials, тихо скипаем.
