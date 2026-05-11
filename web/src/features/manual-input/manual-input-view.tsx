@@ -114,7 +114,12 @@ function ManualInputPageInner() {
   const submitMutation = useMutation({
     mutationFn: postManualInput,
     onSuccess: (data) => {
-      router.push(`/dossier/${data.dossier_id}`);
+      // CA-054: replace, не push. После submit draft удалён в БД, возврат
+      // на /manual-input?draft=X через router.back() из досье даст пустую
+      // форму (Шаг 1, defaults) — это сбивает аналитика. replace удаляет
+      // текущую entry из history → back с досье уйдёт на /search или
+      // /history (откуда аналитик пришёл изначально), а не на пустой Шаг 1.
+      router.replace(`/dossier/${data.dossier_id}`);
     },
   });
 
