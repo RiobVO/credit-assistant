@@ -292,7 +292,7 @@ function Tabs({
             className={cn(
               "inline-flex items-center gap-1.5 rounded-md px-3.5 py-1.5 text-[13.5px] font-medium transition-colors",
               active
-                ? "bg-white text-[var(--ink-1)] shadow-[0_1px_1px_rgba(15,23,42,0.04)]"
+                ? "bg-[var(--surface)] text-[var(--ink-1)] shadow-[0_1px_1px_rgba(15,23,42,0.04)]"
                 : "text-[var(--ink-3)] hover:text-[var(--ink-1)]",
             )}
           >

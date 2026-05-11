@@ -25,7 +25,7 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
       className={cn(
         "flex items-center gap-3 rounded-md px-[10px] py-2 text-[13.5px] font-medium transition-colors",
         active
-          ? "bg-white text-[var(--nav-text)] font-semibold shadow-[inset_2px_0_0_var(--brand-primary),0_1px_0_rgba(14,21,37,0.04)]"
+          ? "bg-[var(--surface)] text-[var(--ink-1)] font-semibold shadow-[inset_2px_0_0_var(--brand-primary),0_1px_0_rgba(14,21,37,0.04)]"
           : "text-[var(--nav-text-2)] hover:bg-[var(--nav-bg-hover)] hover:text-[var(--nav-text)]",
       )}
     >
@@ -105,7 +105,7 @@ export function BankSidebar() {
       <div className="px-3 pt-4">
         <Link
           href="/manual-input"
-          className="group flex items-center gap-[10px] rounded-[10px] border border-[color-mix(in_oklab,var(--ink-1)_7%,transparent)] bg-white px-[9px] py-[9px] text-[var(--ink-1)] shadow-[0_1px_0_rgba(255,255,255,0.6)_inset,0_1px_2px_rgba(14,21,37,0.02),0_6px_14px_-10px_rgba(14,21,37,0.12)] transition-all duration-200 ease-out hover:-translate-y-px hover:border-[var(--brand-primary)] hover:shadow-[0_1px_0_rgba(255,255,255,0.7)_inset,0_1px_2px_rgba(14,21,37,0.02),0_12px_22px_-10px_color-mix(in_oklab,var(--brand-primary)_50%,transparent)]"
+          className="group flex items-center gap-[10px] rounded-[10px] border border-[color-mix(in_oklab,var(--ink-1)_7%,transparent)] bg-[var(--surface)] px-[9px] py-[9px] text-[var(--ink-1)] shadow-[0_1px_0_rgba(255,255,255,0.6)_inset,0_1px_2px_rgba(14,21,37,0.02),0_6px_14px_-10px_rgba(14,21,37,0.12)] transition-all duration-200 ease-out hover:-translate-y-px hover:border-[var(--brand-primary)] hover:shadow-[0_1px_0_rgba(255,255,255,0.7)_inset,0_1px_2px_rgba(14,21,37,0.02),0_12px_22px_-10px_color-mix(in_oklab,var(--brand-primary)_50%,transparent)]"
         >
           <span
             className="grid size-[26px] shrink-0 place-items-center rounded-[7px] border text-[var(--brand-primary)] transition-transform duration-220 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:rotate-90"

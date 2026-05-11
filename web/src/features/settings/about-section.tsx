@@ -337,7 +337,7 @@ function ReleaseNotesPanel() {
       </div>
       {items.map((it) => (
         <div key={it.title} className="grid grid-cols-[36px_1fr] items-start gap-3">
-          <span className="grid size-9 place-items-center rounded-[9px] border border-[var(--brand-primary-soft)] bg-white/70 text-[var(--brand-primary)]">
+          <span className="grid size-9 place-items-center rounded-[9px] border border-[var(--brand-primary-soft)] bg-[var(--surface)]/70 text-[var(--brand-primary)]">
             {it.icon}
           </span>
           <div className="flex flex-col gap-0.5 min-w-0">
@@ -392,7 +392,7 @@ function ServiceRow({ service }: { service: ServiceStatus }) {
   const name = t(nameKey);
 
   return (
-    <div className="grid grid-cols-[36px_1fr_auto] items-center gap-3.5 rounded-md px-2.5 py-2.5 transition-colors hover:bg-white/40">
+    <div className="grid grid-cols-[36px_1fr_auto] items-center gap-3.5 rounded-md px-2.5 py-2.5 transition-colors hover:bg-[var(--surface-2)]">
       <div className={cn("grid size-8 place-items-center rounded-lg", tileTone)}>
         <ServiceIcon serviceKey={service.key} className="size-4" />
       </div>

@@ -130,8 +130,18 @@ function ThemeSwatches({
         active={active === "light"}
         onClick={() => onSelect("light")}
       />
-      <Swatch variant="dark" label={t("ap_theme_dark")} disabled wipLabel={t("ap_theme_wip_sub")} />
-      <Swatch variant="system" label={t("ap_theme_system")} disabled wipLabel={t("ap_theme_wip_sub")} />
+      <Swatch
+        variant="dark"
+        label={t("ap_theme_dark")}
+        active={active === "dark"}
+        onClick={() => onSelect("dark")}
+      />
+      <Swatch
+        variant="system"
+        label={t("ap_theme_system")}
+        active={active === "system"}
+        onClick={() => onSelect("system")}
+      />
     </div>
   );
 }
@@ -140,41 +150,34 @@ function Swatch({
   variant,
   label,
   active,
-  disabled,
-  wipLabel,
   onClick,
 }: {
   variant: "light" | "dark" | "system";
   label: string;
   active?: boolean;
-  disabled?: boolean;
-  wipLabel?: string;
   onClick?: () => void;
 }) {
+  // Preview-палитра в swatch hardcoded — это самопрезентация темы, не UI-токены.
+  // Light: white→slate. Dark: anthracite. System: split.
   const bg =
     variant === "light"
-      ? "linear-gradient(135deg, #fff 0%, var(--surface-3) 100%)"
+      ? "linear-gradient(135deg, #fff 0%, #F1F5F9 100%)"
       : variant === "dark"
-        ? "linear-gradient(135deg, #1a1d2e 0%, #0e1525 100%)"
-        : "linear-gradient(90deg, #fff 0%, #fff 50%, #1a1d2e 50%, #0e1525 100%)";
+        ? "linear-gradient(135deg, #1E242D 0%, #0F1419 100%)"
+        : "linear-gradient(90deg, #fff 0%, #F1F5F9 50%, #1E242D 50%, #0F1419 100%)";
   return (
     <button
       type="button"
-      disabled={disabled}
       onClick={onClick}
       aria-pressed={active}
-      className={cn(
-        "flex flex-col items-center text-center",
-        disabled ? "cursor-not-allowed" : "cursor-pointer",
-      )}
+      className="flex cursor-pointer flex-col items-center text-center"
     >
       <span
         className={cn(
-          "relative h-14 w-20 overflow-hidden rounded-lg border-[1.5px] transition-all duration-200",
+          "relative h-14 w-20 overflow-hidden rounded-lg border-[1.5px] transition-all duration-200 hover:-translate-y-px",
           active
             ? "border-[var(--brand-primary)] shadow-[0_0_0_3px_var(--brand-primary-ring)]"
             : "border-[var(--border)]",
-          disabled ? "opacity-55" : "hover:-translate-y-px",
         )}
         style={{ background: bg }}
       >
@@ -183,9 +186,9 @@ function Swatch({
             style={{
               background:
                 variant === "light"
-                  ? "color-mix(in srgb, var(--ink-1) 18%, transparent)"
+                  ? "rgba(14, 21, 37, 0.18)"
                   : variant === "dark"
-                    ? "color-mix(in srgb, #fff 26%, transparent)"
+                    ? "rgba(255, 255, 255, 0.26)"
                     : "linear-gradient(90deg, rgba(14,21,37,0.18) 50%, rgba(255,255,255,0.26) 50%)",
               borderRadius: 2,
             }}
@@ -195,9 +198,9 @@ function Swatch({
               width: "70%",
               background:
                 variant === "light"
-                  ? "color-mix(in srgb, var(--ink-1) 10%, transparent)"
+                  ? "rgba(14, 21, 37, 0.10)"
                   : variant === "dark"
-                    ? "color-mix(in srgb, #fff 14%, transparent)"
+                    ? "rgba(255, 255, 255, 0.14)"
                     : "linear-gradient(90deg, rgba(14,21,37,0.10) 50%, rgba(255,255,255,0.14) 50%)",
               borderRadius: 2,
             }}
@@ -207,9 +210,9 @@ function Swatch({
               width: "50%",
               background:
                 variant === "light"
-                  ? "color-mix(in srgb, var(--ink-1) 10%, transparent)"
+                  ? "rgba(14, 21, 37, 0.10)"
                   : variant === "dark"
-                    ? "color-mix(in srgb, #fff 14%, transparent)"
+                    ? "rgba(255, 255, 255, 0.14)"
                     : "linear-gradient(90deg, rgba(14,21,37,0.10) 50%, rgba(255,255,255,0.14) 50%)",
               borderRadius: 2,
             }}
@@ -226,17 +229,10 @@ function Swatch({
           "mt-1.5 text-[11.5px] leading-tight",
           active
             ? "font-semibold text-[var(--ink-1)]"
-            : disabled
-              ? "text-[var(--ink-4)]"
-              : "text-[var(--ink-2)]",
+            : "text-[var(--ink-2)]",
         )}
       >
         {label}
-        {wipLabel ? (
-          <span className="mt-0.5 block text-[9.5px] font-semibold uppercase tracking-[0.08em] text-[var(--ink-4)]">
-            {wipLabel}
-          </span>
-        ) : null}
       </span>
     </button>
   );
@@ -266,7 +262,7 @@ function Segmented({
             className={cn(
               "min-w-[42px] cursor-pointer rounded-md border-0 px-3.5 py-1.5 transition-all",
               active
-                ? "bg-white font-semibold text-[var(--ink-1)] shadow-[0_1px_2px_rgba(15,23,42,0.08)]"
+                ? "bg-[var(--surface)] font-semibold text-[var(--ink-1)] shadow-[0_1px_2px_rgba(15,23,42,0.08)]"
                 : "bg-transparent font-medium text-[var(--ink-3)] hover:text-[var(--ink-1)]",
               variant !== "font" && "text-[12.5px]",
               variant === "font" && opt.value === "s" && "text-[11.5px]",

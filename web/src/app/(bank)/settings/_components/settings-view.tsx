@@ -70,7 +70,7 @@ function SessionPill() {
   });
   return (
     <span
-      className="inline-flex items-center gap-3.5 rounded-full border border-[var(--border)] bg-white/70 px-3.5 py-2.5 text-[11.5px]"
+      className="inline-flex items-center gap-3.5 rounded-full border border-[var(--border)] bg-[var(--surface)]/70 px-3.5 py-2.5 text-[11.5px]"
       style={{ backdropFilter: "blur(8px)" }}
     >
       <span className="inline-flex items-center gap-1.5 text-[var(--ink-2)]">

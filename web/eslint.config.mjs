@@ -14,7 +14,23 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
   ]),
   {
-    files: ["src/features/**/*.{ts,tsx}", "src/components/**/*.{ts,tsx}"],
+    files: [
+      "src/features/**/*.{ts,tsx}",
+      "src/components/**/*.{ts,tsx}",
+      "src/app/**/*.{ts,tsx}",
+    ],
+    ignores: [
+      // accountant mode остаётся dark-only (отдельный tenant), нет смысла токенизировать.
+      "src/app/(accountant)/**",
+      // theme self-presentation swatches — preview-палитра намеренно hardcoded.
+      "src/features/settings/appearance-section.tsx",
+      // showcase-bar — dev floating overlay, фиксированный dark wrap.
+      "src/features/search/showcase-bar.tsx",
+      // QR-rendering требует литералов black/white для канваса.
+      "src/features/settings/mfa-enroll-modal.tsx",
+      // brand.test.ts — test fixtures.
+      "src/lib/brand.test.ts",
+    ],
     rules: {
       "no-restricted-syntax": [
         "error",

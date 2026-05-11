@@ -264,10 +264,9 @@ function QrStage({
         if (cancelled) return;
         // QR-код требует максимальный контраст для надёжного scan'а — это
         // ограничение спецификации QR Code 2005 (ISO/IEC 18004), а не дизайн.
-        // Используем чистые black/white, не brand-tokens.
-        // eslint-disable-next-line no-restricted-syntax
+        // Используем чистые black/white, не brand-tokens. Файл в ESLint
+        // ignores для no-restricted-syntax (eslint.config.mjs).
         const QR_DARK = "#000000";
-        // eslint-disable-next-line no-restricted-syntax
         const QR_LIGHT = "#ffffff";
         await QRCode.toCanvas(canvas, data.provisioning_uri, {
           errorCorrectionLevel: "M",
@@ -307,6 +306,8 @@ function QrStage({
       <p className="m-0 text-[13px] leading-[1.5] text-[var(--ink-2)]">
         {t("mfa_enroll_scan_label")}
       </p>
+      {/* QR-контейнер всегда white в обеих темах — иначе TOTP-приложение не отсканирует.
+          Это semantic constraint, не design choice. */}
       <div className="grid place-items-center rounded-xl border border-[var(--border)] bg-white p-4">
         <canvas ref={canvasRef} width={200} height={200} aria-label="QR" />
       </div>
@@ -319,13 +320,13 @@ function QrStage({
           {t("mfa_enroll_secret_label")}
         </span>
         <div className="flex items-center gap-2">
-          <code className="flex-1 break-all rounded-md bg-white px-2.5 py-2 font-mono text-[12.5px] tracking-[0.05em] text-[var(--ink-1)]">
+          <code className="flex-1 break-all rounded-md bg-[var(--surface)] px-2.5 py-2 font-mono text-[12.5px] tracking-[0.05em] text-[var(--ink-1)]">
             {secretVisible ? formattedSecret : "•••• •••• •••• ••••"}
           </code>
           <button
             type="button"
             onClick={() => setSecretVisible((v) => !v)}
-            className="inline-flex h-8 items-center rounded-md border border-[var(--border)] bg-white px-2.5 text-[11.5px] font-medium text-[var(--ink-2)] hover:text-[var(--ink-1)]"
+            className="inline-flex h-8 items-center rounded-md border border-[var(--border)] bg-[var(--surface)] px-2.5 text-[11.5px] font-medium text-[var(--ink-2)] hover:text-[var(--ink-1)]"
           >
             {secretVisible ? t("mfa_enroll_secret_hide") : t("mfa_enroll_secret_show")}
           </button>
@@ -333,7 +334,7 @@ function QrStage({
             type="button"
             onClick={handleCopySecret}
             disabled={!secretVisible}
-            className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[var(--border)] bg-white px-2.5 text-[11.5px] font-medium text-[var(--ink-2)] hover:text-[var(--ink-1)] disabled:opacity-45"
+            className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2.5 text-[11.5px] font-medium text-[var(--ink-2)] hover:text-[var(--ink-1)] disabled:opacity-45"
           >
             {copied ? <Check className="size-3" strokeWidth={2.6} /> : <Copy className="size-3" />}
             {copied ? t("mfa_enroll_secret_copied") : t("mfa_enroll_secret_copy")}
@@ -407,7 +408,7 @@ function VerifyStage({
             onChange(e.target.value.replace(/\D/g, "").slice(0, 6))
           }
           disabled={submitting}
-          className="h-12 rounded-lg border border-[var(--border)] bg-white px-4 text-center font-mono text-[22px] tracking-[0.4em] text-[var(--ink-1)] outline-none focus:border-[var(--brand-primary)] focus:shadow-[0_0_0_3px_var(--brand-primary-ring)] disabled:opacity-60"
+          className="h-12 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 text-center font-mono text-[22px] tracking-[0.4em] text-[var(--ink-1)] outline-none focus:border-[var(--brand-primary)] focus:shadow-[0_0_0_3px_var(--brand-primary-ring)] disabled:opacity-60"
         />
       </label>
       <p className="m-0 text-[11.5px] text-[var(--ink-3)]">
@@ -523,7 +524,7 @@ function BackupStage({
         <button
           type="button"
           onClick={handleCopy}
-          className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md border border-[var(--border)] bg-white px-3 text-[12px] font-medium text-[var(--ink-2)] hover:text-[var(--ink-1)]"
+          className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-[12px] font-medium text-[var(--ink-2)] hover:text-[var(--ink-1)]"
         >
           {copied ? <Check className="size-3" strokeWidth={2.6} /> : <Copy className="size-3" />}
           {copied ? t("mfa_backup_copied") : t("mfa_backup_copy_all")}
@@ -531,7 +532,7 @@ function BackupStage({
         <button
           type="button"
           onClick={handleDownload}
-          className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md border border-[var(--border)] bg-white px-3 text-[12px] font-medium text-[var(--ink-2)] hover:text-[var(--ink-1)]"
+          className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-[12px] font-medium text-[var(--ink-2)] hover:text-[var(--ink-1)]"
         >
           <Download className="size-3" />
           {t("mfa_backup_download")}

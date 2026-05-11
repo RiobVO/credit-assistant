@@ -65,9 +65,6 @@ function readReducedMotion(): boolean {
 function applyToDocument(state: State): void {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
-  // theme: на v1 только light selectable. dark/system disabled в UI, но раз
-  // в localStorage кто-то рукой подсунул — атрибут проставим. CSS-токены
-  // для dark пока не определены (CA-DS5) — будет no-op визуально.
   root.dataset.theme = state.theme;
   root.dataset.density = state.density;
   root.dataset.fontScale = state.fontScale;
@@ -86,6 +83,23 @@ export function useAppearance() {
   // Sync to <html> attributes at mount + on any change.
   useEffect(() => {
     applyToDocument(state);
+  }, [state]);
+
+  // System mode live sync: когда theme === "system", слушаем OS preference и
+  // ре-проставляем data-theme на root. CSS @media (prefers-color-scheme: dark)
+  // [data-theme="system"] {} обслуживает первый paint; listener нужен для
+  // тех случаев когда user меняет OS-тему пока приложение открыто.
+  useEffect(() => {
+    if (typeof window === "undefined" || state.theme !== "system") return;
+    const mql = window.matchMedia("(prefers-color-scheme: dark)");
+    const onChange = () => {
+      // data-theme остаётся "system" — атрибут проставлен через applyToDocument;
+      // listener только триггерит React-rerender зависимых компонентов через
+      // принудительный re-apply (на случай если useEffect выше уже отработал).
+      applyToDocument({ ...state });
+    };
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
   }, [state]);
 
   return {
