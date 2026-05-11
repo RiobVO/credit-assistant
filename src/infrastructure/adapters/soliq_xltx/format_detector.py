@@ -26,11 +26,23 @@ from openpyxl.worksheet.worksheet import Worksheet
 
 class SoliqXltxFormat(StrEnum):
     VAT_DECLARATION = "vat_declaration"
+    # Legacy редакция 10006_41 — header layout сдвинут влево на 2-4 колонки.
+    # Тело декларации (list02 F6-F11, G6-G11, list04 G7/G37) — то же, что в
+    # современной 10006_45/47, отличается только шапка list01. Detection через
+    # ``list01.max_column`` (v1 = 13, v2 = 19; threshold < 17). См. T0.5.
+    VAT_DECLARATION_V1 = "vat_declaration_v1"
     VAT_REGISTRY_ILOVA = "vat_registry_ilova"
     FORM_2_INCOME_STATEMENT = "form_2_income_statement"
     FORM_1_BALANCE_SHEET = "form_1_balance_sheet"
     PROFIT_TAX = "profit_tax"
     UNKNOWN = "unknown"
+
+
+# Граница между v1 (10006_41, max_col=13) и v2 (10006_45/47, max_col=19).
+# Промежуточных layout (14-18 колонок) у Soliq не было — gap широкий. Threshold
+# 14 даёт минимально достаточный буфер над v1 и не задевает synthetic factories
+# (которые строят v2 с max_col ~ 16).
+_VAT_DECL_V1_MAX_COL_THRESHOLD = 14
 
 
 # Sentinel-фразы (нормализованные substrings), по которым опознаём форму. Сравнение
@@ -79,6 +91,10 @@ def detect_format(wb: Workbook) -> SoliqXltxFormat:
         return SoliqXltxFormat.PROFIT_TAX
 
     if _is_vat_declaration(wb, ws):
+        # Structural версия: max_column list01 — заложено в шаблоне формы.
+        # v1 = 13 (10006_41), v2 = 19 (10006_45/47). Threshold 17 даёт буфер.
+        if ws.max_column < _VAT_DECL_V1_MAX_COL_THRESHOLD:
+            return SoliqXltxFormat.VAT_DECLARATION_V1
         return SoliqXltxFormat.VAT_DECLARATION
 
     return SoliqXltxFormat.UNKNOWN

@@ -60,6 +60,8 @@ def parse_header(wb: Workbook, fmt: SoliqXltxFormat) -> SoliqXltxHeader:
 
     if fmt is SoliqXltxFormat.VAT_DECLARATION:
         return _parse_vat_declaration_header(ws)
+    if fmt is SoliqXltxFormat.VAT_DECLARATION_V1:
+        return _parse_vat_declaration_header_v1(ws)
     if fmt is SoliqXltxFormat.FORM_2_INCOME_STATEMENT:
         return _parse_form2_header(ws)
     if fmt is SoliqXltxFormat.FORM_1_BALANCE_SHEET:
@@ -70,12 +72,40 @@ def parse_header(wb: Workbook, fmt: SoliqXltxFormat) -> SoliqXltxHeader:
 
 
 def _parse_vat_declaration_header(ws: Worksheet) -> SoliqXltxHeader:
+    """V2 (10006_45/47) layout — координаты как в шаблоне с 19 колонками."""
     warnings: list[str] = []
     inn = _read_inn(ws, "D3", warnings)
     org = _read_text(ws, "H9", warnings, label="organization name")
     year = _read_int(ws, "O5", warnings, label="period_year")
     kind = _read_period_kind(ws, "K5", warnings)
     submitted = _read_date(ws, "H17")
+    return SoliqXltxHeader(
+        borrower_inn=inn,
+        organization_name=org,
+        period_year=year,
+        period_kind=kind,
+        period_index=None,
+        submitted_at=submitted,
+        parse_warnings=warnings,
+    )
+
+
+def _parse_vat_declaration_header_v1(ws: Worksheet) -> SoliqXltxHeader:
+    """V1 (legacy 10006_41) layout — координаты сдвинуты влево на 2-4 колонки.
+
+    Поле        v2 → v1
+    INN         D3 → C3
+    name        H9 → F9
+    period_year O5 → K5
+    period_kind K5 → I5
+    submitted   H17 → F17
+    """
+    warnings: list[str] = []
+    inn = _read_inn(ws, "C3", warnings)
+    org = _read_text(ws, "F9", warnings, label="organization name")
+    year = _read_int(ws, "K5", warnings, label="period_year")
+    kind = _read_period_kind(ws, "I5", warnings)
+    submitted = _read_date(ws, "F17")
     return SoliqXltxHeader(
         borrower_inn=inn,
         organization_name=org,

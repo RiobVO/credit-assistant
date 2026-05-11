@@ -82,8 +82,13 @@ def parse_vat_declaration(wb: Workbook) -> VatDeclarationData:
     отсутствуют list02/list04.
     """
     fmt = detect_format(wb)
-    if fmt is not SoliqXltxFormat.VAT_DECLARATION:
-        raise UnsupportedFormatError(wb.sheetnames, f"expected VAT_DECLARATION, got {fmt}")
+    # Body (list02 F6-F11/G6-G11, list04 G7/G37) идентичен в v1 (10006_41) и v2
+    # (10006_45/47) — отличается только шапка list01. Поэтому body-парсер
+    # принимает оба формата; dispatch на v1/v2 header-функцию делает parse_header.
+    if fmt not in (SoliqXltxFormat.VAT_DECLARATION, SoliqXltxFormat.VAT_DECLARATION_V1):
+        raise UnsupportedFormatError(
+            wb.sheetnames, f"expected VAT_DECLARATION (any version), got {fmt}"
+        )
 
     header = parse_header(wb, fmt)
     if "list02" not in wb.sheetnames:

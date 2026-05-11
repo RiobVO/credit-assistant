@@ -80,6 +80,12 @@ class VatRegistryData:
 
 _DATA_START_ROW = 15
 
+# Маркер розничной операции через онлайн-кассу (Onlayn NKM, Onlayn-NKM, NKM, …).
+# В таких rows counterparty name (C) пустой — покупатель анонимный розничный,
+# вместо name в counterparty заносится placeholder. См. T0.5.
+_NKM_MARKER = "NKM"
+_NKM_COUNTERPARTY_PLACEHOLDER = "[NKM Retail]"
+
 
 def parse_vat_registry(wb: Workbook) -> VatRegistryData:
     """Прочитать ilova-реестр (list01 + list02) с детализацией ЭСФ.
@@ -126,8 +132,19 @@ def _read_rows(ws: Worksheet, warnings: list[str]) -> tuple[list[VatRegistryRow]
     for r in range(_DATA_START_ROW, max_row + 1):
         seq_raw = ws.cell(row=r, column=2).value
         name_raw = ws.cell(row=r, column=3).value
+        # Stop conditions:
+        # (a) classic: seq и name пустые → конец реестра.
+        # (b) trailing partial: seq есть, но **все** payload-cells (name + amount +
+        #     vat) пусты → это «огрызки» в конце листа (Soliq оставляет
+        #     зарезервированные номера строк без данных). См. T0.5 Bug B.
         if seq_raw is None and name_raw is None:
             break
+        if name_raw is None:
+            amount_raw = ws.cell(row=r, column=7).value
+            vat_raw = ws.cell(row=r, column=8).value
+            invoice_raw = ws.cell(row=r, column=5).value
+            if amount_raw is None and vat_raw is None and invoice_raw is None:
+                break
         try:
             row, skip_reason = _parse_row(ws, r)
         except Exception as exc:
@@ -154,6 +171,10 @@ def _parse_row(ws: Worksheet, r: int) -> tuple[VatRegistryRow | None, str | None
     Возвращает ``(row, None)`` при успехе или ``(None, reason)`` если хотя бы
     одно critical-поле (name / invoice_no / date / amount / vat) не разобралось.
     seq_no при поломке заменяется на 0 — это не critical для downstream.
+
+    NKM (онлайн-касса, T0.5 Bug A): если invoice_no (E) содержит маркер ``NKM``,
+    counterparty_name может быть пустым — это розничная анонимная продажа через
+    онлайн-кассу, name заменяется на ``[NKM Retail]`` placeholder.
     """
     seq_no = _int_cell(ws, r, 2) or 0
     name = _str_cell(ws, r, 3)
@@ -163,8 +184,13 @@ def _parse_row(ws: Worksheet, r: int) -> tuple[VatRegistryRow | None, str | None
     amount_excl_vat = _money_cell(ws, r, 7)
     vat_amount = _money_cell(ws, r, 8)
 
+    is_nkm = invoice_no is not None and _NKM_MARKER in invoice_no.upper()
+
     if name is None:
-        return None, f"{ws.cell(row=r, column=3).coordinate}: name is empty"
+        if is_nkm:
+            name = _NKM_COUNTERPARTY_PLACEHOLDER
+        else:
+            return None, f"{ws.cell(row=r, column=3).coordinate}: name is empty"
     if invoice_no is None:
         return None, f"{ws.cell(row=r, column=5).coordinate}: invoice_no is empty"
     if invoice_date is None:

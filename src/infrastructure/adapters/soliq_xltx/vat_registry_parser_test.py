@@ -214,3 +214,64 @@ class TestTolerantParsing:
         assert len(data.sales) == 1
         assert data.sales[0].counterparty_inn is None
         assert data.parse_warnings == []
+
+
+class TestNkmHandling:
+    """T0.5 Bug A: розничные продажи через онлайн-кассу (Onlayn NKM)
+    имеют пустой counterparty name — это валидная анонимная розничная запись."""
+
+    def test_nkm_row_with_empty_name_keeps_row_with_placeholder(self) -> None:
+        wb = build_vat_registry_wb(
+            sales=[("KEEP", "200000000", "Onlayn NKM", "01.04.2026", 1000.0, 120.0)]
+        )
+        wb["list02"].cell(row=15, column=3).value = None  # стираем name — реальный NKM-pattern
+        data = parse_vat_registry(wb)
+        assert len(data.sales) == 1
+        assert data.sales[0].counterparty_name == "[NKM Retail]"
+        assert data.sales[0].invoice_no == "Onlayn NKM"
+        assert data.skipped_rows_count == 0
+        assert data.parse_warnings == []
+
+    def test_nkm_marker_case_insensitive(self) -> None:
+        wb = build_vat_registry_wb(
+            sales=[("X", "200000000", "ONLAYN NKM", "01.04.2026", 1000.0, 120.0)]
+        )
+        wb["list02"].cell(row=15, column=3).value = None
+        data = parse_vat_registry(wb)
+        assert len(data.sales) == 1
+        assert data.sales[0].counterparty_name == "[NKM Retail]"
+
+    def test_non_nkm_empty_name_still_skipped(self) -> None:
+        # Не-NKM invoice без name остаётся skipped — поведение для obligatory-name rows.
+        wb = build_vat_registry_wb(
+            sales=[("X", "200000000", "INV-7", "01.04.2026", 1000.0, 120.0)]
+        )
+        wb["list02"].cell(row=15, column=3).value = None
+        data = parse_vat_registry(wb)
+        assert data.sales == []
+        assert data.skipped_rows_count == 1
+
+
+class TestTrailingEmptyStop:
+    """T0.5 Bug B: parsing должен останавливаться на трейлинг-rows где seq есть,
+    но name/amount/vat/invoice пусты (Soliq оставляет зарезервированные пустые
+    rows в конце листа — это не данные)."""
+
+    def test_trailing_seq_only_rows_stop_iteration(self) -> None:
+        wb = build_vat_registry_wb(
+            sales=[
+                ("A", "200000000", "1", "01.04.2026", 1000.0, 120.0),
+                ("B", "200000001", "2", "02.04.2026", 2000.0, 240.0),
+            ]
+        )
+        ws = wb["list02"]
+        # Имитируем трейлинг: rows 17-20 имеют только seq (заполнитель), без data.
+        for r in range(17, 21):
+            ws.cell(row=r, column=2).value = r - 16  # seq 1, 2, 3, 4
+            # name, invoice, date, amount, vat — None (по дефолту от Workbook)
+        data = parse_vat_registry(wb)
+        # Парсер должен прочитать первые 2 валидные и сразу stop, без warnings на
+        # трейлинг. До fix всё row 17-20 давали бы 4 warnings.
+        assert len(data.sales) == 2
+        assert data.skipped_rows_count == 0
+        assert data.parse_warnings == []
