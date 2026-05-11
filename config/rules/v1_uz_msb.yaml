@@ -55,6 +55,14 @@ rules:
     formula: "all(net_profit <= 0 for last 3 quarters)"
     rationale: "Системная убыточность — высокий риск default"
 
+  - id: NEGATIVE_EQUITY
+    name: "Отрицательный или нулевой собственный капитал"
+    category: financial
+    severity: critical
+    source: "Базель III IRB (capital adequacy); внутренние методики банков-партнёров"
+    formula: "latest_annual.equity <= 0"
+    rationale: "Negative equity / technical insolvency — один из сильнейших предикторов default'а: обязательства превышают активы"
+
   - id: VAT_GROWTH_NO_REVENUE
     name: "Рост НДС-обязательств без роста выручки"
     category: financial
