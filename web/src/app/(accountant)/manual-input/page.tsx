@@ -27,6 +27,7 @@ import { Step2Financials } from "./_components/step-2-financials";
 import { Step3Loan } from "./_components/step-3-loan";
 import { formValuesToPayload } from "./_form-mapper";
 import { useFormDraft } from "./_hooks/use-form-draft";
+import { SourceTrailProvider } from "./_hooks/use-source-trail";
 import { defaultFormValues, formSchema, type FormValues } from "./_schema";
 
 type Step = 1 | 2 | 3;
@@ -151,6 +152,7 @@ function ManualInputPageInner() {
 
   return (
     <FormProvider {...form}>
+      <SourceTrailProvider>
       <Topbar crumbs={breadcrumbs} draft={draftIndicator} />
       <div className="w-full max-w-[1180px] px-8 pt-7 pb-[120px]">
         <PageHead caseId={caseId} />
@@ -179,6 +181,7 @@ function ManualInputPageInner() {
           </>
         )}
       </div>
+      </SourceTrailProvider>
     </FormProvider>
   );
 }
