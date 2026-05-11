@@ -7,6 +7,21 @@
 
 ---
 
+## Open decisions (quick scan)
+
+Подвешено — закроется при старте соответствующего Tier. Если забываешь — этот блок ловит первым при чтении roadmap.
+
+- **T0.4 / pre-impl check** — проверить `snapshot_mapper.py`: сериализуется ли `rule.name` в JSONB. Если да (исторический immutability — банк хочет видеть досье 2-летней давности с правилами тогдашней версии) — добавление `name_uz` ломает round-trip, нужна миграция snapshots или версионирование rule schema. Сейчас assumption «только rule_id» — не верифицирован кодом.
+- **T0.4 / pick-on-start** — стиль локализации Jinja2 strings: `gettext` vs in-template dict vs branchless `{{ rule.name_ru if lang == 'ru' else rule.name_uz }}`. Не блокер, но при старте T0.4 зафиксировать ОДИН подход — иначе 3 стиля в одном feature.
+
+---
+
+## Resolved decisions (зафиксировано, чтобы не пересматривать)
+
+- **T1.1 year rollover** → application-level reset (не Postgres trigger). Гибче для on-prem (явный код в use-case, легче дебажить через логи, переносится между инстансами без db-script).
+
+---
+
 ## Definition of "ready for bank demo"
 
 1. Реальные данные сквозь весь pipeline (не fixtures, не JSON, не hardcode).
@@ -55,9 +70,9 @@
 2. **Domain schema**: `Rule.name_uz: str` поле в `domain/rules/rule.py`.
 3. **YAML migration**: `config/rules/v*.yaml` — добавить `name_uz` для каждого rule (~30 правил, manual translation).
 4. **Registry factory**: `domain/rules/registry_factory.py` пробрасывает `name_uz` через `RuleRegistry`.
-5. **Snapshot mapper**: round-trip через `_financial_report_to_dict` не затрагивает Rule, проверить что `name_uz` не нужен в JSONB (rules не сериализуются — только rule_id).
+5. **Snapshot mapper** ⚠ **pre-impl check (open)**: assumption — rules не сериализуются в JSONB, только rule_id. **Не верифицировано кодом**. Перед стартом T0.4 прогрепать `snapshot_mapper.py` + `_financial_report_to_dict` / `_from_dict` на упоминание `rule.name` или сериализацию full Rule object. Если банк хочет immutability досье 2-летней давности (правила тогдашней версии) — `name_uz` добавление ломает round-trip, нужна schema-миграция snapshots или версионирование rule registry.
 6. **Endpoint**: `dossier_pdf.py` принимает `lang: Locale` query, `RenderDossierPdf.execute(dossier_id, lang)` передаёт в Jinja2 context.
-7. **Choice**: какие Jinja2 strings — через i18n keys на стороне Python (`gettext` / простой dict), какие — branchless `{{ rule.name_ru if lang == 'ru' else rule.name_uz }}`.
+7. **Localization style** ⚠ **pick-on-start (open)**: один из трёх — Python-side `gettext` / template-level dict / branchless `{{ rule.name_ru if lang == 'ru' else rule.name_uz }}`. Зафиксировать ОДИН до первого PR — иначе 3 стиля разъедутся по templates.
 
 **Acceptance**: `GET /api/dossier/{id}/pdf?lang=uz` рендерит полностью узбекское досье без RU-fallback в content (brand-strings типа имени банка остаются как в config).
 
@@ -67,7 +82,7 @@
 
 ### T1.1 — case_id monotonic sequence (CA-DS18b)
 - Postgres sequence `application_case_seq` в `applications` table.
-- Формат `BR-{YYYY}-{seq:04d}`, year rollover через trigger или application-level reset.
+- Формат `BR-{YYYY}-{seq:04d}`. **Year rollover → application-level reset** (resolved): use-case проверяет `current_year != last_issued_year` и ресетит sequence через `ALTER SEQUENCE ... RESTART`. Trigger в БД отвергнут — application-level гибче для on-prem, явный код, читаемые логи.
 - Frontend `formatCaseId` переключается на чтение `application.case_id` с бэка.
 - Замыкает одновременно CA-DS18c (year edge case).
 
