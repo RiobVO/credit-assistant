@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import {
   digitsOnly,
   formatUzs,
+  hasAnyQuarterValue,
   parseAmount,
   parseRate,
   sumQuarters,
@@ -41,8 +42,16 @@ export function Step3Loan() {
 
   const revenue2025 = useWatch({ control, name: "step2.revenue.y2025" });
   const profit2025 = useWatch({ control, name: "step2.netProfit.y2025" });
-  const annualRevenue = revenue2025 ? sumQuarters(revenue2025) : 0;
-  const annualNetProfit = profit2025 ? sumQuarters(profit2025) : 0;
+  // CA-033: null = «не введено ни одной cell»; 0 = «введён явный 0».
+  // Различие критично для pre-score: null → neutral pill, 0 → red flag.
+  const annualRevenue =
+    revenue2025 && hasAnyQuarterValue(revenue2025)
+      ? sumQuarters(revenue2025)
+      : null;
+  const annualNetProfit =
+    profit2025 && hasAnyQuarterValue(profit2025)
+      ? sumQuarters(profit2025)
+      : null;
 
   const loanAmount = parseAmount(loanAmountStr ?? "");
   const ratePct = parseRate(ratePctStr ?? "");

@@ -1,5 +1,9 @@
 // Кольцевой индикатор DSCR (debt service coverage ratio).
 // Заливка пропорциональна dscr / cap (по умолчанию cap = 3.0).
+//
+// CA-033: value === null = «недостаточно данных» → серая окружность без
+// заливки, центр «—». Отличается от value=0 / value<0 (есть данные, но
+// сигнал риска): там окружность градиентом, но безкольца (нечем покрывать).
 
 const RADIUS = 42;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
@@ -8,12 +12,16 @@ export function DscrGauge({
   value,
   cap = 3,
 }: {
-  value: number;
+  value: number | null;
   cap?: number;
 }) {
-  const safeValue = Number.isFinite(value) ? Math.max(0, value) : 0;
+  const isProvided = value != null && Number.isFinite(value);
+  const safeValue = isProvided ? Math.max(0, value) : 0;
   const fraction = Math.min(safeValue / cap, 1);
   const offset = CIRCUMFERENCE * (1 - fraction);
+  // Цвет stroke: при null — серый (нейтрально). При наличии значения —
+  // градиент, даже если оно <= 0 (signal «данные есть» отделён от «нет данных»).
+  const strokeStyle = isProvided ? "url(#gaugeGrad)" : "#D4D9E0";
 
   return (
     <div className="relative size-[160px]">
@@ -37,7 +45,7 @@ export function DscrGauge({
           cy="50"
           r={RADIUS}
           fill="none"
-          stroke="url(#gaugeGrad)"
+          stroke={strokeStyle}
           strokeWidth="8"
           strokeLinecap="round"
           strokeDasharray={CIRCUMFERENCE.toFixed(2)}
@@ -49,8 +57,8 @@ export function DscrGauge({
           DSCR
         </div>
         <div className="font-mono text-[34px] leading-none font-bold tracking-[-1px] text-[var(--ca-ink-900)]">
-          {safeValue > 0 ? formatDscrLabel(safeValue) : "—"}
-          {safeValue > 0 ? (
+          {isProvided && safeValue > 0 ? formatDscrLabel(safeValue) : "—"}
+          {isProvided && safeValue > 0 ? (
             <span className="ml-0.5 text-[18px] font-medium text-[var(--ca-ink-500)]">
               ×
             </span>
