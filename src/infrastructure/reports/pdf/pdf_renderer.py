@@ -113,8 +113,14 @@ class WeasyPrintPdfRenderer:
         # 0..100 → угол −90°..+90° (вертикаль вниз = 0).
         gauge_angle_deg = (display_score - 50) * 1.8
 
+        # CA-046: пробрасываем «годовые есть?» в empty state чарта, чтобы
+        # копирайт совпадал с UI досье (CA-036): различаем «нет помесячной
+        # детализации» vs «нет данных о выручке вообще».
         chart_b64 = base64.b64encode(
-            chart_renderer.render_revenue_24m(view_bundle.monthly_revenue_24m),
+            chart_renderer.render_revenue_24m(
+                view_bundle.monthly_revenue_24m,
+                has_annual_revenue=view_bundle.kpis.revenue_ltm is not None,
+            ),
         ).decode("ascii")
 
         return {
