@@ -71,3 +71,13 @@ class TestLowMarginHighTurnover:
         # Убыток при большом обороте — тоже сигнал
         ev = low_margin_high_turnover(_snapshot(_annual(10 * B, -100_000_000)))
         assert ev is not None
+
+    def test_margin_evidence_rounded_to_4_decimals(self) -> None:
+        # CA-021b: маржа из реального деления не должна хранить 20+ знаков.
+        # 216_065_371 / 10_000_000_000 = 0.0216065371... → 0.0216 в evidence.
+        ev = low_margin_high_turnover(_snapshot(_annual(10 * B, 216_065_371)))
+        assert ev is not None
+        margin_str = ev.evidence["margin"]
+        decimal_part = margin_str.split(".", 1)[1] if "." in margin_str else ""
+        assert len(decimal_part) <= 4, f"expected ≤4 decimals, got {margin_str!r}"
+        assert margin_str == "0.0216"
