@@ -178,6 +178,31 @@ def test_assess_partial_quarters_in_years_covered_not_full() -> None:
     assert report.full_years == (2025,)
 
 
+def test_assess_one_year_via_yeartotal_proxy_yields_minimal() -> None:
+    """Regression CA-035 smoke #2: на frontend заполнен только Q4 2025 (1 млрд),
+    yearTotal даёт annual revenue → frontend builder кладёт год в
+    annual_report_years (proxy для annual report). На application уровне это
+    видно как обычный annual_report_years=[2025] → MINIMAL.
+
+    Документирует контракт: при наличии годовой выручки (через sum квартальных
+    ИЛИ annual cell) frontend translation НЕ должен передавать год как
+    partial_quarter — иначе пользователь видит INSUFFICIENT при явно введённых
+    данных. Тест на application уровне фиксирует ожидаемый contract от
+    frontend (см. `web/.../checklist.tsx::buildRequest`).
+    """
+    report = assess_draft_readiness(
+        AssessDraftReadinessInput(
+            annual_report_years=[2025],
+            full_quarter_years=[],
+            partial_quarter_years=[],
+            source_trail={},
+        )
+    )
+    assert report.level == DataReadinessLevel.MINIMAL
+    assert report.full_years == (2025,)
+    assert report.confidence_score == Decimal("0.25")
+
+
 def test_assess_duplicate_year_in_annual_and_full_quarters() -> None:
     """Год может быть указан и в annual и в full_quarter — попадает в full_years
     единожды (set-семантика на уровне domain)."""
