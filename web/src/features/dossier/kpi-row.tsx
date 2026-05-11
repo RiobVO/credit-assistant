@@ -118,6 +118,7 @@ function RoeSlot({ kpi }: { kpi: KpiValueDto | null }) {
       yoyPct={yoy}
       changeTone={yoy === null || yoy >= 0 ? "positive" : "negative"}
       sparkline={[]}
+      levelTone={kpi.level_tone ?? undefined}
     />
   );
 }
@@ -147,6 +148,7 @@ function DebtToEbitSlot({
         yoyPct={null}
         changeTone="negative"
         sparkline={[]}
+        levelTone={debtToEbit.level_tone ?? undefined}
       />
     );
   }

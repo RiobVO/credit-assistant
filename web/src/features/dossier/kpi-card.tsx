@@ -8,6 +8,16 @@ import { cn } from "@/lib/utils";
 import { formatYoy } from "./format";
 
 type ChangeTone = "positive" | "negative";
+type LevelTone = "good" | "warn" | "bad";
+
+// CA-048: 4px left severity stripe — ортогональный сигнал absolute-level порога.
+// Не конфликтует с YoY pill (один visual канал = один сигнал). Цвета берутся
+// из дизайн-токенов (см. globals.css), палитра в одном месте.
+const LEVEL_STRIPE_CLASS: Record<LevelTone, string> = {
+  good: "border-l-4 border-l-[var(--ca-success)]",
+  warn: "border-l-4 border-l-[var(--ca-warning)]",
+  bad: "border-l-4 border-l-[var(--ca-danger)]",
+};
 
 export function KpiCard({
   label,
@@ -16,6 +26,7 @@ export function KpiCard({
   changeTone,
   sparkline,
   tooltip,
+  levelTone,
 }: {
   label: string;
   value: string;
@@ -25,6 +36,9 @@ export function KpiCard({
   // CA-037: опциональный подсказывающий title на карточке (для EBIT-прокси
   // объясняет, что D&A недоступен и величина — EBIT, не EBITDA).
   tooltip?: string;
+  // CA-048: absolute-level threshold tone (good/warn/bad). undefined → нет
+  // stripe (для KPI без universal threshold — revenue_ltm, ebit).
+  levelTone?: LevelTone;
 }) {
   const data = sparkline.map((y, i) => ({ i, y }));
 
@@ -38,7 +52,10 @@ export function KpiCard({
 
   return (
     <div
-      className="rounded-[10px] border border-[var(--ca-border)] bg-[var(--ca-surface)] p-4 shadow-[0_1px_2px_rgba(16,24,40,0.05)]"
+      className={cn(
+        "rounded-[10px] border border-[var(--ca-border)] bg-[var(--ca-surface)] p-4 shadow-[0_1px_2px_rgba(16,24,40,0.05)]",
+        levelTone && LEVEL_STRIPE_CLASS[levelTone],
+      )}
       title={tooltip}
     >
       <div className="text-[10.5px] font-semibold tracking-[1.2px] text-[var(--ca-ink-400)] uppercase">

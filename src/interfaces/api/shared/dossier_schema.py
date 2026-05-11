@@ -25,6 +25,7 @@ SeverityCode = Literal["low", "medium", "high", "critical"]
 RecommendationCode = Literal["approve", "review", "reject"]
 ApplicationStatusCode = Literal["in_review", "approved", "rejected", "draft"]
 KpiUnitCode = Literal["UZS", "PCT", "RATIO"]
+KpiLevelToneCode = Literal["good", "warn", "bad"]
 
 
 class _StrictModel(BaseModel):
@@ -261,12 +262,17 @@ class KpiValueOutput(_StrictModel):
     """Значение KPI-карточки. Decimal сериализуется как str — защита от потери
     точности на больших суммах (UZS миллиарды). Frontend парсит в Number для
     отображения в Recharts (визуальная точность до тыс. — достаточная).
+
+    CA-048: ``level_tone`` — категория absolute-level порога (good/warn/bad)
+    для UI/PDF left severity stripe. Заполняется только для ROE и
+    Debt-to-EBIT (см. KpiBundle docstring); для прочих KPI — None.
     """
 
     value: str  # Decimal как str
     unit: KpiUnitCode
     yoy_pct: str | None  # Decimal как str; None если сравнивать не с чем
     sparkline: list[str]  # точки oldest→newest, может быть пустой
+    level_tone: KpiLevelToneCode | None = None
 
 
 class KpiBundleOutput(_StrictModel):

@@ -29,6 +29,7 @@ from decimal import Decimal
 
 from application.dto.kpi_bundle import (
     KpiBundle,
+    KpiLevelTone,
     KpiUnit,
     KpiValue,
     MonthlyRevenuePoint,
@@ -183,6 +184,16 @@ def _equity_avg(
     return (start + end) / Decimal(2)
 
 
+def _roe_level_tone(roe_pct: Decimal) -> KpiLevelTone:
+    """CA-048 пороги ROE: >15 GOOD, 5..15 WARN, <5 BAD. Boundary inclusive
+    на верхней границе warn — 15.00 и 5.00 попадают в WARN."""
+    if roe_pct > Decimal(15):
+        return KpiLevelTone.GOOD
+    if roe_pct >= Decimal(5):
+        return KpiLevelTone.WARN
+    return KpiLevelTone.BAD
+
+
 def _compute_roe(
     latest: FinancialReport | None, prior: FinancialReport | None
 ) -> KpiValue | None:
@@ -193,12 +204,25 @@ def _compute_roe(
     if avg is None or avg <= 0:
         return None
     net = latest.net_profit.amount
+    roe_pct = net / avg * Decimal(100)
     return KpiValue(
-        value=net / avg * Decimal(100),
+        value=roe_pct,
         unit=KpiUnit.PCT,
         yoy_pct=None,  # CA-037: ROE YoY отложен (нужны 2 FORM_1 разных лет)
         sparkline=(),
+        level_tone=_roe_level_tone(roe_pct),
     )
+
+
+def _debt_to_ebit_level_tone(ratio: Decimal) -> KpiLevelTone:
+    """CA-048 пороги Debt/EBIT: <2 GOOD, 2..4 WARN, >4 BAD. Boundary inclusive
+    на верхней границе warn — 2.00 и 4.00 попадают в WARN. ratio == 0
+    («нет долга») трактуется как GOOD."""
+    if ratio < Decimal(2):
+        return KpiLevelTone.GOOD
+    if ratio <= Decimal(4):
+        return KpiLevelTone.WARN
+    return KpiLevelTone.BAD
 
 
 def _compute_debt_to_ebit(
@@ -217,16 +241,22 @@ def _compute_debt_to_ebit(
         return None
     if debt == 0:
         return KpiValue(
-            value=Decimal(0), unit=KpiUnit.RATIO, yoy_pct=None, sparkline=()
+            value=Decimal(0),
+            unit=KpiUnit.RATIO,
+            yoy_pct=None,
+            sparkline=(),
+            level_tone=KpiLevelTone.GOOD,
         )
     ebit = _ebit_amount(latest)
     if ebit is None or ebit <= 0:
         return None
+    ratio = debt / ebit
     return KpiValue(
-        value=debt / ebit,
+        value=ratio,
         unit=KpiUnit.RATIO,
         yoy_pct=None,  # CA-037: YoY отложен
         sparkline=(),
+        level_tone=_debt_to_ebit_level_tone(ratio),
     )
 
 
