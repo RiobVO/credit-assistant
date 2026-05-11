@@ -178,6 +178,86 @@ def test_financial_report_round_trip_with_taxes_paid_none() -> None:
     assert restored == original
 
 
+def test_ca037_financial_report_round_trip_with_all_extensions() -> None:
+    """CA-037: 8 nullable полей (PBT/interest/equity/total_debt × end/start)
+    переживают JSONB round-trip без потерь. До этого фикса они тихо терялись
+    в snapshot_to_payload → KPI calculator получал None → EBIT/ROE/Debt-to-EBIT
+    оставались пустыми даже при полном payload в /api/manual-input.
+    """
+    original = BorrowerSnapshot(
+        borrower=_borrower(),
+        as_of=date(2026, 5, 8),
+        annual_reports=[
+            FinancialReport(
+                period=DateRange(start=date(2025, 1, 1), end=date(2025, 12, 31)),
+                revenue=_money(7_279_371_000),
+                net_profit=_money(157_282_000),
+                taxes_paid=_money(56_000_000),
+                assets=_money(2_533_084_000),
+                liabilities=_money(985_025_000),
+                profit_before_tax=_money(189_060_000),
+                interest_expense=_money(67_803_000),
+                equity=_money(1_548_059_000),
+                total_debt=_money(618_267_000),
+                assets_period_start=_money(2_087_582_000),
+                liabilities_period_start=_money(696_805_000),
+                equity_period_start=_money(1_390_777_000),
+                total_debt_period_start=_money(332_222_000),
+            ),
+        ],
+    )
+    payload = snapshot_to_payload(original)
+    restored = snapshot_from_payload(payload, original.borrower)
+    # Frozen dataclass equality сравнит все 15 полей FinancialReport — если
+    # хоть одно потерялось, equality упадёт.
+    assert restored == original
+    # Дополнительно — явная проверка на критичные для KPI поля.
+    r = restored.annual_reports[0]
+    assert r.profit_before_tax is not None
+    assert r.profit_before_tax.amount == Decimal("189060000")
+    assert r.equity is not None
+    assert r.equity.amount == Decimal("1548059000")
+    assert r.total_debt is not None
+    assert r.total_debt.amount == Decimal("618267000")
+
+
+def test_ca037_legacy_payload_without_new_keys_still_loads() -> None:
+    """Записи, созданные ДО CA-037, не имеют новых ключей в JSONB. Чтение
+    должно вернуть None по всем 8 расширениям — обратная совместимость БД.
+    """
+    legacy_payload: dict[str, object] = {
+        "as_of": "2025-12-31",
+        "annual_reports": [
+            {
+                "period": {"start": "2025-01-01", "end": "2025-12-31"},
+                "revenue": {"amount": "5000000000", "currency": "UZS"},
+                "net_profit": {"amount": "300000000", "currency": "UZS"},
+                # Никаких CA-037 ключей — записано до миграции.
+            },
+        ],
+        "quarterly_reports": [],
+        "monthly_turnover": [],
+        "counterparties_buyers": [],
+        "counterparties_suppliers": [],
+        "buyer_revenue_share": {},
+        "supplier_purchase_share": {},
+        "invoices": [],
+        "tax_events": [],
+        "vat_periods": [],
+        "loan_request": None,
+    }
+    restored = snapshot_from_payload(legacy_payload, _borrower())
+    r = restored.annual_reports[0]
+    assert r.profit_before_tax is None
+    assert r.interest_expense is None
+    assert r.equity is None
+    assert r.total_debt is None
+    assert r.equity_period_start is None
+    assert r.total_debt_period_start is None
+    assert r.assets_period_start is None
+    assert r.liabilities_period_start is None
+
+
 def test_snapshot_decimal_precision_preserved() -> None:
     original = BorrowerSnapshot(
         borrower=_borrower(),

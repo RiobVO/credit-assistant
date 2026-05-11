@@ -329,8 +329,6 @@ function applyToForm(
   }
 
   // CA-041: FORM_1 → assets/liabilities на конец отчётного периода (column E).
-  // period_start (column D) приходит в DTO, но в UI не используется — нужен
-  // для будущего ROE-расчёта (CA-037), а не для заполнения формы.
   if (data.assets_total) {
     setValue("step2.totalAssets", normalizeDigits(data.assets_total), {
       shouldValidate: true,
@@ -347,6 +345,88 @@ function applyToForm(
     filled.push({
       fieldLabel: "Обязательства (всего, на конец периода)",
       sourceLabel: data.source_trail["form1.liabilities_total"] ?? "FORM_1",
+    });
+  }
+
+  // CA-037: hidden поля для EBIT/ROE/Debt-to-EBIT. UI inputs пока не
+  // показываются; данные доходят до backend через _form-mapper. Источник —
+  // FORM_2 (PBT, interest) для current+prior year, FORM_1 (equity, total_debt,
+  // balance period_start) для current year.
+  const ca037Hidden: Array<{
+    field: FieldPath<FormValues>;
+    value: string | null;
+    label: string;
+    sourceKey: string;
+  }> = [
+    {
+      field: "step2.profitBeforeTax25",
+      value: data.profit_before_tax_by_year?.["2025"] ?? null,
+      label: "Прибыль до налогообложения 2025",
+      sourceKey: "profit_before_tax_2025",
+    },
+    {
+      field: "step2.profitBeforeTax24",
+      value: data.profit_before_tax_by_year?.["2024"] ?? null,
+      label: "Прибыль до налогообложения 2024",
+      sourceKey: "profit_before_tax_2024",
+    },
+    {
+      field: "step2.interestExpense25",
+      value: data.interest_expense_by_year?.["2025"] ?? null,
+      label: "Расходы по процентам 2025",
+      sourceKey: "interest_expense_2025",
+    },
+    {
+      field: "step2.interestExpense24",
+      value: data.interest_expense_by_year?.["2024"] ?? null,
+      label: "Расходы по процентам 2024",
+      sourceKey: "interest_expense_2024",
+    },
+    {
+      field: "step2.equityEnd25",
+      value: data.equity_period_end,
+      label: "Собственный капитал на конец 2025",
+      sourceKey: "form1.equity",
+    },
+    {
+      field: "step2.equityStart25",
+      value: data.equity_period_start,
+      label: "Собственный капитал на начало 2025",
+      sourceKey: "form1.equity_period_start",
+    },
+    {
+      field: "step2.totalDebtEnd25",
+      value: data.total_debt_period_end,
+      label: "Совокупный долг на конец 2025",
+      sourceKey: "form1.total_debt",
+    },
+    {
+      field: "step2.totalDebtStart25",
+      value: data.total_debt_period_start,
+      label: "Совокупный долг на начало 2025",
+      sourceKey: "form1.total_debt_period_start",
+    },
+    {
+      field: "step2.assetsStart25",
+      value: data.assets_total_period_start,
+      label: "Активы на начало 2025",
+      sourceKey: "form1.assets_total_period_start",
+    },
+    {
+      field: "step2.liabilitiesStart25",
+      value: data.liabilities_total_period_start,
+      label: "Обязательства на начало 2025",
+      sourceKey: "form1.liabilities_total_period_start",
+    },
+  ];
+  for (const entry of ca037Hidden) {
+    if (entry.value === null || entry.value === "") continue;
+    setValue(entry.field, normalizeDigits(entry.value), {
+      shouldValidate: true,
+    });
+    filled.push({
+      fieldLabel: entry.label,
+      sourceLabel: data.source_trail[entry.sourceKey] ?? "автозаполнение",
     });
   }
 

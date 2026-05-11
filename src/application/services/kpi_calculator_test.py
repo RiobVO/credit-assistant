@@ -176,18 +176,236 @@ def test_revenue_ltm_returns_none_without_data() -> None:
     assert bundle.revenue_ltm is None
 
 
-# ----------- secondary KPIs always degraded in Phase 3.B -----------------------
+# ----------- CA-037: EBIT / ROE / Debt-to-EBIT --------------------------------
+#
+# Контракт: компоненты приходят на latest annual report — PBT+interest_expense
+# для EBIT, equity_period_start/end для ROE, total_debt для Debt-to-EBIT.
+# Все Optional; None семантика — «нет данных», не «ноль». ROE отдельно: ноль
+# или отрицательный equity_avg → None (математически ROE не определён).
 
 
-def test_secondary_kpis_always_none_in_phase_3b() -> None:
-    """EBITDA / ROE / Debt-to-EBITDA всегда None — нужны компоненты, которых
-    нет в snapshot. Подтверждение, что мы НЕ выдумываем числа."""
-    monthly = [_monthly(date(2025, m, 1), 1_000_000_000) for m in range(1, 13)]
-    bundle = compute_kpis(_snapshot(monthly=monthly))
+def _annual_extended(
+    year: int,
+    *,
+    revenue: int = 1_000_000_000,
+    net_profit: int = 100_000_000,
+    profit_before_tax: int | None = 130_000_000,
+    interest_expense: int | None = 20_000_000,
+    equity_end: int | None = 500_000_000,
+    equity_start: int | None = 450_000_000,
+    total_debt_end: int | None = 200_000_000,
+    total_debt_start: int | None = 180_000_000,
+) -> FinancialReport:
+    """Годовой отчёт с CA-037 расширениями. None — поле отсутствует в исходных."""
 
-    assert bundle.ebitda is None
+    def money_opt(v: int | None) -> Money | None:
+        return Money(Decimal(v), UZS) if v is not None else None
+
+    return FinancialReport(
+        period=DateRange(date(year, 1, 1), date(year, 12, 31)),
+        revenue=Money(Decimal(revenue), UZS),
+        net_profit=Money(Decimal(net_profit), UZS),
+        taxes_paid=Money(Decimal(revenue // 20), UZS),
+        profit_before_tax=money_opt(profit_before_tax),
+        interest_expense=money_opt(interest_expense),
+        equity=money_opt(equity_end),
+        equity_period_start=money_opt(equity_start),
+        total_debt=money_opt(total_debt_end),
+        total_debt_period_start=money_opt(total_debt_start),
+    )
+
+
+# ----------- compute_ebit ------------------------------------------------------
+
+
+def test_ebit_happy_path_pbt_plus_interest() -> None:
+    """EBIT = PBT + interest_expense (UZS). Знак не нормализуется — отрицательный PBT
+    с большим interest даёт positive EBIT (что не red flag сам по себе, см.
+    contract: Debt-to-EBIT отдельно ловит ebit <= 0)."""
+    annual = _annual_extended(
+        2025, profit_before_tax=130_000_000, interest_expense=20_000_000,
+    )
+    bundle = compute_kpis(_snapshot(annual=[annual]))
+
+    assert bundle.ebit is not None
+    assert bundle.ebit.value == Decimal("150000000")
+    assert bundle.ebit.unit is KpiUnit.UZS
+
+
+def test_ebit_none_when_pbt_missing() -> None:
+    """PBT None → EBIT None — не выдумываем число, даже если interest есть."""
+    annual = _annual_extended(2025, profit_before_tax=None, interest_expense=20_000_000)
+    bundle = compute_kpis(_snapshot(annual=[annual]))
+    assert bundle.ebit is None
+
+
+def test_ebit_none_when_interest_missing() -> None:
+    annual = _annual_extended(2025, profit_before_tax=130_000_000, interest_expense=None)
+    bundle = compute_kpis(_snapshot(annual=[annual]))
+    assert bundle.ebit is None
+
+
+def test_ebit_none_when_no_annual_reports() -> None:
+    bundle = compute_kpis(_snapshot())
+    assert bundle.ebit is None
+
+
+def test_ebit_yoy_when_prior_year_present() -> None:
+    """YoY% = (current − prior) / prior × 100, на двух годовых отчётах."""
+    prior = _annual_extended(2024, profit_before_tax=80_000_000, interest_expense=20_000_000)
+    current = _annual_extended(2025, profit_before_tax=130_000_000, interest_expense=20_000_000)
+    bundle = compute_kpis(_snapshot(annual=[prior, current]))
+
+    # ebit_current = 150M, ebit_prior = 100M → YoY +50%
+    assert bundle.ebit is not None
+    assert bundle.ebit.value == Decimal("150000000")
+    assert bundle.ebit.yoy_pct == Decimal(50)
+
+
+# ----------- compute_roe -------------------------------------------------------
+
+
+def test_roe_happy_primary_equity_avg_from_single_report() -> None:
+    """primary path: equity_avg = (equity_period_start + equity) / 2 из ОДНОГО
+    FORM_1 (два столбца). ROE% = net_profit_ltm / equity_avg * 100."""
+    annual = _annual_extended(
+        2025, net_profit=100_000_000, equity_start=400_000_000, equity_end=600_000_000,
+    )
+    bundle = compute_kpis(_snapshot(annual=[annual]))
+
+    # equity_avg = (400 + 600) / 2 = 500M; ROE = 100 / 500 * 100 = 20%
+    assert bundle.roe is not None
+    assert bundle.roe.value == Decimal(20)
+    assert bundle.roe.unit is KpiUnit.PCT
+
+
+def test_roe_fallback_uses_prev_report_equity_when_start_missing() -> None:
+    """Если latest.equity_period_start = None — берём prev_report.equity (end)
+    как proxy для start. Согласовано CA-037 plan: fallback chain."""
+    prior = _annual_extended(2024, equity_end=400_000_000)
+    current = _annual_extended(
+        2025,
+        net_profit=120_000_000,
+        equity_start=None,  # FORM_1 не дал period_start
+        equity_end=600_000_000,
+    )
+    bundle = compute_kpis(_snapshot(annual=[prior, current]))
+
+    # equity_avg = (prior.equity_end=400 + current.equity_end=600) / 2 = 500M
+    # ROE = 120 / 500 * 100 = 24%
+    assert bundle.roe is not None
+    assert bundle.roe.value == Decimal(24)
+
+
+def test_roe_none_when_equity_avg_zero() -> None:
+    """equity_avg == 0 → деление на ноль → None (а не Infinity).
+    Семантически: «нет собственного капитала» — ROE не определён."""
+    annual = _annual_extended(2025, equity_start=0, equity_end=0)
+    bundle = compute_kpis(_snapshot(annual=[annual]))
     assert bundle.roe is None
-    assert bundle.debt_to_ebitda is None
+
+
+def test_roe_none_when_equity_avg_negative() -> None:
+    """Отрицательный equity_avg → None. Это red-flag сигнал
+    (TODO[CA-XXX]: rule NEGATIVE_EQUITY); KPI карточка показывает empty state
+    «Отрицательный собственный капитал — ROE не определён»."""
+    annual = _annual_extended(2025, equity_start=-100_000_000, equity_end=-50_000_000)
+    bundle = compute_kpis(_snapshot(annual=[annual]))
+    assert bundle.roe is None
+
+
+def test_roe_none_when_no_annual_reports() -> None:
+    bundle = compute_kpis(_snapshot())
+    assert bundle.roe is None
+
+
+def test_roe_none_when_equity_completely_missing() -> None:
+    """Ни equity_end, ни equity_start, ни prev_report — посчитать avg нельзя."""
+    annual = _annual_extended(2025, equity_end=None, equity_start=None)
+    bundle = compute_kpis(_snapshot(annual=[annual]))
+    assert bundle.roe is None
+
+
+# ----------- compute_debt_to_ebit ---------------------------------------------
+
+
+def test_debt_to_ebit_happy_ratio_in_x_format() -> None:
+    """Happy: debt = 600M, ebit = 150M → 4.0×."""
+    annual = _annual_extended(
+        2025,
+        profit_before_tax=130_000_000,
+        interest_expense=20_000_000,
+        total_debt_end=600_000_000,
+    )
+    bundle = compute_kpis(_snapshot(annual=[annual]))
+
+    assert bundle.debt_to_ebit is not None
+    assert bundle.debt_to_ebit.value == Decimal(4)
+    assert bundle.debt_to_ebit.unit is KpiUnit.RATIO
+
+
+def test_debt_to_ebit_special_zero_when_no_debt() -> None:
+    """total_debt = Money(0) → ratio = 0 (Decimal("0")). UI рендерит как
+    «Нет долга» зелёный pill. Отличается от None (нет данных)."""
+    annual = _annual_extended(2025, total_debt_end=0)
+    bundle = compute_kpis(_snapshot(annual=[annual]))
+
+    assert bundle.debt_to_ebit is not None
+    assert bundle.debt_to_ebit.value == Decimal(0)
+
+
+def test_debt_to_ebit_none_when_ebit_negative() -> None:
+    """ebit <= 0 → None. Семантически: на убыточной компании нельзя оценить
+    долговую нагрузку (нужно покрытие из прибыли, которой нет). UI рендерит
+    «Долговая нагрузка не оценима (убыток)»."""
+    annual = _annual_extended(
+        2025,
+        profit_before_tax=-30_000_000,
+        interest_expense=10_000_000,  # ebit = -20M
+        total_debt_end=500_000_000,
+    )
+    bundle = compute_kpis(_snapshot(annual=[annual]))
+    assert bundle.debt_to_ebit is None
+
+
+def test_debt_to_ebit_none_when_ebit_zero() -> None:
+    """ebit = 0 → деление на ноль → None. Та же семантика, что и negative."""
+    annual = _annual_extended(
+        2025,
+        profit_before_tax=-20_000_000,
+        interest_expense=20_000_000,
+        total_debt_end=100_000_000,
+    )
+    bundle = compute_kpis(_snapshot(annual=[annual]))
+    assert bundle.debt_to_ebit is None
+
+
+def test_debt_to_ebit_none_when_debt_missing() -> None:
+    """total_debt = None → None. UI отличает от «нет долга» (Money(0)) и
+    рендерит empty card «Загрузите Форму №1»."""
+    annual = _annual_extended(2025, total_debt_end=None)
+    bundle = compute_kpis(_snapshot(annual=[annual]))
+    assert bundle.debt_to_ebit is None
+
+
+def test_debt_to_ebit_none_when_ebit_components_missing() -> None:
+    """PBT None → EBIT None → Debt-to-EBIT None (нет знаменателя)."""
+    annual = _annual_extended(
+        2025, profit_before_tax=None, interest_expense=20_000_000, total_debt_end=600_000_000,
+    )
+    bundle = compute_kpis(_snapshot(annual=[annual]))
+    assert bundle.debt_to_ebit is None
+
+
+def test_kpi_bundle_renamed_fields_replace_ebitda() -> None:
+    """CA-037 контракт: KpiBundle экспортирует `ebit` / `debt_to_ebit` —
+    старые имена ebitda/debt_to_ebitda удалены. Это breaking change для
+    DossierViewResponseSchema (CA-037.5) и frontend (CA-037.6)."""
+    bundle = compute_kpis(_snapshot())
+    assert hasattr(bundle, "ebit")
+    assert hasattr(bundle, "debt_to_ebit")
+    assert not hasattr(bundle, "ebitda")
+    assert not hasattr(bundle, "debt_to_ebitda")
 
 
 # ----------- monthly_revenue_24m chart -----------------------------------------
