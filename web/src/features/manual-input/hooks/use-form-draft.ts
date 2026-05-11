@@ -94,7 +94,13 @@ export function useFormDraft({ form, initialDraftId }: Args): UseFormDraftResult
         }
       })
       .finally(() => {
-        if (!cancelled) setIsLoading(false);
+        // CA-053: setIsLoading(false) безусловный. cancelled-guard защищает
+        // от race condition при mutate-state (draftId/loadFailed) — это OK.
+        // Но isLoading — это UI flag «крутилка»: если первый mount отменён
+        // strict-mode cleanup'ом, а второй mount early-return'нул по
+        // loadedRef, то с guard'ом крутилка зависнет навсегда. Без guard'а
+        // повторный setIsLoading(false) безопасен (state уже false → no-op).
+        setIsLoading(false);
       });
 
     return () => {
