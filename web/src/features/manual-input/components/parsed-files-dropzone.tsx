@@ -18,8 +18,8 @@ import { type FieldPath, useFormContext } from "react-hook-form";
 import { ApiError, type ParsedFinancialsDto, parseManualInputFiles } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
-import { useSourceTrail } from "../_hooks/use-source-trail";
-import type { FormValues } from "../_schema";
+import { useSourceTrail } from "../hooks/use-source-trail";
+import type { FormValues } from "../schema";
 
 type SetValueFn = (
   path: FieldPath<FormValues>,

@@ -10,7 +10,7 @@ import {
   computeDscr,
   computeOverpayment,
   formatUzs,
-} from "../_lib/finance";
+} from "../lib/finance";
 
 import { DscrGauge } from "./dscr-gauge";
 
