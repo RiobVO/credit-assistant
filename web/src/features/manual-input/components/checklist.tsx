@@ -20,9 +20,9 @@ import { useFormContext, useWatch } from "react-hook-form";
 import { assessReadiness, type DataReadinessRequest } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
-import { digitsOnly, hasAnyQuarterValue, yearTotal } from "../_lib/finance";
-import { useSourceTrail } from "../_hooks/use-source-trail";
-import type { FormValues } from "../_schema";
+import { digitsOnly, hasAnyQuarterValue, yearTotal } from "../lib/finance";
+import { useSourceTrail } from "../hooks/use-source-trail";
+import type { FormValues } from "../schema";
 
 type Status = "ok" | "warn" | "pending";
 

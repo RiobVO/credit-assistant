@@ -13,8 +13,8 @@
 
 import { format } from "date-fns";
 
-import type { FormValues } from "./_schema";
-import { yearTotal } from "./_lib/finance";
+import type { FormValues } from "./schema";
+import { yearTotal } from "./lib/finance";
 
 type Money = { amount: string; currency: "UZS" };
 
