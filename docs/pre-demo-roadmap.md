@@ -11,7 +11,7 @@
 
 Подвешено — закроется при старте соответствующего Tier. Если забываешь — этот блок ловит первым при чтении roadmap.
 
-- **T0.4 / pre-impl check** — проверить `snapshot_mapper.py`: сериализуется ли `rule.name` в JSONB. Если да (исторический immutability — банк хочет видеть досье 2-летней давности с правилами тогдашней версии) — добавление `name_uz` ломает round-trip, нужна миграция snapshots или версионирование rule schema. Сейчас assumption «только rule_id» — не верифицирован кодом.
+- ~~**T0.4 / pre-impl check**~~ ✅ **resolved 2026-05-17**: `dossier_mapper.py:15-28` сериализует только `rule_id` + `rule_version`, `rule.name` в JSONB не уходит. T0.4 unblocked. Backlog: per-version registry loader для historical-name immutability (использовать существующий `rule_version`) — не сейчас.
 - **T0.4 / pick-on-start** — стиль локализации Jinja2 strings: `gettext` vs in-template dict vs branchless `{{ rule.name_ru if lang == 'ru' else rule.name_uz }}`. Не блокер, но при старте T0.4 зафиксировать ОДИН подход — иначе 3 стиля в одном feature.
 
 ---
@@ -70,7 +70,7 @@
 2. **Domain schema**: `Rule.name_uz: str` поле в `domain/rules/rule.py`.
 3. **YAML migration**: `config/rules/v*.yaml` — добавить `name_uz` для каждого rule (~30 правил, manual translation).
 4. **Registry factory**: `domain/rules/registry_factory.py` пробрасывает `name_uz` через `RuleRegistry`.
-5. **Snapshot mapper** ⚠ **pre-impl check (open)**: assumption — rules не сериализуются в JSONB, только rule_id. **Не верифицировано кодом**. Перед стартом T0.4 прогрепать `snapshot_mapper.py` + `_financial_report_to_dict` / `_from_dict` на упоминание `rule.name` или сериализацию full Rule object. Если банк хочет immutability досье 2-летней давности (правила тогдашней версии) — `name_uz` добавление ломает round-trip, нужна schema-миграция snapshots или версионирование rule registry.
+5. **Snapshot mapper** ✅ **verified 2026-05-17**: `dossier_mapper.py:15-28` сериализует только `rule_id` + `rule_version`. `rule.name` / `name_uz` в JSONB не уходят — round-trip существующих snapshots не ломается. Backlog (не T0.4): per-version registry loader для historical-name immutability — `rule_version` уже сериализуется, можно подгружать old YAML.
 6. **Endpoint**: `dossier_pdf.py` принимает `lang: Locale` query, `RenderDossierPdf.execute(dossier_id, lang)` передаёт в Jinja2 context.
 7. **Localization style** ⚠ **pick-on-start (open)**: один из трёх — Python-side `gettext` / template-level dict / branchless `{{ rule.name_ru if lang == 'ru' else rule.name_uz }}`. Зафиксировать ОДИН до первого PR — иначе 3 стиля разъедутся по templates.
 
