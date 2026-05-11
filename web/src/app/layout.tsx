@@ -52,6 +52,12 @@ export default async function RootLayout({
       className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
       style={brandStyle}
       data-brand={brand.id}
+      // No-FOUC inline script проставляет data-theme/-density/-font-scale/
+      // -reduced-motion на <html> до hydration. React сравнит server-render
+      // (без этих атрибутов) с client-DOM (с атрибутами) и выбросит mismatch
+      // warning. suppressHydrationWarning гасит warning ТОЛЬКО для <html>;
+      // children-нодов это не касается.
+      suppressHydrationWarning
     >
       <head>
         {/* No-FOUC: blocking inline script читает appearance-prefs из LS до
