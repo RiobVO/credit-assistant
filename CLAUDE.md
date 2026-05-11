@@ -24,7 +24,6 @@
 - TODO[CA-020]: LDAP/OAuth AuthnAdapter для production-банка. AuthnPort готов (`application/ports/authn_port.py`), нужен новый adapter в `infrastructure/auth/`.
 - TODO[CA-028]: dynamic unit detection для FORM_2 — сейчас hardcoded ×1000, читать B24 list01 («Единица измерения, …»).
 - TODO[CA-029b]: парсер PROFIT_TAX (taxes_paid, 15 листов) — adapter raises UnsupportedFormatError. По образцу FORM_2/FORM_1 + реальные xltx папы.
-- TODO[CA-039] (P3): Шаг 1 — если дата назначения директора < 90 дней назад, показать inline warning «Будет учтено как сигнал риска».
 - TODO[CA-059] (P3): SubHeader на досье — badge статуса hardcoded `"В работе"` + `documentsCount=5`. Читать из `data.application.status` и реальных documents (когда подключим documents endpoint). Сейчас аналитик видит одинаковую плашку на каждом досье — misleading.
 
 ---
@@ -139,5 +138,6 @@
 | 2026-05-12 | post-4 | **Pre-fill Шага 1 при «Пересобрать» (CA-058)** — borrower-карточка из досье тянется через sessionStorage (per-tab). `form.reset` Шага 1 при mount если нет draft. Финансы и кредит остаются пустыми. | `3fd0a34` |
 | 2026-05-12 | post-4 | **Округление MARGIN evidence до 4 знаков (CA-021b)** — `low_margin_high_turnover` делил Decimal'ы с хвостом 20+ знаков (0.02160653715822424767 в PDF). `margin.quantize(Decimal("0.0001"))` перед сериализацией в evidence. +1 тест. | `20699d0` |
 | 2026-05-12 | post-4 | **Валидация юр.адреса ≥15 симв + цифра (CA-038)** — Шаг 1 zod `registeredAddress`: `min(3)` → `min(15)` + refine на наличие цифры (номер дома). «Ташкент» больше не проходит. +4 теста (новый `schema.test.ts`). | `66cd56c` |
+| 2026-05-12 | post-4 | **Inline warning «директор <90 дней» (CA-039)** — Шаг 1 под полем даты назначения amber-плашка `Назначение <90 дней — будет учтено как сигнал риска`. Pure-helper `isRecentDirectorAppointment(value, threshold=90, now)` с inject `now` для детерминированных границ. Порог exclusive (`diff<90`). +7 unit-тестов. | `5909082` |
 
 > Сжатая история. Полные decomposition / smoke numbers / per-step rationale — в commit messages (`git log --oneline`) и `docs/adr/`.
