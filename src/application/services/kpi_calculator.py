@@ -11,10 +11,11 @@ Pure function над ``BorrowerSnapshot``: выдаёт ``KpiBundle`` для GET
   interest_expense``. Если хотя бы одно None → KPI None. YoY% берётся с
   предыдущего годового отчёта, если у него оба компонента есть.
 * ``roe`` (CA-037) — net_profit (latest annual) / equity_avg × 100, где
-  ``equity_avg = (equity_period_start + equity) / 2`` (primary: единый FORM_1
-  даёт обе колонки), либо ``(prev_report.equity + current.equity) / 2``
-  (fallback на end предыдущего отчёта). ``equity_avg ≤ 0`` → ``None``
-  (отрицательный SE — отдельный red-flag сигнал, TODO[CA-XXX]).
+  ``equity_avg = (balance_start.equity + balance_end.equity) / 2`` (primary:
+  единый FORM_1 даёт обе колонки), либо ``(prev.balance_end.equity +
+  latest.balance_end.equity) / 2`` (fallback на end предыдущего отчёта).
+  ``equity_avg ≤ 0`` → ``None`` (отрицательный SE — отдельный red-flag сигнал,
+  правило NEGATIVE_EQUITY, CA-049).
 * ``debt_to_ebit`` (CA-037) — 4-кейсовая state-machine: см. KpiBundle docstring.
 
 Все деньги в snapshot — ``Money`` с ``Currency``. Здесь работаем только с
@@ -166,19 +167,24 @@ def _equity_avg(
 ) -> Decimal | None:
     """Среднее equity между началом и концом отчётного периода.
 
-    Primary: ``(equity_period_start + equity) / 2`` — единый FORM_1 даёт обе
-    колонки. Fallback: ``(prior.equity + latest.equity) / 2`` — если start
-    отсутствует, end предыдущего отчёта проксирует «начало» текущего периода.
+    Primary: ``(balance_start.equity + balance_end.equity) / 2`` — единый
+    FORM_1 даёт обе колонки. Fallback: ``(prior.balance_end.equity +
+    latest.balance_end.equity) / 2`` — если start отсутствует, end предыдущего
+    отчёта проксирует «начало» текущего периода.
 
-    None если obe не выработаны. Знак сохраняется: отрицательный или нулевой
+    None если обе не выработаны. Знак сохраняется: отрицательный или нулевой
     avg вызывающая сторона трактует как «ROE не определён».
     """
-    end = _money_amount(latest.equity)
+    end = _money_amount(latest.balance_end.equity) if latest.balance_end else None
     if end is None:
         return None
-    start = _money_amount(latest.equity_period_start)
-    if start is None and prior is not None:
-        start = _money_amount(prior.equity)
+    start = (
+        _money_amount(latest.balance_start.equity)
+        if latest.balance_start
+        else None
+    )
+    if start is None and prior is not None and prior.balance_end is not None:
+        start = _money_amount(prior.balance_end.equity)
     if start is None:
         return None
     return (start + end) / Decimal(2)
@@ -234,9 +240,9 @@ def _compute_debt_to_ebit(
     * EBIT ≤ 0 → None (UI: «Долговая нагрузка не оценима (убыток)»);
     * иначе → Decimal ratio.
     """
-    if latest is None:
+    if latest is None or latest.balance_end is None:
         return None
-    debt = _money_amount(latest.total_debt)
+    debt = _money_amount(latest.balance_end.total_debt)
     if debt is None:
         return None
     if debt == 0:

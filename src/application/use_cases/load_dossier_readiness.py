@@ -54,19 +54,13 @@ def infer_parser_sources_from_snapshot(snapshot: BorrowerSnapshot) -> set[Parser
     annual = list(snapshot.annual_reports)
     quarterly = list(snapshot.quarterly_reports)
 
-    # FORM_1 — balance sheet поля. Любое из equity / total_debt / assets /
-    # liabilities × period_end или period_start. CA-037 расширил entity, всё
-    # nullable; присутствие хотя бы одного → FORM_1 был источником.
-    form1_fields = (
-        "equity", "equity_period_start",
-        "total_debt", "total_debt_period_start",
-        "assets", "assets_period_start",
-        "liabilities", "liabilities_period_start",
-    )
+    # FORM_1 — balance_end / balance_start snapshot'ы (CA-037 расширил entity,
+    # CA-047 сгруппировал в BalanceSnapshot). Любой непустой snapshot
+    # (`is_empty()=False`) → FORM_1 был источником.
     if any(
-        getattr(r, fld, None) is not None
+        (r.balance_end is not None and not r.balance_end.is_empty())
+        or (r.balance_start is not None and not r.balance_start.is_empty())
         for r in annual + quarterly
-        for fld in form1_fields
     ):
         sources.add(ParserSource.FORM_1)
 

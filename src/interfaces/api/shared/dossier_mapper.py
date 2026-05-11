@@ -30,6 +30,7 @@ from domain.entities.red_flag import RedFlag
 from domain.entities.tax_event import TaxEvent, TaxEventType
 from domain.entities.vat_period_report import VatPeriodReport
 from domain.services.scoring_service import RiskScore
+from domain.value_objects.balance_snapshot import BalanceSnapshot
 from domain.value_objects.date_range import DateRange
 from domain.value_objects.inn import INN
 from domain.value_objects.loan_request import LoanRequest
@@ -86,23 +87,32 @@ def to_borrower(payload: BorrowerInput) -> Borrower:
 
 
 def _to_financial_report(p: FinancialReportInput) -> FinancialReport:
+    # CA-047: Pydantic schema flat (wire contract), entity группирует
+    # balance-sheet snapshot'ами через BalanceSnapshot. Пустой snapshot
+    # (все 4 поля None) превращается в None — `is_empty()` отсекает шум.
+    balance_end = BalanceSnapshot(
+        assets=_to_money_optional(p.assets),
+        liabilities=_to_money_optional(p.liabilities),
+        equity=_to_money_optional(p.equity),
+        total_debt=_to_money_optional(p.total_debt),
+    )
+    balance_start = BalanceSnapshot(
+        assets=_to_money_optional(p.assets_period_start),
+        liabilities=_to_money_optional(p.liabilities_period_start),
+        equity=_to_money_optional(p.equity_period_start),
+        total_debt=_to_money_optional(p.total_debt_period_start),
+    )
     return FinancialReport(
         period=DateRange(p.period.start, p.period.end),
         revenue=_to_money(p.revenue),
         net_profit=_to_money(p.net_profit),
         taxes_paid=_to_money_optional(p.taxes_paid),
         vat_declared=_to_money_optional(p.vat_declared),
-        assets=_to_money_optional(p.assets),
-        liabilities=_to_money_optional(p.liabilities),
-        # CA-037: income statement + balance-sheet расширения.
+        # CA-037: income statement расширения.
         profit_before_tax=_to_money_optional(p.profit_before_tax),
         interest_expense=_to_money_optional(p.interest_expense),
-        equity=_to_money_optional(p.equity),
-        total_debt=_to_money_optional(p.total_debt),
-        assets_period_start=_to_money_optional(p.assets_period_start),
-        liabilities_period_start=_to_money_optional(p.liabilities_period_start),
-        equity_period_start=_to_money_optional(p.equity_period_start),
-        total_debt_period_start=_to_money_optional(p.total_debt_period_start),
+        balance_end=balance_end if not balance_end.is_empty() else None,
+        balance_start=balance_start if not balance_start.is_empty() else None,
     )
 
 
