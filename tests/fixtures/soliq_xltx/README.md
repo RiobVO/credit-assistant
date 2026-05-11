@@ -1,0 +1,53 @@
+# Soliq xltx fixtures
+
+Реальные и анонимизированные выгрузки `my3.soliq.uz` для парсеров и integration-теста `tests/integration/real_xltx_test.py` (T0.1 Pre-Demo Roadmap).
+
+## Соглашение об именах
+
+| Суффикс | В git? | Назначение |
+|---|---|---|
+| `*_full.xltx` | **Нет** (gitignored через `tests/fixtures/**/*_full.*`) | Реальные выгрузки с моей ЭЦП. Локально, не уходит в репо. |
+| `*_anon.xltx` | **Да** | Анонимизированные версии. Прогоняются в CI. |
+| `*_sample.csv` / `*_sample.xltx` | Да | Синтетические минимальные fixtures для unit-тестов парсеров. |
+
+## Workflow: положить новую real-выгрузку
+
+1. Сохранить файл с ЭЦП-выгрузки в `tests/fixtures/soliq_xltx/<тип>_<период>_<inn>_full.xltx`.
+   Пример: `vat_decl_q4_2025_201308534_full.xltx`.
+
+2. Сгенерировать анонимизированную версию:
+
+   ```bash
+   python scripts/anonymize_xltx.py \
+     tests/fixtures/soliq_xltx/vat_decl_q4_2025_201308534_full.xltx \
+     tests/fixtures/soliq_xltx/vat_decl_q4_2025_anon.xltx
+   ```
+
+3. Прогнать integration:
+
+   ```bash
+   docker compose exec -T api bash -c \
+     "cd /app && PYTHONPATH=/app/src uv run python -m pytest tests/integration/real_xltx_test.py -v"
+   ```
+
+   Ожидание:
+   - `*_full` и `*_anon` файлы — оба должны парситься без `parse_warnings`.
+   - `PROFIT_TAX` файлы — `xfailed` (parser в T2.3).
+   - Если детектор вернул `UNKNOWN` — `fail`. Либо файл битый, либо нужен новый sentinel в `format_detector.py`.
+
+4. Закоммитить только `*_anon.xltx` (`*_full.*` автоматически проигнорируется).
+
+## Что anonymizer замазывает
+
+- **ИНН** (9 / 14 подряд цифр) → детерминированный hash той же длины. Один и тот же ИНН → один и тот же anon (сохраняет cross-file references).
+- **Имена компаний** (ООО / ОАО / АО / MCHJ / ХК / ХТ / ХУСУСИЙ) → `ОБЕЗЛИЧЕНО NNN`.
+- **Суммы** (numeric > 1000) → `value / 10`. Порядок величин сохраняется (для KPI-smoke), реальные цифры не утекают.
+- **Формулы** не трогаются — пересчитаются автоматически после `/10`.
+
+## Что НЕ замазывается (намеренно)
+
+- Sentinel-строки формата ("Расчёт НДС", "Бухгалтерский баланс" и т.п.) — без них `format_detector` вернёт `UNKNOWN` и тест упадёт.
+- Даты, периоды, ОКВЭДы — публичная справочная информация.
+- Структура листов (`list01..list15`) — определяет тип файла.
+
+Если после прогона `parse_warnings != []` на anon-файле, но на оригинале их не было — anonymizer что-то сломал. Уменьшить `_AMOUNT_THRESHOLD` или сузить `_COMPANY_PATTERN` в `scripts/anonymize_xltx.py`.
