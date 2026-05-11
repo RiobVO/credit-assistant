@@ -132,6 +132,22 @@ export const step2Schema = z.object({
   totalAssets: uzsAmount,
   totalLiabilities: uzsAmount,
   vatPeriod: vatPeriodFromSoliq.nullable(),
+  // CA-037: компоненты EBIT/ROE/Debt-to-EBIT — все опциональные hidden поля,
+  // заполняются автозаполнением из FORM_2 (income statement) и FORM_1 (balance
+  // sheet); UI inputs пока не показываются (TODO: вынести в Step 2 раздел
+  // «Углублённые показатели» отдельным тикетом). Применяются только для
+  // отчёта последнего года (2025 = current), плюс PBT/interest за 2024 для
+  // EBIT YoY.
+  profitBeforeTax24: uzsAmountOptional,
+  profitBeforeTax25: uzsAmountOptional,
+  interestExpense24: uzsAmountOptional,
+  interestExpense25: uzsAmountOptional,
+  equityEnd25: uzsAmountOptional,
+  equityStart25: uzsAmountOptional,
+  totalDebtEnd25: uzsAmountOptional,
+  totalDebtStart25: uzsAmountOptional,
+  assetsStart25: uzsAmountOptional,
+  liabilitiesStart25: uzsAmountOptional,
 });
 
 export const step3Schema = z.object({
@@ -205,6 +221,17 @@ export function defaultFormValues(): FormValues {
       totalAssets: "",
       totalLiabilities: "",
       vatPeriod: null,
+      // CA-037: hidden поля для EBIT/ROE/Debt-to-EBIT (см. step2Schema).
+      profitBeforeTax24: "",
+      profitBeforeTax25: "",
+      interestExpense24: "",
+      interestExpense25: "",
+      equityEnd25: "",
+      equityStart25: "",
+      totalDebtEnd25: "",
+      totalDebtStart25: "",
+      assetsStart25: "",
+      liabilitiesStart25: "",
     },
     step3: {
       loanAmount: "",

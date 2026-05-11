@@ -83,6 +83,17 @@ class FinancialReportInput(_StrictModel):
     vat_declared: MoneyInput | None = None
     assets: MoneyInput | None = None
     liabilities: MoneyInput | None = None
+    # CA-037: income-statement и balance-sheet расширения для EBIT/ROE/Debt-to-EBIT.
+    # Все Optional — заполняются автоматически из FORM_2 (PBT, interest) и FORM_1
+    # (equity, total_debt + period_start снимки на начало того же DateRange).
+    profit_before_tax: MoneyInput | None = None
+    interest_expense: MoneyInput | None = None
+    equity: MoneyInput | None = None
+    total_debt: MoneyInput | None = None
+    assets_period_start: MoneyInput | None = None
+    liabilities_period_start: MoneyInput | None = None
+    equity_period_start: MoneyInput | None = None
+    total_debt_period_start: MoneyInput | None = None
 
 
 class MonthlyTurnoverInput(_StrictModel):
@@ -259,10 +270,14 @@ class KpiValueOutput(_StrictModel):
 
 
 class KpiBundleOutput(_StrictModel):
+    """CA-037: ``ebit`` / ``debt_to_ebit`` (вместо EBITDA-имён) — честно отражают,
+    что D&A не входит в расчёт (нужен FORM_5 cashflow). Когда появятся данные —
+    добавим отдельные ``ebitda`` / ``debt_to_ebitda`` рядом."""
+
     revenue_ltm: KpiValueOutput | None
-    ebitda: KpiValueOutput | None
+    ebit: KpiValueOutput | None
     roe: KpiValueOutput | None
-    debt_to_ebitda: KpiValueOutput | None
+    debt_to_ebit: KpiValueOutput | None
 
 
 class MonthlyRevenuePointOutput(_StrictModel):

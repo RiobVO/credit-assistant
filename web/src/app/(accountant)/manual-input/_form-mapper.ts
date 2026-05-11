@@ -30,6 +30,16 @@ type FinancialReport = {
   vat_declared?: Money;
   assets?: Money;
   liabilities?: Money;
+  // CA-037: income-statement расширения (EBIT прокси компоненты).
+  profit_before_tax?: Money;
+  interest_expense?: Money;
+  // CA-037: balance-sheet расширения (ROE + Debt-to-EBIT).
+  equity?: Money;
+  total_debt?: Money;
+  assets_period_start?: Money;
+  liabilities_period_start?: Money;
+  equity_period_start?: Money;
+  total_debt_period_start?: Money;
 };
 
 type VatPeriodReport = {
@@ -117,6 +127,33 @@ export function formValuesToPayload(values: FormValues): ManualInputPayload {
         if (step2.vatDeclared) report.vat_declared = money(step2.vatDeclared);
         if (step2.totalAssets) report.assets = money(step2.totalAssets);
         if (step2.totalLiabilities) report.liabilities = money(step2.totalLiabilities);
+        // CA-037: EBIT/ROE/Debt-to-EBIT компоненты — все опциональные, идут
+        // только в latest year reporting period (2025). PBT/interest для 2024
+        // подключаются отдельной веткой ниже (для EBIT YoY).
+        const pbt25 = moneyOptional(step2.profitBeforeTax25);
+        if (pbt25) report.profit_before_tax = pbt25;
+        const intr25 = moneyOptional(step2.interestExpense25);
+        if (intr25) report.interest_expense = intr25;
+        const eqEnd = moneyOptional(step2.equityEnd25);
+        if (eqEnd) report.equity = eqEnd;
+        const eqStart = moneyOptional(step2.equityStart25);
+        if (eqStart) report.equity_period_start = eqStart;
+        const debtEnd = moneyOptional(step2.totalDebtEnd25);
+        if (debtEnd) report.total_debt = debtEnd;
+        const debtStart = moneyOptional(step2.totalDebtStart25);
+        if (debtStart) report.total_debt_period_start = debtStart;
+        const aStart = moneyOptional(step2.assetsStart25);
+        if (aStart) report.assets_period_start = aStart;
+        const lStart = moneyOptional(step2.liabilitiesStart25);
+        if (lStart) report.liabilities_period_start = lStart;
+      } else if (y === 2024) {
+        // CA-037: PBT/interest_expense за 2024 — только для EBIT YoY%
+        // в досье. Полный balance snapshot 2024 не требуется (UI карточки
+        // показывают KPI текущего периода).
+        const pbt24 = moneyOptional(step2.profitBeforeTax24);
+        if (pbt24) report.profit_before_tax = pbt24;
+        const intr24 = moneyOptional(step2.interestExpense24);
+        if (intr24) report.interest_expense = intr24;
       }
       return report;
     })

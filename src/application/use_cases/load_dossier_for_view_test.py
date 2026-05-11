@@ -100,10 +100,11 @@ async def test_returns_view_with_computed_kpis() -> None:
     # KPI: 12 месяцев по 1B → revenue_ltm = 12B
     assert result.kpis.revenue_ltm is not None
     assert result.kpis.revenue_ltm.value == Decimal("12000000000")
-    # Вторичные KPI degraded
-    assert result.kpis.ebitda is None
+    # Вторичные KPI degraded (CA-037: компонентов в snapshot нет — annual_reports
+    # без profit_before_tax/equity/total_debt).
+    assert result.kpis.ebit is None
     assert result.kpis.roe is None
-    assert result.kpis.debt_to_ebitda is None
+    assert result.kpis.debt_to_ebit is None
     # Monthly chart — 12 точек, тренд и peaks посчитаны
     assert len(result.monthly_revenue_24m) == 12
     assert all(p.revenue == Decimal("1000000000") for p in result.monthly_revenue_24m)

@@ -45,13 +45,20 @@ class ParsedFinancialsResponse(BaseModel):
     net_profit_by_year: dict[int, str]
     vat_declared_by_year: dict[int, str]
     taxes_paid_by_year: dict[int, str]
+    # CA-037: income-statement расширения для EBIT-прокси (PBT + interest).
+    profit_before_tax_by_year: dict[int, str]
+    interest_expense_by_year: dict[int, str]
     # CA-041: column E xltx, «На конец отчётного периода» — текущий срез.
     assets_total: str | None
     liabilities_total: str | None
-    # column D xltx, «На начало отчётного периода». Frontend пока не использует,
-    # сохраняем для CA-037 (ROE с average_equity = (BoY+EoY)/2).
+    # column D xltx, «На начало отчётного периода» — для ROE avg = (start+end)/2.
     assets_total_period_start: str | None
     liabilities_total_period_start: str | None
+    # CA-037: equity + total_debt снимки для ROE и Debt-to-EBIT.
+    equity_period_end: str | None
+    equity_period_start: str | None
+    total_debt_period_end: str | None
+    total_debt_period_start: str | None
     source_trail: dict[str, str]
     parse_warnings: list[str]
 
@@ -89,6 +96,12 @@ async def parse_files(
         net_profit_by_year={y: str(v) for y, v in parsed.net_profit_by_year.items()},
         vat_declared_by_year={y: str(v) for y, v in parsed.vat_declared_by_year.items()},
         taxes_paid_by_year={y: str(v) for y, v in parsed.taxes_paid_by_year.items()},
+        profit_before_tax_by_year={
+            y: str(v) for y, v in parsed.profit_before_tax_by_year.items()
+        },
+        interest_expense_by_year={
+            y: str(v) for y, v in parsed.interest_expense_by_year.items()
+        },
         assets_total=str(parsed.assets_total) if parsed.assets_total is not None else None,
         liabilities_total=(
             str(parsed.liabilities_total) if parsed.liabilities_total is not None else None
@@ -101,6 +114,26 @@ async def parse_files(
         liabilities_total_period_start=(
             str(parsed.liabilities_total_period_start)
             if parsed.liabilities_total_period_start is not None
+            else None
+        ),
+        equity_period_end=(
+            str(parsed.equity_period_end)
+            if parsed.equity_period_end is not None
+            else None
+        ),
+        equity_period_start=(
+            str(parsed.equity_period_start)
+            if parsed.equity_period_start is not None
+            else None
+        ),
+        total_debt_period_end=(
+            str(parsed.total_debt_period_end)
+            if parsed.total_debt_period_end is not None
+            else None
+        ),
+        total_debt_period_start=(
+            str(parsed.total_debt_period_start)
+            if parsed.total_debt_period_start is not None
             else None
         ),
         source_trail=parsed.source_trail,
