@@ -91,7 +91,13 @@ export const step1Schema = z
     okvedMain: z.string().trim().min(2, "Укажите ОКВЭД"),
     directorName: z.string().trim().min(2, "Укажите Ф.И.О. директора"),
     directorAppointedAt: isoDate,
-    registeredAddress: z.string().trim().min(3, "Укажите юридический адрес"),
+    // CA-038: адрес «Ташкент» проходил min(3); банк требует улицу+дом.
+    // Эвристика: ≥15 символов и хотя бы одна цифра (= номер дома/корпуса).
+    registeredAddress: z
+      .string()
+      .trim()
+      .min(15, "Адрес должен содержать не менее 15 символов (улица, дом)")
+      .refine((v) => /\d/.test(v), "Адрес должен содержать номер дома"),
   })
   .refine(
     ({ registrationDate, directorAppointedAt }) => {
