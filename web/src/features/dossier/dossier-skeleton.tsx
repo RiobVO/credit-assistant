@@ -1,20 +1,9 @@
 // Скелетон-вью на время загрузки досье. Повторяет layout страницы
 // с серыми блоками + animate-pulse — глаз ловит будущее место контента.
 
-import { Topbar } from "@/components/topbar";
-
-import { APP_MODE } from "@/lib/config";
-
-const PREFIX =
-  APP_MODE === "bank"
-    ? [{ label: "История" }, { label: "Досье" }]
-    : [{ label: "Заявки" }, { label: "Досье" }];
-
 export function DossierSkeleton() {
   return (
-    <>
-      <Topbar crumbs={[...PREFIX, { label: "—", current: true }]} />
-      <div className="w-full max-w-[1280px] px-8 pt-7 pb-12">
+    <div className="mx-auto w-full max-w-[1280px] px-8 pt-7 pb-12">
         <div className="mb-5 flex flex-wrap items-center gap-x-4 gap-y-2">
           <Block className="h-5 w-28" />
           <Block className="h-7 w-72" />
@@ -44,15 +33,14 @@ export function DossierSkeleton() {
         <div className="mt-4">
           <Card className="h-[200px]" />
         </div>
-      </div>
-    </>
+    </div>
   );
 }
 
 function Card({ className = "" }: { className?: string }) {
   return (
     <div
-      className={`rounded-[10px] border border-[var(--ca-border)] bg-[var(--ca-surface)] shadow-[0_1px_2px_rgba(16,24,40,0.05)] ${className}`}
+      className={`rounded-[10px] border border-[var(--ub-hairline)] bg-[var(--ub-surface)] shadow-[0_1px_2px_rgba(16,24,40,0.05)] ${className}`}
     />
   );
 }

@@ -182,11 +182,11 @@ function EmptyKpiCard({
   // CA-037: tone "danger" подсвечивает красным КПИ-карточку, когда null означает
   // конкретный финансовый сигнал (не «нет данных»), например ebit ≤ 0 для D/E.
   const border =
-    tone === "danger" ? "border-[#F2BCBA] bg-[#FCE7E5]" : "border-[var(--ca-border)] bg-[var(--ca-surface)]";
+    tone === "danger" ? "border-[#F2BCBA] bg-[#FCE7E5]" : "border-[var(--ub-hairline)] bg-[var(--ub-surface)]";
   const labelColor =
-    tone === "danger" ? "text-[var(--ca-danger)]" : "text-[var(--ca-ink-400)]";
+    tone === "danger" ? "text-[var(--ub-bad-fg)]" : "text-[var(--ub-ink-4)]";
   const hintColor =
-    tone === "danger" ? "text-[var(--ca-danger)]" : "text-[var(--ca-ink-500)]";
+    tone === "danger" ? "text-[var(--ub-bad-fg)]" : "text-[var(--ub-ink-3)]";
   return (
     <div
       className={`rounded-[10px] border ${border} p-4 shadow-[0_1px_2px_rgba(16,24,40,0.05)]`}
@@ -195,7 +195,7 @@ function EmptyKpiCard({
       <div className={`text-[10.5px] font-semibold tracking-[1.2px] uppercase ${labelColor}`}>
         {label}
       </div>
-      <div className="mt-2 font-mono text-[24px] leading-none font-semibold tracking-[-0.6px] text-[var(--ca-ink-400)]">
+      <div className="mt-2 font-mono text-[24px] leading-none font-semibold tracking-[-0.6px] text-[var(--ub-ink-4)]">
         —
       </div>
       <div className={`mt-2 text-[11.5px] ${hintColor}`}>{hint}</div>
@@ -209,14 +209,14 @@ function NoDebtCard({ label }: { label: string }) {
   // нагрузки), а не «нет данных». Зелёный pill согласован с цветовой схемой
   // success в дизайне досье.
   return (
-    <div className="rounded-[10px] border border-[#BFE2D2] bg-[var(--ca-success-50)] p-4 shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
-      <div className="text-[10.5px] font-semibold tracking-[1.2px] text-[var(--ca-success)] uppercase">
+    <div className="rounded-[10px] border border-[#BFE2D2] bg-[var(--ub-ok-bg)] p-4 shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
+      <div className="text-[10.5px] font-semibold tracking-[1.2px] text-[var(--ub-ok-fg)] uppercase">
         {label}
       </div>
-      <div className="mt-2 font-mono text-[24px] leading-none font-semibold tracking-[-0.6px] text-[var(--ca-success)]">
+      <div className="mt-2 font-mono text-[24px] leading-none font-semibold tracking-[-0.6px] text-[var(--ub-ok-fg)]">
         0,00×
       </div>
-      <div className="mt-2 inline-flex items-center rounded-full bg-[var(--ca-success)] px-2 py-px text-[11px] font-semibold text-white">
+      <div className="mt-2 inline-flex items-center rounded-full bg-[var(--ub-ok-fg)] px-2 py-px text-[11px] font-semibold text-white">
         Нет долга
       </div>
       <div className="mt-3 h-[36px]" aria-hidden="true" />

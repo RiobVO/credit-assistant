@@ -13,21 +13,21 @@ const LEGAL_FORM_LABEL: Record<DossierViewDto["borrower"]["legal_form"], string>
 
 export function BorrowerCard({ borrower }: { borrower: DossierViewDto["borrower"] }) {
   return (
-    <div className="flex h-full flex-col rounded-[10px] border border-[var(--ca-border)] bg-[var(--ca-surface)] shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
-      <header className="flex items-start justify-between border-b border-[var(--ca-border)] px-[22px] py-4">
+    <div className="flex h-full flex-col rounded-[10px] border border-[var(--ub-hairline)] bg-[var(--ub-surface)] shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
+      <header className="flex items-start justify-between border-b border-[var(--ub-hairline)] px-[22px] py-4">
         <div>
-          <div className="text-[10.5px] font-semibold tracking-[1.2px] text-[var(--ca-ink-400)] uppercase">
+          <div className="text-[10.5px] font-semibold tracking-[1.2px] text-[var(--ub-ink-4)] uppercase">
             Карточка заёмщика
           </div>
-          <h3 className="m-0 mt-1 text-[16px] font-semibold tracking-[-0.2px] text-[var(--ca-ink-900)]">
+          <h3 className="m-0 mt-1 text-[16px] font-semibold tracking-[-0.2px] text-[var(--ub-ink)]">
             {borrower.name}
           </h3>
-          <p className="m-0 mt-0.5 font-mono text-[12px] text-[var(--ca-ink-500)]">
+          <p className="m-0 mt-0.5 font-mono text-[12px] text-[var(--ub-ink-3)]">
             ИНН {borrower.inn}
           </p>
         </div>
 
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-[#BFE2D2] bg-[var(--ca-success-50)] px-2.5 py-1 text-[11px] font-semibold text-[var(--ca-success)]">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-[#BFE2D2] bg-[var(--ub-ok-bg)] px-2.5 py-1 text-[11px] font-semibold text-[var(--ub-ok-fg)]">
           <CheckCircle2 className="size-3.5" />
           Проверено в ГНК
         </span>
@@ -41,7 +41,7 @@ export function BorrowerCard({ borrower }: { borrower: DossierViewDto["borrower"
           value={
             <>
               {borrower.director_name}
-              <span className="ml-1 text-[var(--ca-ink-400)]">
+              <span className="ml-1 text-[var(--ub-ink-4)]">
                 · с {formatRuDate(borrower.director_appointed_at)}
               </span>
             </>
@@ -57,8 +57,8 @@ export function BorrowerCard({ borrower }: { borrower: DossierViewDto["borrower"
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <>
-      <dt className="text-[var(--ca-ink-500)]">{label}</dt>
-      <dd className="m-0 text-[var(--ca-ink-900)]">{value}</dd>
+      <dt className="text-[var(--ub-ink-3)]">{label}</dt>
+      <dd className="m-0 text-[var(--ub-ink)]">{value}</dd>
     </>
   );
 }
