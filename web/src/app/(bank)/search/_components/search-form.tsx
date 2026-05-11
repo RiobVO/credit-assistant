@@ -1,8 +1,9 @@
 "use client";
 
 import { Search } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
+import { rememberBackTarget } from "@/features/dossier/back-target";
 import { searchBorrower, type BorrowerSearchResult } from "@/lib/bank-api";
 import { cn } from "@/lib/utils";
 
@@ -31,6 +32,13 @@ function validateInn(raw: string): { ok: true; value: string } | { ok: false; me
 export function SearchForm() {
   const [inn, setInn] = useState("");
   const [state, setState] = useState<State>({ kind: "idle" });
+
+  // CA-055: запоминаем как back-target для досье — поиск → открыть досье →
+  // «Назад» вернёт сюда, а не на /manual-input (если у пользователя был
+  // submit где-то ранее в стеке).
+  useEffect(() => {
+    rememberBackTarget("/search");
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
