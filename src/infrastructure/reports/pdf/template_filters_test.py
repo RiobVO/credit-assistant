@@ -48,20 +48,29 @@ def test_fmt_uzs_accepts_int() -> None:
 # ----- fmt_pct / fmt_pct_share -------------------------------------------
 
 
-def test_fmt_pct_converts_decimal_to_percent() -> None:
-    assert fmt_pct(Decimal("0.182")) == "18,2%"
+def test_fmt_pct_formats_percent_value() -> None:
+    """CA-043: fmt_pct принимает значение уже в процентах, не fraction."""
+    assert fmt_pct(Decimal("18.2")) == "18,2%"
 
 
 def test_fmt_pct_with_sign_positive() -> None:
-    assert fmt_pct(Decimal("0.182"), with_sign=True) == "+18,2%"
+    assert fmt_pct(Decimal("18.2"), with_sign=True) == "+18,2%"
 
 
 def test_fmt_pct_with_sign_negative_uses_unicode_minus() -> None:
-    assert fmt_pct(Decimal("-0.045"), with_sign=True) == "−4,5%"
+    assert fmt_pct(Decimal("-14.4"), with_sign=True) == "−14,4%"
 
 
 def test_fmt_pct_none() -> None:
     assert fmt_pct(None) == "—"
+
+
+def test_fmt_pct_does_not_double_scale_percent_input() -> None:
+    """Regression-guard: CA-043. Production-yoy_pct = (a-b)/b*100 даёт уже
+    значения вида -14.4 для падения на 14,4%. Если фильтр снова умножит на 100,
+    PDF покажет -1440%.
+    """
+    assert fmt_pct(Decimal("-14.4"), with_sign=True) == "−14,4%"
 
 
 def test_fmt_pct_share_already_in_percent() -> None:

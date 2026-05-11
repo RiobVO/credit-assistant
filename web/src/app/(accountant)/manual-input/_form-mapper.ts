@@ -24,7 +24,9 @@ type FinancialReport = {
   period: DateRange;
   revenue: Money;
   net_profit: Money;
-  taxes_paid: Money;
+  // CA-044: optional. Пустое поле формы → undefined в payload → null в БД.
+  // Money(0) сохраняем только когда юзер осознанно ввёл "0".
+  taxes_paid?: Money;
   vat_declared?: Money;
   assets?: Money;
   liabilities?: Money;
@@ -74,6 +76,12 @@ function money(digits: string): Money {
   return { amount: digits || "0", currency: "UZS" };
 }
 
+// CA-044: пустая строка → undefined, не Money(0). Это даёт backend
+// различать «не заполнено» (null) и «осознанно ноль» (Money(0)).
+function moneyOptional(digits: string): Money | undefined {
+  return digits ? { amount: digits, currency: "UZS" } : undefined;
+}
+
 export function formValuesToPayload(values: FormValues): ManualInputPayload {
   const { step1, step2, step3 } = values;
   const today = format(new Date(), "yyyy-MM-dd");
@@ -100,8 +108,11 @@ export function formValuesToPayload(values: FormValues): ManualInputPayload {
         period: { start: `${y}-01-01`, end: `${y}-12-31` },
         revenue: money(String(revenueTotal)),
         net_profit: money(String(profitTotal)),
-        taxes_paid: money(taxesByYear[y]),
       };
+      // CA-044: taxes_paid опционален. Пустое поле → не отправляем (None в БД),
+      // не фабрикуем Money(0) в банковский документ.
+      const tax = moneyOptional(taxesByYear[y]);
+      if (tax) report.taxes_paid = tax;
       if (isLatest) {
         if (step2.vatDeclared) report.vat_declared = money(step2.vatDeclared);
         if (step2.totalAssets) report.assets = money(step2.totalAssets);
@@ -118,11 +129,12 @@ export function formValuesToPayload(values: FormValues): ManualInputPayload {
       const revDigits = step2.revenue[yKey][q];
       const profitDigits = step2.netProfit[yKey][q];
       if (!revDigits && !profitDigits) continue;
+      // CA-044: quarterly без taxes_paid — годовой taxes уже в annual_reports.
+      // Прежний dummy Money(0) попадал в payload и сериализовался в БД.
       quarterly.push({
         period: QUARTER_RANGES[q](y),
         revenue: money(revDigits || "0"),
         net_profit: money(profitDigits || "0"),
-        taxes_paid: money("0"),
       });
     }
   }

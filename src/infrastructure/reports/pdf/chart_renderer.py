@@ -58,23 +58,43 @@ def render_revenue_24m(
     width_in: float = 8.5,
     height_in: float = 2.6,
     dpi: int = DPI_DEFAULT,
+    has_annual_revenue: bool = False,
 ) -> bytes:
     """PNG-чарт «выручка по месяцам» для раздела C.
 
-    Пустой ``points`` — пустой график-плейсхолдер с подписью «Нет данных».
-    Это сохраняет layout: шаблон не знает про «есть/нет», просто вставляет
-    PNG; страница не плывёт.
+    Пустой ``points`` — placeholder-PNG с текстом empty state. Layout
+    сохраняется: шаблон вставляет PNG, не зная «есть данные или нет».
+
+    CA-046: ``has_annual_revenue`` синхронизирует копирайт с UI досье (CA-036).
+    Аналитик не должен видеть «нет данных», когда годовые показатели в
+    разделе B уже сформированы — это два разных уровня детализации.
+
+    * ``True``  → «Помесячная динамика недоступна» (годовые из FORM_2 есть,
+      нужен ESF CSV из my3.soliq.uz для помесячной разбивки).
+    * ``False`` → «Нет данных о выручке» (INSUFFICIENT: ни годовых, ни
+      помесячных — флоу загрузки на Шаге 2).
     """
     fig: Figure
     fig, ax = plt.subplots(figsize=(width_in, height_in), dpi=dpi)
 
     if not points:
+        if has_annual_revenue:
+            title = "Помесячная динамика недоступна"
+            hint = "Годовая выручка вычислена из Формы №2. Загрузите ESF CSV\nиз my3.soliq.uz для помесячной разбивки."
+        else:
+            title = "Нет данных о выручке"
+            hint = "Загрузите выгрузку Soliq на Шаге 2 формы или укажите\nпомесячный оборот вручную."
         ax.text(
-            0.5, 0.5,
-            "Нет данных для построения графика",
+            0.5, 0.62, title,
             ha="center", va="center",
             transform=ax.transAxes,
-            color=COLOR_AXIS, fontsize=10,
+            color=COLOR_AXIS, fontsize=11, fontweight="semibold",
+        )
+        ax.text(
+            0.5, 0.36, hint,
+            ha="center", va="center",
+            transform=ax.transAxes,
+            color=COLOR_AXIS, fontsize=9,
         )
         ax.set_axis_off()
         return _figure_to_png(fig)

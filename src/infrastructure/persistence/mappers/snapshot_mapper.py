@@ -89,14 +89,15 @@ def _financial_report_from_dict(d: dict[str, Any]) -> FinancialReport:
     )
     revenue = _money_from_dict(d["revenue"])
     net_profit = _money_from_dict(d["net_profit"])
-    taxes_paid = _money_from_dict(d["taxes_paid"])
-    if revenue is None or net_profit is None or taxes_paid is None:
-        raise ValueError("financial report core money fields cannot be null")
+    # CA-044: taxes_paid стал опциональным. Legacy записи (до CA-044) хранили
+    # его как обязательное поле; новые могут не содержать ключа вовсе.
+    if revenue is None or net_profit is None:
+        raise ValueError("financial report revenue/net_profit cannot be null")
     return FinancialReport(
         period=period,
         revenue=revenue,
         net_profit=net_profit,
-        taxes_paid=taxes_paid,
+        taxes_paid=_money_from_dict(d.get("taxes_paid")),
         vat_declared=_money_from_dict(d.get("vat_declared")),
         assets=_money_from_dict(d.get("assets")),
         liabilities=_money_from_dict(d.get("liabilities")),

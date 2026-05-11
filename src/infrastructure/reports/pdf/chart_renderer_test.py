@@ -43,6 +43,20 @@ def test_revenue_24m_empty_input_returns_placeholder_png() -> None:
     assert len(png) > 500
 
 
+def test_revenue_24m_empty_with_annual_revenue_renders_different_placeholder() -> None:
+    """CA-046: при `has_annual_revenue=True` копирайт меняется на «недоступна»
+    вместо «нет данных». Разные тексты → разные PNG (matplotlib рисует строку).
+    """
+    no_data = render_revenue_24m([])
+    annual_only = render_revenue_24m([], has_annual_revenue=True)
+
+    assert no_data.startswith(PNG_MAGIC)
+    assert annual_only.startswith(PNG_MAGIC)
+    assert no_data != annual_only, (
+        "Разные empty-state копирайты должны давать разные PNG"
+    )
+
+
 def test_sparkline_returns_png_for_normal_series() -> None:
     png = render_sparkline([Decimal(i) for i in range(10)], tone="up")
 

@@ -75,10 +75,17 @@ def fmt_uzs(value: Money | Decimal | int | None, *, billions: bool = False) -> s
 
 
 def fmt_pct(value: Decimal | None, *, with_sign: bool = False, decimals: int = 1) -> str:
-    """Форматирует число как проценты. ``Decimal("0.182")`` → "18,2%"."""
+    """Форматирует число как проценты. Принимает значение **уже в процентах**.
+
+    CA-043: ``Decimal("18.2")`` → ``"18,2%"`` (не fraction). Это контракт всего
+    стека — ``kpi_calculator`` производит ``yoy_pct = (a - b) / b * 100``,
+    frontend ``formatYoy(-14.4) → "−14,4%"``, ``revenue_drop_yoy_50`` пишет
+    evidence как percent. Прежнее ``* 100`` внутри фильтра удваивало масштаб
+    (PDF показывал ``−1442,9%`` вместо ``−14,4%``).
+    """
     if value is None:
         return _DASH
-    pct = Decimal(value) * 100
+    pct = Decimal(value)
     sign = ""
     if with_sign:
         if pct > 0:

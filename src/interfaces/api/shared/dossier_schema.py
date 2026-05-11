@@ -77,7 +77,9 @@ class FinancialReportInput(_StrictModel):
     period: DateRangeInput
     revenue: MoneyInput
     net_profit: MoneyInput
-    taxes_paid: MoneyInput
+    # CA-044: optional — пустое поле формы означает «не заполнено» (None),
+    # а не «уплачено 0 сум» (это разный смысл для банковского документа).
+    taxes_paid: MoneyInput | None = None
     vat_declared: MoneyInput | None = None
     assets: MoneyInput | None = None
     liabilities: MoneyInput | None = None

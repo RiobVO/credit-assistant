@@ -81,7 +81,10 @@ export function DossierView({ dossierId }: { dossierId: string }) {
         </div>
 
         <div className="mt-4">
-          <Revenue24mChart data={data.monthly_revenue_24m} />
+          <Revenue24mChart
+            data={data.monthly_revenue_24m}
+            hasAnnualRevenue={data.kpis.revenue_ltm !== null}
+          />
         </div>
 
         <div className="mt-4">

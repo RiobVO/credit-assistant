@@ -90,7 +90,7 @@ def _to_financial_report(p: FinancialReportInput) -> FinancialReport:
         period=DateRange(p.period.start, p.period.end),
         revenue=_to_money(p.revenue),
         net_profit=_to_money(p.net_profit),
-        taxes_paid=_to_money(p.taxes_paid),
+        taxes_paid=_to_money_optional(p.taxes_paid),
         vat_declared=_to_money_optional(p.vat_declared),
         assets=_to_money_optional(p.assets),
         liabilities=_to_money_optional(p.liabilities),
