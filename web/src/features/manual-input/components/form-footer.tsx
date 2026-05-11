@@ -1,4 +1,4 @@
-import { Loader2, MoveLeft, MoveRight, Save, Send } from "lucide-react";
+import { Loader2, MoveLeft, MoveRight, Send } from "lucide-react";
 import { type ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
@@ -11,12 +11,15 @@ const NEXT_LABEL: Record<Variant, string> = {
   step3: "Отправить на скоринг",
 };
 
+// CA-057: «Сохранить как черновик» убрана — она была dead (onSaveDraft в
+// manual-input-view не передавался, клик был no-op). Auto-save срабатывает
+// в `goNext` на переходе между шагами — каноничный draft lifecycle.
+// Индикатор «Сохранён в HH:MM» в Topbar информирует пользователя.
 export function FormFooter({
   variant,
   onCancel,
   onBack,
   onNext,
-  onSaveDraft,
   isSubmitting = false,
   isNextDisabled = false,
 }: {
@@ -24,7 +27,6 @@ export function FormFooter({
   onCancel?: () => void;
   onBack?: () => void;
   onNext?: () => void;
-  onSaveDraft?: () => void;
   isSubmitting?: boolean;
   isNextDisabled?: boolean;
 }) {
@@ -35,7 +37,7 @@ export function FormFooter({
     <div className="mt-[22px] flex items-center gap-3 rounded-[10px] border border-[var(--ca-border)] bg-[var(--ca-surface)] px-[18px] py-[14px]">
       <div className="flex items-center gap-2 text-[12.5px] text-[var(--ca-ink-500)]">
         <span className="size-1.5 rounded-full bg-[var(--ca-ink-400)]" />
-        Черновик не сохранён локально
+        Черновик сохраняется автоматически при переходе между шагами
       </div>
 
       <div className="ml-auto flex gap-[10px]">
@@ -50,10 +52,6 @@ export function FormFooter({
             <MoveLeft className="size-4" /> Назад
           </FootButton>
         ) : null}
-
-        <FootButton variant="ghost" onClick={onSaveDraft}>
-          <Save className="size-4" /> Сохранить как черновик
-        </FootButton>
 
         <FootButton
           variant="primary"
