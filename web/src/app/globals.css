@@ -67,6 +67,38 @@
   --color-ca-warning: var(--ca-warning);
   --color-ca-danger: var(--ca-danger);
 
+  /* Uzbekbank bank-mode tokens — параллельно `--ca-*` (accountant остаётся
+     на legacy). Mockup: slate ladder + Claude terracotta accent. */
+  --color-ub-bg: var(--ub-bg);
+  --color-ub-surface: var(--ub-surface);
+  --color-ub-surface-2: var(--ub-surface-2);
+  --color-ub-surface-3: var(--ub-surface-3);
+  --color-ub-hairline: var(--ub-hairline);
+  --color-ub-hairline-soft: var(--ub-hairline-soft);
+  --color-ub-nav-bg: var(--ub-nav-bg);
+  --color-ub-nav-bg-hover: var(--ub-nav-bg-hover);
+  --color-ub-nav-text: var(--ub-nav-text);
+  --color-ub-nav-text-2: var(--ub-nav-text-2);
+  --color-ub-nav-text-3: var(--ub-nav-text-3);
+  --color-ub-ink: var(--ub-ink);
+  --color-ub-ink-2: var(--ub-ink-2);
+  --color-ub-ink-3: var(--ub-ink-3);
+  --color-ub-ink-4: var(--ub-ink-4);
+  --color-ub-accent: var(--ub-accent);
+  --color-ub-accent-hover: var(--ub-accent-hover);
+  --color-ub-accent-soft: var(--ub-accent-soft);
+  --color-ub-accent-ink: var(--ub-accent-ink);
+  --color-ub-ok-fg: var(--ub-ok-fg);
+  --color-ub-ok-bg: var(--ub-ok-bg);
+  --color-ub-warn-fg: var(--ub-warn-fg);
+  --color-ub-warn-bg: var(--ub-warn-bg);
+  --color-ub-bad-fg: var(--ub-bad-fg);
+  --color-ub-bad-bg: var(--ub-bad-bg);
+  --color-ub-info-fg: var(--ub-info-fg);
+  --color-ub-info-bg: var(--ub-info-bg);
+  --color-ub-neutral-fg: var(--ub-neutral-fg);
+  --color-ub-neutral-bg: var(--ub-neutral-bg);
+
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -133,6 +165,42 @@
   --ca-success-50: #E6F4EE;
   --ca-warning: #B8730E;
   --ca-danger: #B42318;
+
+  /* ────────── Uzbekbank bank-mode (mockup tokens) ──────────
+     Применять через Tailwind arbitrary: `bg-[var(--ub-surface-2)]` или
+     именованные классы `bg-ub-surface-2`. Не пересекаются с `--ca-*`. */
+  --ub-bg:            #FFFFFF;
+  --ub-surface:       #FFFFFF;
+  --ub-surface-2:     #F8FAFC;
+  --ub-surface-3:     #F1F5F9;
+  --ub-hairline:      #E2E8F0;
+  --ub-hairline-soft: #EEF2F6;
+
+  --ub-nav-bg:        #0B1220;
+  --ub-nav-bg-2:      #0F172A;
+  --ub-nav-bg-hover:  #1E293B;
+  --ub-nav-border:    #1E293B;
+  --ub-nav-text:      #E2E8F0;
+  --ub-nav-text-2:    #94A3B8;
+  --ub-nav-text-3:    #64748B;
+  --ub-nav-active-bg: #1E293B;
+
+  --ub-ink:   #0F172A;
+  --ub-ink-2: #475569;
+  --ub-ink-3: #64748B;
+  --ub-ink-4: #94A3B8;
+
+  --ub-accent:       #CC785C;
+  --ub-accent-hover: #B5624A;
+  --ub-accent-soft:  #F7E8DF;
+  --ub-accent-ink:   #6E2F1C;
+  --ub-accent-ring:  rgba(204, 120, 92, 0.22);
+
+  --ub-ok-fg:      #166534; --ub-ok-bg:      #DCFCE7;
+  --ub-warn-fg:    #92400E; --ub-warn-bg:    #FEF3C7;
+  --ub-bad-fg:     #991B1B; --ub-bad-bg:     #FEE2E2;
+  --ub-info-fg:    #6E2F1C; --ub-info-bg:    #F7E8DF;
+  --ub-neutral-fg: #334155; --ub-neutral-bg: #F1F5F9;
 }
 
 @layer base {

@@ -1,6 +1,6 @@
 "use client";
 
-import { Clock, LogOut, Plus, Search } from "lucide-react";
+import { HelpCircle, History as HistoryIcon, LogOut, Plus, Search, Settings } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { type ReactNode } from "react";
@@ -8,11 +8,21 @@ import { type ReactNode } from "react";
 import { useAnalyst, useLogout } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
-type NavItem = { href: string; label: string; icon: ReactNode };
+type NavItem = {
+  href: string;
+  label: string;
+  icon: ReactNode;
+  count?: number | null;
+};
 
-const NAV: NavItem[] = [
-  { href: "/search", label: "Поиск заёмщика", icon: <Search className="size-4" /> },
-  { href: "/history", label: "История досье", icon: <Clock className="size-4" /> },
+const PRIMARY: NavItem[] = [
+  { href: "/search", label: "Поиск", icon: <Search className="size-[17px]" /> },
+  { href: "/history", label: "История", icon: <HistoryIcon className="size-[17px]" /> },
+];
+
+const SECONDARY: NavItem[] = [
+  { href: "/help", label: "Помощь", icon: <HelpCircle className="size-[17px]" /> },
+  { href: "/settings", label: "Настройки", icon: <Settings className="size-[17px]" /> },
 ];
 
 function NavLink({ item, active }: { item: NavItem; active: boolean }) {
@@ -21,21 +31,19 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
       href={item.href}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "group flex items-center gap-3 rounded-md px-3 py-[9px] text-[13.5px] font-medium transition-colors",
+        "flex items-center gap-3 rounded-md px-[10px] py-2 text-[14px] font-medium transition-colors",
         active
-          ? "bg-[var(--ca-navy-600)] text-white shadow-[inset_2px_0_0_#4A7BD9]"
-          : "text-[#C5CCDA] hover:bg-[var(--ca-navy-700)] hover:text-white",
+          ? "bg-[var(--ub-nav-active-bg)] text-white"
+          : "text-[var(--ub-nav-text-2)] hover:bg-[var(--ub-nav-bg-hover)] hover:text-[var(--ub-nav-text)]",
       )}
     >
-      <span
-        className={cn(
-          "flex size-4 items-center justify-center transition-colors",
-          active ? "text-[#A9C2F1]" : "text-[#9AA6BC]",
-        )}
-      >
-        {item.icon}
-      </span>
+      <span className="flex shrink-0 items-center">{item.icon}</span>
       <span className="truncate">{item.label}</span>
+      {item.count != null ? (
+        <span className="ml-auto rounded-full bg-white/[0.08] px-[6px] py-px text-[11px] font-medium text-[var(--ub-nav-text-2)]">
+          {item.count}
+        </span>
+      ) : null}
     </Link>
   );
 }
@@ -45,6 +53,12 @@ function initials(fullName: string): string {
   const first = parts[0]?.[0] ?? "";
   const second = parts[1]?.[0] ?? "";
   return (first + second).toUpperCase() || "??";
+}
+
+function roleLabel(role: string | undefined): string {
+  if (role === "senior_analyst") return "Старший аналитик";
+  if (role === "analyst") return "Кредитный аналитик";
+  return role ?? "";
 }
 
 export function BankSidebar() {
@@ -60,40 +74,40 @@ export function BankSidebar() {
   };
 
   return (
-    <aside className="sticky top-0 flex h-screen flex-col border-r border-black bg-[var(--ca-navy-900)] text-[#E6EAF2]">
-      <div className="flex items-center gap-[10px] border-b border-[var(--ca-line-dark)] px-5 pt-5 pb-[22px]">
-        <div className="grid size-8 place-items-center rounded-md border border-[#2E4470] bg-gradient-to-b from-[#2C4880] to-[#1E3360] font-mono text-[13px] font-semibold text-white">
+    <aside className="sticky top-0 flex h-screen flex-col border-r border-[var(--ub-nav-border)] bg-[var(--ub-nav-bg)] text-[var(--ub-nav-text)]">
+      {/* Brand */}
+      <div className="flex items-center gap-[10px] border-b border-[var(--ub-nav-border)] px-5 pt-[18px] pb-4">
+        <div className="grid size-7 shrink-0 place-items-center rounded-md bg-gradient-to-br from-[#D88E73] to-[#B5624A] text-[13px] font-bold tracking-[-0.02em] text-white">
           UB
         </div>
-        <div>
-          <div className="text-sm font-semibold tracking-[0.2px] text-[#F2F4F8]">
+        <div className="min-w-0">
+          <div className="truncate text-[14px] font-semibold tracking-[-0.01em] text-white">
             Uzbekbank Credit
           </div>
-          <div className="mt-0.5 text-[11px] tracking-[0.5px] text-[var(--ca-muted-dark)] uppercase">
-            Кредитный конвейер
+          <div className="mt-0.5 text-[11px] tracking-[0.02em] text-[var(--ub-nav-text-3)]">
+            Bank Mode · Андижон
           </div>
         </div>
       </div>
 
-      {/* CA-051: primary CTA «+ Новая заявка». Без поиска ИНН — аналитик
-          может сразу заполнять Шаг 1 руками (ИНН вводится в форме). Точка
-          входа для нового workflow в bank-mode, чтобы не требовать ИНН-first. */}
+      {/* CTA «+ Новая заявка» — terracotta accent (CA-051 sustained). */}
       <div className="px-3 pt-4">
         <Link
           href="/manual-input"
-          className="flex items-center justify-center gap-2 rounded-md bg-[#1E40AF] px-3 py-[10px] text-[13px] font-semibold text-white shadow-sm transition-colors hover:bg-[#1A3899]"
+          className="flex items-center justify-center gap-2 rounded-md bg-[var(--ub-accent)] px-3 py-[10px] text-[13.5px] font-semibold text-white shadow-sm transition-colors hover:bg-[var(--ub-accent-hover)]"
         >
           <Plus className="size-4" />
           Новая заявка
         </Link>
       </div>
 
-      <div className="px-3 pt-4 pb-1">
-        <div className="px-[10px] pb-2 text-[10.5px] font-medium tracking-[1.2px] text-[var(--ca-muted-dark-2)] uppercase">
-          Анализ заявок
+      {/* Primary nav — «Рабочее пространство» */}
+      <div className="px-3 pt-5 pb-2">
+        <div className="px-3 pb-2 text-[10.5px] font-semibold tracking-[0.1em] text-[var(--ub-nav-text-3)] uppercase">
+          Рабочее пространство
         </div>
-        <nav className="flex flex-col gap-px px-2">
-          {NAV.map((item) => (
+        <nav className="flex flex-col gap-px">
+          {PRIMARY.map((item) => (
             <NavLink
               key={item.href}
               item={item}
@@ -103,32 +117,44 @@ export function BankSidebar() {
         </nav>
       </div>
 
-      <div className="mt-auto border-t border-[var(--ca-line-dark)]">
-        <div className="flex items-center gap-[10px] px-[14px] py-[14px]">
-          <div className="grid size-[34px] place-items-center rounded-full border border-[#324567] bg-[var(--ca-navy-500)] text-xs font-semibold text-[#D8E0EE]">
-            {analyst ? initials(analyst.full_name) : "—"}
+      {/* Secondary nav — «Помощь» (внизу) */}
+      <div className="mt-auto px-3 pb-2">
+        <div className="px-3 pb-2 text-[10.5px] font-semibold tracking-[0.1em] text-[var(--ub-nav-text-3)] uppercase">
+          Помощь
+        </div>
+        <nav className="flex flex-col gap-px">
+          {SECONDARY.map((item) => (
+            <NavLink
+              key={item.href}
+              item={item}
+              active={pathname === item.href || pathname.startsWith(`${item.href}/`)}
+            />
+          ))}
+        </nav>
+      </div>
+
+      {/* User card */}
+      <div className="flex items-center gap-3 border-t border-[var(--ub-nav-border)] p-4">
+        <div className="grid size-8 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#D88E73] to-[#B5624A] text-[12px] font-semibold text-white">
+          {analyst ? initials(analyst.full_name) : "—"}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-[13px] font-medium leading-tight text-white">
+            {analyst?.full_name ?? "—"}
           </div>
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-[13px] font-medium text-[#E6EAF2]">
-              {analyst?.full_name ?? "—"}
-            </div>
-            <div className="truncate text-[11px] text-[var(--ca-muted-dark)]">
-              {analyst?.role === "senior_analyst"
-                ? "Старший аналитик"
-                : analyst?.role === "analyst"
-                  ? "Кредитный аналитик"
-                  : (analyst?.role ?? "")}
-            </div>
+          <div className="mt-0.5 truncate text-[11px] text-[var(--ub-nav-text-3)]">
+            {roleLabel(analyst?.role)}
           </div>
         </div>
         <button
           type="button"
           onClick={handleLogout}
           disabled={logout.isPending}
-          className="flex w-full items-center gap-2 border-t border-[var(--ca-line-dark)] px-[14px] py-[12px] text-left text-[12.5px] text-[#C5CCDA] transition-colors hover:bg-[var(--ca-navy-700)] hover:text-white disabled:cursor-wait disabled:opacity-60"
+          aria-label="Выйти"
+          title="Выйти"
+          className="grid size-7 shrink-0 place-items-center rounded text-[var(--ub-nav-text-3)] transition-colors hover:bg-[var(--ub-nav-bg-hover)] hover:text-[var(--ub-nav-text)] disabled:cursor-wait disabled:opacity-60"
         >
-          <LogOut className="size-4 text-[#9AA6BC]" />
-          {logout.isPending ? "Выходим…" : "Выйти"}
+          <LogOut className="size-4" />
         </button>
       </div>
     </aside>
