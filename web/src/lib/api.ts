@@ -268,6 +268,18 @@ export async function assessReadiness(
   return (await r.json()) as DataReadinessResponse;
 }
 
+// CA-035b: GET /api/dossier/{id}/readiness — readiness для готового досье
+// (зеркало POST /readiness, но source_trail восстанавливается на бэке через
+// heuristic по присутствию полей snapshot'а).
+export async function getDossierReadiness(
+  dossierId: string,
+): Promise<DataReadinessResponse> {
+  return jsonFetch<DataReadinessResponse>(
+    `/api/dossier/${encodeURIComponent(dossierId)}/readiness`,
+    { method: "GET" },
+  );
+}
+
 export async function uploadSoliqXltx(args: {
   files: File[]; // ровно два файла: декларация + ilova (любой порядок)
   borrowerInn: string;
