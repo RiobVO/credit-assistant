@@ -21,6 +21,7 @@ from interfaces.api.bank.auth import router as bank_auth_router
 from interfaces.api.bank.dependencies import get_current_analyst
 from interfaces.api.bank.history import router as bank_history_router
 from interfaces.api.bank.search import router as bank_search_router
+from interfaces.api.shared.data_readiness import router as data_readiness_router
 from interfaces.api.shared.dossier import router as dossier_router
 from interfaces.api.shared.dossier_pdf import router as dossier_pdf_router
 from interfaces.api.shared.draft import router as draft_router
@@ -63,6 +64,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.include_router(draft_router, dependencies=auth_required)
         app.include_router(soliq_upload_router, dependencies=auth_required)
         app.include_router(manual_input_parse_router, dependencies=auth_required)
+        app.include_router(data_readiness_router, dependencies=auth_required)
     else:
         # Accountant Mode: bank-роуты не подключаются. Shared — без auth,
         # OptionalAnalyst в handler'ах возвращает None → audit пропускается.
@@ -71,5 +73,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.include_router(draft_router)
         app.include_router(soliq_upload_router)
         app.include_router(manual_input_parse_router)
+        app.include_router(data_readiness_router)
 
     return app
