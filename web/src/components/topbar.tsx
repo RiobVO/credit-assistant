@@ -1,4 +1,7 @@
+"use client";
+
 import { Bell, HelpCircle, Search } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Fragment, type ReactNode } from "react";
 
 export type Crumb = {
@@ -19,6 +22,7 @@ export function Topbar({
   crumbs: Crumb[];
   draft?: DraftIndicator;
 }) {
+  const t = useTranslations("shared.topbar");
   return (
     <div className="flex items-center gap-[14px] border-b border-[var(--border)] bg-[var(--surface)] px-8 py-[14px]">
       <div className="text-[13px] text-[var(--ink-3)]">
@@ -38,11 +42,11 @@ export function Topbar({
 
       <div className="ml-auto flex items-center gap-3">
         {draft ? <DraftBadge draft={draft} /> : null}
-        <SearchBox />
-        <IconButton title="Уведомления">
+        <SearchBox placeholder={t("search_placeholder_inn")} />
+        <IconButton title={t("bell_aria")}>
           <Bell className="size-4" />
         </IconButton>
-        <IconButton title="Помощь">
+        <IconButton title={t("help_aria")}>
           <HelpCircle className="size-4" />
         </IconButton>
       </div>
@@ -51,13 +55,14 @@ export function Topbar({
 }
 
 function DraftBadge({ draft }: { draft: DraftIndicator }) {
+  const t = useTranslations("shared.topbar");
   if (draft.state === "idle") return null;
 
   if (draft.state === "saving") {
     return (
       <span className="flex items-center gap-1.5 text-[12.5px] text-[var(--ink-3)]">
         <span className="pulse-dot size-1.5 rounded-full bg-[var(--brand-primary)]" />
-        Сохраняем черновик…
+        {t("draft_saving")}
       </span>
     );
   }
@@ -65,7 +70,7 @@ function DraftBadge({ draft }: { draft: DraftIndicator }) {
   if (draft.state === "error") {
     return (
       <span className="flex items-center gap-1.5 text-[12.5px] text-[var(--state-bad-fg)]">
-        Не удалось сохранить черновик
+        {t("draft_error")}
       </span>
     );
   }
@@ -73,7 +78,7 @@ function DraftBadge({ draft }: { draft: DraftIndicator }) {
   return (
     <span className="flex items-center gap-1.5 text-[12.5px] text-[var(--ink-3)]">
       <span className="size-1.5 rounded-full bg-[var(--state-ok-fg)]" />
-      Черновик сохранён · {formatHm(draft.at)}
+      {t("draft_saved", { time: formatHm(draft.at) })}
     </span>
   );
 }
@@ -84,12 +89,12 @@ function formatHm(d: Date): string {
   return `${hh}:${mm}`;
 }
 
-function SearchBox() {
+function SearchBox({ placeholder }: { placeholder: string }) {
   return (
     <div className="flex h-[34px] w-[280px] items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-[10px] text-[var(--ink-4)]">
       <Search className="size-4" />
       <input
-        placeholder="Поиск по ИНН, заявкам…"
+        placeholder={placeholder}
         className="flex-1 bg-transparent text-[var(--ink-1)] outline-none placeholder:text-[var(--ink-4)]"
       />
       <span className="rounded border border-[var(--border)] bg-[var(--surface-2)] px-[5px] py-px font-mono text-[10.5px] text-[var(--ink-4)]">
