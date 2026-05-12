@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertCircle, ArrowLeft, RefreshCw } from "lucide-react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 
 import { ApiError } from "@/lib/api";
@@ -21,6 +22,8 @@ export function DossierError({
   backHref: string;
   backLabel: string;
 }) {
+  const t = useTranslations("dossier");
+  const tCta = useTranslations("shared.cta");
   const isNotFound = error instanceof ApiError && error.status === 404;
 
   return (
@@ -31,12 +34,10 @@ export function DossierError({
           </div>
 
           <h1 className="mt-4 text-[20px] font-semibold tracking-[-0.2px] text-[var(--ink-1)]">
-            {isNotFound ? "Досье не найдено" : "Не удалось загрузить досье"}
+            {isNotFound ? t("not_found_title") : t("load_error_title")}
           </h1>
           <p className="mx-auto mt-2 max-w-[480px] text-[14px] text-[var(--ink-3)]">
-            {isNotFound
-              ? "Возможно, ссылка устарела или досье было удалено. Создайте новое из формы ручного ввода."
-              : "Попробуйте ещё раз. Если ошибка повторяется — проверьте, что бэкенд запущен и доступна база данных."}
+            {isNotFound ? t("not_found_hint") : t("load_error_hint")}
           </p>
 
           <div className="mt-6 flex flex-wrap justify-center gap-2">
@@ -54,7 +55,7 @@ export function DossierError({
                 className="inline-flex items-center gap-2 rounded-md bg-[var(--brand-primary)] px-4 py-2 text-[13px] font-medium text-white transition-colors hover:bg-[var(--brand-primary-hover)]"
               >
                 <RefreshCw className="size-4" />
-                Повторить
+                {tCta("retry")}
               </button>
             )}
           </div>

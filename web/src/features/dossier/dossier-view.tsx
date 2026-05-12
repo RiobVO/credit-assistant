@@ -6,6 +6,7 @@
 // скелетом, чтобы переход на готовые данные не «прыгал».
 
 import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 
 import { ActionBar } from "./action-bar";
 import { BorrowerCard } from "./borrower-card";
@@ -23,6 +24,7 @@ import { useAppMode } from "@/lib/use-app-mode";
 
 export function DossierView({ dossierId }: { dossierId: string }) {
   const mode = useAppMode();
+  const t = useTranslations("dossier");
   const query = useQuery({
     queryKey: ["dossier", dossierId],
     queryFn: () => getDossier(dossierId),
@@ -31,8 +33,8 @@ export function DossierView({ dossierId }: { dossierId: string }) {
 
   const back =
     mode === "bank"
-      ? { href: "/history", label: "К истории" }
-      : { href: "/manual-input", label: "К форме" };
+      ? { href: "/history", label: t("back_to_history") }
+      : { href: "/manual-input", label: t("back_to_form") };
 
   if (query.isPending) {
     return <DossierSkeleton />;
