@@ -1,3 +1,5 @@
+"use client";
+
 import {
   LayoutDashboard,
   FileText,
@@ -9,6 +11,7 @@ import {
   Clock,
   Settings,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { type ReactNode } from "react";
 
@@ -21,27 +24,6 @@ type NavItem = {
   badge?: string;
   active?: boolean;
 };
-
-const main: NavItem[] = [
-  { href: "#", label: "Панель управления", icon: <LayoutDashboard className="size-4" /> },
-  {
-    href: "/manual-input",
-    label: "Заявки на кредит",
-    icon: <FileText className="size-4" />,
-    badge: "24",
-    active: true,
-  },
-  { href: "#", label: "Заёмщики", icon: <Users className="size-4" /> },
-  { href: "#", label: "Скоринг и аналитика", icon: <TrendingUp className="size-4" /> },
-  { href: "#", label: "Портфель", icon: <Briefcase className="size-4" /> },
-];
-
-const tools: NavItem[] = [
-  { href: "#", label: "Новый анализ", icon: <Plus className="size-4" /> },
-  { href: "#", label: "Отчёты", icon: <ListOrdered className="size-4" /> },
-  { href: "#", label: "История", icon: <Clock className="size-4" /> },
-  { href: "#", label: "Настройки", icon: <Settings className="size-4" /> },
-];
 
 function NavLink({ item }: { item: NavItem }) {
   return (
@@ -96,6 +78,29 @@ function NavSection({ title, items }: { title: string; items: NavItem[] }) {
 }
 
 export function Sidebar() {
+  const t = useTranslations("accountant.sidebar");
+
+  const main: NavItem[] = [
+    { href: "#", label: t("nav_dashboard"), icon: <LayoutDashboard className="size-4" /> },
+    {
+      href: "/manual-input",
+      label: t("nav_applications"),
+      icon: <FileText className="size-4" />,
+      badge: "24",
+      active: true,
+    },
+    { href: "#", label: t("nav_borrowers"), icon: <Users className="size-4" /> },
+    { href: "#", label: t("nav_scoring"), icon: <TrendingUp className="size-4" /> },
+    { href: "#", label: t("nav_portfolio"), icon: <Briefcase className="size-4" /> },
+  ];
+
+  const tools: NavItem[] = [
+    { href: "#", label: t("nav_new_analysis"), icon: <Plus className="size-4" /> },
+    { href: "#", label: t("nav_reports"), icon: <ListOrdered className="size-4" /> },
+    { href: "#", label: t("nav_history"), icon: <Clock className="size-4" /> },
+    { href: "#", label: t("nav_settings"), icon: <Settings className="size-4" /> },
+  ];
+
   return (
     <aside className="flex h-screen sticky top-0 flex-col border-r border-black bg-[var(--nav-bg)] text-[#E6EAF2]">
       <div className="flex items-center gap-[10px] border-b border-[var(--nav-border)] px-5 pt-5 pb-[22px]">
@@ -112,8 +117,8 @@ export function Sidebar() {
         </div>
       </div>
 
-      <NavSection title="Основное" items={main} />
-      <NavSection title="Инструменты" items={tools} />
+      <NavSection title={t("section_main")} items={main} />
+      <NavSection title={t("section_tools")} items={tools} />
 
       <div className="mt-auto flex items-center gap-[10px] border-t border-[var(--nav-border)] px-[14px] py-[14px] pb-[18px]">
         <div className="grid size-[34px] place-items-center rounded-full border border-[#324567] bg-[var(--nav-bg-hover)] text-xs font-semibold text-[#D8E0EE]">
@@ -122,7 +127,7 @@ export function Sidebar() {
         <div>
           <div className="text-[13px] font-medium text-[#E6EAF2]">И. Каримов</div>
           <div className="text-[11px] text-[var(--nav-text-2)]">
-            Кредитный аналитик
+            {t("role_analyst")}
           </div>
         </div>
       </div>
