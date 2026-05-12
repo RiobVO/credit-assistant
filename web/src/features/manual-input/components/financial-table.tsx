@@ -85,7 +85,7 @@ function Th({ children, first }: { children: React.ReactNode; first?: boolean })
 
 function FirstCell({ children }: { children: React.ReactNode }) {
   return (
-    <td className="h-10 border-r border-b border-l border-[var(--border)] bg-[#FAFBFC] px-[14px] py-0 text-left font-medium whitespace-nowrap text-[var(--ink-2)]">
+    <td className="h-10 border-r border-b border-l border-[var(--border)] bg-[var(--surface-2)] px-[14px] py-0 text-left font-medium whitespace-nowrap text-[var(--ink-2)]">
       {children}
     </td>
   );
@@ -107,7 +107,7 @@ function CellInput({ name }: { name: string }) {
             onChange={(e) => field.onChange(digitsOnly(e.target.value))}
             inputMode="numeric"
             placeholder="—"
-            className="h-10 w-full bg-transparent px-3 text-right font-mono text-[13px] text-[var(--ink-1)] outline-none focus:bg-[#F4F8FF] focus:shadow-[inset_0_0_0_2px_var(--brand-primary)]"
+            className="h-10 w-full bg-transparent px-3 text-right font-mono text-[13px] text-[var(--ink-1)] outline-none focus:bg-[var(--brand-primary-soft)] focus:shadow-[inset_0_0_0_2px_var(--brand-primary)]"
           />
         )}
       />
@@ -122,7 +122,7 @@ function ReadOnlyTotalCell({ value }: { value: number }) {
         readOnly
         value={value > 0 ? formatUzs(String(value)) : ""}
         placeholder="—"
-        className="h-10 w-full bg-[#FAFBFC] px-3 text-right font-mono text-[13px] font-semibold text-[var(--ink-2)] outline-none"
+        className="h-10 w-full bg-[var(--surface-2)] px-3 text-right font-mono text-[13px] font-semibold text-[var(--ink-2)] outline-none"
       />
     </td>
   );
@@ -148,13 +148,13 @@ function Footer({
     return (
       <tfoot>
         <tr>
-          <td className="rounded-bl-lg border-r border-b border-l border-t-[1px] border-[var(--border-strong)] bg-[#F4F6F9] px-3 py-2.5 text-left font-semibold text-[var(--ink-2)]">
+          <td className="rounded-bl-lg border-r border-b border-l border-t-[1px] border-[var(--border-strong)] bg-[var(--surface-2)] px-3 py-2.5 text-left font-semibold text-[var(--ink-2)]">
             CAGR 2023→2025
             <RatioPill tone={cagrTone(cagr)}>{formatRatioPct(cagr)}</RatioPill>
           </td>
           <td
             colSpan={4}
-            className="border-r border-b border-t-[1px] border-[var(--border-strong)] bg-[#F4F6F9] px-3 py-2.5 pl-[14px] text-left font-medium text-[var(--ink-3)]"
+            className="border-r border-b border-t-[1px] border-[var(--border-strong)] bg-[var(--surface-2)] px-3 py-2.5 pl-[14px] text-left font-medium text-[var(--ink-3)]"
           >
             Совокупный среднегодовой темп роста выручки
           </td>
@@ -169,13 +169,13 @@ function Footer({
   return (
     <tfoot>
       <tr>
-        <td className="rounded-bl-lg border-r border-b border-l border-t-[1px] border-[var(--border-strong)] bg-[#F4F6F9] px-3 py-2.5 text-left font-semibold text-[var(--ink-2)]">
+        <td className="rounded-bl-lg border-r border-b border-l border-t-[1px] border-[var(--border-strong)] bg-[var(--surface-2)] px-3 py-2.5 text-left font-semibold text-[var(--ink-2)]">
           Маржа 2025
           <MarginPill />
         </td>
         <td
           colSpan={4}
-          className="border-r border-b border-t-[1px] border-[var(--border-strong)] bg-[#F4F6F9] px-3 py-2.5 pl-[14px] text-left font-medium text-[var(--ink-3)]"
+          className="border-r border-b border-t-[1px] border-[var(--border-strong)] bg-[var(--surface-2)] px-3 py-2.5 pl-[14px] text-left font-medium text-[var(--ink-3)]"
         >
           Рентабельность по чистой прибыли
         </td>
@@ -197,7 +197,7 @@ function MarginPill() {
 
 function RatioTotalCell() {
   return (
-    <td className="rounded-br-lg border-r border-b border-t-[1px] border-[var(--border-strong)] bg-[#F4F6F9] px-3 py-2.5 text-right font-mono text-[13px] font-semibold text-[var(--ink-3)]">
+    <td className="rounded-br-lg border-r border-b border-t-[1px] border-[var(--border-strong)] bg-[var(--surface-2)] px-3 py-2.5 text-right font-mono text-[13px] font-semibold text-[var(--ink-3)]">
       —
     </td>
   );
@@ -225,8 +225,8 @@ function RatioPill({
     tone === "success"
       ? "bg-[var(--state-ok-bg)] text-[var(--state-ok-fg)]"
       : tone === "danger"
-        ? "bg-[#FCE7E5] text-[var(--state-bad-fg)]"
-        : "bg-[#F4F6F9] text-[var(--ink-3)] border border-[var(--border)]";
+        ? "bg-[var(--state-bad-bg)] text-[var(--state-bad-fg)]"
+        : "bg-[var(--surface-2)] text-[var(--ink-3)] border border-[var(--border)]";
   return (
     <span
       className={`ml-2 rounded-full px-1.5 py-px font-mono text-[11.5px] font-semibold ${palette}`}
