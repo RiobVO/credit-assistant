@@ -11,9 +11,11 @@
 но юнит-тесты на других слоях не должны страдать. Импорт триггерится
 только при первом вызове ``render``.
 
-Шрифты: цепочка ``Inter → DejaVu Sans`` живёт в самом шаблоне. Если в
-будущем подключим Inter через bundle TTF — нужен FontConfig
-(см. ADR 0008, TODO[CA-010]).
+Шрифты: Inter (400/500/600/700) и JetBrains Mono (500/600) забандлены в
+``fonts/`` рядом с этим модулем (OFL, см. их LICENSE-файлы). `@font-face`
+в шаблоне даёт WeasyPrint найти TTF через `base_url`, который мы выставляем
+на директорию модуля. DejaVu остаётся резервом на случай, если в будущем
+кто-то рендерит шаблон без bundle (CA-010).
 """
 
 from __future__ import annotations
@@ -43,8 +45,13 @@ from infrastructure.reports.pdf.template_filters import (
 if TYPE_CHECKING:
     from application.use_cases.load_dossier_for_view import DossierViewBundle
 
-TEMPLATES_DIR = Path(__file__).parent / "templates"
+PDF_DIR = Path(__file__).parent
+TEMPLATES_DIR = PDF_DIR / "templates"
 TEMPLATE_NAME = "dossier.html"
+# WeasyPrint резолвит относительные URL из CSS (например, url('fonts/Inter-Regular.ttf'))
+# относительно base_url. Делаем base_url абсолютным file:// URI на директорию pdf/ —
+# работает одинаково на Windows-хосте и в Linux-контейнере (ADR-0008).
+_BASE_URL = PDF_DIR.as_uri()
 
 _RECOMMENDATION_LABEL = {
     "approve": "Одобрить",
@@ -97,7 +104,7 @@ class WeasyPrintPdfRenderer:
 
         context = self._build_context(bundle)
         html = self._env.get_template(TEMPLATE_NAME).render(**context)
-        pdf_bytes: bytes = HTML(string=html).write_pdf()
+        pdf_bytes: bytes = HTML(string=html, base_url=_BASE_URL).write_pdf()
         return pdf_bytes
 
     # ----------------------------- context build -----------------------------
