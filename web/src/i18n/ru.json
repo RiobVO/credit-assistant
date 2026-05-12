@@ -9,7 +9,9 @@
       "retry": "Повторить",
       "close": "Закрыть",
       "search": "Поиск",
-      "download_pdf": "Скачать PDF"
+      "download_pdf": "Скачать PDF",
+      "try_again": "Попробовать снова",
+      "go_home": "На главную"
     },
     "nav": {
       "search": "Поиск заёмщика",
@@ -20,8 +22,29 @@
     "states": {
       "loading": "Загрузка…",
       "error_generic": "Произошла непредвиденная ошибка",
+      "error_title": "Что-то пошло не так",
+      "error_hint": "Произошла непредвиденная ошибка. Попробуй обновить страницу. Если ошибка повторяется — сообщи в support с кодом",
       "not_found": "Страница не найдена",
+      "not_found_hint": "Возможно, она была перемещена или удалена.",
       "no_data": "Нет данных"
+    },
+    "topbar": {
+      "search_button": "Поиск",
+      "help_aria": "Помощь",
+      "bell_aria": "Уведомления",
+      "breadcrumbs_aria": "Хлебные крошки"
+    },
+    "palette": {
+      "placeholder": "Найти страницу или действие…",
+      "close_aria": "Закрыть",
+      "section_navigation": "Навигация",
+      "section_actions": "Действия",
+      "empty": "Ничего не найдено",
+      "search_borrower": "Поиск заёмщика",
+      "history": "История досье",
+      "new_application": "Новая заявка",
+      "settings": "Настройки",
+      "help": "Помощь"
     }
   },
   "bank": {

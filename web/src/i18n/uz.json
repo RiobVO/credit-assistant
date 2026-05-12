@@ -9,7 +9,9 @@
       "retry": "Qayta urinish",
       "close": "Yopish",
       "search": "Qidiruv",
-      "download_pdf": "PDF yuklab olish"
+      "download_pdf": "PDF yuklab olish",
+      "try_again": "Qayta urinish",
+      "go_home": "Bosh sahifaga"
     },
     "nav": {
       "search": "Qarz oluvchini qidirish",
@@ -20,8 +22,29 @@
     "states": {
       "loading": "Yuklanmoqda…",
       "error_generic": "Kutilmagan xato yuz berdi",
+      "error_title": "Nimadir noto'g'ri ketdi",
+      "error_hint": "Kutilmagan xato yuz berdi. Sahifani yangilashga harakat qiling. Agar xato takrorlansa — supportga kod bilan xabar bering",
       "not_found": "Sahifa topilmadi",
+      "not_found_hint": "Ehtimol, u ko'chirilgan yoki o'chirilgan.",
       "no_data": "Ma'lumot yo'q"
+    },
+    "topbar": {
+      "search_button": "Qidiruv",
+      "help_aria": "Yordam",
+      "bell_aria": "Bildirishnomalar",
+      "breadcrumbs_aria": "Yo'l ko'rsatkichlari"
+    },
+    "palette": {
+      "placeholder": "Sahifa yoki amalni topish…",
+      "close_aria": "Yopish",
+      "section_navigation": "Navigatsiya",
+      "section_actions": "Amallar",
+      "empty": "Hech narsa topilmadi",
+      "search_borrower": "Qarz oluvchini qidirish",
+      "history": "Dosye tarixi",
+      "new_application": "Yangi ariza",
+      "settings": "Sozlamalar",
+      "help": "Yordam"
     }
   },
   "bank": {
