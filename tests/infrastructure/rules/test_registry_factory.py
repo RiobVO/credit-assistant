@@ -102,10 +102,13 @@ class TestNameUzPropagation:
 
     def test_name_uz_propagates_from_default_yaml(self) -> None:
         registry = load_registry(DEFAULT_YAML)
-        # Placeholder pattern до финального ревью переводов.
         for rule in registry.rules:
             assert rule.name_uz, f"rule {rule.id} has empty name_uz"
-            assert rule.name_uz.startswith("[UZ-TBD] "), (
-                f"rule {rule.id} name_uz must currently be placeholder, "
-                f"got: {rule.name_uz!r}"
+            # Placeholder pattern не должен остаться после commit 3 ревью.
+            assert not rule.name_uz.startswith("[UZ-TBD]"), (
+                f"rule {rule.id} carries placeholder name_uz: {rule.name_uz!r}"
+            )
+            # Финальные переводы должны отличаться от RU-оригинала.
+            assert rule.name_uz != rule.name, (
+                f"rule {rule.id} name_uz identical to RU name: {rule.name_uz!r}"
             )
