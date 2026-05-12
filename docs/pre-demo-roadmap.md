@@ -46,6 +46,21 @@
 
 ## Tier 0 — Deal-breakers (active)
 
+### T0.5 — VAT parser fix for real 10006_41/45/47 formats ✅ DONE 2026-05-17 (commit f5d7495)
+Промоут из Tier 2 (CA-015) — раскрыто прогоном `tests/parsers/real_xltx_test.py`
+на real-фикстурах от 3 фирм. Парсер падал на:
+- **NKM ilova** — розничные продажи через онлайн-кассу с пустым counterparty name.
+- **Trailing empty rows** — Soliq оставляет зарезервированные rows в конце листа.
+- **vat_decl legacy 10006_41** — header layout сдвинут влево на 2-4 колонки (декабрь 2025).
+
+Detection — structural через `list01.max_column` (v1=13, v2=19, threshold=14),
+не sentinel-substring. Body (list02/list04) идентичен — отличается только шапка.
+
+Acceptance: 19 real-xltx pass (form1/form2 ×3 фирмы, vat_decl ×4, vat_ilova ×4 +
+существующие), 4 xfail (profit_tax — T2.3 pending). 0 failed.
+
+
+
 ### T0.1 — Real soliq fixtures via personal ETSP
 - **Цель**: 3–4 собственные фирмы × 5 типов xltx = 15–20 реальных файлов. Выгрузка через личные кабинеты soliq.uz по моим ЭЦП.
 - **Куда**: `tests/fixtures/real/` (gitignore). Анонимизированные версии (замазанные ИНН/имена/суммы) в `tests/fixtures/real_anon/*.xltx` — в git.
@@ -133,7 +148,7 @@
 ## Tier 2 — Data quality (после T1)
 
 - **T2.1** — Dynamic unit detection FORM_2 (CA-028). Header parsing «в тысячах/миллионах сум», сейчас hardcoded ×1000.
-- **T2.2** — VAT parser на реальных 10006_45/10006_47 (CA-015). T0.1 даст fixtures — после прогона зафиксировать diff vs current parser.
+- ~~**T2.2** — VAT parser на реальных 10006_45/10006_47 (CA-015)~~ → **поглощено T0.5 done 2026-05-17 (commit f5d7495)**.
 - **T2.3** — PROFIT_TAX parser (CA-029b). 15 листов, сейчас adapter raises `UnsupportedFormatError`. Замыкает CA-DS25 (KPI sparkline) как side-effect.
 - **T2.4** — faktura.uz integration (CA-DS11). Сейчас в `/api/system/health` всегда `not_implemented`.
 
