@@ -13,6 +13,7 @@ import {
   Sun,
   User,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { BankPageHead } from "@/app/(bank)/_components/page-head";
@@ -23,24 +24,22 @@ type Section = "profile" | "appearance" | "security" | "about";
 
 const SECTIONS: Array<{
   key: Section;
-  label: string;
+  labelKey: "nav_profile" | "nav_appearance" | "nav_security" | "nav_about";
   icon: LucideIcon;
 }> = [
-  { key: "profile", label: "Профиль", icon: User },
-  { key: "appearance", label: "Внешний вид", icon: Palette },
-  { key: "security", label: "Безопасность", icon: Shield },
-  { key: "about", label: "О системе", icon: Info },
+  { key: "profile", labelKey: "nav_profile", icon: User },
+  { key: "appearance", labelKey: "nav_appearance", icon: Palette },
+  { key: "security", labelKey: "nav_security", icon: Shield },
+  { key: "about", labelKey: "nav_about", icon: Info },
 ];
 
 export function SettingsView() {
+  const t = useTranslations("bank.settings");
   const [section, setSection] = useState<Section>("profile");
 
   return (
     <>
-      <BankPageHead
-        title="Настройки"
-        subtitle="Управление учётной записью аналитика и параметрами интерфейса."
-      />
+      <BankPageHead title={t("title")} subtitle={t("subtitle")} />
 
       <div className="grid gap-6 md:grid-cols-[220px_1fr]">
         <nav className="flex flex-col gap-1">
@@ -65,7 +64,7 @@ export function SettingsView() {
                     active ? "text-[var(--brand-primary)]" : "text-[var(--ink-4)]",
                   )}
                 />
-                {s.label}
+                {t(s.labelKey)}
               </button>
             );
           })}
@@ -85,30 +84,31 @@ export function SettingsView() {
 // ─────────────── Profile ───────────────
 
 function ProfileSection() {
+  const t = useTranslations("bank.settings");
   const { data: analyst, isLoading } = useAnalyst();
   return (
-    <SectionLayout title="Профиль аналитика" hint="Данные из учётной записи. Изменения — через администратора банка.">
+    <SectionLayout title={t("profile_title")} hint={t("profile_hint")}>
       {isLoading ? (
-        <div className="text-[13.5px] text-[var(--ink-3)]">Загрузка…</div>
+        <div className="text-[13.5px] text-[var(--ink-3)]">{t("profile_loading")}</div>
       ) : !analyst ? (
         <div className="text-[13.5px] text-[var(--ink-3)]">
-          Не удалось загрузить профиль.
+          {t("profile_load_error")}
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
-          <ReadField label="ФИО" value={analyst.full_name} />
-          <ReadField label="Email" value={analyst.email} />
+          <ReadField label={t("field_full_name")} value={analyst.full_name} />
+          <ReadField label={t("field_email")} value={analyst.email} />
           <ReadField
-            label="Роль"
+            label={t("field_role")}
             value={
               analyst.role === "senior_analyst"
-                ? "Старший аналитик"
+                ? t("role_senior")
                 : analyst.role === "analyst"
-                  ? "Кредитный аналитик"
+                  ? t("role_analyst")
                   : analyst.role
             }
           />
-          <ReadField label="Идентификатор" value={analyst.id} mono />
+          <ReadField label={t("field_id")} value={analyst.id} mono />
         </div>
       )}
     </SectionLayout>
@@ -142,29 +142,30 @@ function ReadField({
 // ─────────────── Appearance ───────────────
 
 function AppearanceSection() {
+  const t = useTranslations("bank.settings");
   const [theme, setTheme] = useState<"light" | "dark" | "system">("light");
   return (
-    <SectionLayout title="Внешний вид" hint="Тема интерфейса. Тёмная тема скоро.">
+    <SectionLayout title={t("appearance_title")} hint={t("appearance_hint")}>
       <div className="grid gap-3 md:grid-cols-3">
         <ThemeCard
           icon={<Sun className="size-4" />}
-          label="Светлая"
+          label={t("theme_light")}
           active={theme === "light"}
           onClick={() => setTheme("light")}
         />
         <ThemeCard
           icon={<Moon className="size-4" />}
-          label="Тёмная"
+          label={t("theme_dark")}
           active={theme === "dark"}
           disabled
-          hint="В разработке"
+          hint={t("theme_wip")}
         />
         <ThemeCard
           icon={<Monitor className="size-4" />}
-          label="Системная"
+          label={t("theme_system")}
           active={theme === "system"}
           disabled
-          hint="В разработке"
+          hint={t("theme_wip")}
         />
       </div>
     </SectionLayout>
@@ -222,6 +223,7 @@ function ThemeCard({
 // ─────────────── Security ───────────────
 
 function SecuritySection() {
+  const t = useTranslations("bank.settings");
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -235,11 +237,11 @@ function SecuritySection() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (next.length < 12) {
-      setState({ kind: "error", message: "Новый пароль — минимум 12 символов" });
+      setState({ kind: "error", message: t("password_too_short") });
       return;
     }
     if (next !== confirm) {
-      setState({ kind: "error", message: "Пароли не совпадают" });
+      setState({ kind: "error", message: t("passwords_mismatch") });
       return;
     }
     setState({ kind: "submitting" });
@@ -255,30 +257,30 @@ function SecuritySection() {
     } catch (err) {
       setState({
         kind: "error",
-        message: err instanceof Error ? err.message : "Не удалось сменить пароль",
+        message: err instanceof Error ? err.message : t("password_change_failed"),
       });
     }
   };
 
   return (
-    <SectionLayout title="Безопасность" hint="Смена пароля. Минимум 12 символов, рекомендуется менеджер паролей.">
+    <SectionLayout title={t("security_title")} hint={t("security_hint")}>
       <form onSubmit={handleSubmit} className="grid max-w-md gap-4">
         <PasswordField
-          label="Текущий пароль"
+          label={t("field_current_password")}
           value={current}
           onChange={setCurrent}
           autoComplete="current-password"
           required
         />
         <PasswordField
-          label="Новый пароль"
+          label={t("field_new_password")}
           value={next}
           onChange={setNext}
           autoComplete="new-password"
           required
         />
         <PasswordField
-          label="Подтвердить пароль"
+          label={t("field_confirm_password")}
           value={confirm}
           onChange={setConfirm}
           autoComplete="new-password"
@@ -292,7 +294,7 @@ function SecuritySection() {
         ) : null}
         {state.kind === "ok" ? (
           <p role="status" className="inline-flex items-center gap-2 text-[12.5px] text-[var(--state-ok-fg)]">
-            <Check className="size-3.5" /> Пароль обновлён.
+            <Check className="size-3.5" /> {t("password_updated")}
           </p>
         ) : null}
 
@@ -307,10 +309,10 @@ function SecuritySection() {
             ) : (
               <KeyRound className="size-3.5" />
             )}
-            Сменить пароль
+            {t("change_password_cta")}
           </button>
           <span className="text-[11.5px] text-[var(--ink-4)]">
-            Endpoint в разработке — пока UI-flow без сохранения.
+            {t("endpoint_wip")}
           </span>
         </div>
       </form>
@@ -355,22 +357,19 @@ function PasswordField({
 
 function AboutSection() {
   // Settings-view рендерится только внутри (bank) route group → mode = "bank".
+  const t = useTranslations("bank.settings");
   const buildVersion =
     process.env.NEXT_PUBLIC_BUILD_VERSION ?? "dev";
   return (
-    <SectionLayout title="О системе" hint="Информация об установленной версии Credit Assistant.">
+    <SectionLayout title={t("about_title")} hint={t("about_hint")}>
       <div className="grid gap-4 md:grid-cols-2">
-        <ReadField label="Режим работы" value="Bank Mode" />
-        <ReadField label="Версия" value={buildVersion} mono />
+        <ReadField label={t("field_mode")} value="Bank Mode" />
+        <ReadField label={t("field_version")} value={buildVersion} mono />
         <ReadField
-          label="Описание"
-          value="Внутренний инструмент банка для подготовки кредитного досье МСБ-заёмщика. Phase 4 Bank Mode UI."
+          label={t("field_description")}
+          value={t("about_description")}
         />
-        <ReadField
-          label="Поддержка"
-          value="ops@uzbekbank.uz"
-          mono
-        />
+        <ReadField label={t("field_support")} value="ops@uzbekbank.uz" mono />
       </div>
     </SectionLayout>
   );

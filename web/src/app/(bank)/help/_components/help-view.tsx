@@ -8,128 +8,48 @@ import {
   MessageCircle,
   Phone,
 } from "lucide-react";
-import { useState } from "react";
+import { useTranslations } from "next-intl";
+import { type ReactNode, useState } from "react";
 
 import { BankPageHead } from "@/app/(bank)/_components/page-head";
 import { cn } from "@/lib/utils";
 
-type FaqItem = {
-  id: string;
-  question: string;
-  answer: React.ReactNode;
-};
+type FaqId =
+  | "scoring"
+  | "red_flags"
+  | "insufficient"
+  | "xltx"
+  | "rebuild"
+  | "audit"
+  | "support";
 
-const FAQ: FaqItem[] = [
-  {
-    id: "scoring",
-    question: "Что означает «scoring» и как его читать?",
-    answer: (
-      <>
-        Scoring — числовая оценка кредитного риска заёмщика от 0 до 100.
-        Чем выше — тем ниже риск. Шкала разделена на три полосы:{" "}
-        <b style={{ color: "var(--state-ok-fg)" }}>≥70 «к выдаче»</b>,{" "}
-        <b style={{ color: "var(--state-warn-fg)" }}>40–69 «на проверку»</b>,{" "}
-        <b style={{ color: "var(--state-bad-fg)" }}>&lt;40 «отклонить»</b>. Цифра —
-        результат правил из YAML-реестра, не black-box ML, у каждого правила
-        указан источник (ЦБ РУз, Базель III, методика банка).
-      </>
-    ),
-  },
-  {
-    id: "red-flags",
-    question: "Что такое «red flag» и насколько критично?",
-    answer: (
-      <>
-        Red flag — сработавшее правило с явным негативом. Сейчас в системе
-        19 правил, разделённых по severity: <b>critical</b> (требует ручной
-        проверки до решения), <b>high</b> (снижает scoring сильно), <b>medium</b>
-        (заметное снижение). Каждый flag сопровождается evidence — конкретные
-        цифры из отчётности заёмщика. Critical-flag — повод связаться с клиентом.
-      </>
-    ),
-  },
-  {
-    id: "insufficient-data",
-    question: "Статус «INSUFFICIENT_DATA» — что делать?",
-    answer: (
-      <>
-        Система не получила достаточно данных для расчёта рекомендации. Чаще
-        всего это значит: нет годовых отчётов за 2 последних периода, или нет
-        VAT-периодов из Soliq. Откройте досье — раздел «Готовность данных»
-        покажет, чего не хватает. Догрузите файлы через «Пересобрать с
-        дополнениями».
-      </>
-    ),
-  },
-  {
-    id: "xltx",
-    question: "Как импортировать выгрузки Soliq (.xltx)?",
-    answer: (
-      <>
-        Поддерживается 5 форматов из my3.soliq.uz: VAT decl., Ilova приложение №4
-        (продажи), Form 2 (Отчёт о финансовых результатах), Form 1 (Баланс),
-        Profit Tax. Drag-n-drop в Шаге 2 мастера «Новая заявка». Парсер
-        best-effort: упадёт только на неизвестный формат, частичные ошибки
-        ячеек — warning в карточке файла.
-      </>
-    ),
-  },
-  {
-    id: "rebuild",
-    question: "Что делает «Пересобрать с дополнениями»?",
-    answer: (
-      <>
-        Открывает мастер «Новая заявка» с pre-fill borrower-данных из текущего
-        досье. Финансовые поля и кредит остаются пустыми — заполняются с нуля.
-        Полезно когда пришёл свежий FORM_2 или новая Ilova и нужно обновить
-        scoring.
-      </>
-    ),
-  },
-  {
-    id: "audit",
-    question: "Где найти журнал действий аналитика?",
-    answer: (
-      <>
-        Все ключевые действия (login, search, view, generate, download) пишутся
-        в audit log с маскированным ИНН. Доступ к журналу — у руководителя
-        управления и compliance-офицера через админ-консоль. Аналитик свой лог
-        видит в разделе «Профиль» (в разработке).
-      </>
-    ),
-  },
-  {
-    id: "support",
-    question: "Куда писать при ошибке системы?",
-    answer: (
-      <>
-        Если экран показывает ошибку или скоринг выглядит подозрительно — пишите
-        в чат поддержки <code>#credit-assistant</code> в корпоративном Slack или
-        на ops@uzbekbank.uz. Приложите ИНН досье и скриншот. Команда отвечает в
-        течение рабочего дня.
-      </>
-    ),
-  },
+const FAQ_IDS: FaqId[] = [
+  "scoring",
+  "red_flags",
+  "insufficient",
+  "xltx",
+  "rebuild",
+  "audit",
+  "support",
 ];
 
 export function HelpView() {
+  const t = useTranslations("bank.help");
+
   return (
     <>
-      <BankPageHead
-        title="Помощь"
-        subtitle="Часто задаваемые вопросы и контакты команды поддержки Credit Assistant."
-      />
+      <BankPageHead title={t("title")} subtitle={t("subtitle")} />
 
       <div className="grid gap-6 md:grid-cols-[1fr_300px]">
         <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)]">
           <header className="border-b border-[var(--border)] px-6 py-4">
             <h2 className="m-0 text-[16px] font-semibold tracking-[-0.01em] text-[var(--ink-1)]">
-              Частые вопросы
+              {t("faq_heading")}
             </h2>
           </header>
           <div className="divide-y divide-[var(--border)]">
-            {FAQ.map((item) => (
-              <FaqRow key={item.id} item={item} />
+            {FAQ_IDS.map((id) => (
+              <FaqRow key={id} id={id} />
             ))}
           </div>
         </section>
@@ -137,36 +57,35 @@ export function HelpView() {
         <aside className="flex flex-col gap-4">
           <ContactCard
             icon={<Mail className="size-4" />}
-            title="Email поддержки"
+            title={t("contact_email")}
             value="ops@uzbekbank.uz"
             href="mailto:ops@uzbekbank.uz"
           />
           <ContactCard
             icon={<MessageCircle className="size-4" />}
-            title="Чат Slack"
+            title={t("contact_slack")}
             value="#credit-assistant"
-            hint="внутренний корпоративный Slack"
+            hint={t("contact_slack_hint")}
           />
           <ContactCard
             icon={<Phone className="size-4" />}
-            title="Hotline"
+            title={t("contact_hotline")}
             value="+998 71 200-00-00"
-            hint="будни 09:00–18:00 Ташкент"
+            hint={t("contact_hotline_hint")}
           />
           <ContactCard
             icon={<BookOpen className="size-4" />}
-            title="Документация"
+            title={t("contact_docs")}
             value="docs.credit-assistant"
-            hint="методология scoring и список правил"
+            hint={t("contact_docs_hint")}
           />
           <div className="rounded-lg border border-[#F1D9A6] bg-[#FFF6E5] p-4 text-[13px] text-[var(--state-warn-fg)]">
             <div className="mb-1 inline-flex items-center gap-1.5 font-semibold">
               <AlertTriangle className="size-3.5" />
-              Срочные инциденты
+              {t("incident_title")}
             </div>
             <div className="text-[12.5px] leading-[1.45]">
-              Если данные клиента стали видны другому аналитику — немедленно
-              позвоните в compliance.
+              {t("incident_text")}
             </div>
           </div>
         </aside>
@@ -175,8 +94,22 @@ export function HelpView() {
   );
 }
 
-function FaqRow({ item }: { item: FaqItem }) {
+function FaqRow({ id }: { id: FaqId }) {
+  const t = useTranslations("bank.help");
   const [open, setOpen] = useState(false);
+  const answer: ReactNode = t.rich(`faq_${id}_a`, {
+    b: (chunks) => <b>{chunks}</b>,
+    code: (chunks) => <code>{chunks}</code>,
+    good: (chunks) => (
+      <b style={{ color: "var(--state-ok-fg)" }}>{chunks}</b>
+    ),
+    warn: (chunks) => (
+      <b style={{ color: "var(--state-warn-fg)" }}>{chunks}</b>
+    ),
+    bad: (chunks) => (
+      <b style={{ color: "var(--state-bad-fg)" }}>{chunks}</b>
+    ),
+  });
   return (
     <div>
       <button
@@ -185,7 +118,7 @@ function FaqRow({ item }: { item: FaqItem }) {
         aria-expanded={open}
         className="flex w-full items-center justify-between gap-3 px-6 py-4 text-left text-[14px] font-medium text-[var(--ink-1)] transition-colors hover:bg-[var(--surface-2)]"
       >
-        {item.question}
+        {t(`faq_${id}_q`)}
         <ChevronDown
           className={cn(
             "size-4 shrink-0 text-[var(--ink-3)] transition-transform",
@@ -195,7 +128,7 @@ function FaqRow({ item }: { item: FaqItem }) {
       </button>
       {open ? (
         <div className="px-6 pb-5 text-[13.5px] leading-[1.55] text-[var(--ink-2)]">
-          {item.answer}
+          {answer}
         </div>
       ) : null}
     </div>
