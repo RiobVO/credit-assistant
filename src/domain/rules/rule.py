@@ -25,6 +25,11 @@ class Rule:
     # (Phase 10). До Phase 10 поле дропалось registry_factory'ем — теперь
     # пробрасывается синхронно с config/rules/v*.yaml.
     name: str = ""
+    # UZ-перевод name (T0.4 / CA-DS29-pdf / ADR-0015). YAML schema требует
+    # min_length=1 — fail-fast на load_registry, а не на runtime PDF.
+    # Domain dataclass держит soft default="" для test-fixtures, которые
+    # конструируют Rule инлайн без UZ-перевода.
+    name_uz: str = ""
 
 
 class RuleRegistry:

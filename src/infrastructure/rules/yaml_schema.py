@@ -14,6 +14,10 @@ class RuleSpecYaml(BaseModel):
 
     id: str = Field(min_length=1)
     name: str = Field(min_length=1)
+    # T0.4 / ADR-0015: UZ-перевод name. Required (min_length=1) — banking-grade
+    # продукт не должен иметь fallback-to-empty semantics; новое правило без
+    # UZ-имени падает на load_registry, не на runtime в PDF.
+    name_uz: str = Field(min_length=1)
     category: str = Field(min_length=1)
     severity: FlagSeverity
     source: str = Field(min_length=1)

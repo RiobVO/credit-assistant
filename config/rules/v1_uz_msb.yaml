@@ -3,11 +3,14 @@ version: v1
 # 17 red-flag правил для МСБ-заёмщиков Узбекистана.
 # Severity weights калибруем после Phase 2 на реальных кейсах.
 # Источники: ЦБ РУз, НК РУз, Базель III, Group-IB UZ fraud reports.
+# T0.4 / ADR-0015: name_uz пока placeholder "[UZ-TBD] ..." — финальные
+# переводы прилетают отдельным коммитом после ревью владельцем фикстур.
 
 rules:
   # --- Структурные ---
   - id: DIRECTOR_CHANGED_6M
     name: "Смена директора за последние 6 месяцев"
+    name_uz: "[UZ-TBD] Смена директора за последние 6 месяцев"
     category: structural
     severity: medium
     source: "Group-IB Uzbekistan fraud report 2024-2025; внутренние методики банков"
@@ -16,6 +19,7 @@ rules:
 
   - id: OKVED_CHANGED_12M
     name: "Изменение основного ОКВЭД за последние 12 месяцев"
+    name_uz: "[UZ-TBD] Изменение основного ОКВЭД за последние 12 месяцев"
     category: structural
     severity: medium
     source: "Внутренние методики UZ-банков; Group-IB fraud patterns"
@@ -24,6 +28,7 @@ rules:
 
   - id: LOAN_TO_REVENUE_RATIO
     name: "Запрашиваемая сумма >50% годовой выручки"
+    name_uz: "[UZ-TBD] Запрашиваемая сумма >50% годовой выручки"
     category: structural
     severity: high
     source: "Внутренние методики UZ-банков; стандартная практика МСБ-кредитования"
@@ -33,6 +38,7 @@ rules:
   # --- Финансовые ---
   - id: REVENUE_DROP_MOM_30
     name: "Падение выручки >30% МоМ два месяца подряд"
+    name_uz: "[UZ-TBD] Падение выручки >30% МоМ два месяца подряд"
     category: financial
     severity: high
     source: "ЦБ РУз положение №27-п, п.4.5; Базель III IRB approach"
@@ -41,6 +47,7 @@ rules:
 
   - id: REVENUE_DROP_YOY_50
     name: "Падение годовой выручки >50% YoY"
+    name_uz: "[UZ-TBD] Падение годовой выручки >50% YoY"
     category: financial
     severity: high
     source: "ЦБ РУз положение №27-п; Базель III IRB approach"
@@ -49,6 +56,7 @@ rules:
 
   - id: NEGATIVE_PROFIT_3Q
     name: "Чистая прибыль ≤0 три квартала подряд"
+    name_uz: "[UZ-TBD] Чистая прибыль ≤0 три квартала подряд"
     category: financial
     severity: high
     source: "ЦБ РУз положение №27-п; стандартная практика МСБ-кредитования"
@@ -57,6 +65,7 @@ rules:
 
   - id: NEGATIVE_EQUITY
     name: "Отрицательный или нулевой собственный капитал"
+    name_uz: "[UZ-TBD] Отрицательный или нулевой собственный капитал"
     category: financial
     severity: critical
     source: "Базель III IRB (capital adequacy); внутренние методики банков-партнёров"
@@ -65,6 +74,7 @@ rules:
 
   - id: VAT_GROWTH_NO_REVENUE
     name: "Рост НДС-обязательств без роста выручки"
+    name_uz: "[UZ-TBD] Рост НДС-обязательств без роста выручки"
     category: financial
     severity: medium
     source: "НК РУз; внутренние методики Soliq + банковская практика"
@@ -73,6 +83,7 @@ rules:
 
   - id: VAT_ESF_MISMATCH
     name: "Разрыв декларация НДС vs ЭСФ >15%"
+    name_uz: "[UZ-TBD] Разрыв декларация НДС vs ЭСФ >15%"
     category: financial
     severity: critical
     source: "НК РУз ст. 256; Soliq внутренние методики"
@@ -81,6 +92,7 @@ rules:
 
   - id: LOW_MARGIN_HIGH_TURNOVER
     name: "Маржа <5% при годовой выручке >5 млрд сум"
+    name_uz: "[UZ-TBD] Маржа <5% при годовой выручке >5 млрд сум"
     category: financial
     severity: medium
     source: "Внутренние методики UZ-банков; стандартная МСБ-практика"
@@ -90,6 +102,7 @@ rules:
   # --- Платёжная дисциплина ---
   - id: TAX_PAYMENT_DELAYS
     name: "Задержки уплаты налогов >30 дней"
+    name_uz: "[UZ-TBD] Задержки уплаты налогов >30 дней"
     category: payment_discipline
     severity: medium
     source: "НК РУз; внутренние методики Soliq + банковская практика"
@@ -98,6 +111,7 @@ rules:
 
   - id: BANK_ACCOUNT_FROZEN_12M
     name: "Приостановка счёта Soliq за последние 12 месяцев"
+    name_uz: "[UZ-TBD] Приостановка счёта Soliq за последние 12 месяцев"
     category: payment_discipline
     severity: high
     source: "НК РУз; внутренние практики Soliq; банковский compliance"
@@ -106,6 +120,7 @@ rules:
 
   - id: TAX_PENALTIES_CURRENT_YEAR
     name: "Пеня по налогам в текущем календарном году"
+    name_uz: "[UZ-TBD] Пеня по налогам в текущем календарном году"
     category: payment_discipline
     severity: medium
     source: "НК РУз; банковская методика оценки платёжной дисциплины"
@@ -115,6 +130,7 @@ rules:
   # --- Контрагентные ---
   - id: SINGLE_BUYER_CONCENTRATION
     name: "Концентрация >70% выручки на одном покупателе"
+    name_uz: "[UZ-TBD] Концентрация >70% выручки на одном покупателе"
     category: counterparty
     severity: medium
     source: "Базель III concentration risk; внутренние методики Kapitalbank"
@@ -123,6 +139,7 @@ rules:
 
   - id: SINGLE_SUPPLIER_CONCENTRATION
     name: "Концентрация >60% закупок у одного поставщика"
+    name_uz: "[UZ-TBD] Концентрация >60% закупок у одного поставщика"
     category: counterparty
     severity: medium
     source: "Базель III concentration risk; supply-chain risk practice"
@@ -131,6 +148,7 @@ rules:
 
   - id: NEW_COUNTERPARTY_LARGE_SHARE
     name: "Новые контрагенты (<180 дней) дают >30% оборота"
+    name_uz: "[UZ-TBD] Новые контрагенты (<180 дней) дают >30% оборота"
     category: counterparty
     severity: high
     source: "Group-IB Uzbekistan fraud report 2024-2025"
@@ -139,6 +157,7 @@ rules:
 
   - id: SHELL_COMPANY_PARTNERS
     name: "Контрагенты с ИНН моложе 6 месяцев"
+    name_uz: "[UZ-TBD] Контрагенты с ИНН моложе 6 месяцев"
     category: counterparty
     severity: high
     source: "Group-IB Uzbekistan fraud report 2024-2025; AML compliance"
@@ -147,6 +166,7 @@ rules:
 
   - id: CIRCULAR_INVOICING
     name: "Циклические ЭСФ с контрагентами"
+    name_uz: "[UZ-TBD] Циклические ЭСФ с контрагентами"
     category: counterparty
     severity: high
     source: "Group-IB UZ fraud report 2024-2025; AML — накачивание оборота"
@@ -156,6 +176,7 @@ rules:
   # --- Meta (data-quality safeguards) ---
   - id: INSUFFICIENT_DATA
     name: "Недостаточно данных для оценки"
+    name_uz: "[UZ-TBD] Недостаточно данных для оценки"
     category: meta
     severity: high
     source: "Внутренняя политика: defensive default при пустом снапшоте"

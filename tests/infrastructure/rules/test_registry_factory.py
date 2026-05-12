@@ -41,6 +41,7 @@ class TestLoadRegistryMismatch:
             "rules:\n"
             "  - id: NOT_A_RULE\n"
             "    name: x\n"
+            "    name_uz: x\n"
             "    category: financial\n"
             "    severity: low\n"
             "    source: nope\n",
@@ -56,6 +57,7 @@ class TestLoadRegistryMismatch:
             "rules:\n"
             "  - id: DIRECTOR_CHANGED_6M\n"
             "    name: x\n"
+            "    name_uz: x\n"
             "    category: structural\n"
             "    severity: medium\n"
             "    source: src\n",
@@ -70,6 +72,7 @@ class TestLoadRegistryMismatch:
             "rules:\n"
             "  - id: DIRECTOR_CHANGED_6M\n"
             "    name: x\n"
+            "    name_uz: x\n"
             "    category: structural\n"
             "    severity: urgent\n"  # invalid
             "    source: src\n",
@@ -77,3 +80,32 @@ class TestLoadRegistryMismatch:
         )
         with pytest.raises(ValueError):
             load_registry(tmp_yaml)
+
+    def test_missing_name_uz_raises_validation_error(self, tmp_yaml: Path) -> None:
+        # T0.4 / ADR-0015: name_uz required (min_length=1) — fail-fast на load.
+        tmp_yaml.write_text(
+            "version: v1\n"
+            "rules:\n"
+            "  - id: DIRECTOR_CHANGED_6M\n"
+            "    name: x\n"
+            "    category: structural\n"
+            "    severity: medium\n"
+            "    source: src\n",
+            encoding="utf-8",
+        )
+        with pytest.raises(ValueError, match="name_uz"):
+            load_registry(tmp_yaml)
+
+
+class TestNameUzPropagation:
+    """T0.4 / ADR-0015: name_uz пробрасывается из YAML → Rule.name_uz."""
+
+    def test_name_uz_propagates_from_default_yaml(self) -> None:
+        registry = load_registry(DEFAULT_YAML)
+        # Placeholder pattern до финального ревью переводов.
+        for rule in registry.rules:
+            assert rule.name_uz, f"rule {rule.id} has empty name_uz"
+            assert rule.name_uz.startswith("[UZ-TBD] "), (
+                f"rule {rule.id} name_uz must currently be placeholder, "
+                f"got: {rule.name_uz!r}"
+            )
