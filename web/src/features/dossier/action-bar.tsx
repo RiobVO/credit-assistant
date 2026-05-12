@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { rememberStep1Prefill } from "@/features/manual-input/prefill";
 import type { DossierViewDto } from "@/lib/api";
-import { APP_MODE } from "@/lib/config";
+import { useAppMode } from "@/lib/use-app-mode";
 
 import { consumeBackTarget } from "./back-target";
 
@@ -15,7 +15,7 @@ type Props = {
 };
 
 const BUTTON_GHOST =
-  "inline-flex h-[38px] items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-4 text-[13.5px] font-semibold text-[var(--ink-2)] transition-colors hover:bg-[#FAFBFC]";
+  "inline-flex h-[38px] items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-4 text-[13.5px] font-semibold text-[var(--ink-2)] transition-colors hover:bg-[var(--surface-2)]";
 
 // CA-055: smart back (sessionStorage с /search или /history).
 // CA-056: «Пересобрать» — ведёт на /manual-input?inn=<INN>.
@@ -24,11 +24,12 @@ const BUTTON_GHOST =
 // аналитик заполняет заново, в этом и смысл «Пересобрать».
 export function ActionBar({ dossierId, borrower }: Props) {
   const router = useRouter();
+  const mode = useAppMode();
   const pdfHref = `/api/dossier/${dossierId}/pdf`;
   const rebuildHref = `/manual-input?inn=${encodeURIComponent(borrower.inn)}`;
 
   const handleBack = () => {
-    if (APP_MODE === "bank") {
+    if (mode === "bank") {
       const target = consumeBackTarget() ?? "/history";
       router.push(target);
       return;

@@ -6,8 +6,8 @@ import { Sidebar as AccountantSidebar } from "@/app/(accountant)/_components/sid
 import { APP_MODE } from "@/lib/config";
 
 // Shared dossier-layout: используется обоими режимами через `/dossier/[id]`.
-// Bank-mode получает новый shell (Sidebar dark navy + Topbar 60px breadcrumb),
-// accountant остаётся на legacy AccountantSidebar без topbar.
+// Server component → APP_MODE напрямую (useAppMode hook применяется
+// только в client components, см. ADR-0011 + CA-061).
 export default function DossierLayout({ children }: { children: ReactNode }) {
   const isBank = APP_MODE === "bank";
   const SidebarComponent = isBank ? BankSidebar : AccountantSidebar;

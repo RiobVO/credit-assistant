@@ -4,30 +4,29 @@ import { AlertCircle, ArrowLeft, RefreshCw } from "lucide-react";
 import Link from "next/link";
 
 import { ApiError } from "@/lib/api";
-import { APP_MODE } from "@/lib/config";
 
 // Экран ошибки: отдельная разводка для 404 и для остального (network/500).
-// Back-link зависит от режима (история в bank, форма в accountant).
-
-const BACK =
-  APP_MODE === "bank"
-    ? { href: "/history", label: "К истории" }
-    : { href: "/manual-input", label: "К форме" };
+// Back-link приходит сверху (см. dossier/[id]/layout.tsx) — фича не знает
+// про режим, это решение принимает page-level shell (ADR-0011 CA-061).
 
 export function DossierError({
   error,
   onRetry,
+  backHref,
+  backLabel,
 }: {
   dossierId: string;
   error: unknown;
   onRetry: () => void;
+  backHref: string;
+  backLabel: string;
 }) {
   const isNotFound = error instanceof ApiError && error.status === 404;
 
   return (
     <div className="mx-auto w-full max-w-[760px] px-8 pt-16 pb-12">
         <div className="rounded-[10px] border border-[var(--border)] bg-[var(--surface)] p-10 text-center shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
-          <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-[#FCE7E5] text-[var(--state-bad-fg)]">
+          <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-[var(--state-bad-bg)] text-[var(--state-bad-fg)]">
             <AlertCircle className="size-6" />
           </div>
 
@@ -42,11 +41,11 @@ export function DossierError({
 
           <div className="mt-6 flex flex-wrap justify-center gap-2">
             <Link
-              href={BACK.href}
-              className="inline-flex items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-[13px] font-medium text-[var(--ink-2)] transition-colors hover:bg-[#FAFBFC]"
+              href={backHref}
+              className="inline-flex items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-[13px] font-medium text-[var(--ink-2)] transition-colors hover:bg-[var(--surface-2)]"
             >
               <ArrowLeft className="size-4" />
-              {BACK.label}
+              {backLabel}
             </Link>
             {!isNotFound && (
               <button
