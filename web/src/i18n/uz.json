@@ -35,6 +35,13 @@
       "back_to_search": "Qidiruvga",
       "back_to_history": "Tarixga"
     },
+    "sidebar": {
+      "workspace": "Ish maydoni",
+      "help_section": "Yordam",
+      "logout_aria": "Chiqish",
+      "role_senior": "Katta analitik",
+      "role_analyst": "Kredit analitigi"
+    },
     "history": {
       "title": "Dosye tarixi",
       "empty": "Bu yerda avval yig'ilgan dosyelar ro'yxati bo'ladi"
