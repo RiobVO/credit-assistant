@@ -31,6 +31,7 @@ import { type FormValues, type Step1Values } from "../schema";
 
 import { DatePicker } from "./date-picker";
 import { Field, FieldInput } from "./field";
+import { GnkCertificateUpload } from "./gnk-certificate-upload";
 
 // Phase 6 Step 1 design statement: section-card в стиле Phase 4 (leading
 // icon-tile + counter), ИНН 3-state (idle/checking/verified) с mock GNK
@@ -267,6 +268,15 @@ export function Step1Borrower() {
             invalid={Boolean(addrErr)}
           />
         </Field>
+
+        {/* T0.3: ГНК-справка (manual upload, Phase A, CA-003). Optional —
+            показывается только когда ИНН валиден (9 цифр). Не блокирует submit. */}
+        <div className="md:col-span-2">
+          <GnkCertificateUpload
+            inn={(step1?.inn ?? "").replace(/\D/g, "")}
+            innValid={(step1?.inn ?? "").replace(/\D/g, "").length === 9}
+          />
+        </div>
       </div>
     </section>
   );

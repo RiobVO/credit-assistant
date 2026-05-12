@@ -315,6 +315,76 @@ export async function getUsdRate(): Promise<UsdRateDto> {
   return jsonFetch<UsdRateDto>("/api/system/usd-rate", { method: "GET" });
 }
 
+// T0.3: ГНК-справка (manual upload Phase A, CA-003). Бэкенд: shared/gnk_certificate.py.
+// Multipart upload — bypass jsonFetch (он ставит application/json content-type).
+export type GnkStatus = "active" | "suspended" | "revoked" | "unknown";
+export type GnkSource = "uploaded" | "gnk_live" | "gnk_cached" | "fallback";
+
+export type GnkCertificateDto = {
+  file_id: string | null;
+  borrower_inn: string;
+  full_name: string;
+  status: GnkStatus;
+  okveds: string[];
+  source: GnkSource;
+  cert_id: string | null;
+  uploaded_at: string | null;
+  uploaded_by_analyst_id: string | null;
+};
+
+export type GnkUploadInput = {
+  inn: string;
+  file: File;
+  fullName: string;
+  status: GnkStatus;
+  okveds: string[];
+  certId?: string | null;
+};
+
+export async function uploadGnkCertificate(
+  input: GnkUploadInput,
+): Promise<GnkCertificateDto> {
+  const fd = new FormData();
+  fd.append("file", input.file, input.file.name);
+  fd.append("full_name", input.fullName);
+  fd.append("cert_status", input.status);
+  fd.append("okveds", input.okveds.join(","));
+  if (input.certId) fd.append("cert_id", input.certId);
+  const r = await fetch(
+    `/api/borrowers/${encodeURIComponent(input.inn)}/gnk-certificate`,
+    { method: "POST", body: fd },
+  );
+  if (!r.ok) {
+    let body: ApiErrorBody | string;
+    try {
+      body = (await r.json()) as ApiErrorBody;
+    } catch {
+      body = await r.text();
+    }
+    throw new ApiError(r.status, body);
+  }
+  return (await r.json()) as GnkCertificateDto;
+}
+
+export async function getGnkCertificate(
+  inn: string,
+): Promise<GnkCertificateDto | null> {
+  const r = await fetch(
+    `/api/borrowers/${encodeURIComponent(inn)}/gnk-certificate`,
+  );
+  if (r.status === 404) return null;
+  if (!r.ok) {
+    let body: ApiErrorBody | string;
+    try {
+      body = (await r.json()) as ApiErrorBody;
+    } catch {
+      body = await r.text();
+    }
+    throw new ApiError(r.status, body);
+  }
+  return (await r.json()) as GnkCertificateDto;
+}
+
 export async function uploadSoliqXltx(args: {
   files: File[]; // ровно два файла: декларация + ilova (любой порядок)
   borrowerInn: string;
