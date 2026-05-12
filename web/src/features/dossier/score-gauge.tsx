@@ -7,10 +7,10 @@ import type { Recommendation } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 const SECTORS = [
-  { from: 180, to: 135, color: "#B42318" }, // red — 0–25
-  { from: 135, to: 90, color: "#E07A2A" }, // orange — 25–50
-  { from: 90, to: 45, color: "#D4A815" }, // yellow — 50–75
-  { from: 45, to: 0, color: "#0F8A5F" }, // green — 75–100
+  { from: 180, to: 135, color: "var(--chart-red)" }, // red — 0–25
+  { from: 135, to: 90, color: "var(--chart-orange)" }, // orange — 25–50
+  { from: 90, to: 45, color: "var(--chart-yellow)" }, // yellow — 50–75
+  { from: 45, to: 0, color: "var(--chart-green)" }, // green — 75–100
 ] as const;
 
 const RECOMMENDATION_LABEL: Record<Recommendation, string> = {
@@ -20,9 +20,12 @@ const RECOMMENDATION_LABEL: Record<Recommendation, string> = {
 };
 
 const RECOMMENDATION_TONE: Record<Recommendation, string> = {
-  approve: "border-[#BFE2D2] bg-[var(--state-ok-bg)] text-[var(--state-ok-fg)]",
-  review: "border-[#F1D9A6] bg-[#FFF6E5] text-[var(--state-warn-fg)]",
-  reject: "border-[#F2BCBA] bg-[#FCE7E5] text-[var(--state-bad-fg)]",
+  approve:
+    "border-[var(--state-ok-border)] bg-[var(--state-ok-bg)] text-[var(--state-ok-fg)]",
+  review:
+    "border-[var(--state-warn-border)] bg-[var(--state-warn-bg)] text-[var(--state-warn-fg)]",
+  reject:
+    "border-[var(--state-bad-border)] bg-[var(--state-bad-bg)] text-[var(--state-bad-fg)]",
 };
 
 export function ScoreGauge({
@@ -62,12 +65,12 @@ export function ScoreGauge({
             y1={115}
             x2={110}
             y2={37}
-            stroke="#0E1525"
+            stroke="var(--ink-1)"
             strokeWidth={3}
             strokeLinecap="round"
             transform={`rotate(${needleRotation} 110 115)`}
           />
-          <circle cx={110} cy={115} r={6} fill="#0E1525" />
+          <circle cx={110} cy={115} r={6} fill="var(--ink-1)" />
         </svg>
 
         <div className="mt-3 flex items-baseline gap-1.5">
