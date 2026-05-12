@@ -13,9 +13,10 @@ Borrower не входит в payload — он хранится отдельно
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Any, cast
+from uuid import UUID
 
 from domain.entities.borrower import Borrower
 from domain.entities.borrower_snapshot import BorrowerSnapshot
@@ -27,6 +28,11 @@ from domain.entities.tax_event import TaxEvent, TaxEventType
 from domain.entities.vat_period_report import VatPeriodReport
 from domain.value_objects.balance_snapshot import BalanceSnapshot
 from domain.value_objects.date_range import DateRange
+from domain.value_objects.gnk_certificate import (
+    GnkCertificate,
+    GnkSource,
+    GnkStatus,
+)
 from domain.value_objects.inn import INN
 from domain.value_objects.loan_request import LoanRequest
 from domain.value_objects.money import Currency, Money
@@ -238,6 +244,52 @@ def _vat_period_from_dict(d: dict[str, Any]) -> VatPeriodReport:
     )
 
 
+def _gnk_certificate_to_dict(cert: GnkCertificate | None) -> dict[str, Any] | None:
+    """T0.3: только metadata в snapshot — file_bytes остаётся в gnk_certificates
+    table, ссылаемся по ``file_id`` (UUID). Снимок не разрастается на 5MB BYTEA."""
+    if cert is None:
+        return None
+    return {
+        "borrower_inn": cert.borrower_inn.value,
+        "full_name": cert.full_name,
+        "status": cert.status,
+        "okveds": list(cert.okveds),
+        "source": cert.source,
+        "cert_id": cert.cert_id,
+        "uploaded_at": cert.uploaded_at.isoformat() if cert.uploaded_at else None,
+        "uploaded_by_analyst_id": (
+            str(cert.uploaded_by_analyst_id) if cert.uploaded_by_analyst_id else None
+        ),
+        "file_id": str(cert.file_id) if cert.file_id else None,
+    }
+
+
+def _gnk_certificate_from_dict(d: dict[str, Any] | None) -> GnkCertificate | None:
+    if d is None:
+        return None
+    status_raw = d["status"]
+    status: GnkStatus = (
+        status_raw if status_raw in ("active", "suspended", "revoked", "unknown") else "unknown"
+    )
+    source_raw = d.get("source", "uploaded")
+    _valid_sources = ("uploaded", "gnk_live", "gnk_cached", "fallback")
+    source: GnkSource = source_raw if source_raw in _valid_sources else "uploaded"
+    uploaded_at_raw = d.get("uploaded_at")
+    analyst_id_raw = d.get("uploaded_by_analyst_id")
+    file_id_raw = d.get("file_id")
+    return GnkCertificate(
+        borrower_inn=INN(d["borrower_inn"]),
+        full_name=d["full_name"],
+        status=status,
+        okveds=list(d.get("okveds", [])),
+        source=source,
+        cert_id=d.get("cert_id"),
+        uploaded_at=datetime.fromisoformat(uploaded_at_raw) if uploaded_at_raw else None,
+        uploaded_by_analyst_id=UUID(analyst_id_raw) if analyst_id_raw else None,
+        file_id=UUID(file_id_raw) if file_id_raw else None,
+    )
+
+
 def snapshot_to_payload(snapshot: BorrowerSnapshot) -> dict[str, Any]:
     """Сериализует snapshot в JSONB-совместимый dict (без borrower)."""
     return {
@@ -259,6 +311,7 @@ def snapshot_to_payload(snapshot: BorrowerSnapshot) -> dict[str, Any]:
         "tax_events": [_tax_event_to_dict(t) for t in snapshot.tax_events],
         "vat_periods": [_vat_period_to_dict(p) for p in snapshot.vat_periods],
         "loan_request": _loan_request_to_dict(snapshot.loan_request),
+        "gnk_certificate": _gnk_certificate_to_dict(snapshot.gnk_certificate),
     }
 
 
@@ -291,4 +344,5 @@ def snapshot_from_payload(payload: dict[str, Any], borrower: Borrower) -> Borrow
         tax_events=[_tax_event_from_dict(d) for d in payload["tax_events"]],
         vat_periods=[_vat_period_from_dict(d) for d in payload.get("vat_periods", [])],
         loan_request=_loan_request_from_dict(payload.get("loan_request")),
+        gnk_certificate=_gnk_certificate_from_dict(payload.get("gnk_certificate")),
     )

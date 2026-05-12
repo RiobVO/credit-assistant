@@ -15,6 +15,7 @@ from domain.entities.invoice import Invoice
 from domain.entities.monthly_turnover import MonthlyTurnover
 from domain.entities.tax_event import TaxEvent
 from domain.entities.vat_period_report import VatPeriodReport
+from domain.value_objects.gnk_certificate import GnkCertificate
 from domain.value_objects.loan_request import LoanRequest
 
 
@@ -42,3 +43,8 @@ class BorrowerSnapshot:
     vat_periods: list[VatPeriodReport] = field(default_factory=list)
 
     loan_request: LoanRequest | None = None
+
+    # ГНК-справка о статусе плательщика НДС. Phase A (T0.3) — manual upload
+    # аналитиком; Phase B (CA-DS28) — automatic fetch с soliq.uz после legal
+    # review. None если не подгружена.
+    gnk_certificate: GnkCertificate | None = None

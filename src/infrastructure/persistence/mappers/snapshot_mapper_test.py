@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import json
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
+from uuid import UUID
 
 from domain.entities.borrower import Borrower, LegalForm
 from domain.entities.borrower_snapshot import BorrowerSnapshot
@@ -16,6 +17,7 @@ from domain.entities.tax_event import TaxEvent, TaxEventType
 from domain.entities.vat_period_report import VatPeriodReport
 from domain.value_objects.balance_snapshot import BalanceSnapshot
 from domain.value_objects.date_range import DateRange
+from domain.value_objects.gnk_certificate import GnkCertificate
 from domain.value_objects.inn import INN
 from domain.value_objects.loan_request import LoanRequest
 from domain.value_objects.money import Currency, Money
@@ -275,3 +277,47 @@ def test_snapshot_decimal_precision_preserved() -> None:
     payload = snapshot_to_payload(original)
     restored = snapshot_from_payload(payload, original.borrower)
     assert restored.buyer_revenue_share == original.buyer_revenue_share
+
+
+def test_snapshot_gnk_certificate_round_trip() -> None:
+    """T0.3: gnk_certificate сериализуется в JSONB и восстанавливается без потерь.
+    file_bytes остаётся в gnk_certificates table — снапшот хранит только metadata
+    + file_id ссылку (UUID)."""
+    cert = GnkCertificate(
+        borrower_inn=INN("305002665"),
+        full_name='"ZAMIN NOZ NEMATLARI" MCHJ',
+        status="active",
+        okveds=["47.11", "47.19"],
+        source="uploaded",
+        cert_id="GNK-2026-12345",
+        uploaded_at=datetime(2026, 5, 17, 22, 30, 0),
+        uploaded_by_analyst_id=UUID("11111111-2222-3333-4444-555555555555"),
+        file_id=UUID("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"),
+    )
+    original = BorrowerSnapshot(
+        borrower=_borrower(),
+        as_of=date(2026, 5, 8),
+        gnk_certificate=cert,
+    )
+    payload = snapshot_to_payload(original)
+    # JSON-сериализуем — должен пройти без TypeError.
+    json.dumps(payload)
+    restored = snapshot_from_payload(payload, original.borrower)
+    assert restored.gnk_certificate == cert
+
+
+def test_snapshot_gnk_certificate_optional_none_round_trip() -> None:
+    original = BorrowerSnapshot(borrower=_borrower(), as_of=date(2026, 5, 8))
+    payload = snapshot_to_payload(original)
+    assert payload["gnk_certificate"] is None
+    restored = snapshot_from_payload(payload, original.borrower)
+    assert restored.gnk_certificate is None
+
+
+def test_snapshot_legacy_payload_without_gnk_certificate_loads() -> None:
+    """Существующие JSONB-записи (до T0.3) не содержат ключ gnk_certificate —
+    from_payload должен мягко вернуть None."""
+    payload = snapshot_to_payload(BorrowerSnapshot(borrower=_borrower(), as_of=date(2026, 5, 8)))
+    del payload["gnk_certificate"]
+    restored = snapshot_from_payload(payload, _borrower())
+    assert restored.gnk_certificate is None
