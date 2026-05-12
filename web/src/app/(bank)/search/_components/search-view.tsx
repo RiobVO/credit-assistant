@@ -87,6 +87,7 @@ export function SearchView() {
 
   useEffect(() => {
     rememberBackTarget("/search");
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage post-mount load; init со SSR [] для избежания hydration-mismatch
     setRecent(loadRecent());
   }, []);
 
