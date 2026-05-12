@@ -33,14 +33,14 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
       className={cn(
         "flex items-center gap-3 rounded-md px-[10px] py-2 text-[14px] font-medium transition-colors",
         active
-          ? "bg-[var(--ub-nav-active-bg)] text-white"
-          : "text-[var(--ub-nav-text-2)] hover:bg-[var(--ub-nav-bg-hover)] hover:text-[var(--ub-nav-text)]",
+          ? "bg-[var(--nav-bg-hover)] text-white"
+          : "text-[var(--nav-text-2)] hover:bg-[var(--nav-bg-hover)] hover:text-[var(--nav-text)]",
       )}
     >
       <span className="flex shrink-0 items-center">{item.icon}</span>
       <span className="truncate">{item.label}</span>
       {item.count != null ? (
-        <span className="ml-auto rounded-full bg-white/[0.08] px-[6px] py-px text-[11px] font-medium text-[var(--ub-nav-text-2)]">
+        <span className="ml-auto rounded-full bg-white/[0.08] px-[6px] py-px text-[11px] font-medium text-[var(--nav-text-2)]">
           {item.count}
         </span>
       ) : null}
@@ -74,9 +74,9 @@ export function BankSidebar() {
   };
 
   return (
-    <aside className="sticky top-0 flex h-screen flex-col border-r border-[var(--ub-nav-border)] bg-[var(--ub-nav-bg)] text-[var(--ub-nav-text)]">
+    <aside className="sticky top-0 flex h-screen flex-col border-r border-[var(--nav-border)] bg-[var(--nav-bg)] text-[var(--nav-text)]">
       {/* Brand */}
-      <div className="flex items-center gap-[10px] border-b border-[var(--ub-nav-border)] px-5 pt-[18px] pb-4">
+      <div className="flex items-center gap-[10px] border-b border-[var(--nav-border)] px-5 pt-[18px] pb-4">
         <div className="grid size-7 shrink-0 place-items-center rounded-md bg-gradient-to-br from-[#D88E73] to-[#B5624A] text-[13px] font-bold tracking-[-0.02em] text-white">
           UB
         </div>
@@ -84,7 +84,7 @@ export function BankSidebar() {
           <div className="truncate text-[14px] font-semibold tracking-[-0.01em] text-white">
             Uzbekbank Credit
           </div>
-          <div className="mt-0.5 text-[11px] tracking-[0.02em] text-[var(--ub-nav-text-3)]">
+          <div className="mt-0.5 text-[11px] tracking-[0.02em] text-[var(--nav-text-3)]">
             Bank Mode · Андижон
           </div>
         </div>
@@ -94,7 +94,7 @@ export function BankSidebar() {
       <div className="px-3 pt-4">
         <Link
           href="/manual-input"
-          className="flex items-center justify-center gap-2 rounded-md bg-[var(--ub-accent)] px-3 py-[10px] text-[13.5px] font-semibold text-white shadow-sm transition-colors hover:bg-[var(--ub-accent-hover)]"
+          className="flex items-center justify-center gap-2 rounded-md bg-[var(--brand-primary)] px-3 py-[10px] text-[13.5px] font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-primary-hover)]"
         >
           <Plus className="size-4" />
           Новая заявка
@@ -103,7 +103,7 @@ export function BankSidebar() {
 
       {/* Primary nav — «Рабочее пространство» */}
       <div className="px-3 pt-5 pb-2">
-        <div className="px-3 pb-2 text-[10.5px] font-semibold tracking-[0.1em] text-[var(--ub-nav-text-3)] uppercase">
+        <div className="px-3 pb-2 text-[10.5px] font-semibold tracking-[0.1em] text-[var(--nav-text-3)] uppercase">
           Рабочее пространство
         </div>
         <nav className="flex flex-col gap-px">
@@ -119,7 +119,7 @@ export function BankSidebar() {
 
       {/* Secondary nav — «Помощь» (внизу) */}
       <div className="mt-auto px-3 pb-2">
-        <div className="px-3 pb-2 text-[10.5px] font-semibold tracking-[0.1em] text-[var(--ub-nav-text-3)] uppercase">
+        <div className="px-3 pb-2 text-[10.5px] font-semibold tracking-[0.1em] text-[var(--nav-text-3)] uppercase">
           Помощь
         </div>
         <nav className="flex flex-col gap-px">
@@ -134,7 +134,7 @@ export function BankSidebar() {
       </div>
 
       {/* User card */}
-      <div className="flex items-center gap-3 border-t border-[var(--ub-nav-border)] p-4">
+      <div className="flex items-center gap-3 border-t border-[var(--nav-border)] p-4">
         <div className="grid size-8 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#D88E73] to-[#B5624A] text-[12px] font-semibold text-white">
           {analyst ? initials(analyst.full_name) : "—"}
         </div>
@@ -142,7 +142,7 @@ export function BankSidebar() {
           <div className="truncate text-[13px] font-medium leading-tight text-white">
             {analyst?.full_name ?? "—"}
           </div>
-          <div className="mt-0.5 truncate text-[11px] text-[var(--ub-nav-text-3)]">
+          <div className="mt-0.5 truncate text-[11px] text-[var(--nav-text-3)]">
             {roleLabel(analyst?.role)}
           </div>
         </div>
@@ -152,7 +152,7 @@ export function BankSidebar() {
           disabled={logout.isPending}
           aria-label="Выйти"
           title="Выйти"
-          className="grid size-7 shrink-0 place-items-center rounded text-[var(--ub-nav-text-3)] transition-colors hover:bg-[var(--ub-nav-bg-hover)] hover:text-[var(--ub-nav-text)] disabled:cursor-wait disabled:opacity-60"
+          className="grid size-7 shrink-0 place-items-center rounded text-[var(--nav-text-3)] transition-colors hover:bg-[var(--nav-bg-hover)] hover:text-[var(--nav-text)] disabled:cursor-wait disabled:opacity-60"
         >
           <LogOut className="size-4" />
         </button>

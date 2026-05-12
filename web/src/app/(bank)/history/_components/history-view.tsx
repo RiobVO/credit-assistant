@@ -170,14 +170,14 @@ export function HistoryView() {
                 )
               }
               disabled={visibleItems.length === 0}
-              className="inline-flex h-9 items-center gap-2 rounded-md border border-[var(--ub-hairline)] bg-[var(--ub-surface)] px-3 text-[13px] font-medium text-[var(--ub-ink)] transition-colors hover:bg-[var(--ub-surface-2)] disabled:cursor-not-allowed disabled:opacity-55"
+              className="inline-flex h-9 items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-[13px] font-medium text-[var(--ink-1)] transition-colors hover:bg-[var(--surface-2)] disabled:cursor-not-allowed disabled:opacity-55"
             >
               <Download className="size-3.5" />
               Экспорт
             </button>
             <Link
               href="/manual-input"
-              className="inline-flex h-9 items-center gap-2 rounded-md bg-[var(--ub-accent)] px-3 text-[13px] font-semibold text-white transition-colors hover:bg-[var(--ub-accent-hover)]"
+              className="inline-flex h-9 items-center gap-2 rounded-md bg-[var(--brand-primary)] px-3 text-[13px] font-semibold text-white transition-colors hover:bg-[var(--brand-primary-hover)]"
             >
               <Plus className="size-3.5" />
               Новая заявка
@@ -210,7 +210,7 @@ export function HistoryView() {
         }}
       />
 
-      <section className="overflow-hidden rounded-lg border border-[var(--ub-hairline)] bg-[var(--ub-surface)]">
+      <section className="overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface)]">
         {main.isLoading ? (
           <SkeletonRows />
         ) : main.isError ? (
@@ -264,7 +264,7 @@ function Tabs({
       { key: "all", label: "Все", count: allCount },
     ];
   return (
-    <div className="mb-5 inline-flex gap-0 rounded-md bg-[var(--ub-surface-3)] p-[3px]">
+    <div className="mb-5 inline-flex gap-0 rounded-md bg-[var(--surface-3)] p-[3px]">
       {items.map((it) => {
         const active = value === it.key;
         return (
@@ -275,8 +275,8 @@ function Tabs({
             className={cn(
               "inline-flex items-center gap-1.5 rounded-[4px] px-3.5 py-1.5 text-[14px] font-medium transition-colors",
               active
-                ? "bg-white text-[var(--ub-ink)] shadow-[0_1px_1px_rgba(15,23,42,0.04)]"
-                : "text-[var(--ub-ink-2)] hover:text-[var(--ub-ink)]",
+                ? "bg-white text-[var(--ink-1)] shadow-[0_1px_1px_rgba(15,23,42,0.04)]"
+                : "text-[var(--ink-2)] hover:text-[var(--ink-1)]",
             )}
           >
             {it.label}
@@ -285,8 +285,8 @@ function Tabs({
                 className={cn(
                   "rounded px-1.5 py-px text-[11px]",
                   active
-                    ? "bg-[var(--ub-surface-2)] text-[var(--ub-ink-3)]"
-                    : "bg-[var(--ub-surface-3)] text-[var(--ub-ink-3)]",
+                    ? "bg-[var(--surface-2)] text-[var(--ink-3)]"
+                    : "bg-[var(--surface-3)] text-[var(--ink-3)]",
                 )}
               >
                 {it.count}
@@ -320,20 +320,20 @@ function Toolbar({
     <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
       <form onSubmit={onSubmit} className="flex-1" style={{ maxWidth: 480 }}>
         <div className="relative flex items-center">
-          <Search className="pointer-events-none absolute left-3 size-4 text-[var(--ub-ink-4)]" />
+          <Search className="pointer-events-none absolute left-3 size-4 text-[var(--ink-4)]" />
           <input
             type="search"
             placeholder="Поиск по ИНН или названию компании"
             value={q}
             onChange={(e) => onQ(e.target.value)}
-            className="h-[38px] w-full rounded-md border border-[var(--ub-hairline)] bg-[var(--ub-surface)] px-9 text-[14px] text-[var(--ub-ink)] outline-none transition-colors placeholder:text-[var(--ub-ink-4)] focus:border-[var(--ub-accent)] focus:shadow-[0_0_0_3px_var(--ub-accent-ring)]"
+            className="h-[38px] w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-9 text-[14px] text-[var(--ink-1)] outline-none transition-colors placeholder:text-[var(--ink-4)] focus:border-[var(--brand-primary)] focus:shadow-[0_0_0_3px_var(--brand-primary-ring)]"
           />
           {q ? (
             <button
               type="button"
               onClick={() => onQ("")}
               aria-label="Очистить"
-              className="absolute right-2 grid size-[22px] place-items-center rounded text-[var(--ub-ink-4)] hover:bg-[var(--ub-surface-2)] hover:text-[var(--ub-ink-2)]"
+              className="absolute right-2 grid size-[22px] place-items-center rounded text-[var(--ink-4)] hover:bg-[var(--surface-2)] hover:text-[var(--ink-2)]"
             >
               <X className="size-3.5" />
             </button>
@@ -367,9 +367,9 @@ function Toolbar({
         <button
           type="button"
           title="Дополнительные фильтры"
-          className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[var(--ub-hairline)] bg-[var(--ub-surface)] px-2.5 text-[13px] text-[var(--ub-ink-2)] transition-colors hover:bg-[var(--ub-surface-2)] hover:text-[var(--ub-ink)]"
+          className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2.5 text-[13px] text-[var(--ink-2)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--ink-1)]"
         >
-          <Filter className="size-3.5 text-[var(--ub-ink-4)]" />
+          <Filter className="size-3.5 text-[var(--ink-4)]" />
           Ещё
         </button>
       </div>
@@ -390,10 +390,10 @@ function FilterSelect({
 }) {
   const current = options.find((o) => o.v === value) ?? options[0];
   return (
-    <label className="relative inline-flex h-8 items-center gap-1.5 rounded-md border border-[var(--ub-hairline)] bg-[var(--ub-surface)] px-2.5 text-[13px] text-[var(--ub-ink-2)] transition-colors hover:bg-[var(--ub-surface-2)] hover:text-[var(--ub-ink)]">
-      <span className="text-[12px] text-[var(--ub-ink-3)]">{label}:</span>
-      <span className="text-[var(--ub-ink)]">{current?.l ?? ""}</span>
-      <ChevronDown className="size-3.5 text-[var(--ub-ink-4)]" />
+    <label className="relative inline-flex h-8 items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2.5 text-[13px] text-[var(--ink-2)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--ink-1)]">
+      <span className="text-[12px] text-[var(--ink-3)]">{label}:</span>
+      <span className="text-[var(--ink-1)]">{current?.l ?? ""}</span>
+      <ChevronDown className="size-3.5 text-[var(--ink-4)]" />
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -446,7 +446,7 @@ function Th({ children, width }: { children?: React.ReactNode; width?: number })
   return (
     <th
       style={width ? { width } : undefined}
-      className="border-b border-[var(--ub-hairline)] bg-[var(--ub-surface-2)] px-4 py-2.5 text-left text-[12px] font-medium tracking-[0.01em] whitespace-nowrap text-[var(--ub-ink-3)]"
+      className="border-b border-[var(--border)] bg-[var(--surface-2)] px-4 py-2.5 text-left text-[12px] font-medium tracking-[0.01em] whitespace-nowrap text-[var(--ink-3)]"
     >
       {children}
     </th>
@@ -463,12 +463,12 @@ function Row({
   return (
     <tr
       onClick={onClick}
-      className="cursor-pointer border-b border-[var(--ub-hairline-soft)] transition-colors last:border-b-0 hover:bg-[var(--ub-surface-2)]"
+      className="cursor-pointer border-b border-[var(--border)] transition-colors last:border-b-0 hover:bg-[var(--surface-2)]"
     >
-      <td className="px-4 py-3.5 font-mono tabular-nums text-[13px] text-[var(--ub-ink)]">
+      <td className="px-4 py-3.5 font-mono tabular-nums text-[13px] text-[var(--ink-1)]">
         {item.borrower_inn_masked}
       </td>
-      <td className="px-4 py-3.5 font-medium text-[var(--ub-ink)]">
+      <td className="px-4 py-3.5 font-medium text-[var(--ink-1)]">
         {item.borrower_name}
       </td>
       <td className="px-4 py-3.5">
@@ -477,7 +477,7 @@ function Row({
       <td className="px-4 py-3.5">
         <RecBadge rec={item.recommendation} />
       </td>
-      <td className="px-4 py-3.5 text-[13px] text-[var(--ub-ink-3)]">
+      <td className="px-4 py-3.5 text-[13px] text-[var(--ink-3)]">
         {formatRuDate(item.created_at)}
       </td>
       <td className="px-4 py-3.5">
@@ -491,7 +491,7 @@ function Row({
             e.stopPropagation();
             // TODO: контекстное меню (открыть, дублировать, экспортировать)
           }}
-          className="grid size-7 place-items-center rounded text-[var(--ub-ink-3)] hover:bg-[var(--ub-surface-3)] hover:text-[var(--ub-ink)]"
+          className="grid size-7 place-items-center rounded text-[var(--ink-3)] hover:bg-[var(--surface-3)] hover:text-[var(--ink-1)]"
         >
           <MoreHorizontal className="size-4" />
         </button>
@@ -509,10 +509,10 @@ function ScoreBar({ score }: { score: number }) {
   };
   return (
     <span className="inline-flex items-center gap-2.5 tabular-nums">
-      <span className="min-w-[28px] font-semibold text-[var(--ub-ink)]">
+      <span className="min-w-[28px] font-semibold text-[var(--ink-1)]">
         {score}
       </span>
-      <span className="block h-1 w-24 overflow-hidden rounded-full bg-[var(--ub-surface-3)]">
+      <span className="block h-1 w-24 overflow-hidden rounded-full bg-[var(--surface-3)]">
         <span
           className="block h-full rounded-full"
           style={{
@@ -528,9 +528,9 @@ function ScoreBar({ score }: { score: number }) {
 function RecBadge({ rec }: { rec: BankDossierListItem["recommendation"] }) {
   const band = recommendationBand(rec);
   const colors: Record<"good" | "warn" | "bad", { fg: string; bg: string }> = {
-    good: { fg: "var(--ub-ok-fg)", bg: "var(--ub-ok-bg)" },
-    warn: { fg: "var(--ub-warn-fg)", bg: "var(--ub-warn-bg)" },
-    bad: { fg: "var(--ub-bad-fg)", bg: "var(--ub-bad-bg)" },
+    good: { fg: "var(--state-ok-fg)", bg: "var(--state-ok-bg)" },
+    warn: { fg: "var(--state-warn-fg)", bg: "var(--state-warn-bg)" },
+    bad: { fg: "var(--state-bad-fg)", bg: "var(--state-bad-bg)" },
   };
   const c = colors[band];
   return (
@@ -550,14 +550,14 @@ function RecBadge({ rec }: { rec: BankDossierListItem["recommendation"] }) {
 
 function AnalystCell({ name }: { name: string | null }) {
   if (!name) {
-    return <span className="text-[13px] text-[var(--ub-ink-4)]">—</span>;
+    return <span className="text-[13px] text-[var(--ink-4)]">—</span>;
   }
   return (
     <span className="inline-flex items-center gap-2">
       <span className="grid size-[22px] shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#D88E73] to-[#B5624A] text-[10px] font-semibold text-white">
         {initials(name)}
       </span>
-      <span className="text-[13px] text-[var(--ub-ink)]">{name}</span>
+      <span className="text-[13px] text-[var(--ink-1)]">{name}</span>
     </span>
   );
 }
@@ -577,10 +577,10 @@ function Pagination({
 }) {
   const pages = pageNumbers(page, totalPages);
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--ub-hairline)] bg-[var(--ub-surface)] px-4 py-3 text-[13px] text-[var(--ub-ink-3)]">
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-[13px] text-[var(--ink-3)]">
       <span>
-        Показано <b className="text-[var(--ub-ink)]">{shownCount}</b> из{" "}
-        <b className="text-[var(--ub-ink)]">{apiTotal}</b>
+        Показано <b className="text-[var(--ink-1)]">{shownCount}</b> из{" "}
+        <b className="text-[var(--ink-1)]">{apiTotal}</b>
       </span>
       <div className="flex items-center gap-1">
         <PageBtn
@@ -594,7 +594,7 @@ function Pagination({
           p === "gap" ? (
             <span
               key={`gap-${i}`}
-              className="px-1.5 text-[var(--ub-ink-4)]"
+              className="px-1.5 text-[var(--ink-4)]"
             >
               …
             </span>
@@ -640,8 +640,8 @@ function PageBtn({
       className={cn(
         "inline-flex h-7 min-w-[28px] items-center justify-center rounded px-2 text-[13px] font-medium tabular-nums transition-colors",
         active
-          ? "bg-[var(--ub-ink)] text-white hover:bg-[var(--ub-ink)]"
-          : "bg-transparent text-[var(--ub-ink-2)] hover:bg-[var(--ub-surface-2)] hover:text-[var(--ub-ink)]",
+          ? "bg-[var(--ink-1)] text-white hover:bg-[var(--ink-1)]"
+          : "bg-transparent text-[var(--ink-2)] hover:bg-[var(--surface-2)] hover:text-[var(--ink-1)]",
         disabled && "cursor-not-allowed opacity-40 hover:bg-transparent",
       )}
       {...rest}
@@ -657,7 +657,7 @@ function SkeletonRows() {
       {Array.from({ length: 6 }).map((_, i) => (
         <div
           key={i}
-          className="h-10 animate-pulse rounded-md bg-[var(--ub-surface-2)]"
+          className="h-10 animate-pulse rounded-md bg-[var(--surface-2)]"
         />
       ))}
     </div>
@@ -666,7 +666,7 @@ function SkeletonRows() {
 
 function ErrorBlock({ message }: { message: string }) {
   return (
-    <div className="px-5 py-10 text-center text-[13px] text-[var(--ub-bad-fg)]">
+    <div className="px-5 py-10 text-center text-[13px] text-[var(--state-bad-fg)]">
       Не удалось загрузить историю: {message}
     </div>
   );
@@ -674,7 +674,7 @@ function ErrorBlock({ message }: { message: string }) {
 
 function EmptyBlock() {
   return (
-    <div className="px-5 py-12 text-center text-[13px] text-[var(--ub-ink-3)]">
+    <div className="px-5 py-12 text-center text-[13px] text-[var(--ink-3)]">
       Ничего не найдено по текущим фильтрам.
     </div>
   );

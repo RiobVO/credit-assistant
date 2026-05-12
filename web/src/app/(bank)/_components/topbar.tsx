@@ -22,11 +22,11 @@ export function BankTopbar() {
   const title = titleFor(pathname);
 
   return (
-    <header className="sticky top-0 z-10 flex h-[60px] items-center justify-between border-b border-[var(--ub-hairline)] bg-[var(--ub-bg)] px-8">
+    <header className="sticky top-0 z-10 flex h-[60px] items-center justify-between border-b border-[var(--border)] bg-[var(--surface)] px-8">
       <nav aria-label="Хлебные крошки" className="flex items-center gap-2">
-        <span className="text-[14px] text-[var(--ub-ink-3)]">Bank Mode</span>
-        <ChevronRight className="size-3.5 text-[var(--ub-ink-4)]" aria-hidden />
-        <span className="text-[15px] font-semibold tracking-[-0.01em] text-[var(--ub-ink)]">
+        <span className="text-[14px] text-[var(--ink-3)]">Bank Mode</span>
+        <ChevronRight className="size-3.5 text-[var(--ink-4)]" aria-hidden />
+        <span className="text-[15px] font-semibold tracking-[-0.01em] text-[var(--ink-1)]">
           {title}
         </span>
       </nav>
@@ -36,13 +36,13 @@ export function BankTopbar() {
           type="button"
           aria-label="Уведомления"
           title="Уведомления"
-          className="grid size-9 place-items-center rounded-md text-[var(--ub-ink-2)] transition-colors hover:bg-[var(--ub-surface-2)] hover:text-[var(--ub-ink)]"
+          className="grid size-9 place-items-center rounded-md text-[var(--ink-2)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--ink-1)]"
         >
           <Bell className="size-4" />
         </button>
         <a
           href="/help"
-          className="inline-flex h-9 items-center gap-2 rounded-md border border-[var(--ub-hairline)] bg-[var(--ub-surface)] px-3 text-[13px] font-medium text-[var(--ub-ink)] transition-colors hover:bg-[var(--ub-surface-2)]"
+          className="inline-flex h-9 items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-[13px] font-medium text-[var(--ink-1)] transition-colors hover:bg-[var(--surface-2)]"
         >
           <HelpCircle className="size-3.5" />
           Справка

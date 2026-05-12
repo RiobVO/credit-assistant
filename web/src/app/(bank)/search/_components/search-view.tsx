@@ -140,7 +140,7 @@ export function SearchView() {
         actions={
           <Link
             href="/manual-input"
-            className="inline-flex h-9 items-center gap-2 rounded-md bg-[var(--ub-accent)] px-3 text-[13px] font-semibold text-white transition-colors hover:bg-[var(--ub-accent-hover)]"
+            className="inline-flex h-9 items-center gap-2 rounded-md bg-[var(--brand-primary)] px-3 text-[13px] font-semibold text-white transition-colors hover:bg-[var(--brand-primary-hover)]"
           >
             <Plus className="size-3.5" />
             Новая заявка
@@ -154,7 +154,7 @@ export function SearchView() {
         noValidate
       >
         <div className="relative flex-1">
-          <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-[var(--ub-ink-4)]" />
+          <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-[var(--ink-4)]" />
           <input
             type="text"
             inputMode="numeric"
@@ -165,9 +165,9 @@ export function SearchView() {
             disabled={isLoading}
             maxLength={14}
             className={cn(
-              "h-[44px] w-full rounded-md border bg-[var(--ub-surface)] pr-9 pl-9 font-mono text-[15px] tracking-[0.04em] text-[var(--ub-ink)] outline-none transition-colors",
-              "border-[var(--ub-hairline)] placeholder:text-[var(--ub-ink-4)]",
-              "focus:border-[var(--ub-accent)] focus:shadow-[0_0_0_3px_var(--ub-accent-ring)]",
+              "h-[44px] w-full rounded-md border bg-[var(--surface)] pr-9 pl-9 font-mono text-[15px] tracking-[0.04em] text-[var(--ink-1)] outline-none transition-colors",
+              "border-[var(--border)] placeholder:text-[var(--ink-4)]",
+              "focus:border-[var(--brand-primary)] focus:shadow-[0_0_0_3px_var(--brand-primary-ring)]",
               "disabled:cursor-wait disabled:opacity-60",
             )}
           />
@@ -179,7 +179,7 @@ export function SearchView() {
                 setState({ kind: "idle" });
               }}
               aria-label="Очистить"
-              className="absolute top-1/2 right-2 grid size-[22px] -translate-y-1/2 place-items-center rounded text-[var(--ub-ink-4)] hover:bg-[var(--ub-surface-2)] hover:text-[var(--ub-ink-2)]"
+              className="absolute top-1/2 right-2 grid size-[22px] -translate-y-1/2 place-items-center rounded text-[var(--ink-4)] hover:bg-[var(--surface-2)] hover:text-[var(--ink-2)]"
             >
               <X className="size-3.5" />
             </button>
@@ -189,8 +189,8 @@ export function SearchView() {
           type="submit"
           disabled={!isValid || isLoading}
           className={cn(
-            "inline-flex h-[44px] items-center justify-center rounded-md bg-[var(--ub-accent)] px-5 text-[15px] font-semibold text-white transition-colors",
-            "hover:bg-[var(--ub-accent-hover)] disabled:cursor-not-allowed disabled:opacity-55",
+            "inline-flex h-[44px] items-center justify-center rounded-md bg-[var(--brand-primary)] px-5 text-[15px] font-semibold text-white transition-colors",
+            "hover:bg-[var(--brand-primary-hover)] disabled:cursor-not-allowed disabled:opacity-55",
           )}
         >
           {isLoading ? "Ищем…" : "Найти"}
@@ -227,16 +227,16 @@ function HintRow({
 }) {
   if (recent.length === 0 && !showHelper) return null;
   return (
-    <div className="mb-8 flex flex-wrap items-center gap-3 text-[13px] text-[var(--ub-ink-3)]">
+    <div className="mb-8 flex flex-wrap items-center gap-3 text-[13px] text-[var(--ink-3)]">
       {recent.length > 0 ? (
         <>
-          <span className="text-[13px] text-[var(--ub-ink-3)]">Недавние:</span>
+          <span className="text-[13px] text-[var(--ink-3)]">Недавние:</span>
           {recent.map((r) => (
             <button
               key={r}
               type="button"
               onClick={() => onChipClick(r)}
-              className="inline-flex items-center gap-1.5 rounded-full border border-[var(--ub-hairline)] bg-[var(--ub-surface-2)] px-2.5 py-1 font-mono text-[12px] text-[var(--ub-ink-2)] transition-colors hover:border-[#CBD5E1] hover:bg-[var(--ub-surface-3)] hover:text-[var(--ub-ink)]"
+              className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-2.5 py-1 font-mono text-[12px] text-[var(--ink-2)] transition-colors hover:border-[#CBD5E1] hover:bg-[var(--surface-3)] hover:text-[var(--ink-1)]"
             >
               {formatInn(r)}
             </button>
@@ -244,9 +244,9 @@ function HintRow({
         </>
       ) : null}
       {showHelper ? (
-        <span className="ml-auto inline-flex items-center gap-2 text-[12px] text-[var(--ub-ink-3)]">
+        <span className="ml-auto inline-flex items-center gap-2 text-[12px] text-[var(--ink-3)]">
           ИНН в Узбекистане — 9 цифр
-          <kbd className="rounded border border-b-2 border-[var(--ub-hairline)] bg-[var(--ub-surface)] px-1.5 py-0.5 font-mono text-[11px] text-[var(--ub-ink-2)]">
+          <kbd className="rounded border border-b-2 border-[var(--border)] bg-[var(--surface)] px-1.5 py-0.5 font-mono text-[11px] text-[var(--ink-2)]">
             Enter
           </kbd>
         </span>
@@ -257,14 +257,14 @@ function HintRow({
 
 function EmptyHero() {
   return (
-    <div className="flex flex-col items-center gap-3 rounded-lg border border-[var(--ub-hairline)] bg-[var(--ub-surface)] px-8 py-14 text-center">
-      <div className="grid size-10 place-items-center rounded-md bg-[var(--ub-surface-3)] text-[var(--ub-ink-2)]">
+    <div className="flex flex-col items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-8 py-14 text-center">
+      <div className="grid size-10 place-items-center rounded-md bg-[var(--surface-3)] text-[var(--ink-2)]">
         <Building className="size-5" />
       </div>
-      <h3 className="m-0 text-[16px] font-semibold tracking-[-0.01em] text-[var(--ub-ink)]">
+      <h3 className="m-0 text-[16px] font-semibold tracking-[-0.01em] text-[var(--ink-1)]">
         Начните с ИНН
       </h3>
-      <p className="m-0 max-w-[56ch] text-[14px] text-[var(--ub-ink-3)]">
+      <p className="m-0 max-w-[56ch] text-[14px] text-[var(--ink-3)]">
         Введите идентификационный номер компании — система найдёт существующее
         досье или предложит загрузить выгрузки для нового заёмщика.
       </p>
@@ -276,7 +276,7 @@ function ErrorState({ message }: { message: string }) {
   return (
     <div
       role="alert"
-      className="rounded-lg border border-[#FCA5A5] bg-[var(--ub-bad-bg)] px-5 py-4 text-[13.5px] text-[var(--ub-bad-fg)]"
+      className="rounded-lg border border-[#FCA5A5] bg-[var(--state-bad-bg)] px-5 py-4 text-[13.5px] text-[var(--state-bad-fg)]"
     >
       {message}
     </div>
@@ -308,36 +308,36 @@ function FoundWithDossier({
 }) {
   const band = scoreBand(result.display_score) ?? "warn";
   const colors: Record<"good" | "warn" | "bad", { fg: string; bg: string; line: string }> = {
-    good: { fg: "var(--ub-ok-fg)", bg: "var(--ub-ok-bg)", line: "#059669" },
-    warn: { fg: "var(--ub-warn-fg)", bg: "var(--ub-warn-bg)", line: "#D97706" },
-    bad: { fg: "var(--ub-bad-fg)", bg: "var(--ub-bad-bg)", line: "#DC2626" },
+    good: { fg: "var(--state-ok-fg)", bg: "var(--state-ok-bg)", line: "#059669" },
+    warn: { fg: "var(--state-warn-fg)", bg: "var(--state-warn-bg)", line: "#D97706" },
+    bad: { fg: "var(--state-bad-fg)", bg: "var(--state-bad-bg)", line: "#DC2626" },
   };
   const c = colors[band];
 
   return (
-    <div className="overflow-hidden rounded-lg border border-[var(--ub-hairline)] bg-[var(--ub-surface)]">
-      <div className="grid gap-5 border-b border-[var(--ub-hairline)] p-6 md:grid-cols-[1fr_auto]">
+    <div className="overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface)]">
+      <div className="grid gap-5 border-b border-[var(--border)] p-6 md:grid-cols-[1fr_auto]">
         <div className="min-w-0">
-          <div className="mb-1.5 flex items-center gap-2 text-[13px] text-[var(--ub-ink-3)]">
+          <div className="mb-1.5 flex items-center gap-2 text-[13px] text-[var(--ink-3)]">
             <Building className="size-3.5" />
             <span className="font-mono">{formatInn(inn)}</span>
-            <span className="text-[var(--ub-hairline)]">·</span>
+            <span className="text-[var(--border)]">·</span>
             <span
               className="inline-flex items-center gap-1.5 rounded px-2 py-0.5 text-[12px] font-medium"
-              style={{ color: "var(--ub-ok-fg)", background: "var(--ub-ok-bg)" }}
+              style={{ color: "var(--state-ok-fg)", background: "var(--state-ok-bg)" }}
             >
               <span
                 className="size-1.5 rounded-full"
-                style={{ background: "var(--ub-ok-fg)" }}
+                style={{ background: "var(--state-ok-fg)" }}
               />
               Досье найдено
             </span>
           </div>
-          <h2 className="m-0 text-[22px] font-semibold tracking-[-0.015em] text-[var(--ub-ink)]">
+          <h2 className="m-0 text-[22px] font-semibold tracking-[-0.015em] text-[var(--ink-1)]">
             {result.borrower_name ?? "—"}
           </h2>
           {result.created_at ? (
-            <p className="mt-1.5 text-[13px] text-[var(--ub-ink-3)]">
+            <p className="mt-1.5 text-[13px] text-[var(--ink-3)]">
               Последнее досье обновлено{" "}
               {new Date(result.created_at).toLocaleDateString("ru", {
                 day: "2-digit",
@@ -349,17 +349,17 @@ function FoundWithDossier({
         </div>
 
         <div className="flex flex-col items-end gap-1.5 md:min-w-[180px]">
-          <span className="text-[11px] font-semibold tracking-[0.08em] text-[var(--ub-ink-3)] uppercase">
+          <span className="text-[11px] font-semibold tracking-[0.08em] text-[var(--ink-3)] uppercase">
             Скоринг
           </span>
-          <div className="font-semibold tabular-nums text-[36px] leading-none tracking-[-0.03em] text-[var(--ub-ink)]">
+          <div className="font-semibold tabular-nums text-[36px] leading-none tracking-[-0.03em] text-[var(--ink-1)]">
             {result.display_score ?? "—"}
-            <span className="ml-1 text-[16px] font-medium text-[var(--ub-ink-3)]">
+            <span className="ml-1 text-[16px] font-medium text-[var(--ink-3)]">
               / 100
             </span>
           </div>
           {result.display_score != null ? (
-            <div className="block h-1.5 w-[180px] overflow-hidden rounded-full bg-[var(--ub-surface-3)]">
+            <div className="block h-1.5 w-[180px] overflow-hidden rounded-full bg-[var(--surface-3)]">
               <span
                 className="block h-full rounded-full"
                 style={{
@@ -374,18 +374,18 @@ function FoundWithDossier({
 
       <div
         className="flex flex-wrap justify-end gap-3 p-4"
-        style={{ background: "var(--ub-surface)" }}
+        style={{ background: "var(--surface)" }}
       >
         <Link
           href={`/dossier/${result.dossier_id}`}
-          className="inline-flex h-9 items-center gap-2 rounded-md border border-[var(--ub-hairline)] bg-[var(--ub-surface)] px-3 text-[13px] font-medium text-[var(--ub-ink)] transition-colors hover:bg-[var(--ub-surface-2)]"
+          className="inline-flex h-9 items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-[13px] font-medium text-[var(--ink-1)] transition-colors hover:bg-[var(--surface-2)]"
         >
           <FileText className="size-3.5" />
           Открыть полное досье
         </Link>
         <Link
           href={`/manual-input?inn=${encodeURIComponent(inn)}`}
-          className="inline-flex h-9 items-center gap-2 rounded-md bg-[var(--ub-accent)] px-3 text-[13px] font-semibold text-white transition-colors hover:bg-[var(--ub-accent-hover)]"
+          className="inline-flex h-9 items-center gap-2 rounded-md bg-[var(--brand-primary)] px-3 text-[13px] font-semibold text-white transition-colors hover:bg-[var(--brand-primary-hover)]"
         >
           Пересобрать с новыми данными
           <ArrowRight className="size-3.5" />
@@ -397,39 +397,39 @@ function FoundWithDossier({
 
 function NoDossierState({ inn, name }: { inn: string; name: string }) {
   return (
-    <div className="flex flex-col items-start gap-3 rounded-lg border border-[var(--ub-hairline)] bg-[var(--ub-surface)] p-8">
-      <div className="grid size-10 place-items-center rounded-md bg-[var(--ub-info-bg)] text-[var(--ub-info-fg)]">
+    <div className="flex flex-col items-start gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-8">
+      <div className="grid size-10 place-items-center rounded-md bg-[var(--state-info-bg)] text-[var(--state-info-fg)]">
         <Info className="size-5" />
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <h3 className="m-0 text-[16px] font-semibold tracking-[-0.01em] text-[var(--ub-ink)]">
+        <h3 className="m-0 text-[16px] font-semibold tracking-[-0.01em] text-[var(--ink-1)]">
           Компания найдена, но досье не сформировано
         </h3>
         <span
           className="rounded px-2 py-0.5 text-[12px] font-medium"
-          style={{ color: "var(--ub-info-fg)", background: "var(--ub-info-bg)" }}
+          style={{ color: "var(--state-info-fg)", background: "var(--state-info-bg)" }}
         >
           Новый клиент
         </span>
       </div>
-      <div className="w-full rounded-md border border-[var(--ub-hairline)] bg-[var(--ub-surface-2)] px-3.5 py-2.5">
-        <div className="mb-0.5 text-[12px] text-[var(--ub-ink-3)]">
+      <div className="w-full rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-3.5 py-2.5">
+        <div className="mb-0.5 text-[12px] text-[var(--ink-3)]">
           Найдено в реестре
         </div>
         <div className="flex flex-wrap items-center gap-3 text-[13px]">
-          <span className="font-mono text-[var(--ub-ink)]">{formatInn(inn)}</span>
-          <span className="text-[var(--ub-hairline)]">·</span>
-          <span className="text-[var(--ub-ink)]">{name}</span>
+          <span className="font-mono text-[var(--ink-1)]">{formatInn(inn)}</span>
+          <span className="text-[var(--border)]">·</span>
+          <span className="text-[var(--ink-1)]">{name}</span>
         </div>
       </div>
-      <p className="m-0 max-w-[56ch] text-[14px] text-[var(--ub-ink-3)]">
+      <p className="m-0 max-w-[56ch] text-[14px] text-[var(--ink-3)]">
         Кредитное досье ещё не собрано. Запустите формирование — система пройдёт
         через 3 шага мастера и подготовит scoring.
       </p>
       <div className="mt-2 flex flex-wrap gap-2">
         <Link
           href={`/manual-input?inn=${encodeURIComponent(inn)}`}
-          className="inline-flex h-8 items-center gap-1.5 rounded-md bg-[var(--ub-accent)] px-3 text-[13px] font-semibold text-white transition-colors hover:bg-[var(--ub-accent-hover)]"
+          className="inline-flex h-8 items-center gap-1.5 rounded-md bg-[var(--brand-primary)] px-3 text-[13px] font-semibold text-white transition-colors hover:bg-[var(--brand-primary-hover)]"
         >
           <Plus className="size-3.5" />
           Сформировать досье
@@ -441,22 +441,22 @@ function NoDossierState({ inn, name }: { inn: string; name: string }) {
 
 function NotFoundState({ inn }: { inn: string }) {
   return (
-    <div className="flex flex-col items-start gap-3 rounded-lg border border-[var(--ub-hairline)] bg-[var(--ub-surface)] p-8">
-      <div className="grid size-10 place-items-center rounded-md bg-[var(--ub-warn-bg)] text-[var(--ub-warn-fg)]">
+    <div className="flex flex-col items-start gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-8">
+      <div className="grid size-10 place-items-center rounded-md bg-[var(--state-warn-bg)] text-[var(--state-warn-fg)]">
         <FileX className="size-5" />
       </div>
-      <h3 className="m-0 text-[16px] font-semibold tracking-[-0.01em] text-[var(--ub-ink)]">
+      <h3 className="m-0 text-[16px] font-semibold tracking-[-0.01em] text-[var(--ink-1)]">
         Компания не найдена
       </h3>
-      <p className="m-0 max-w-[56ch] text-[14px] text-[var(--ub-ink-3)]">
-        ИНН <span className="font-mono text-[var(--ub-ink)]">{formatInn(inn)}</span>{" "}
+      <p className="m-0 max-w-[56ch] text-[14px] text-[var(--ink-3)]">
+        ИНН <span className="font-mono text-[var(--ink-1)]">{formatInn(inn)}</span>{" "}
         не встречался в системе. Проверьте правильность ввода или загрузите выгрузки
         Soliq — мы создадим новое досье с нуля.
       </p>
       <div className="mt-2 flex flex-wrap gap-2">
         <Link
           href={`/manual-input?inn=${encodeURIComponent(inn)}`}
-          className="inline-flex h-8 items-center gap-1.5 rounded-md bg-[var(--ub-accent)] px-3 text-[13px] font-semibold text-white transition-colors hover:bg-[var(--ub-accent-hover)]"
+          className="inline-flex h-8 items-center gap-1.5 rounded-md bg-[var(--brand-primary)] px-3 text-[13px] font-semibold text-white transition-colors hover:bg-[var(--brand-primary-hover)]"
         >
           <Plus className="size-3.5" />
           Создать досье
