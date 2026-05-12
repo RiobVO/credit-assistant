@@ -43,63 +43,8 @@
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
 
-  --color-ca-navy-900: var(--ca-navy-900);
-  --color-ca-navy-800: var(--ca-navy-800);
-  --color-ca-navy-700: var(--ca-navy-700);
-  --color-ca-navy-600: var(--ca-navy-600);
-  --color-ca-navy-500: var(--ca-navy-500);
-  --color-ca-line-dark: var(--ca-line-dark);
-  --color-ca-muted-dark: var(--ca-muted-dark);
-  --color-ca-muted-dark-2: var(--ca-muted-dark-2);
-  --color-ca-ink-900: var(--ca-ink-900);
-  --color-ca-ink-700: var(--ca-ink-700);
-  --color-ca-ink-500: var(--ca-ink-500);
-  --color-ca-ink-400: var(--ca-ink-400);
-  --color-ca-border: var(--ca-border);
-  --color-ca-border-strong: var(--ca-border-strong);
-  --color-ca-surface: var(--ca-surface);
-  --color-ca-bg: var(--ca-bg);
-  --color-ca-primary-blue: var(--ca-primary-blue);
-  --color-ca-primary-blue-700: var(--ca-primary-blue-700);
-  --color-ca-primary-blue-50: var(--ca-primary-blue-50);
-  --color-ca-success: var(--ca-success);
-  --color-ca-success-50: var(--ca-success-50);
-  --color-ca-warning: var(--ca-warning);
-  --color-ca-danger: var(--ca-danger);
-
-  /* Uzbekbank bank-mode tokens — параллельно `--ca-*` (accountant остаётся
-     на legacy). Mockup: slate ladder + Claude terracotta accent. */
-  --color-ub-bg: var(--ub-bg);
-  --color-ub-surface: var(--ub-surface);
-  --color-ub-surface-2: var(--ub-surface-2);
-  --color-ub-surface-3: var(--ub-surface-3);
-  --color-ub-hairline: var(--ub-hairline);
-  --color-ub-hairline-soft: var(--ub-hairline-soft);
-  --color-ub-nav-bg: var(--ub-nav-bg);
-  --color-ub-nav-bg-hover: var(--ub-nav-bg-hover);
-  --color-ub-nav-text: var(--ub-nav-text);
-  --color-ub-nav-text-2: var(--ub-nav-text-2);
-  --color-ub-nav-text-3: var(--ub-nav-text-3);
-  --color-ub-ink: var(--ub-ink);
-  --color-ub-ink-2: var(--ub-ink-2);
-  --color-ub-ink-3: var(--ub-ink-3);
-  --color-ub-ink-4: var(--ub-ink-4);
-  --color-ub-accent: var(--ub-accent);
-  --color-ub-accent-hover: var(--ub-accent-hover);
-  --color-ub-accent-soft: var(--ub-accent-soft);
-  --color-ub-accent-ink: var(--ub-accent-ink);
-  --color-ub-ok-fg: var(--ub-ok-fg);
-  --color-ub-ok-bg: var(--ub-ok-bg);
-  --color-ub-warn-fg: var(--ub-warn-fg);
-  --color-ub-warn-bg: var(--ub-warn-bg);
-  --color-ub-bad-fg: var(--ub-bad-fg);
-  --color-ub-bad-bg: var(--ub-bad-bg);
-  --color-ub-info-fg: var(--ub-info-fg);
-  --color-ub-info-bg: var(--ub-info-bg);
-  --color-ub-neutral-fg: var(--ub-neutral-fg);
-  --color-ub-neutral-bg: var(--ub-neutral-bg);
-
-  /* Semantic + brand layer (CA-060). */
+  /* Semantic + brand layer (CA-060) — единственный источник для UI кода.
+     Tenant-specific значения переопределяются в :root[data-brand="..."] ниже. */
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
   --color-surface-3: var(--surface-3);
@@ -148,18 +93,20 @@
   --card-foreground: #0E1525;
   --popover: #FCFCFD;
   --popover-foreground: #0E1525;
-  --primary: #1E55C9;
+  /* shadcn-defaults делегируются в brand (CA-060) — переключение тенанта */
+  /* автоматически обновляет shadcn UI components. */
+  --primary: var(--brand-primary);
   --primary-foreground: #FFFFFF;
   --secondary: #FAFBFC;
   --secondary-foreground: #2B3344;
   --muted: #FAFBFC;
   --muted-foreground: #5A6478;
-  --accent: #EAF0FB;
-  --accent-foreground: #1947AA;
+  --accent: var(--brand-primary-soft);
+  --accent-foreground: var(--brand-primary-ink);
   --destructive: #B42318;
   --border: #E4E7EC;
   --input: #CDD3DD;
-  --ring: #1E55C9;
+  --ring: var(--brand-primary);
   --chart-1: #1E55C9;
   --chart-2: #0F8A5F;
   --chart-3: #B8730E;
@@ -168,76 +115,15 @@
   --radius: 0.625rem;
   --sidebar: #0B1220;
   --sidebar-foreground: #E6EAF2;
-  --sidebar-primary: #1E55C9;
+  --sidebar-primary: var(--brand-primary);
   --sidebar-primary-foreground: #FFFFFF;
   --sidebar-accent: #1F2D47;
   --sidebar-accent-foreground: #FFFFFF;
   --sidebar-border: #243049;
   --sidebar-ring: #4A7BD9;
 
-  --ca-navy-900: #0B1220;
-  --ca-navy-800: #111A2E;
-  --ca-navy-700: #172339;
-  --ca-navy-600: #1F2D47;
-  --ca-navy-500: #2A3A57;
-  --ca-line-dark: #243049;
-  --ca-muted-dark: #8A95AC;
-  --ca-muted-dark-2: #5C6884;
-  --ca-ink-900: #0E1525;
-  --ca-ink-700: #2B3344;
-  --ca-ink-500: #5A6478;
-  --ca-ink-400: #7A8497;
-  --ca-border: #E4E7EC;
-  --ca-border-strong: #CDD3DD;
-  --ca-surface: #FCFCFD;
-  --ca-bg: #F1F5F9;
-  --ca-primary-blue: #1E55C9;
-  --ca-primary-blue-700: #1947AA;
-  --ca-primary-blue-50: #EAF0FB;
-  --ca-success: #0F8A5F;
-  --ca-success-50: #E6F4EE;
-  --ca-warning: #B8730E;
-  --ca-danger: #B42318;
-
-  /* ────────── Uzbekbank bank-mode (mockup tokens) ──────────
-     Применять через Tailwind arbitrary: `bg-[var(--ub-surface-2)]` или
-     именованные классы `bg-ub-surface-2`. Не пересекаются с `--ca-*`. */
-  --ub-bg:            #FFFFFF;
-  --ub-surface:       #FFFFFF;
-  --ub-surface-2:     #F8FAFC;
-  --ub-surface-3:     #F1F5F9;
-  --ub-hairline:      #E2E8F0;
-  --ub-hairline-soft: #EEF2F6;
-
-  --ub-nav-bg:        #0B1220;
-  --ub-nav-bg-2:      #0F172A;
-  --ub-nav-bg-hover:  #1E293B;
-  --ub-nav-border:    #1E293B;
-  --ub-nav-text:      #E2E8F0;
-  --ub-nav-text-2:    #94A3B8;
-  --ub-nav-text-3:    #64748B;
-  --ub-nav-active-bg: #1E293B;
-
-  --ub-ink:   #0F172A;
-  --ub-ink-2: #475569;
-  --ub-ink-3: #64748B;
-  --ub-ink-4: #94A3B8;
-
-  --ub-accent:       #CC785C;
-  --ub-accent-hover: #B5624A;
-  --ub-accent-soft:  #F7E8DF;
-  --ub-accent-ink:   #6E2F1C;
-  --ub-accent-ring:  rgba(204, 120, 92, 0.22);
-
-  --ub-ok-fg:      #166534; --ub-ok-bg:      #DCFCE7;
-  --ub-warn-fg:    #92400E; --ub-warn-bg:    #FEF3C7;
-  --ub-bad-fg:     #991B1B; --ub-bad-bg:     #FEE2E2;
-  --ub-info-fg:    #6E2F1C; --ub-info-bg:    #F7E8DF;
-  --ub-neutral-fg: #334155; --ub-neutral-bg: #F1F5F9;
-
   /* ── Semantic layer (CA-060) — единственный источник для UI кода.
-     Tenant-specific значения здесь — для default (accountant); bank-tenant
-     переопределяет их в [data-brand="uzbekbank"] блоке ниже. */
+     Default tenant (accountant); bank-tenant переопределяет ниже. */
   --surface: #FCFCFD;
   --surface-2: #FAFBFC;
   --surface-3: #F1F5F9;
@@ -248,7 +134,7 @@
   --ink-3: #5A6478;
   --ink-4: #7A8497;
 
-  /* --border уже задан в shadcn-defaults выше (#E4E7EC), используем его как semantic. */
+  /* --border задан в shadcn-defaults выше (#E4E7EC) — используем его как semantic. */
   --border-strong: #CDD3DD;
 
   --nav-bg: #0B1220;
@@ -265,7 +151,7 @@
   --state-info-fg: #1947AA; --state-info-bg: #EAF0FB;
   --state-neutral-fg: #5A6478; --state-neutral-bg: #FAFBFC;
 
-  /* Brand fallback (если cssVars из brand JSON не загружены инлайном на <html>). */
+  /* Brand fallback (если cssVars из brand JSON не инжектированы на <html>). */
   --brand-primary: #1E55C9;
   --brand-primary-hover: #1947AA;
   --brand-primary-soft: #EAF0FB;
