@@ -2,6 +2,9 @@
 // Стрелка-указатель: вертикальная линия в центре, повёрнутая на (score-50)*1.8°.
 // Шкала «выше = лучше» (banking-UX), не совпадает с domain risk_score (0-14 = approve);
 // в Phase 3.B будет маппер score→display_score, сейчас mock уже в banking-шкале.
+"use client";
+
+import { useTranslations } from "next-intl";
 
 import type { Recommendation } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -13,10 +16,13 @@ const SECTORS = [
   { from: 45, to: 0, color: "var(--chart-green)" }, // green — 75–100
 ] as const;
 
-const RECOMMENDATION_LABEL: Record<Recommendation, string> = {
-  approve: "Рекомендация: одобрить",
-  review: "Рекомендация: на проверку",
-  reject: "Рекомендация: отказ",
+const RECOMMENDATION_KEY: Record<
+  Recommendation,
+  "rec_approve" | "rec_review" | "rec_reject"
+> = {
+  approve: "rec_approve",
+  review: "rec_review",
+  reject: "rec_reject",
 };
 
 const RECOMMENDATION_TONE: Record<Recommendation, string> = {
@@ -35,6 +41,7 @@ export function ScoreGauge({
   score: number;
   recommendation: Recommendation;
 }) {
+  const t = useTranslations("dossier.score");
   const clamped = Math.max(0, Math.min(100, score));
   const needleRotation = (clamped - 50) * 1.8;
 
@@ -42,7 +49,7 @@ export function ScoreGauge({
     <div className="rounded-[10px] border border-[var(--border)] bg-[var(--surface)] shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
       <div className="flex flex-col items-center px-6 pt-6 pb-5">
         <div className="text-[10.5px] font-semibold tracking-[1.2px] text-[var(--ink-4)] uppercase">
-          Скоринговый балл
+          {t("label")}
         </div>
 
         <svg
@@ -89,7 +96,7 @@ export function ScoreGauge({
           )}
         >
           <span className="size-1.5 rounded-full bg-current opacity-70" />
-          {RECOMMENDATION_LABEL[recommendation]}
+          {t(RECOMMENDATION_KEY[recommendation])}
         </span>
       </div>
     </div>

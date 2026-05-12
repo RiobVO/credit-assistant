@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronDown, ChevronRight } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import type { RedFlagDto, Severity } from "@/lib/api";
@@ -20,35 +21,6 @@ const SEVERITY_PILL: Record<Severity, string> = {
   critical: "border-[var(--state-bad-fg)] bg-[#FCE7E5] text-[var(--state-bad-fg)]",
 };
 
-const SEVERITY_LABEL: Record<Severity, string> = {
-  low: "Низкий",
-  medium: "Средний",
-  high: "Высокий",
-  critical: "Критический",
-};
-
-const RULE_LABEL: Record<string, string> = {
-  LOAN_TO_REVENUE_RATIO: "Долг / EBITDA",
-  TAX_PAYMENT_DELAYS: "Уплата налогов",
-  SINGLE_BUYER_CONCENTRATION: "Концентрация выручки",
-  RECEIVABLES_CONCENTRATION: "Концентрация дебиторов",
-  REVENUE_DROP_MOM_30: "Падение выручки MoM",
-  REVENUE_DROP_YOY_50: "Падение выручки YoY",
-  NEGATIVE_PROFIT_3Q: "Отриц. прибыль 3 кв.",
-  VAT_GROWTH_NO_REVENUE: "НДС без роста выручки",
-  VAT_ESF_MISMATCH: "Расхождение НДС / ЭСФ",
-  LOW_MARGIN_HIGH_TURNOVER: "Низкая маржа",
-  SINGLE_SUPPLIER_CONCENTRATION: "Концентрация поставщиков",
-  NEW_COUNTERPARTY_LARGE_SHARE: "Новые контрагенты",
-  SHELL_COMPANY_PARTNERS: "Контрагенты-однодневки",
-  CIRCULAR_INVOICING: "Циклические ЭСФ",
-  BANK_ACCOUNT_FROZEN_12M: "Блокировки счёта",
-  TAX_PENALTIES_CURRENT_YEAR: "Пеня по налогам",
-  DIRECTOR_CHANGED_6M: "Смена директора",
-  OKVED_CHANGED_12M: "Смена ОКВЭД",
-  NEGATIVE_EQUITY: "Отрицательный капитал",
-};
-
 // CA-050: accordion-rows + actual rules_evaluated count из API
 // (вместо хардкода 17 — реестр после CA-049 содержит 19 правил).
 export function RiskSignals({
@@ -58,22 +30,23 @@ export function RiskSignals({
   flags: RedFlagDto[];
   rulesEvaluated: number;
 }) {
+  const t = useTranslations("dossier.risk");
   return (
     <section className="flex h-full flex-col rounded-[10px] border border-[var(--border)] bg-[var(--surface)] shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
       <header className="flex items-center gap-2.5 border-b border-[var(--border)] px-[22px] py-[18px]">
         <div>
           <h2 className="m-0 text-[15px] font-semibold text-[var(--ink-1)]">
-            Сигналы риска
+            {t("title")}
           </h2>
           <p className="m-0 mt-0.5 text-[12.5px] text-[var(--ink-3)]">
-            {flags.length} {pluralFlags(flags.length)} из {rulesEvaluated} проверенных
+            {t("subtitle", { count: flags.length, evaluated: rulesEvaluated })}
           </p>
         </div>
       </header>
 
       {flags.length === 0 ? (
         <div className="flex-1 px-[22px] py-10 text-center text-[13px] text-[var(--ink-3)]">
-          Все проверки пройдены.
+          {t("empty")}
         </div>
       ) : (
         <ul className="divide-y divide-[var(--border)]">
@@ -87,11 +60,15 @@ export function RiskSignals({
 }
 
 function SignalRow({ flag }: { flag: RedFlagDto }) {
+  const t = useTranslations("dossier.risk");
   const [expanded, setExpanded] = useState(false);
-  const label = RULE_LABEL[flag.rule_id] ?? flag.rule_id;
+  // t() returns rule label, fall back to raw rule_id если ключа нет.
+  const ruleKey = `rule_${flag.rule_id}` as const;
+  const label = t.has(ruleKey) ? t(ruleKey) : flag.rule_id;
   const value = renderEvidenceValue(flag);
   const Chevron = expanded ? ChevronDown : ChevronRight;
   const evidenceEntries = Object.entries(flag.evidence ?? {});
+  const severityLabel = t(`severity_${flag.severity}`);
 
   return (
     <li className="px-[22px]">
@@ -127,25 +104,25 @@ function SignalRow({ flag }: { flag: RedFlagDto }) {
       {expanded && (
         <div className="ml-5 border-l-2 border-[var(--border)] pl-4 pb-4 text-[12.5px] text-[var(--ink-2)]">
           <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5">
-            <dt className="text-[var(--ink-3)]">Правило</dt>
+            <dt className="text-[var(--ink-3)]">{t("field_rule")}</dt>
             <dd className="font-mono text-[11.5px]">{flag.rule_id}</dd>
 
-            <dt className="text-[var(--ink-3)]">Severity</dt>
-            <dd>{SEVERITY_LABEL[flag.severity]}</dd>
+            <dt className="text-[var(--ink-3)]">{t("field_severity")}</dt>
+            <dd>{severityLabel}</dd>
 
-            <dt className="text-[var(--ink-3)]">Сообщение</dt>
+            <dt className="text-[var(--ink-3)]">{t("field_message")}</dt>
             <dd>{flag.message}</dd>
 
             {evidenceEntries.length > 0 && (
               <>
-                <dt className="self-start text-[var(--ink-3)]">Evidence</dt>
+                <dt className="self-start text-[var(--ink-3)]">{t("field_evidence")}</dt>
                 <dd>
                   <ul className="space-y-0.5">
                     {evidenceEntries.map(([k, v]) => (
                       <li key={k} className="font-mono text-[11.5px]">
                         <span className="text-[var(--ink-3)]">{k}:</span>{" "}
                         <span className="text-[var(--ink-1)]">
-                          {formatEvidenceCell(v)}
+                          {formatEvidenceCell(v, t("evidence_yes"), t("evidence_no"))}
                         </span>
                       </li>
                     ))}
@@ -197,9 +174,9 @@ function formatEvidenceNumber(raw: unknown): string | null {
 
 // CA-050: универсальное отображение evidence-значения в раскрытой строке.
 // Числовые Decimal-строки округляем до 2 знаков (как в pill); прочее — as-is.
-function formatEvidenceCell(raw: unknown): string {
+function formatEvidenceCell(raw: unknown, yes: string, no: string): string {
   if (raw === null || raw === undefined) return "—";
-  if (typeof raw === "boolean") return raw ? "да" : "нет";
+  if (typeof raw === "boolean") return raw ? yes : no;
   if (typeof raw === "number") return raw.toFixed(2).replace(".", ",");
   if (typeof raw === "string") {
     // Числовая строка → округляем; остальное (год, имя, ИНН) — без изменений.
@@ -210,13 +187,4 @@ function formatEvidenceCell(raw: unknown): string {
     return raw;
   }
   return JSON.stringify(raw);
-}
-
-function pluralFlags(n: number): string {
-  const mod10 = n % 10;
-  const mod100 = n % 100;
-  if (mod100 >= 11 && mod100 <= 14) return "сигналов";
-  if (mod10 === 1) return "сигнал";
-  if (mod10 >= 2 && mod10 <= 4) return "сигнала";
-  return "сигналов";
 }
