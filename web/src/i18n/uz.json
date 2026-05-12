@@ -1,0 +1,86 @@
+{
+  "shared": {
+    "cta": {
+      "save": "Saqlash",
+      "cancel": "Bekor qilish",
+      "back": "Orqaga",
+      "next": "Davom etish",
+      "submit": "Yuborish",
+      "retry": "Qayta urinish",
+      "close": "Yopish",
+      "search": "Qidiruv",
+      "download_pdf": "PDF yuklab olish"
+    },
+    "nav": {
+      "search": "Qarz oluvchini qidirish",
+      "history": "Dosye tarixi",
+      "settings": "Sozlamalar",
+      "help": "Yordam"
+    },
+    "states": {
+      "loading": "Yuklanmoqda…",
+      "error_generic": "Kutilmagan xato yuz berdi",
+      "not_found": "Sahifa topilmadi",
+      "no_data": "Ma'lumot yo'q"
+    }
+  },
+  "bank": {
+    "borrower": {
+      "title": "Qarz oluvchi",
+      "search_placeholder": "000 000 000"
+    },
+    "cta": {
+      "new_application": "Yangi ariza",
+      "view_dossier": "Dosyeni ochish",
+      "back_to_search": "Qidiruvga",
+      "back_to_history": "Tarixga"
+    },
+    "history": {
+      "title": "Dosye tarixi",
+      "empty": "Bu yerda avval yig'ilgan dosyelar ro'yxati bo'ladi"
+    },
+    "search": {
+      "title": "Kompaniyani qidirish",
+      "subtitle": "O'zbekiston kompaniyasining 9 raqamli STIRini kiriting, kredit dosyesini ochish va tizim tavsiyasini ko'rish uchun.",
+      "recent": "So'nggi:"
+    },
+    "login": {
+      "title": "Tizimga kirish",
+      "subtitle": "Korporativ bank hisobi.",
+      "email_label": "Elektron pochta",
+      "password_label": "Parol",
+      "remember": "Eslab qolish",
+      "forgot": "Parolni unutdingizmi?",
+      "submit": "Kirish",
+      "submitting": "Kirilmoqda…",
+      "tls_signal": "Xavfsiz ulanish · TLS 1.3 · AES-256-GCM",
+      "error_invalid": "Email yoki parol noto'g'ri",
+      "error_generic": "Kirib bo'lmadi. Qaytadan urining."
+    }
+  },
+  "accountant": {
+    "my_company": {
+      "title": "Mening kompaniyam"
+    },
+    "cta": {
+      "upload_files": "Fayllarni yuklash",
+      "back_to_form": "Formaga"
+    },
+    "manual_input": {
+      "title": "Dosyeni tayyorlash",
+      "step_1": "Qarz oluvchi",
+      "step_2": "Moliya",
+      "step_3": "Kredit",
+      "rebuild_with_extras": "Qo'shimcha bilan qayta yig'ish"
+    }
+  },
+  "dossier": {
+    "title": "Dosye",
+    "back_to_history": "Tarixga",
+    "back_to_form": "Formaga",
+    "not_found_title": "Dosye topilmadi",
+    "not_found_hint": "Havola eskirgan yoki dosye o'chirilgan bo'lishi mumkin. Qo'lda kiritish formasidan yangisini yarating.",
+    "load_error_title": "Dosyeni yuklab bo'lmadi",
+    "load_error_hint": "Qaytadan urining. Agar xato takrorlansa — backend ishlayotganini va ma'lumotlar bazasi mavjudligini tekshiring."
+  }
+}

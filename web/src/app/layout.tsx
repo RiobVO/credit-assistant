@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import { NextIntlClientProvider } from "next-intl";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
-import { BRAND_ID } from "@/lib/config";
+import { BRAND_ID, LOCALE } from "@/lib/config";
 import { resolveBrand } from "@/lib/brand";
+import { getMessages, resolveLocale } from "@/i18n";
 
 const inter = Inter({
   variable: "--font-sans",
@@ -29,16 +31,20 @@ export default function RootLayout({
 }>) {
   const brand = resolveBrand(BRAND_ID);
   const brandStyle = brand.cssVars as React.CSSProperties;
+  const locale = resolveLocale(LOCALE);
+  const messages = getMessages(locale);
 
   return (
     <html
-      lang="ru"
+      lang={locale}
       className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
       style={brandStyle}
       data-brand={brand.id}
     >
       <body className="min-h-full flex flex-col">
-        <Providers>{children}</Providers>
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          <Providers>{children}</Providers>
+        </NextIntlClientProvider>
       </body>
     </html>
   );

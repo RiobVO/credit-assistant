@@ -17,3 +17,8 @@ export const REFRESH_COOKIE = "ca_refresh";
 export const BRAND_ID: string =
   process.env.NEXT_PUBLIC_BRAND_ID ??
   (APP_MODE === "bank" ? "uzbekbank" : "default");
+
+// CA-063: статическая локаль инсталляции (ru | uz). По умолчанию ru.
+// Меняется только в build env, runtime-switch не предусмотрен (один UI-язык
+// на банк-инсталляцию).
+export const LOCALE: string = process.env.NEXT_PUBLIC_LOCALE ?? "ru";
