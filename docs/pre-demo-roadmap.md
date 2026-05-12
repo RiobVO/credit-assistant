@@ -66,11 +66,16 @@ Acceptance: 19 real-xltx pass (form1/form2 ×3 фирмы, vat_decl ×4, vat_ilo
 - **Куда**: `tests/fixtures/real/` (gitignore). Анонимизированные версии (замазанные ИНН/имена/суммы) в `tests/fixtures/real_anon/*.xltx` — в git.
 - **Acceptance**: `tests/integration/test_real_xltx.py` прогон через все 5 парсеров → 0 unexpected `parse_warnings` (whitelist допустимых документирован в тесте).
 
-### T0.2 — CBU API real integration (CA-024b)
-- Adapter `infrastructure/external/cbu_client.py` поверх `cbu.uz/oz/arkhiv-kursov-valyut/json/`.
-- Daily Postgres caching, fallback на last-known rate, 90-дневная история для аудита.
-- Legal review запустить параллельно (mirror CA-DS28: уз-юрист 30 мин + robots.txt check).
-- **Acceptance**: `GET /api/system/usd-rate` отдаёт live rate + `as_of` timestamp + `source: "cbu_live" | "cached" | "fallback"`.
+### T0.2 — CBU API real integration (CA-024b) ✅ DONE 2026-05-17 (commit b124af6)
+- ✅ Adapter `infrastructure/external/cbu_client.py` поверх `cbu.uz/oz/arkhiv-kursov-valyut/json/USD/`.
+- ✅ Per-call `async with httpx.AsyncClient`, timeout 3s + 2 retries (0.5s/1s backoff), `CBU_API_URL` env override, User-Agent identity.
+- ✅ Postgres caching: table `usd_uzs_rates(date PK, rate Decimal(14,4), nominal, source, fetched_at, raw_response jsonb)` с idx date DESC. ON CONFLICT (date) DO NOTHING.
+- ✅ Service `application/services/usd_rate_service.py` — fallback chain env → DB today → CBU live (save) → DB latest → JSON bootstrap → ExchangeRateError.
+- ✅ Endpoint `/api/system/usd-rate` через DI service, source enum: `env | cbu_live | db_cached | manual | fallback`.
+- ✅ ADR-0014 «External API integration pattern (CBU as reference)» — шаблон для T0.3 ГНК Phase A, T2.4 faktura.uz, CA-DS28 ГНК public.
+- ✅ Tests: 6 unit CBU client (mock httpx.MockTransport) + 7 unit service (6 веток fallback) + 5 integration repository (testcontainers) + 5 integration endpoint (mock fetch). Live smoke на cbu.uz: rate=11975.36, asof=2026-05-15.
+- ⏳ Legal review CBU public data — параллельно (запросы юриста, не блокер).
+- ⏳ Daily background fetch / 90-day retention автоудаление — отложено в T3 (operational readiness).
 
 ### T0.3 — ГНК Phase A: manual upload (CA-003 Phase A)
 - Аналитик грузит PDF/JPG справки + ручной ввод полей (имя, ИНН, статус, ОКВЭДы).
