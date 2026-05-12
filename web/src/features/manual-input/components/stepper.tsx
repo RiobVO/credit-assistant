@@ -19,7 +19,7 @@ export function Stepper({ activeStep }: { activeStep: StepIdx }) {
       aria-valuenow={activeStep}
       aria-valuemin={1}
       aria-valuemax={3}
-      className="relative mb-5 grid grid-cols-3 gap-0 rounded-[10px] border border-[var(--ca-border)] bg-[var(--ca-surface)] px-[18px] py-[14px]"
+      className="relative mb-5 grid grid-cols-3 gap-0 rounded-[10px] border border-[var(--border)] bg-[var(--surface)] px-[18px] py-[14px]"
     >
       {STEPS.map(({ idx, title }) => {
         const isActive = idx === activeStep;
@@ -33,12 +33,12 @@ export function Stepper({ activeStep }: { activeStep: StepIdx }) {
               className={cn(
                 "z-[1] grid size-7 flex-none place-items-center rounded-full border text-[13px] font-semibold",
                 isDone &&
-                  "border-[var(--ca-success)] bg-[var(--ca-success)] text-white",
+                  "border-[var(--state-ok-fg)] bg-[var(--state-ok-fg)] text-white",
                 isActive &&
-                  "border-[var(--ca-primary-blue)] bg-[var(--ca-primary-blue)] text-white",
+                  "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white",
                 !isActive &&
                   !isDone &&
-                  "border-[var(--ca-border)] bg-[var(--ca-surface)] text-[var(--ca-ink-500)]",
+                  "border-[var(--border)] bg-[var(--surface)] text-[var(--ink-3)]",
               )}
             >
               {isDone ? <Check className="size-3.5" /> : idx}
@@ -48,8 +48,8 @@ export function Stepper({ activeStep }: { activeStep: StepIdx }) {
                 className={cn(
                   "text-[11px] tracking-[0.6px] uppercase",
                   isActive
-                    ? "text-[var(--ca-primary-blue)]"
-                    : "text-[var(--ca-ink-400)]",
+                    ? "text-[var(--brand-primary)]"
+                    : "text-[var(--ink-4)]",
                 )}
               >
                 Шаг {idx}
@@ -59,8 +59,8 @@ export function Stepper({ activeStep }: { activeStep: StepIdx }) {
                 className={cn(
                   "mt-0.5 text-[13.5px] font-semibold",
                   isActive
-                    ? "text-[var(--ca-ink-900)]"
-                    : "text-[var(--ca-ink-700)]",
+                    ? "text-[var(--ink-1)]"
+                    : "text-[var(--ink-2)]",
                 )}
               >
                 {title}

@@ -63,13 +63,13 @@ export function Step3Loan() {
     termMonths > 0 ? format(addMonths(new Date(), termMonths), "dd.MM.yyyy") : "—";
 
   return (
-    <section className="rounded-[10px] border border-[var(--ca-border)] bg-[var(--ca-surface)] shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
-      <header className="flex items-center gap-2.5 border-b border-[var(--ca-border)] px-[22px] py-[18px]">
+    <section className="rounded-[10px] border border-[var(--border)] bg-[var(--surface)] shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
+      <header className="flex items-center gap-2.5 border-b border-[var(--border)] px-[22px] py-[18px]">
         <div>
-          <h2 className="m-0 text-[15px] font-semibold text-[var(--ca-ink-900)]">
+          <h2 className="m-0 text-[15px] font-semibold text-[var(--ink-1)]">
             Параметры запрашиваемого кредита
           </h2>
-          <p className="m-0 mt-0.5 text-[12.5px] text-[var(--ca-ink-500)]">
+          <p className="m-0 mt-0.5 text-[12.5px] text-[var(--ink-3)]">
             Все суммы — в сумах (UZS). Поля помечены звёздочкой обязательны.
           </p>
         </div>
@@ -108,7 +108,7 @@ export function Step3Loan() {
                   />
                 )}
               />
-              <div className="grid place-items-center rounded-r-md border border-l-0 border-[var(--ca-border-strong)] bg-[#F4F6F9] px-3 text-[14px] font-semibold text-[var(--ca-ink-700)]">
+              <div className="grid place-items-center rounded-r-md border border-l-0 border-[var(--border-strong)] bg-[#F4F6F9] px-3 text-[14px] font-semibold text-[var(--ink-2)]">
                 UZS
               </div>
             </div>
@@ -139,7 +139,7 @@ export function Step3Loan() {
                   </select>
                   <span
                     aria-hidden
-                    className="pointer-events-none absolute top-1/2 right-[14px] size-2 -translate-y-[70%] rotate-45 border-r-[1.5px] border-b-[1.5px] border-[var(--ca-ink-500)]"
+                    className="pointer-events-none absolute top-1/2 right-[14px] size-2 -translate-y-[70%] rotate-45 border-r-[1.5px] border-b-[1.5px] border-[var(--ink-3)]"
                   />
                 </div>
               )}
@@ -164,7 +164,7 @@ export function Step3Loan() {
                   "rounded-r-none border-r-0 text-right font-mono",
                 )}
               />
-              <div className="grid place-items-center rounded-r-md border border-l-0 border-[var(--ca-border-strong)] bg-[#FAFBFC] px-3 text-[13px] text-[var(--ca-ink-500)]">
+              <div className="grid place-items-center rounded-r-md border border-l-0 border-[var(--border-strong)] bg-[#FAFBFC] px-3 text-[13px] text-[var(--ink-3)]">
                 % годовых
               </div>
             </div>
@@ -183,13 +183,13 @@ export function Step3Loan() {
               rows={5}
               placeholder="Подробно опишите, на что планируется направить кредит. Указание контрагентов и контрактов помогает скорингу."
               aria-invalid={Boolean(e?.loanPurpose) || undefined}
-              className="min-h-[120px] w-full resize-y rounded-md border border-[var(--ca-border-strong)] bg-[var(--ca-surface)] px-3 py-3 text-[14px] leading-[1.5] text-[var(--ca-ink-900)] outline-none focus:border-[var(--ca-primary-blue)] focus:shadow-[0_0_0_3px_rgba(30,85,201,0.15)] aria-invalid:border-[var(--ca-danger)]"
+              className="min-h-[120px] w-full resize-y rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-3 text-[14px] leading-[1.5] text-[var(--ink-1)] outline-none focus:border-[var(--brand-primary)] focus:shadow-[0_0_0_3px_rgba(30,85,201,0.15)] aria-invalid:border-[var(--state-bad-fg)]"
             />
             <div className="mt-0.5 flex items-center justify-between">
-              <span className="text-[12px] text-[var(--ca-ink-400)]">
+              <span className="text-[12px] text-[var(--ink-4)]">
                 Подробное описание помогает ускорить принятие решения
               </span>
-              <span className="font-mono text-[11.5px] text-[var(--ca-ink-400)]">
+              <span className="font-mono text-[11.5px] text-[var(--ink-4)]">
                 {(purpose ?? "").length} / 2000
               </span>
             </div>
@@ -197,18 +197,18 @@ export function Step3Loan() {
           </Field>
         </div>
 
-        <div className="my-6 h-px bg-[var(--ca-border)]" />
+        <div className="my-6 h-px bg-[var(--border)]" />
 
         <div className="mb-1.5 flex items-end justify-between">
           <div>
-            <h3 className="m-0 text-[14px] font-semibold text-[var(--ca-ink-900)]">
+            <h3 className="m-0 text-[14px] font-semibold text-[var(--ink-1)]">
               Предварительный расчёт
             </h3>
-            <p className="m-0 mt-1 text-[12.5px] text-[var(--ca-ink-500)]">
+            <p className="m-0 mt-1 text-[12.5px] text-[var(--ink-3)]">
               На основе введённых параметров и финансовых данных Шага 2
             </p>
           </div>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-[#A8C0EE] bg-[var(--ca-primary-blue-50)] px-[7px] py-px text-[11.5px] font-semibold text-[var(--ca-primary-blue-700)]">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-[#A8C0EE] bg-[var(--brand-primary-soft)] px-[7px] py-px text-[11.5px] font-semibold text-[var(--brand-primary-hover)]">
             <Info className="size-3" />
             Расчёт обновлён
           </span>
@@ -222,7 +222,7 @@ export function Step3Loan() {
           annualNetProfit={annualNetProfit}
         />
 
-        <div className="my-6 h-px bg-[var(--ca-border)]" />
+        <div className="my-6 h-px bg-[var(--border)]" />
 
         <Checklist />
       </div>
@@ -238,7 +238,7 @@ function CategoryPills() {
       name="step3.loanCategory"
       render={({ field }) => (
         <div className="mt-2 flex flex-wrap items-center gap-2">
-          <span className="mr-1 text-[12px] text-[var(--ca-ink-500)]">
+          <span className="mr-1 text-[12px] text-[var(--ink-3)]">
             Категория:
           </span>
           {loanCategories.map((cat) => {
@@ -251,8 +251,8 @@ function CategoryPills() {
                 className={cn(
                   "inline-flex items-center gap-1.5 rounded-full border px-3 py-[7px] text-[13px] transition-colors",
                   active
-                    ? "border-[#A8C0EE] bg-[var(--ca-primary-blue-50)] font-semibold text-[var(--ca-primary-blue-700)]"
-                    : "border-[var(--ca-border-strong)] bg-[var(--ca-surface)] text-[var(--ca-ink-700)] hover:bg-[#FAFBFC]",
+                    ? "border-[#A8C0EE] bg-[var(--brand-primary-soft)] font-semibold text-[var(--brand-primary-hover)]"
+                    : "border-[var(--border-strong)] bg-[var(--surface)] text-[var(--ink-2)] hover:bg-[#FAFBFC]",
                 )}
               >
                 {cat.label}
@@ -274,15 +274,15 @@ function RateBar({ value }: { value: number }) {
     <div className="mt-1.5 flex items-center gap-3.5">
       <div className="relative h-2 flex-1 rounded-full bg-[#EAEDF2]">
         <span
-          className="absolute top-0 left-0 h-full rounded-full bg-gradient-to-r from-[var(--ca-success)] to-[var(--ca-primary-blue)]"
+          className="absolute top-0 left-0 h-full rounded-full bg-gradient-to-r from-[var(--state-ok-fg)] to-[var(--brand-primary)]"
           style={{ width: `${pct}%` }}
         />
         <span
-          className="absolute -top-0.5 size-3.5 -translate-x-1/2 rounded-full border-[3px] border-[var(--ca-primary-blue)] bg-[var(--ca-surface)] shadow-[0_1px_4px_rgba(0,0,0,0.15)]"
+          className="absolute -top-0.5 size-3.5 -translate-x-1/2 rounded-full border-[3px] border-[var(--brand-primary)] bg-[var(--surface)] shadow-[0_1px_4px_rgba(0,0,0,0.15)]"
           style={{ left: `${pct}%` }}
         />
       </div>
-      <div className="flex w-full max-w-[200px] justify-between font-mono text-[11px] text-[var(--ca-ink-400)]">
+      <div className="flex w-full max-w-[200px] justify-between font-mono text-[11px] text-[var(--ink-4)]">
         <span>14%</span>
         <span>26%</span>
       </div>

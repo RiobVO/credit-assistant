@@ -65,7 +65,7 @@ export function ManualInputView() {
 function ManualInputFallback() {
   return (
     <div className="w-full max-w-[1180px] px-8 pt-7 pb-[120px]">
-      <div className="rounded-lg border border-[var(--ca-border)] bg-[var(--ca-surface)] px-5 py-4 text-[13px] text-[var(--ca-ink-500)]">
+      <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-5 py-4 text-[13px] text-[var(--ink-3)]">
         Загружаем форму…
       </div>
     </div>
@@ -215,7 +215,7 @@ function ManualInputPageInner() {
         <PageHead caseId={caseId} />
 
         {draft.isLoading ? (
-          <div className="rounded-lg border border-[var(--ca-border)] bg-[var(--ca-surface)] px-5 py-4 text-[13px] text-[var(--ca-ink-500)]">
+          <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-5 py-4 text-[13px] text-[var(--ink-3)]">
             Загружаем черновик…
           </div>
         ) : (
@@ -275,11 +275,11 @@ function ErrorBanner({ error }: { error: unknown }) {
   return (
     <div className="mb-[22px] rounded-lg border border-[#F2BCBA] bg-[#FCE7E5] px-[14px] py-3">
       <div className="flex items-start gap-3">
-        <TriangleAlert className="mt-px size-4 flex-none text-[var(--ca-danger)]" />
-        <div className="text-[13px] leading-[1.5] text-[var(--ca-danger)]">
+        <TriangleAlert className="mt-px size-4 flex-none text-[var(--state-bad-fg)]" />
+        <div className="text-[13px] leading-[1.5] text-[var(--state-bad-fg)]">
           <b className="font-semibold">Ошибка отправки на скоринг.</b>{" "}
           Проверьте данные и попробуйте снова.
-          <pre className="mt-2 max-h-40 overflow-auto rounded-md border border-[#F2BCBA] bg-[var(--ca-surface)] p-2 font-mono text-[11.5px] text-[var(--ca-ink-700)]">
+          <pre className="mt-2 max-h-40 overflow-auto rounded-md border border-[#F2BCBA] bg-[var(--surface)] p-2 font-mono text-[11.5px] text-[var(--ink-2)]">
             {body}
           </pre>
         </div>

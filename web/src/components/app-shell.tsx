@@ -14,7 +14,7 @@ import { APP_MODE } from "@/lib/config";
 export function AppShell({ children }: { children: ReactNode }) {
   const SidebarComponent = APP_MODE === "bank" ? BankSidebar : AccountantSidebar;
   return (
-    <div className="grid min-h-screen grid-cols-[260px_minmax(0,1fr)] bg-[var(--ca-bg)]">
+    <div className="grid min-h-screen grid-cols-[260px_minmax(0,1fr)] bg-[var(--bg)]">
       <SidebarComponent />
       <main className="flex min-w-0 flex-col">{children}</main>
     </div>

@@ -20,17 +20,17 @@ export function Topbar({
   draft?: DraftIndicator;
 }) {
   return (
-    <div className="flex items-center gap-[14px] border-b border-[var(--ca-border)] bg-[var(--ca-surface)] px-8 py-[14px]">
-      <div className="text-[13px] text-[var(--ca-ink-500)]">
+    <div className="flex items-center gap-[14px] border-b border-[var(--border)] bg-[var(--surface)] px-8 py-[14px]">
+      <div className="text-[13px] text-[var(--ink-3)]">
         {crumbs.map((c, i) => (
           <Fragment key={i}>
             {i > 0 ? (
-              <span className="mx-2 text-[var(--ca-ink-400)]">/</span>
+              <span className="mx-2 text-[var(--ink-4)]">/</span>
             ) : null}
             {c.current ? (
-              <b className="font-semibold text-[var(--ca-ink-900)]">{c.label}</b>
+              <b className="font-semibold text-[var(--ink-1)]">{c.label}</b>
             ) : (
-              <span className="text-[var(--ca-ink-400)]">{c.label}</span>
+              <span className="text-[var(--ink-4)]">{c.label}</span>
             )}
           </Fragment>
         ))}
@@ -55,7 +55,7 @@ function DraftBadge({ draft }: { draft: DraftIndicator }) {
 
   if (draft.state === "saving") {
     return (
-      <span className="flex items-center gap-1.5 text-[12.5px] text-[var(--ca-ink-500)]">
+      <span className="flex items-center gap-1.5 text-[12.5px] text-[var(--ink-3)]">
         <Loader2 className="size-3.5 animate-spin" />
         Сохраняем черновик…
       </span>
@@ -64,15 +64,15 @@ function DraftBadge({ draft }: { draft: DraftIndicator }) {
 
   if (draft.state === "error") {
     return (
-      <span className="flex items-center gap-1.5 text-[12.5px] text-[var(--ca-danger)]">
+      <span className="flex items-center gap-1.5 text-[12.5px] text-[var(--state-bad-fg)]">
         Не удалось сохранить черновик
       </span>
     );
   }
 
   return (
-    <span className="flex items-center gap-1.5 text-[12.5px] text-[var(--ca-ink-500)]">
-      <Check className="size-3.5 text-[var(--ca-success,#16A34A)]" />
+    <span className="flex items-center gap-1.5 text-[12.5px] text-[var(--ink-3)]">
+      <Check className="size-3.5 text-[var(--state-ok-fg,#16A34A)]" />
       Черновик сохранён {formatHm(draft.at)}
     </span>
   );
@@ -86,13 +86,13 @@ function formatHm(d: Date): string {
 
 function SearchBox() {
   return (
-    <div className="flex h-[34px] w-[280px] items-center gap-2 rounded-md border border-[var(--ca-border)] bg-[var(--ca-surface)] px-[10px] text-[var(--ca-ink-400)]">
+    <div className="flex h-[34px] w-[280px] items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-[10px] text-[var(--ink-4)]">
       <Search className="size-4" />
       <input
         placeholder="Поиск по ИНН, заявкам…"
-        className="flex-1 bg-transparent text-[var(--ca-ink-900)] outline-none placeholder:text-[var(--ca-ink-400)]"
+        className="flex-1 bg-transparent text-[var(--ink-1)] outline-none placeholder:text-[var(--ink-4)]"
       />
-      <span className="rounded border border-[var(--ca-border)] bg-[#FAFBFC] px-[5px] py-px font-mono text-[10.5px] text-[var(--ca-ink-400)]">
+      <span className="rounded border border-[var(--border)] bg-[#FAFBFC] px-[5px] py-px font-mono text-[10.5px] text-[var(--ink-4)]">
         ⌘K
       </span>
     </div>
@@ -105,7 +105,7 @@ function IconButton({ title, children }: { title: string; children: ReactNode })
       type="button"
       title={title}
       aria-label={title}
-      className="grid size-[34px] place-items-center rounded-md border border-[var(--ca-border)] bg-[var(--ca-surface)] text-[var(--ca-ink-500)] transition-colors hover:bg-[#FAFBFC] hover:text-[var(--ca-ink-700)]"
+      className="grid size-[34px] place-items-center rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--ink-3)] transition-colors hover:bg-[#FAFBFC] hover:text-[var(--ink-2)]"
     >
       {children}
     </button>

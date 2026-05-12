@@ -100,13 +100,13 @@ function SoliqUploadInner({ field }: { field: FieldShape }) {
   };
 
   return (
-    <section className="rounded-[10px] border border-[var(--ca-border)] bg-[var(--ca-surface)] shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
-      <header className="flex items-start justify-between gap-2.5 border-b border-[var(--ca-border)] px-[22px] py-[18px]">
+    <section className="rounded-[10px] border border-[var(--border)] bg-[var(--surface)] shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
+      <header className="flex items-start justify-between gap-2.5 border-b border-[var(--border)] px-[22px] py-[18px]">
         <div>
-          <h2 className="m-0 text-[15px] font-semibold text-[var(--ca-ink-900)]">
+          <h2 className="m-0 text-[15px] font-semibold text-[var(--ink-1)]">
             Загрузить из my3.soliq.uz
           </h2>
-          <p className="m-0 mt-0.5 text-[12.5px] text-[var(--ca-ink-500)]">
+          <p className="m-0 mt-0.5 text-[12.5px] text-[var(--ink-3)]">
             Расчёт НДС + ilova-приложение №4 за один налоговый период (один месяц)
           </p>
         </div>
@@ -114,7 +114,7 @@ function SoliqUploadInner({ field }: { field: FieldShape }) {
           <button
             type="button"
             onClick={reset}
-            className="inline-flex items-center gap-1.5 rounded-md border border-[var(--ca-border-strong)] bg-[var(--ca-surface)] px-3 py-1.5 text-[12px] text-[var(--ca-ink-700)] transition-colors hover:bg-[#FAFBFC]"
+            className="inline-flex items-center gap-1.5 rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-1.5 text-[12px] text-[var(--ink-2)] transition-colors hover:bg-[#FAFBFC]"
           >
             <Trash2 className="size-3.5" />
             Сбросить
@@ -148,11 +148,11 @@ function SoliqUploadInner({ field }: { field: FieldShape }) {
 
             <div className="grid grid-cols-1 items-end gap-3 md:grid-cols-3">
               <div className="flex flex-col gap-1.5">
-                <label className="text-[13px] font-medium text-[var(--ca-ink-700)]">Год</label>
+                <label className="text-[13px] font-medium text-[var(--ink-2)]">Год</label>
                 <select
                   value={year}
                   onChange={(e) => setYear(Number(e.target.value))}
-                  className="h-[38px] rounded-md border border-[var(--ca-border-strong)] bg-[var(--ca-surface)] px-3 text-[14px] text-[var(--ca-ink-900)]"
+                  className="h-[38px] rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3 text-[14px] text-[var(--ink-1)]"
                 >
                   {YEARS.map((y) => (
                     <option key={y} value={y}>
@@ -162,11 +162,11 @@ function SoliqUploadInner({ field }: { field: FieldShape }) {
                 </select>
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-[13px] font-medium text-[var(--ca-ink-700)]">Месяц</label>
+                <label className="text-[13px] font-medium text-[var(--ink-2)]">Месяц</label>
                 <select
                   value={month}
                   onChange={(e) => setMonth(Number(e.target.value))}
-                  className="h-[38px] rounded-md border border-[var(--ca-border-strong)] bg-[var(--ca-surface)] px-3 text-[14px] text-[var(--ca-ink-900)]"
+                  className="h-[38px] rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3 text-[14px] text-[var(--ink-1)]"
                 >
                   {MONTHS_RU.map((label, idx) => (
                     <option key={idx} value={idx + 1}>
@@ -182,8 +182,8 @@ function SoliqUploadInner({ field }: { field: FieldShape }) {
                 className={cn(
                   "h-[38px] rounded-md px-4 text-[13px] font-semibold transition-colors",
                   canSubmit
-                    ? "bg-[var(--ca-primary-blue)] text-white hover:opacity-90"
-                    : "cursor-not-allowed bg-[#E5E8EE] text-[var(--ca-ink-400)]",
+                    ? "bg-[var(--brand-primary)] text-white hover:opacity-90"
+                    : "cursor-not-allowed bg-[#E5E8EE] text-[var(--ink-4)]",
                 )}
               >
                 {mutation.isPending ? "Распознаём…" : "Распознать"}
@@ -223,8 +223,8 @@ function FilePicker({
   onRemove: () => void;
 }) {
   return (
-    <div className="rounded-md border border-dashed border-[var(--ca-border-strong)] bg-[#FAFBFC] p-4">
-      <div className="text-[12px] tracking-[0.4px] text-[var(--ca-ink-500)] uppercase">{label}</div>
+    <div className="rounded-md border border-dashed border-[var(--border-strong)] bg-[#FAFBFC] p-4">
+      <div className="text-[12px] tracking-[0.4px] text-[var(--ink-3)] uppercase">{label}</div>
       <input
         ref={inputRef}
         type="file"
@@ -233,15 +233,15 @@ function FilePicker({
         onChange={(e) => onChange(e.target.files?.[0] ?? null)}
       />
       {file ? (
-        <div className="mt-2 flex items-center justify-between gap-3 rounded-md border border-[var(--ca-border)] bg-[var(--ca-surface)] px-3 py-2">
+        <div className="mt-2 flex items-center justify-between gap-3 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2">
           <div className="flex min-w-0 items-center gap-2">
-            <FileText className="size-4 shrink-0 text-[var(--ca-ink-500)]" />
-            <span className="truncate text-[13px] text-[var(--ca-ink-700)]">{file.name}</span>
+            <FileText className="size-4 shrink-0 text-[var(--ink-3)]" />
+            <span className="truncate text-[13px] text-[var(--ink-2)]">{file.name}</span>
           </div>
           <button
             type="button"
             onClick={onRemove}
-            className="text-[12px] text-[var(--ca-danger)] hover:underline"
+            className="text-[12px] text-[var(--state-bad-fg)] hover:underline"
           >
             Удалить
           </button>
@@ -250,13 +250,13 @@ function FilePicker({
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
-          className="mt-2 flex w-full items-center justify-center gap-2 rounded-md border border-[var(--ca-border-strong)] bg-[var(--ca-surface)] py-3 text-[13px] text-[var(--ca-ink-700)] hover:bg-[#F4F6FA]"
+          className="mt-2 flex w-full items-center justify-center gap-2 rounded-md border border-[var(--border-strong)] bg-[var(--surface)] py-3 text-[13px] text-[var(--ink-2)] hover:bg-[#F4F6FA]"
         >
           <Upload className="size-4" />
           Выбрать .xltx
         </button>
       )}
-      <div className="mt-1.5 text-[12px] text-[var(--ca-ink-400)]">{hint}</div>
+      <div className="mt-1.5 text-[12px] text-[var(--ink-4)]">{hint}</div>
     </div>
   );
 }
@@ -270,11 +270,11 @@ function PreviewBlock({ data }: { data: VatPeriodFromSoliq }) {
   return (
     <div className="space-y-2.5">
       <div className="flex items-start gap-2.5 rounded-md border border-[#BFE7C8] bg-[#E9F7EE] px-[14px] py-3">
-        <CheckCircle2 className="mt-px size-4 flex-none text-[var(--ca-success)]" />
-        <div className="text-[13px] leading-[1.5] text-[var(--ca-ink-900)]">
+        <CheckCircle2 className="mt-px size-4 flex-none text-[var(--state-ok-fg)]" />
+        <div className="text-[13px] leading-[1.5] text-[var(--ink-1)]">
           <b className="font-semibold">Распознан период {monthLabel.toLowerCase()} {data.year}.</b>{" "}
           {data.organizationName ? (
-            <span className="text-[var(--ca-ink-500)]">{data.organizationName}</span>
+            <span className="text-[var(--ink-3)]">{data.organizationName}</span>
           ) : null}
         </div>
       </div>
@@ -296,7 +296,7 @@ function PreviewBlock({ data }: { data: VatPeriodFromSoliq }) {
       </div>
 
       {data.submittedAt ? (
-        <div className="text-[12px] text-[var(--ca-ink-400)]">
+        <div className="text-[12px] text-[var(--ink-4)]">
           Дата подачи: {data.submittedAt}
         </div>
       ) : null}
@@ -322,12 +322,12 @@ function ParseWarnings({ warnings, skipped }: { warnings: string[]; skipped: num
       onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)}
       className="rounded-md border border-[#F2DBA1] bg-[#FCF4DD] px-[14px] py-2.5"
     >
-      <summary className="cursor-pointer list-none text-[12.5px] font-medium text-[var(--ca-ink-700)]">
+      <summary className="cursor-pointer list-none text-[12.5px] font-medium text-[var(--ink-2)]">
         <span className="mr-1 inline-block transition-transform" style={{ transform: open ? "rotate(90deg)" : "rotate(0deg)" }}>▸</span>
         {summary}
       </summary>
       {warnings.length > 0 ? (
-        <ul className="mt-2 space-y-1 text-[12px] leading-[1.5] text-[var(--ca-ink-700)]">
+        <ul className="mt-2 space-y-1 text-[12px] leading-[1.5] text-[var(--ink-2)]">
           {warnings.map((w, i) => (
             <li key={i} className="font-mono break-all">
               · {w}
@@ -349,14 +349,14 @@ function Stat({
   tone?: "good" | "warn" | "neutral";
 }) {
   return (
-    <div className="rounded-lg border border-dashed border-[var(--ca-border-strong)] bg-[#FAFBFC] px-[14px] py-3">
-      <div className="text-[12px] tracking-[0.6px] text-[var(--ca-ink-500)] uppercase">{label}</div>
+    <div className="rounded-lg border border-dashed border-[var(--border-strong)] bg-[#FAFBFC] px-[14px] py-3">
+      <div className="text-[12px] tracking-[0.6px] text-[var(--ink-3)] uppercase">{label}</div>
       <div
         className={cn(
           "mt-1 font-mono text-[14px] font-semibold",
-          tone === "good" && "text-[var(--ca-success)]",
-          tone === "warn" && "text-[var(--ca-warning)]",
-          tone === "neutral" && "text-[var(--ca-ink-900)]",
+          tone === "good" && "text-[var(--state-ok-fg)]",
+          tone === "warn" && "text-[var(--state-warn-fg)]",
+          tone === "neutral" && "text-[var(--ink-1)]",
         )}
       >
         {value}
@@ -371,9 +371,9 @@ function Hint({ tone, text }: { tone: "info" | "warn"; text: string }) {
       className={cn(
         "rounded-md border px-[14px] py-2.5 text-[12.5px]",
         tone === "info" &&
-          "border-[var(--ca-border)] bg-[#F4F6FA] text-[var(--ca-ink-500)]",
+          "border-[var(--border)] bg-[#F4F6FA] text-[var(--ink-3)]",
         tone === "warn" &&
-          "border-[#F2DBA1] bg-[#FCF4DD] text-[var(--ca-ink-700)]",
+          "border-[#F2DBA1] bg-[#FCF4DD] text-[var(--ink-2)]",
       )}
     >
       {text}
@@ -398,8 +398,8 @@ function ErrorBlock({ error }: { error: unknown }) {
   }
   return (
     <div className="flex items-start gap-2.5 rounded-md border border-[#F2BCBA] bg-[#FCE7E5] px-[14px] py-3">
-      <TriangleAlert className="mt-px size-4 flex-none text-[var(--ca-danger)]" />
-      <div className="text-[13px] leading-[1.5] text-[var(--ca-danger)]">{message}</div>
+      <TriangleAlert className="mt-px size-4 flex-none text-[var(--state-bad-fg)]" />
+      <div className="text-[13px] leading-[1.5] text-[var(--state-bad-fg)]">{message}</div>
     </div>
   );
 }
