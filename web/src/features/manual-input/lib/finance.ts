@@ -126,14 +126,20 @@ export function computeDscr(
   return annualNetProfit / (monthlyPayment * 12);
 }
 
+export type DscrRiskKey =
+  | "dscr_risk_low"
+  | "dscr_risk_medium"
+  | "dscr_risk_high"
+  | "dscr_risk_no_data";
+
 export function classifyDscrRisk(dscr: number | null): {
-  label: "Низкий риск" | "Средний риск" | "Высокий риск" | "Недостаточно данных";
+  key: DscrRiskKey;
   tone: "success" | "warning" | "danger" | "neutral";
 } {
-  if (dscr == null) return { label: "Недостаточно данных", tone: "neutral" };
-  if (dscr >= 1.5) return { label: "Низкий риск", tone: "success" };
-  if (dscr >= 1.25) return { label: "Средний риск", tone: "warning" };
-  return { label: "Высокий риск", tone: "danger" };
+  if (dscr == null) return { key: "dscr_risk_no_data", tone: "neutral" };
+  if (dscr >= 1.5) return { key: "dscr_risk_low", tone: "success" };
+  if (dscr >= 1.25) return { key: "dscr_risk_medium", tone: "warning" };
+  return { key: "dscr_risk_high", tone: "danger" };
 }
 
 export function computeDebtToAssets(

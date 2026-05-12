@@ -12,6 +12,7 @@
 
 import { useMutation } from "@tanstack/react-query";
 import { CheckCircle2, FileText, TriangleAlert, Trash2, Upload } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useRef, useState } from "react";
 import { type FieldPath, useFormContext } from "react-hook-form";
 
@@ -20,6 +21,8 @@ import { cn } from "@/lib/utils";
 
 import { useSourceTrail } from "../hooks/use-source-trail";
 import type { FormValues } from "../schema";
+
+type Translator = ReturnType<typeof useTranslations>;
 
 type SetValueFn = (
   path: FieldPath<FormValues>,
@@ -34,6 +37,7 @@ const KNOWN_YEARS = [2023, 2024, 2025] as const;
 type Source = { fieldLabel: string; year?: number; sourceLabel: string };
 
 export function ParsedFilesDropzone() {
+  const t = useTranslations("accountant.manual_input");
   const { setValue } = useFormContext<FormValues>();
   const { mergeSourceTrail } = useSourceTrail();
   const [files, setFiles] = useState<File[]>([]);
@@ -44,7 +48,7 @@ export function ParsedFilesDropzone() {
   const mutation = useMutation({
     mutationFn: () => parseManualInputFiles(files),
     onSuccess: (data) => {
-      const filled = applyToForm(data, setValue);
+      const filled = applyToForm(data, setValue, t);
       setAutofilled(filled);
       setWarnings(data.parse_warnings ?? []);
       // CA-035: source_trail в context, чтобы Checklist (Шаг 3) знал какие
@@ -74,9 +78,9 @@ export function ParsedFilesDropzone() {
   const canSubmit = files.length > 0 && !mutation.isPending;
   const errorMessage =
     mutation.error instanceof ApiError
-      ? formatApiError(mutation.error)
+      ? formatApiError(mutation.error, t)
       : mutation.error
-        ? "Не удалось распарсить файлы"
+        ? t("dropzone_parse_error")
         : null;
 
   return (
@@ -85,20 +89,16 @@ export function ParsedFilesDropzone() {
         <Upload className="size-4 text-[var(--brand-primary)]" />
         <div>
           <h2 className="m-0 text-[15px] font-semibold text-[var(--ink-1)]">
-            Автозаполнение из выгрузок my3.soliq.uz
+            {t("dropzone_title")}
           </h2>
           <p className="m-0 mt-0.5 text-[12.5px] text-[var(--ink-3)]">
-            Загрузите xltx-файлы (Форма №2, декларация НДС) — поля ниже заполнятся
-            автоматически. Можно несколько за один год / разные годы.
+            {t("dropzone_sub")}
           </p>
         </div>
       </header>
 
       <div className="space-y-4 p-[22px]">
-        <DropZone
-          onSelect={onAddFiles}
-          inputRef={inputRef}
-        />
+        <DropZone onSelect={onAddFiles} inputRef={inputRef} />
 
         {files.length > 0 && (
           <ul className="divide-y divide-[var(--border)] rounded-md border border-[var(--border)]">
@@ -113,7 +113,7 @@ export function ParsedFilesDropzone() {
                 </span>
                 <button
                   type="button"
-                  aria-label={`Удалить ${f.name}`}
+                  aria-label={t("dropzone_remove_aria", { name: f.name })}
                   onClick={() => removeFile(i)}
                   className="rounded p-1 text-[var(--ink-4)] transition-colors hover:bg-[#FCE7E5] hover:text-[var(--state-bad-fg)]"
                 >
@@ -127,8 +127,8 @@ export function ParsedFilesDropzone() {
         <div className="flex items-center justify-between">
           <span className="text-[12px] text-[var(--ink-3)]">
             {files.length === 0
-              ? `До ${MAX_FILES} файлов · xltx из личного кабинета Soliq`
-              : `${files.length} ${pluralFiles(files.length)} готов${files.length === 1 ? "" : "ы"} к загрузке`}
+              ? t("dropzone_files_hint_empty", { max: MAX_FILES })
+              : t("dropzone_files_hint_count", { count: files.length })}
           </span>
           <button
             type="button"
@@ -141,7 +141,7 @@ export function ParsedFilesDropzone() {
                 : "cursor-not-allowed bg-[#E5E9EF] text-[var(--ink-4)]",
             )}
           >
-            {mutation.isPending ? "Парсим…" : "Распарсить и заполнить"}
+            {mutation.isPending ? t("dropzone_submitting") : t("dropzone_submit")}
           </button>
         </div>
 
@@ -167,6 +167,7 @@ function DropZone({
   onSelect: (f: FileList | null) => void;
   inputRef: React.RefObject<HTMLInputElement | null>;
 }) {
+  const t = useTranslations("accountant.manual_input");
   const [over, setOver] = useState(false);
   return (
     <label
@@ -193,10 +194,10 @@ function DropZone({
     >
       <Upload className="size-5 text-[var(--ink-3)]" />
       <span className="text-[13px] font-medium text-[var(--ink-2)]">
-        Перетащите xltx-файлы сюда
+        {t("dropzone_drag_text")}
       </span>
       <span className="text-[11.5px] text-[var(--ink-3)]">
-        или нажмите, чтобы выбрать (несколько файлов сразу)
+        {t("dropzone_drag_sub")}
       </span>
       <input
         ref={inputRef}
@@ -211,18 +212,21 @@ function DropZone({
 }
 
 function AutofilledSummary({ entries }: { entries: Source[] }) {
+  const t = useTranslations("accountant.manual_input");
   return (
     <div className="rounded-md border border-[#BFE2D2] bg-[var(--state-ok-bg)] px-3 py-2.5">
       <div className="mb-1.5 flex items-center gap-1.5 text-[12.5px] font-semibold text-[var(--state-ok-fg)]">
         <CheckCircle2 className="size-4" />
-        Автозаполнено {entries.length} {pluralFields(entries.length)}
+        {t("dropzone_autofilled_heading", { count: entries.length })}
       </div>
       <ul className="space-y-1 text-[12px] text-[var(--ink-2)]">
         {entries.map((e, i) => (
           <li key={i} className="flex items-baseline gap-2">
             <span className="font-medium">{e.fieldLabel}</span>
             {e.year ? <span className="text-[var(--ink-3)]">{e.year}</span> : null}
-            <span className="text-[11.5px] text-[var(--ink-3)]">— из {e.sourceLabel}</span>
+            <span className="text-[11.5px] text-[var(--ink-3)]">
+              {t("dropzone_source_prefix", { source: e.sourceLabel })}
+            </span>
           </li>
         ))}
       </ul>
@@ -231,10 +235,11 @@ function AutofilledSummary({ entries }: { entries: Source[] }) {
 }
 
 function WarningsBlock({ warnings }: { warnings: string[] }) {
+  const t = useTranslations("accountant.manual_input");
   return (
     <details className="rounded-md border border-[#F1D9A6] bg-[#FFF6E5] px-3 py-2">
       <summary className="cursor-pointer text-[12.5px] font-semibold text-[var(--state-warn-fg)]">
-        Предупреждения парсера ({warnings.length})
+        {t("dropzone_warnings_summary", { count: warnings.length })}
       </summary>
       <ul className="mt-2 list-disc space-y-0.5 pl-5 text-[11.5px] text-[var(--ink-2)]">
         {warnings.map((w, i) => (
@@ -245,29 +250,11 @@ function WarningsBlock({ warnings }: { warnings: string[] }) {
   );
 }
 
-function formatApiError(err: ApiError): string {
+function formatApiError(err: ApiError, t: Translator): string {
   if (typeof err.body === "object" && err.body !== null && "detail" in err.body) {
     return String((err.body as { detail: unknown }).detail);
   }
-  return `Запрос завершился ошибкой ${err.status}`;
-}
-
-function pluralFiles(n: number): string {
-  const mod10 = n % 10;
-  const mod100 = n % 100;
-  if (mod100 >= 11 && mod100 <= 14) return "файлов";
-  if (mod10 === 1) return "файл";
-  if (mod10 >= 2 && mod10 <= 4) return "файла";
-  return "файлов";
-}
-
-function pluralFields(n: number): string {
-  const mod10 = n % 10;
-  const mod100 = n % 100;
-  if (mod100 >= 11 && mod100 <= 14) return "полей";
-  if (mod10 === 1) return "поле";
-  if (mod10 >= 2 && mod10 <= 4) return "поля";
-  return "полей";
+  return t("dropzone_http_error", { status: err.status });
 }
 
 /**
@@ -280,8 +267,11 @@ function pluralFields(n: number): string {
 function applyToForm(
   data: ParsedFinancialsDto,
   setValue: SetValueFn,
+  t: Translator,
 ): Source[] {
   const filled: Source[] = [];
+  const sourceFile = t("dropzone_source_fallback_file");
+  const sourceAutofill = t("dropzone_source_fallback_autofill");
 
   const setAnnual = (
     section: "revenue" | "netProfit",
@@ -302,8 +292,8 @@ function applyToForm(
       "revenue",
       Number(year),
       value,
-      data.source_trail[`revenue_${year}`] ?? "файл",
-      "Выручка (годовой total)",
+      data.source_trail[`revenue_${year}`] ?? sourceFile,
+      t("dropzone_field_revenue_annual"),
     );
   }
   for (const [year, value] of Object.entries(data.net_profit_by_year)) {
@@ -311,8 +301,8 @@ function applyToForm(
       "netProfit",
       Number(year),
       value,
-      data.source_trail[`net_profit_${year}`] ?? "файл",
-      "Чистая прибыль (годовой total)",
+      data.source_trail[`net_profit_${year}`] ?? sourceFile,
+      t("dropzone_field_profit_annual"),
     );
   }
   // VAT — единственный «годовой» annual в форме, привязан к latest year (2025).
@@ -323,8 +313,8 @@ function applyToForm(
       shouldValidate: true,
     });
     filled.push({
-      fieldLabel: "НДС задекларированный (за 2025 г.)",
-      sourceLabel: data.source_trail["vat_declared_2025"] ?? "файл",
+      fieldLabel: t("dropzone_field_vat_2025"),
+      sourceLabel: data.source_trail["vat_declared_2025"] ?? sourceFile,
     });
   }
 
@@ -334,7 +324,7 @@ function applyToForm(
       shouldValidate: true,
     });
     filled.push({
-      fieldLabel: "Активы (всего, на конец периода)",
+      fieldLabel: t("dropzone_field_assets_end"),
       sourceLabel: data.source_trail["form1.assets_total"] ?? "FORM_1",
     });
   }
@@ -343,7 +333,7 @@ function applyToForm(
       shouldValidate: true,
     });
     filled.push({
-      fieldLabel: "Обязательства (всего, на конец периода)",
+      fieldLabel: t("dropzone_field_liabs_end"),
       sourceLabel: data.source_trail["form1.liabilities_total"] ?? "FORM_1",
     });
   }
@@ -361,61 +351,61 @@ function applyToForm(
     {
       field: "step2.profitBeforeTax25",
       value: data.profit_before_tax_by_year?.["2025"] ?? null,
-      label: "Прибыль до налогообложения 2025",
+      label: t("dropzone_field_pbt", { year: 2025 }),
       sourceKey: "profit_before_tax_2025",
     },
     {
       field: "step2.profitBeforeTax24",
       value: data.profit_before_tax_by_year?.["2024"] ?? null,
-      label: "Прибыль до налогообложения 2024",
+      label: t("dropzone_field_pbt", { year: 2024 }),
       sourceKey: "profit_before_tax_2024",
     },
     {
       field: "step2.interestExpense25",
       value: data.interest_expense_by_year?.["2025"] ?? null,
-      label: "Расходы по процентам 2025",
+      label: t("dropzone_field_interest", { year: 2025 }),
       sourceKey: "interest_expense_2025",
     },
     {
       field: "step2.interestExpense24",
       value: data.interest_expense_by_year?.["2024"] ?? null,
-      label: "Расходы по процентам 2024",
+      label: t("dropzone_field_interest", { year: 2024 }),
       sourceKey: "interest_expense_2024",
     },
     {
       field: "step2.equityEnd25",
       value: data.equity_period_end,
-      label: "Собственный капитал на конец 2025",
+      label: t("dropzone_field_equity_end"),
       sourceKey: "form1.equity",
     },
     {
       field: "step2.equityStart25",
       value: data.equity_period_start,
-      label: "Собственный капитал на начало 2025",
+      label: t("dropzone_field_equity_start"),
       sourceKey: "form1.equity_period_start",
     },
     {
       field: "step2.totalDebtEnd25",
       value: data.total_debt_period_end,
-      label: "Совокупный долг на конец 2025",
+      label: t("dropzone_field_debt_end"),
       sourceKey: "form1.total_debt",
     },
     {
       field: "step2.totalDebtStart25",
       value: data.total_debt_period_start,
-      label: "Совокупный долг на начало 2025",
+      label: t("dropzone_field_debt_start"),
       sourceKey: "form1.total_debt_period_start",
     },
     {
       field: "step2.assetsStart25",
       value: data.assets_total_period_start,
-      label: "Активы на начало 2025",
+      label: t("dropzone_field_assets_start"),
       sourceKey: "form1.assets_total_period_start",
     },
     {
       field: "step2.liabilitiesStart25",
       value: data.liabilities_total_period_start,
-      label: "Обязательства на начало 2025",
+      label: t("dropzone_field_liabs_start"),
       sourceKey: "form1.liabilities_total_period_start",
     },
   ];
@@ -426,7 +416,7 @@ function applyToForm(
     });
     filled.push({
       fieldLabel: entry.label,
-      sourceLabel: data.source_trail[entry.sourceKey] ?? "автозаполнение",
+      sourceLabel: data.source_trail[entry.sourceKey] ?? sourceAutofill,
     });
   }
 

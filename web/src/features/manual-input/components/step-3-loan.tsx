@@ -2,6 +2,7 @@
 
 import { addMonths, format } from "date-fns";
 import { Info } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Controller, useFormContext, useWatch } from "react-hook-form";
 
 import { cn } from "@/lib/utils";
@@ -27,6 +28,7 @@ import { Field, fieldInputClass } from "./field";
 const USD_RATE_UZS = 12575;
 
 export function Step3Loan() {
+  const t = useTranslations("accountant.manual_input");
   const {
     control,
     register,
@@ -34,7 +36,7 @@ export function Step3Loan() {
   } = useFormContext<FormValues>();
 
   const e = errors.step3;
-  const t = touchedFields.step3;
+  const touched = touchedFields.step3;
 
   const loanAmountStr = useWatch({ control, name: "step3.loanAmount" });
   const termMonths = useWatch({ control, name: "step3.loanTermMonths" });
@@ -67,10 +69,10 @@ export function Step3Loan() {
       <header className="flex items-center gap-2.5 border-b border-[var(--border)] px-[22px] py-[18px]">
         <div>
           <h2 className="m-0 text-[15px] font-semibold text-[var(--ink-1)]">
-            Параметры запрашиваемого кредита
+            {t("s3_section_title")}
           </h2>
           <p className="m-0 mt-0.5 text-[12.5px] text-[var(--ink-3)]">
-            Все суммы — в сумах (UZS). Поля помечены звёздочкой обязательны.
+            {t("s3_section_sub")}
           </p>
         </div>
       </header>
@@ -79,14 +81,17 @@ export function Step3Loan() {
         <div className="grid grid-cols-1 gap-x-5 gap-y-[18px] md:grid-cols-2">
           {/* Сумма кредита (col-2, large) */}
           <Field
-            label="Сумма кредита"
+            label={t("s3_amount_label")}
             required
             help={
               loanAmount > 0
-                ? `≈ ${formatUzs(String(usdEquivalent))} USD по курсу ЦБ РУз (1 USD = ${formatUzs(String(USD_RATE_UZS))} UZS)`
-                : "Введите сумму запрашиваемого кредита в сумах"
+                ? t("s3_amount_help_with_usd", {
+                    usd: formatUzs(String(usdEquivalent)),
+                    rate: formatUzs(String(USD_RATE_UZS)),
+                  })
+                : t("s3_amount_help_default")
             }
-            error={t?.loanAmount ? e?.loanAmount?.message : undefined}
+            error={touched?.loanAmount ? e?.loanAmount?.message : undefined}
             className="md:col-span-2"
           >
             <div className="flex items-stretch">
@@ -116,9 +121,9 @@ export function Step3Loan() {
 
           {/* Срок */}
           <Field
-            label="Срок кредита"
+            label={t("s3_term_label")}
             required
-            help={`Дата погашения: ${repaymentDate}`}
+            help={t("s3_term_help", { date: repaymentDate })}
           >
             <Controller
               control={control}
@@ -148,10 +153,10 @@ export function Step3Loan() {
 
           {/* Ставка */}
           <Field
-            label="Запрошенная ставка"
+            label={t("s3_rate_label")}
             required
-            error={t?.loanRatePct ? e?.loanRatePct?.message : undefined}
-            help="СР ЦБ 14% · рынок 19%"
+            error={touched?.loanRatePct ? e?.loanRatePct?.message : undefined}
+            help={t("s3_rate_help")}
           >
             <div className="flex items-stretch">
               <input
@@ -165,7 +170,7 @@ export function Step3Loan() {
                 )}
               />
               <div className="grid place-items-center rounded-r-md border border-l-0 border-[var(--border-strong)] bg-[#FAFBFC] px-3 text-[13px] text-[var(--ink-3)]">
-                % годовых
+                {t("s3_rate_suffix")}
               </div>
             </div>
             <RateBar value={ratePct} />
@@ -173,21 +178,21 @@ export function Step3Loan() {
 
           {/* Цель */}
           <Field
-            label="Цель кредита"
+            label={t("s3_purpose_label")}
             required
-            error={t?.loanPurpose ? e?.loanPurpose?.message : undefined}
+            error={touched?.loanPurpose ? e?.loanPurpose?.message : undefined}
             className="md:col-span-2"
           >
             <textarea
               {...register("step3.loanPurpose")}
               rows={5}
-              placeholder="Подробно опишите, на что планируется направить кредит. Указание контрагентов и контрактов помогает скорингу."
+              placeholder={t("s3_purpose_placeholder")}
               aria-invalid={Boolean(e?.loanPurpose) || undefined}
               className="min-h-[120px] w-full resize-y rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-3 text-[14px] leading-[1.5] text-[var(--ink-1)] outline-none focus:border-[var(--brand-primary)] focus:shadow-[0_0_0_3px_rgba(30,85,201,0.15)] aria-invalid:border-[var(--state-bad-fg)]"
             />
             <div className="mt-0.5 flex items-center justify-between">
               <span className="text-[12px] text-[var(--ink-4)]">
-                Подробное описание помогает ускорить принятие решения
+                {t("s3_purpose_hint")}
               </span>
               <span className="font-mono text-[11.5px] text-[var(--ink-4)]">
                 {(purpose ?? "").length} / 2000
@@ -202,15 +207,15 @@ export function Step3Loan() {
         <div className="mb-1.5 flex items-end justify-between">
           <div>
             <h3 className="m-0 text-[14px] font-semibold text-[var(--ink-1)]">
-              Предварительный расчёт
+              {t("s3_calc_heading")}
             </h3>
             <p className="m-0 mt-1 text-[12.5px] text-[var(--ink-3)]">
-              На основе введённых параметров и финансовых данных Шага 2
+              {t("s3_calc_sub")}
             </p>
           </div>
           <span className="inline-flex items-center gap-1.5 rounded-full border border-[#A8C0EE] bg-[var(--brand-primary-soft)] px-[7px] py-px text-[11.5px] font-semibold text-[var(--brand-primary-hover)]">
             <Info className="size-3" />
-            Расчёт обновлён
+            {t("s3_calc_updated")}
           </span>
         </div>
 
@@ -231,6 +236,7 @@ export function Step3Loan() {
 }
 
 function CategoryPills() {
+  const t = useTranslations("accountant.manual_input");
   const { control } = useFormContext<FormValues>();
   return (
     <Controller
@@ -239,7 +245,7 @@ function CategoryPills() {
       render={({ field }) => (
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <span className="mr-1 text-[12px] text-[var(--ink-3)]">
-            Категория:
+            {t("s3_category_label")}
           </span>
           {loanCategories.map((cat) => {
             const active = field.value === cat.code;
