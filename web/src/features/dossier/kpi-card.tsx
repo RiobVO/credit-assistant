@@ -14,9 +14,9 @@ type LevelTone = "good" | "warn" | "bad";
 // Не конфликтует с YoY pill (один visual канал = один сигнал). Цвета берутся
 // из дизайн-токенов (см. globals.css), палитра в одном месте.
 const LEVEL_STRIPE_CLASS: Record<LevelTone, string> = {
-  good: "border-l-4 border-l-[var(--ub-ok-fg)]",
-  warn: "border-l-4 border-l-[var(--ub-warn-fg)]",
-  bad: "border-l-4 border-l-[var(--ub-bad-fg)]",
+  good: "border-l-4 border-l-[var(--state-ok-fg)]",
+  warn: "border-l-4 border-l-[var(--state-warn-fg)]",
+  bad: "border-l-4 border-l-[var(--state-bad-fg)]",
 };
 
 export function KpiCard({
@@ -44,8 +44,8 @@ export function KpiCard({
 
   const tone =
     changeTone === "positive"
-      ? "border-[#BFE2D2] bg-[var(--ub-ok-bg)] text-[var(--ub-ok-fg)]"
-      : "border-[#F2BCBA] bg-[#FCE7E5] text-[var(--ub-bad-fg)]";
+      ? "border-[#BFE2D2] bg-[var(--state-ok-bg)] text-[var(--state-ok-fg)]"
+      : "border-[#F2BCBA] bg-[#FCE7E5] text-[var(--state-bad-fg)]";
 
   const sparkColor = changeTone === "positive" ? "#0F8A5F" : "#B42318";
   const Icon = changeTone === "positive" ? TrendingUp : TrendingDown;
@@ -53,17 +53,17 @@ export function KpiCard({
   return (
     <div
       className={cn(
-        "rounded-[10px] border border-[var(--ub-hairline)] bg-[var(--ub-surface)] p-4 shadow-[0_1px_2px_rgba(16,24,40,0.05)]",
+        "rounded-[10px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[0_1px_2px_rgba(16,24,40,0.05)]",
         levelTone && LEVEL_STRIPE_CLASS[levelTone],
       )}
       title={tooltip}
     >
-      <div className="text-[10.5px] font-semibold tracking-[1.2px] text-[var(--ub-ink-4)] uppercase">
+      <div className="text-[10.5px] font-semibold tracking-[1.2px] text-[var(--ink-4)] uppercase">
         {label}
       </div>
 
       <div className="mt-2 flex items-end justify-between gap-2">
-        <span className="font-mono text-[24px] leading-none font-semibold tracking-[-0.6px] text-[var(--ub-ink)]">
+        <span className="font-mono text-[24px] leading-none font-semibold tracking-[-0.6px] text-[var(--ink-1)]">
           {value}
         </span>
         {yoyPct !== null && (

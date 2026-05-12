@@ -15,7 +15,7 @@ type Props = {
 };
 
 const BUTTON_GHOST =
-  "inline-flex h-[38px] items-center gap-2 rounded-md border border-[var(--ub-hairline)] bg-[var(--ub-surface)] px-4 text-[13.5px] font-semibold text-[var(--ub-ink-2)] transition-colors hover:bg-[#FAFBFC]";
+  "inline-flex h-[38px] items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-4 text-[13.5px] font-semibold text-[var(--ink-2)] transition-colors hover:bg-[#FAFBFC]";
 
 // CA-055: smart back (sessionStorage с /search или /history).
 // CA-056: «Пересобрать» — ведёт на /manual-input?inn=<INN>.
@@ -55,7 +55,7 @@ export function ActionBar({ dossierId, borrower }: Props) {
   };
 
   return (
-    <div className="mt-7 flex items-center justify-between gap-3 border-t border-[var(--ub-hairline)] pt-5">
+    <div className="mt-7 flex items-center justify-between gap-3 border-t border-[var(--border)] pt-5">
       <button type="button" onClick={handleBack} className={BUTTON_GHOST}>
         <ChevronLeft className="size-4" />
         Назад
@@ -76,7 +76,7 @@ export function ActionBar({ dossierId, borrower }: Props) {
           href={pdfHref}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex h-[38px] items-center gap-2 rounded-md bg-[var(--ub-accent)] px-5 text-[13.5px] font-semibold text-white transition-colors hover:bg-[var(--ub-accent-hover)]"
+          className="inline-flex h-[38px] items-center gap-2 rounded-md bg-[var(--brand-primary)] px-5 text-[13.5px] font-semibold text-white transition-colors hover:bg-[var(--brand-primary-hover)]"
         >
           <Download className="size-4" />
           Скачать PDF
