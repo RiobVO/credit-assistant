@@ -2,6 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowRight, Eye, EyeOff, Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -11,14 +12,17 @@ import { AuthError, login } from "@/lib/auth";
 
 import styles from "./login.module.css";
 
+// Errors переводятся в callsite через `t("email_required")` / etc.
+// Zod возвращает короткий sentinel, view замапит на локализованную строку.
 const schema = z.object({
-  email: z.string().min(3, "Введите email").max(255),
-  password: z.string().min(1, "Введите пароль").max(200),
+  email: z.string().min(3, "email_required").max(255),
+  password: z.string().min(1, "password_required").max(200),
 });
 
 type FormValues = z.infer<typeof schema>;
 
 export function LoginView() {
+  const t = useTranslations("bank.login");
   const router = useRouter();
   const params = useSearchParams();
   const nextPath = params.get("next") ?? "/search";
@@ -70,9 +74,9 @@ export function LoginView() {
       router.refresh();
     } catch (e) {
       if (e instanceof AuthError && e.status === 401) {
-        setServerError("Неверный email или пароль");
+        setServerError(t("error_invalid"));
       } else {
-        setServerError("Не удалось войти. Попробуйте ещё раз.");
+        setServerError(t("error_generic"));
       }
     }
   };
@@ -100,15 +104,15 @@ export function LoginView() {
         </div>
         <div className={styles.headMeta}>
           <span className={styles.statusDot} aria-hidden />
-          Безопасное соединение
+          {t("tls_signal_short")}
         </div>
       </header>
 
       <main className={styles.main}>
         <div className={styles.card}>
           <div className={styles.eyebrow}>Authentication</div>
-          <h1 className={styles.title}>Вход в&nbsp;систему</h1>
-          <p className={styles.sub}>Корпоративная учётная запись банка.</p>
+          <h1 className={styles.title}>{t("title")}</h1>
+          <p className={styles.sub}>{t("subtitle")}</p>
 
           <form
             onSubmit={handleSubmit(onSubmit)}
@@ -117,7 +121,7 @@ export function LoginView() {
           >
             <div className={styles.group}>
               <label className={styles.label} htmlFor="email">
-                Эл. почта
+                {t("email_label")}
               </label>
               <input
                 id="email"
@@ -131,14 +135,14 @@ export function LoginView() {
               />
               {errors.email ? (
                 <p className={styles.error} role="alert" style={{ marginTop: 6 }}>
-                  {errors.email.message}
+                  {t(errors.email.message as "email_required")}
                 </p>
               ) : null}
             </div>
 
             <div className={styles.group}>
               <label className={styles.label} htmlFor="password">
-                Пароль
+                {t("password_label")}
               </label>
               <div className={styles.field}>
                 <input
@@ -155,8 +159,7 @@ export function LoginView() {
                   type="button"
                   onClick={() => setShowPass((v) => !v)}
                   className={styles.suffix}
-                  aria-label={showPass ? "Скрыть пароль" : "Показать пароль"}
-                  title={showPass ? "Скрыть" : "Показать"}
+                  aria-label={showPass ? t("hide_password") : t("show_password")}
                   tabIndex={-1}
                 >
                   {showPass ? <EyeOff size={14} /> : <Eye size={14} />}
@@ -164,7 +167,7 @@ export function LoginView() {
               </div>
               {errors.password ? (
                 <p className={styles.error} role="alert" style={{ marginTop: 6 }}>
-                  {errors.password.message}
+                  {t(errors.password.message as "password_required")}
                 </p>
               ) : null}
             </div>
@@ -176,7 +179,7 @@ export function LoginView() {
                   checked={remember}
                   onChange={(e) => setRemember(e.target.checked)}
                 />
-                <span>Запомнить</span>
+                <span>{t("remember")}</span>
               </label>
               <button
                 type="button"
@@ -185,7 +188,7 @@ export function LoginView() {
                   // TODO: реализовать восстановление через /api/auth/recover
                 }}
               >
-                Забыли пароль?
+                {t("forgot")}
               </button>
             </div>
 
@@ -199,11 +202,11 @@ export function LoginView() {
               {isSubmitting ? (
                 <>
                   <Loader2 size={15} className="animate-spin" />
-                  Вход…
+                  {t("submitting")}
                 </>
               ) : (
                 <>
-                  Войти <ArrowRight size={15} />
+                  {t("submit")} <ArrowRight size={15} />
                 </>
               )}
             </button>
@@ -214,7 +217,7 @@ export function LoginView() {
       <footer className={styles.foot}>
         <span className={styles.footSecurity}>
           <span className={styles.footDot} aria-hidden />
-          Безопасное соединение · TLS 1.3 · AES-256-GCM
+          {t("tls_signal")}
         </span>
         <span>© 2026 Uzbekbank · Все права защищены</span>
       </footer>
