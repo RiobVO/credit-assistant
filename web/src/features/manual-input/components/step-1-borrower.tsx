@@ -83,10 +83,16 @@ export function Step1Borrower() {
                     height="18"
                     viewBox="0 0 24 24"
                     fill="none"
-                    stroke="#0F8A5F"
+                    stroke="var(--state-ok-fg)"
                     strokeWidth="2.2"
                   >
-                    <circle cx="12" cy="12" r="9.5" fill="#E6F4EE" stroke="#7CC2A6" />
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="9.5"
+                      fill="var(--state-ok-bg)"
+                      stroke="var(--state-ok-stroke)"
+                    />
                     <path d="m7.5 12.2 3 3 6-6.5" />
                   </svg>
                 </div>
