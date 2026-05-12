@@ -212,7 +212,10 @@ export function LoginView() {
       </main>
 
       <footer className={styles.foot}>
-        <span>TLS 1.3 · AES-256-GCM</span>
+        <span className={styles.footSecurity}>
+          <span className={styles.footDot} aria-hidden />
+          Безопасное соединение · TLS 1.3 · AES-256-GCM
+        </span>
         <span>© 2026 Uzbekbank · Все права защищены</span>
       </footer>
     </div>
