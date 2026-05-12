@@ -182,7 +182,9 @@ function EmptyKpiCard({
   // CA-037: tone "danger" подсвечивает красным КПИ-карточку, когда null означает
   // конкретный финансовый сигнал (не «нет данных»), например ebit ≤ 0 для D/E.
   const border =
-    tone === "danger" ? "border-[#F2BCBA] bg-[#FCE7E5]" : "border-[var(--border)] bg-[var(--surface)]";
+    tone === "danger"
+      ? "border-[var(--state-bad-border)] bg-[var(--state-bad-bg)]"
+      : "border-[var(--border)] bg-[var(--surface)]";
   const labelColor =
     tone === "danger" ? "text-[var(--state-bad-fg)]" : "text-[var(--ink-4)]";
   const hintColor =
@@ -209,7 +211,7 @@ function NoDebtCard({ label }: { label: string }) {
   // нагрузки), а не «нет данных». Зелёный pill согласован с цветовой схемой
   // success в дизайне досье.
   return (
-    <div className="rounded-[10px] border border-[#BFE2D2] bg-[var(--state-ok-bg)] p-4 shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
+    <div className="rounded-[10px] border border-[var(--state-ok-border)] bg-[var(--state-ok-bg)] p-4 shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
       <div className="text-[10.5px] font-semibold tracking-[1.2px] text-[var(--state-ok-fg)] uppercase">
         {label}
       </div>
