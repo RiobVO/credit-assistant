@@ -28,6 +28,7 @@ export function CommandPalette({
   useEffect(() => {
     if (open) {
       inputRef.current?.focus();
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- сброс query при открытии palette; нельзя выразить через initial state
       setQuery("");
     }
   }, [open]);
