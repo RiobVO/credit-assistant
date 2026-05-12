@@ -35,6 +35,13 @@
       "back_to_search": "К поиску",
       "back_to_history": "К истории"
     },
+    "sidebar": {
+      "workspace": "Рабочее пространство",
+      "help_section": "Помощь",
+      "logout_aria": "Выйти",
+      "role_senior": "Старший аналитик",
+      "role_analyst": "Кредитный аналитик"
+    },
     "history": {
       "title": "История досье",
       "empty": "Здесь будет список ранее собранных досье"
