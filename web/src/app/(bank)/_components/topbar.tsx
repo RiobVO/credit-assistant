@@ -4,6 +4,8 @@ import { Bell, ChevronRight, HelpCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { usePathname } from "next/navigation";
 
+import { useBrand } from "@/lib/brand-context";
+
 type TitleKey =
   | "title_search"
   | "title_history"
@@ -25,13 +27,14 @@ export function BankTopbar() {
   const pathname = usePathname();
   const t = useTranslations("bank.topbar");
   const tShared = useTranslations("shared.topbar");
+  const brand = useBrand();
   const hit = TITLE_MAP.find((m) => m.pattern.test(pathname));
   const title = hit ? t(hit.key) : t("title_fallback");
 
   return (
     <header className="sticky top-0 z-10 flex h-[60px] items-center justify-between border-b border-[var(--border)] bg-[var(--surface)] px-8">
       <nav aria-label={tShared("breadcrumbs_aria")} className="flex items-center gap-2">
-        <span className="text-[14px] text-[var(--ink-3)]">Bank Mode</span>
+        <span className="text-[14px] text-[var(--ink-3)]">{brand.tagline}</span>
         <ChevronRight className="size-3.5 text-[var(--ink-4)]" aria-hidden />
         <span className="text-[15px] font-semibold tracking-[-0.01em] text-[var(--ink-1)]">
           {title}

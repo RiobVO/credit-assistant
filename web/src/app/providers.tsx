@@ -6,7 +6,15 @@ import {
 } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 
-export function Providers({ children }: { children: ReactNode }) {
+import { BrandProvider, type BrandClient } from "@/lib/brand-context";
+
+export function Providers({
+  brand,
+  children,
+}: {
+  brand: BrandClient;
+  children: ReactNode;
+}) {
   const [client] = useState(
     () =>
       new QueryClient({
@@ -18,5 +26,9 @@ export function Providers({ children }: { children: ReactNode }) {
         },
       }),
   );
-  return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+  return (
+    <QueryClientProvider client={client}>
+      <BrandProvider brand={brand}>{children}</BrandProvider>
+    </QueryClientProvider>
+  );
 }
