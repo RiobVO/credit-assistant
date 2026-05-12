@@ -36,7 +36,7 @@ describe("computeDscr (CA-033 null-семантика)", () => {
 describe("classifyDscrRisk (CA-033 четыре ветки)", () => {
   it("null → neutral «Недостаточно данных»", () => {
     expect(classifyDscrRisk(null)).toEqual({
-      label: "Недостаточно данных",
+      key: "dscr_risk_no_data",
       tone: "neutral",
     });
   });

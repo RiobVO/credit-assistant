@@ -1,18 +1,20 @@
+"use client";
+
 import { Check } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { cn } from "@/lib/utils";
 
 type StepIdx = 1 | 2 | 3;
 
-type StepDef = { idx: StepIdx; title: string };
-
-const STEPS: StepDef[] = [
-  { idx: 1, title: "Основные данные" },
-  { idx: 2, title: "Финансовые показатели" },
-  { idx: 3, title: "Параметры кредита" },
-];
+const STEP_TITLE_KEYS = [
+  "stepper_step_1_title",
+  "stepper_step_2_title",
+  "stepper_step_3_title",
+] as const;
 
 export function Stepper({ activeStep }: { activeStep: StepIdx }) {
+  const t = useTranslations("accountant.manual_input");
   return (
     <div
       role="progressbar"
@@ -21,9 +23,10 @@ export function Stepper({ activeStep }: { activeStep: StepIdx }) {
       aria-valuemax={3}
       className="relative mb-5 grid grid-cols-3 gap-0 rounded-[10px] border border-[var(--border)] bg-[var(--surface)] px-[18px] py-[14px]"
     >
-      {STEPS.map(({ idx, title }) => {
+      {[1, 2, 3].map((idx) => {
         const isActive = idx === activeStep;
         const isDone = idx < activeStep;
+        const title = t(STEP_TITLE_KEYS[idx - 1]);
         return (
           <div
             key={idx}
@@ -52,8 +55,8 @@ export function Stepper({ activeStep }: { activeStep: StepIdx }) {
                     : "text-[var(--ink-4)]",
                 )}
               >
-                Шаг {idx}
-                {isDone ? " · готово" : ""}
+                {t("stepper_step_prefix", { n: idx })}
+                {isDone ? ` · ${t("stepper_done_suffix")}` : ""}
               </span>
               <span
                 className={cn(
