@@ -21,12 +21,17 @@ const KEYS: Record<Variant, { bold: string; body: string }> = {
 export function InfoBanner({ variant }: { variant: Variant }) {
   const t = useTranslations("accountant.manual_input");
   return (
-    <div className="mb-[22px] flex items-start gap-3 rounded-lg border border-[#D4E1F7] bg-[#F4F8FF] px-[14px] py-3">
-      <span className="mt-px flex-none text-[var(--brand-primary)]">
+    <div
+      className="mb-[22px] flex items-start gap-3 rounded-lg border bg-[var(--state-info-bg)] px-[14px] py-3"
+      style={{
+        borderColor: "color-mix(in srgb, var(--state-info-fg) 25%, transparent)",
+      }}
+    >
+      <span className="mt-px flex-none text-[var(--state-info-fg)]">
         {ICONS[variant]}
       </span>
-      <div className="text-[13px] leading-[1.5] text-[#1A3A78]">
-        <b className="text-[#0F2A5C]">{t(KEYS[variant].bold)}</b>
+      <div className="text-[13px] leading-[1.5] text-[var(--state-info-fg)]">
+        <b className="font-semibold">{t(KEYS[variant].bold)}</b>
         {t(KEYS[variant].body)}
       </div>
     </div>

@@ -43,7 +43,16 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <NextIntlClientProvider locale={locale} messages={messages}>
-          <Providers>{children}</Providers>
+          <Providers
+            brand={{
+              id: brand.id,
+              name: brand.name,
+              tagline: brand.tagline,
+              logoMark: brand.logoMark,
+            }}
+          >
+            {children}
+          </Providers>
         </NextIntlClientProvider>
       </body>
     </html>

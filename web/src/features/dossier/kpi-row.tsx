@@ -7,66 +7,23 @@ import type { DossierViewDto, KpiValueDto } from "@/lib/api";
 import { formatBigUzs, formatPct, formatRatio } from "./format";
 
 import { KpiCard } from "./kpi-card";
+import { ReadinessKpiCard } from "./readiness-badge";
 
-type Format = "uzs" | "pct" | "ratio";
-type GrowthDirection = "up_is_good" | "down_is_good";
-
-export function KpiRow({ kpis }: { kpis: DossierViewDto["kpis"] }) {
+export function KpiRow({
+  kpis,
+  dossierId,
+}: {
+  kpis: DossierViewDto["kpis"];
+  dossierId: string;
+}) {
   const t = useTranslations("dossier.kpi");
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-      <KpiSlot
-        label={t("label_revenue_ltm")}
-        kpi={kpis.revenue_ltm}
-        format="uzs"
-        growth="up_is_good"
-      />
       <EbitSlot kpi={kpis.ebit} />
       <RoeSlot kpi={kpis.roe} />
       <DebtToEbitSlot debtToEbit={kpis.debt_to_ebit} ebit={kpis.ebit} />
+      <ReadinessKpiCard dossierId={dossierId} label={t("label_readiness")} />
     </div>
-  );
-}
-
-// ----------- Generic slot: revenue_ltm and other simple cards ----------------
-
-function KpiSlot({
-  label,
-  kpi,
-  format,
-  growth,
-}: {
-  label: string;
-  kpi: KpiValueDto | null;
-  format: Format;
-  growth: GrowthDirection;
-}) {
-  const t = useTranslations("dossier.kpi");
-  // == null ловит и undefined (Docker API ещё не пересобран после CA-037 rename
-  // → response может прийти без ключей ebit/debt_to_ebit). Без этого слот падает.
-  if (kpi == null) {
-    return <EmptyKpiCard label={label} hint={t("no_data_default")} />;
-  }
-
-  const value = parseFloat(kpi.value);
-  const yoyNum = kpi.yoy_pct !== null ? parseFloat(kpi.yoy_pct) : null;
-  const sparkline = kpi.sparkline.map((p) => parseFloat(p));
-
-  const isGood =
-    yoyNum === null
-      ? true
-      : growth === "up_is_good"
-        ? yoyNum >= 0
-        : yoyNum <= 0;
-
-  return (
-    <KpiCard
-      label={label}
-      value={formatValue(value, format)}
-      yoyPct={yoyNum}
-      changeTone={isGood ? "positive" : "negative"}
-      sparkline={sparkline}
-    />
   );
 }
 
@@ -224,15 +181,4 @@ function NoDebtCard({ label, pillLabel }: { label: string; pillLabel: string }) 
       <div className="mt-3 h-[36px]" aria-hidden="true" />
     </div>
   );
-}
-
-function formatValue(value: number, format: Format): string {
-  switch (format) {
-    case "uzs":
-      return formatBigUzs(value);
-    case "pct":
-      return formatPct(value);
-    case "ratio":
-      return formatRatio(value);
-  }
 }
