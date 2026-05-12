@@ -73,6 +73,16 @@ export type DossierViewDto = DossierResponseDto & {
     trend: string; // Decimal как str
     is_peak: boolean;
   }>;
+  // T0.3.2: ГНК-справка из BorrowerSnapshot. null если не загружена.
+  gnk_certificate: {
+    file_id: string | null;
+    full_name: string;
+    status: GnkStatus;
+    okveds: string[];
+    source: GnkSource;
+    cert_id: string | null;
+    uploaded_at: string | null;
+  } | null;
 };
 
 export type KpiValueDto = {

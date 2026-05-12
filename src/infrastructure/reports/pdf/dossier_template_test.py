@@ -269,6 +269,32 @@ def test_template_excludes_gnk_verified_pill() -> None:
     assert "pill-ok" not in html
 
 
+def test_template_renders_gnk_certificate_row_when_provided() -> None:
+    """T0.3.2: если в context есть gnk_certificate — Section A добавляет row
+    со статусом + источником. Без gnk_certificate — row отсутствует."""
+    env = _make_env()
+    tpl = env.get_template("dossier.html")
+
+    # Без справки — row отсутствует.
+    ctx_no_cert = _minimal_context()
+    ctx_no_cert.setdefault("gnk_certificate", None)
+    html_no_cert = tpl.render(**ctx_no_cert)
+    assert "Справка ГНК" not in html_no_cert
+
+    # Со справкой active + cert_id — row рендерится со статусом и источником.
+    ctx_with_cert = _minimal_context()
+    ctx_with_cert["gnk_certificate"] = _Stub(
+        status="active",
+        source="uploaded",
+        cert_id="GNK-2026-12345",
+    )
+    html_with_cert = tpl.render(**ctx_with_cert)
+    assert "Справка ГНК" in html_with_cert
+    assert "Активный плательщик НДС" in html_with_cert
+    assert "GNK-2026-12345" in html_with_cert
+    assert "загружено аналитиком" in html_with_cert
+
+
 def test_template_handles_empty_observations() -> None:
     """Если ни strengths ни risks — рендерятся empty states."""
     env = _make_env()

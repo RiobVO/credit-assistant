@@ -763,6 +763,26 @@
         <div class="k">Основной вид деятельности</div>
         <div class="v">{{ borrower.okved_main }} — {{ okved_full_label }}</div>
       </div>
+      {% if gnk_certificate %}
+      <div class="row">
+        <div class="k">Справка ГНК</div>
+        <div class="v">
+          {% if gnk_certificate.status == 'active' %}✓ Активный плательщик НДС
+          {% elif gnk_certificate.status == 'suspended' %}⚠ Регистрация НДС приостановлена
+          {% elif gnk_certificate.status == 'revoked' %}✗ Снят с учёта НДС
+          {% else %}? Статус НДС не определён
+          {% endif %}
+          {% if gnk_certificate.cert_id %}<span class="dim mono">· № {{ gnk_certificate.cert_id }}</span>{% endif %}
+          <span class="dim">·
+            {% if gnk_certificate.source == 'uploaded' %}загружено аналитиком
+            {% elif gnk_certificate.source == 'gnk_live' %}live из ГНК
+            {% elif gnk_certificate.source == 'gnk_cached' %}кэш ГНК
+            {% else %}fallback
+            {% endif %}
+          </span>
+        </div>
+      </div>
+      {% endif %}
     </div>
   </section>
 

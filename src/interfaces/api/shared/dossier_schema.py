@@ -300,6 +300,18 @@ class MonthlyRevenuePointOutput(_StrictModel):
     is_peak: bool
 
 
+class GnkCertificateOutput(_StrictModel):
+    """T0.3.2: ГНК-справка в досье — public представление без file_bytes."""
+
+    file_id: UUID | None = None
+    full_name: str
+    status: Literal["active", "suspended", "revoked", "unknown"]
+    okveds: list[str]
+    source: Literal["uploaded", "gnk_live", "gnk_cached", "fallback"]
+    cert_id: str | None = None
+    uploaded_at: str | None = None
+
+
 class DossierViewResponse(_StrictModel):
     dossier_id: UUID
     borrower_inn_masked: str
@@ -311,3 +323,6 @@ class DossierViewResponse(_StrictModel):
     application: ApplicationOutput
     kpis: KpiBundleOutput
     monthly_revenue_24m: list[MonthlyRevenuePointOutput]
+    # T0.3.2: optional — None если ГНК-справка не загружена (Phase A — manual
+    # upload в Step 1 wizard, см. shared/gnk_certificate.py + GnkCertificateUpload).
+    gnk_certificate: GnkCertificateOutput | None = None

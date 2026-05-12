@@ -66,7 +66,7 @@ export function DossierView({ dossierId }: { dossierId: string }) {
           score={data.risk_score.display_score}
           recommendation={data.risk_score.recommendation}
         />
-        <BorrowerCard borrower={data.borrower} />
+        <BorrowerCard borrower={data.borrower} gnkCertificate={data.gnk_certificate} />
       </div>
 
       <div className="mt-4">
