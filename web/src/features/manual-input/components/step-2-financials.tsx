@@ -59,13 +59,13 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-[10px] border border-[var(--ca-border)] bg-[var(--ca-surface)] shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
-      <header className="flex items-center gap-2.5 border-b border-[var(--ca-border)] px-[22px] py-[18px]">
+    <section className="rounded-[10px] border border-[var(--border)] bg-[var(--surface)] shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
+      <header className="flex items-center gap-2.5 border-b border-[var(--border)] px-[22px] py-[18px]">
         <div>
-          <h2 className="m-0 text-[15px] font-semibold text-[var(--ca-ink-900)]">
+          <h2 className="m-0 text-[15px] font-semibold text-[var(--ink-1)]">
             {title}
           </h2>
-          <p className="m-0 mt-0.5 text-[12.5px] text-[var(--ca-ink-500)]">
+          <p className="m-0 mt-0.5 text-[12.5px] text-[var(--ink-3)]">
             {sub}
           </p>
         </div>
@@ -87,10 +87,10 @@ function AnnualFields() {
   return (
     <div className="space-y-[18px]">
       <div>
-        <div className="mb-2 text-[12.5px] font-medium text-[var(--ca-ink-700)]">
+        <div className="mb-2 text-[12.5px] font-medium text-[var(--ink-2)]">
           Налоги уплаченные (по годам)
         </div>
-        <p className="m-0 mb-2 text-[11.5px] text-[var(--ca-ink-500)]">
+        <p className="m-0 mb-2 text-[11.5px] text-[var(--ink-3)]">
           Совокупная сумма налогов, уплаченных за каждый отчётный год.
           За 2023/2024 — необязательно (используется только при наличии данных).
         </p>
@@ -181,12 +181,12 @@ function UzsField({
                 fieldInputClass,
                 "rounded-r-none border-r-0 text-right font-mono",
                 error &&
-                  "border-[var(--ca-danger)] focus:border-[var(--ca-danger)] focus:shadow-[0_0_0_3px_rgba(180,35,24,0.15)]",
+                  "border-[var(--state-bad-fg)] focus:border-[var(--state-bad-fg)] focus:shadow-[0_0_0_3px_rgba(180,35,24,0.15)]",
               )}
             />
           )}
         />
-        <div className="grid place-items-center rounded-r-md border border-l-0 border-[var(--ca-border-strong)] bg-[#FAFBFC] px-3 text-[13px] text-[var(--ca-ink-500)]">
+        <div className="grid place-items-center rounded-r-md border border-l-0 border-[var(--border-strong)] bg-[#FAFBFC] px-3 text-[13px] text-[var(--ink-3)]">
           UZS
         </div>
       </div>
@@ -239,19 +239,19 @@ function ComputedBox({
   tone: "good" | "warn" | "neutral";
 }) {
   return (
-    <div className="flex items-center justify-between rounded-lg border border-dashed border-[var(--ca-border-strong)] bg-[#FAFBFC] px-[14px] py-3">
+    <div className="flex items-center justify-between rounded-lg border border-dashed border-[var(--border-strong)] bg-[#FAFBFC] px-[14px] py-3">
       <div>
-        <div className="text-[12px] tracking-[0.6px] text-[var(--ca-ink-500)] uppercase">
+        <div className="text-[12px] tracking-[0.6px] text-[var(--ink-3)] uppercase">
           {keyLabel}
         </div>
-        <div className="mt-0.5 text-[12px] text-[var(--ca-ink-400)]">{sub}</div>
+        <div className="mt-0.5 text-[12px] text-[var(--ink-4)]">{sub}</div>
       </div>
       <div
         className={cn(
           "font-mono text-[14px] font-semibold",
-          tone === "good" && "text-[var(--ca-success)]",
-          tone === "warn" && "text-[var(--ca-warning)]",
-          tone === "neutral" && "text-[var(--ca-ink-900)]",
+          tone === "good" && "text-[var(--state-ok-fg)]",
+          tone === "warn" && "text-[var(--state-warn-fg)]",
+          tone === "neutral" && "text-[var(--ink-1)]",
         )}
       >
         {value}

@@ -51,8 +51,8 @@ function NavLink({ item }: { item: NavItem }) {
       className={cn(
         "group/navlink flex items-center gap-3 rounded-md px-3 py-[9px] text-[13.5px] font-medium transition-colors",
         item.active
-          ? "bg-[var(--ca-navy-600)] text-white shadow-[inset_2px_0_0_#4A7BD9]"
-          : "text-[#C5CCDA] hover:bg-[var(--ca-navy-700)] hover:text-white",
+          ? "bg-[var(--nav-bg-hover)] text-white shadow-[inset_2px_0_0_#4A7BD9]"
+          : "text-[#C5CCDA] hover:bg-[var(--nav-bg-2)] hover:text-white",
       )}
     >
       <span
@@ -83,7 +83,7 @@ function NavLink({ item }: { item: NavItem }) {
 function NavSection({ title, items }: { title: string; items: NavItem[] }) {
   return (
     <div className="px-3 pt-4 pb-1">
-      <div className="px-[10px] pb-2 text-[10.5px] font-medium tracking-[1.2px] text-[var(--ca-muted-dark-2)] uppercase">
+      <div className="px-[10px] pb-2 text-[10.5px] font-medium tracking-[1.2px] text-[var(--nav-text-3)] uppercase">
         {title}
       </div>
       <nav className="flex flex-col gap-px px-2">
@@ -97,8 +97,8 @@ function NavSection({ title, items }: { title: string; items: NavItem[] }) {
 
 export function Sidebar() {
   return (
-    <aside className="flex h-screen sticky top-0 flex-col border-r border-black bg-[var(--ca-navy-900)] text-[#E6EAF2]">
-      <div className="flex items-center gap-[10px] border-b border-[var(--ca-line-dark)] px-5 pt-5 pb-[22px]">
+    <aside className="flex h-screen sticky top-0 flex-col border-r border-black bg-[var(--nav-bg)] text-[#E6EAF2]">
+      <div className="flex items-center gap-[10px] border-b border-[var(--nav-border)] px-5 pt-5 pb-[22px]">
         <div className="grid size-8 place-items-center rounded-md border border-[#2E4470] bg-gradient-to-b from-[#2C4880] to-[#1E3360] font-mono text-[13px] font-semibold text-white">
           CR
         </div>
@@ -106,7 +106,7 @@ export function Sidebar() {
           <div className="text-sm font-semibold tracking-[0.2px] text-[#F2F4F8]">
             CreditScope
           </div>
-          <div className="mt-0.5 text-[11px] tracking-[0.5px] text-[var(--ca-muted-dark)] uppercase">
+          <div className="mt-0.5 text-[11px] tracking-[0.5px] text-[var(--nav-text-2)] uppercase">
             Risk Suite · v3.2
           </div>
         </div>
@@ -115,13 +115,13 @@ export function Sidebar() {
       <NavSection title="Основное" items={main} />
       <NavSection title="Инструменты" items={tools} />
 
-      <div className="mt-auto flex items-center gap-[10px] border-t border-[var(--ca-line-dark)] px-[14px] py-[14px] pb-[18px]">
-        <div className="grid size-[34px] place-items-center rounded-full border border-[#324567] bg-[var(--ca-navy-500)] text-xs font-semibold text-[#D8E0EE]">
+      <div className="mt-auto flex items-center gap-[10px] border-t border-[var(--nav-border)] px-[14px] py-[14px] pb-[18px]">
+        <div className="grid size-[34px] place-items-center rounded-full border border-[#324567] bg-[var(--nav-bg-hover)] text-xs font-semibold text-[#D8E0EE]">
           ИК
         </div>
         <div>
           <div className="text-[13px] font-medium text-[#E6EAF2]">И. Каримов</div>
-          <div className="text-[11px] text-[var(--ca-muted-dark)]">
+          <div className="text-[11px] text-[var(--nav-text-2)]">
             Кредитный аналитик
           </div>
         </div>

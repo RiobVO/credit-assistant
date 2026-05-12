@@ -34,9 +34,9 @@ export function FormFooter({
   const showCancel = variant === "step1";
 
   return (
-    <div className="mt-[22px] flex items-center gap-3 rounded-[10px] border border-[var(--ca-border)] bg-[var(--ca-surface)] px-[18px] py-[14px]">
-      <div className="flex items-center gap-2 text-[12.5px] text-[var(--ca-ink-500)]">
-        <span className="size-1.5 rounded-full bg-[var(--ca-ink-400)]" />
+    <div className="mt-[22px] flex items-center gap-3 rounded-[10px] border border-[var(--border)] bg-[var(--surface)] px-[18px] py-[14px]">
+      <div className="flex items-center gap-2 text-[12.5px] text-[var(--ink-3)]">
+        <span className="size-1.5 rounded-full bg-[var(--ink-4)]" />
         Черновик сохраняется автоматически при переходе между шагами
       </div>
 
@@ -95,9 +95,9 @@ function FootButton({
       className={cn(
         "inline-flex h-[38px] items-center gap-2 rounded-md border px-4 text-[13.5px] font-semibold whitespace-nowrap transition-colors",
         variant === "ghost" &&
-          "border-[var(--ca-border-strong)] bg-[var(--ca-surface)] text-[var(--ca-ink-700)] hover:bg-[#FAFBFC] disabled:cursor-not-allowed disabled:opacity-50",
+          "border-[var(--border-strong)] bg-[var(--surface)] text-[var(--ink-2)] hover:bg-[#FAFBFC] disabled:cursor-not-allowed disabled:opacity-50",
         variant === "primary" &&
-          "border-[var(--ca-primary-blue)] bg-[var(--ca-primary-blue)] text-white hover:border-[var(--ca-primary-blue-700)] hover:bg-[var(--ca-primary-blue-700)] disabled:cursor-not-allowed disabled:border-[#A8BDE2] disabled:bg-[#A8BDE2] disabled:text-[#EAF0FB]",
+          "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white hover:border-[var(--brand-primary-hover)] hover:bg-[var(--brand-primary-hover)] disabled:cursor-not-allowed disabled:border-[#A8BDE2] disabled:bg-[#A8BDE2] disabled:text-[#EAF0FB]",
       )}
     >
       {children}
