@@ -77,7 +77,6 @@ Phase 2.5.6 ввёл endpoints `/api/manual-input/draft` (POST/GET/PUT) для �
 
 ## Open items (не блокируют закрытие 2.5)
 
-- **TODO[CA-006]**: дубль `ix_borrowers_inn` рядом с `UniqueConstraint("inn")` (`borrowers_inn_key`). Косметика, отдельной миграцией перед production deploy.
 - **TODO[CA-003]**: реальный лукап ГНК для ИНН — UI-зона.
 - **TODO[CA-004]**: per-year taxes UI на Шаге 2 — UI-зона.
 - **purge_expired scheduling**: метод `SqlAlchemyDraftRepository.purge_expired()` реализован и протестирован, но не вызывается scheduled job'ом. До Phase 4 — ручной запуск (`uv run python -c "from infrastructure.persistence.repositories.draft_repository import SqlAlchemyDraftRepository; ..."`).

@@ -17,7 +17,6 @@
 ## Открытые TODO
 
 - TODO[CA-003]: реальный лукап ГНК для ИНН (сейчас pill «Проверено в ГНК» по 9-значной валидации формата).
-- TODO[CA-006]: убрать дублирующий `ix_borrowers_inn` — `UniqueConstraint("inn")` уже создаёт `borrowers_inn_key`. Косметика, миграция перед production.
 - TODO[CA-010]: bundle TTF Inter (400/500/600/700) + JetBrains Mono (500/600) в `src/infrastructure/reports/pdf/fonts/` + `@font-face`. Сейчас PDF на DejaVu Sans.
 - TODO[CA-015]: уточнить `vat_declaration_parser.py` под живые xltx 10006_45/10006_47 — детектор опознаёт через widened sentinel + structural fallback (CA-012), но cells F6/G6/F7-F11/G7 могут быть смещены. Ждём реальные файлы.
 - TODO[CA-019]: refresh-token rotation + denylist (Redis) — в v1 refresh stateless 7д без инвалидации. ADR-0009 fixes path к v2.

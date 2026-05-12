@@ -10,7 +10,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from uuid import UUID, uuid4
 
-from sqlalchemy import DateTime, Index, Numeric, String, func
+from sqlalchemy import DateTime, Numeric, String, func
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -45,5 +45,3 @@ class BorrowerORM(Base):
         onupdate=func.now(),
         nullable=False,
     )
-
-    __table_args__ = (Index("ix_borrowers_inn", "inn"),)
