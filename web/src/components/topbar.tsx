@@ -1,4 +1,4 @@
-import { Bell, Check, HelpCircle, Loader2, Search } from "lucide-react";
+import { Bell, HelpCircle, Search } from "lucide-react";
 import { Fragment, type ReactNode } from "react";
 
 export type Crumb = {
@@ -56,7 +56,7 @@ function DraftBadge({ draft }: { draft: DraftIndicator }) {
   if (draft.state === "saving") {
     return (
       <span className="flex items-center gap-1.5 text-[12.5px] text-[var(--ink-3)]">
-        <Loader2 className="size-3.5 animate-spin" />
+        <span className="pulse-dot size-1.5 rounded-full bg-[var(--brand-primary)]" />
         Сохраняем черновик…
       </span>
     );
@@ -72,8 +72,8 @@ function DraftBadge({ draft }: { draft: DraftIndicator }) {
 
   return (
     <span className="flex items-center gap-1.5 text-[12.5px] text-[var(--ink-3)]">
-      <Check className="size-3.5 text-[var(--state-ok-fg,#16A34A)]" />
-      Черновик сохранён {formatHm(draft.at)}
+      <span className="size-1.5 rounded-full bg-[var(--state-ok-fg)]" />
+      Черновик сохранён · {formatHm(draft.at)}
     </span>
   );
 }
@@ -92,7 +92,7 @@ function SearchBox() {
         placeholder="Поиск по ИНН, заявкам…"
         className="flex-1 bg-transparent text-[var(--ink-1)] outline-none placeholder:text-[var(--ink-4)]"
       />
-      <span className="rounded border border-[var(--border)] bg-[#FAFBFC] px-[5px] py-px font-mono text-[10.5px] text-[var(--ink-4)]">
+      <span className="rounded border border-[var(--border)] bg-[var(--surface-2)] px-[5px] py-px font-mono text-[10.5px] text-[var(--ink-4)]">
         ⌘K
       </span>
     </div>
@@ -105,7 +105,7 @@ function IconButton({ title, children }: { title: string; children: ReactNode })
       type="button"
       title={title}
       aria-label={title}
-      className="grid size-[34px] place-items-center rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--ink-3)] transition-colors hover:bg-[#FAFBFC] hover:text-[var(--ink-2)]"
+      className="grid size-[34px] place-items-center rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--ink-3)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--ink-2)]"
     >
       {children}
     </button>
