@@ -10,13 +10,18 @@ import { cn } from "@/lib/utils";
 // count-up анимацией 0→target и пульсирующим reco-pill снизу.
 // Радиус 46, stroke 8 → circumference = 2πr ≈ 289.027.
 
+type Recommendation = "approve" | "review" | "reject";
 type Band = "good" | "warn" | "bad";
 
 const CIRCUMFERENCE = 289.027;
 
-function bandOf(displayScore: number): Band {
-  if (displayScore >= 70) return "good";
-  if (displayScore >= 40) return "warn";
+// Цвет ring + reco-pill определяется РЕКОМЕНДАЦИЕЙ, а не display_score.
+// Иначе display_score=79 (зелёный band) + recommendation=review (yellow) = визуально
+// несоответствие: зелёное кольцо с лейблом «На проверку». Recommendation —
+// единый source of truth для verdict-цвета.
+function bandOfRecommendation(rec: Recommendation): Band {
+  if (rec === "approve") return "good";
+  if (rec === "review") return "warn";
   return "bad";
 }
 
@@ -45,8 +50,6 @@ function bandTokens(band: Band): { stroke: string; pillBg: string; pillFg: strin
   };
 }
 
-type Recommendation = "approve" | "review" | "reject";
-
 export function ScoreRing({
   displayScore,
   recommendation,
@@ -60,7 +63,7 @@ export function ScoreRing({
   label: string;
   denominator: string;
 }) {
-  const band = bandOf(displayScore);
+  const band = bandOfRecommendation(recommendation);
   const tone = bandTokens(band);
   const reduced = useReducedMotion();
   const [displayed, setDisplayed] = useState(reduced ? displayScore : 0);
@@ -116,18 +119,6 @@ export function ScoreRing({
       </span>
       <div className="relative size-[112px]">
         <svg width="112" height="112" viewBox="0 0 112 112" className="block -rotate-90">
-          {/* Tick marks at 25/50/75/100 (visually top/right/bottom/left after -90deg). */}
-          <g
-            stroke="var(--border-strong)"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            opacity="0.7"
-          >
-            <line x1="103" y1="56" x2="108" y2="56" />
-            <line x1="56" y1="103" x2="56" y2="108" />
-            <line x1="9" y1="56" x2="4" y2="56" />
-            <line x1="56" y1="9" x2="56" y2="4" />
-          </g>
           <circle
             cx="56"
             cy="56"

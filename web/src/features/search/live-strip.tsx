@@ -1,18 +1,30 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 
-// Phase 2 (DS-PHASE-2): live-strip pill «● Сегодня · 247 досье · 84% одобрено
-// · 12 в проверке».
-//
-// TODO[CA-DS-LIVE]: цифры сейчас mock — нужен backend endpoint
-// `/api/bank/stats/today` (cron-aggregated daily metrics). Pilot-demo папа
-// видит placeholder; реальные метрики — отдельный sprint.
+import { fetchBankDailyStats } from "@/lib/bank-api";
 
-const MOCK = { collected: 247, approved_pct: 84, in_review: 12 };
+// Phase 2 (DS-PHASE-2): live-strip pill «● Сегодня · N досье · M% одобрено
+// · K в проверке». Данные из `/api/bank/stats/today` — реальная агрегация
+// bank-mode dossiers за UTC-сегодня. При loading — skeleton-dashes
+// «—», при error — тихо скрываем strip (не падаем UI).
 
 export function LiveStrip() {
   const t = useTranslations("bank.search");
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["bank-stats-today"],
+    queryFn: fetchBankDailyStats,
+    staleTime: 60_000, // 1 мин — daily metric, refresh не критичен
+    refetchOnWindowFocus: false,
+  });
+
+  if (isError) return null;
+
+  const collected = isLoading || !data ? null : data.collected_today;
+  const approvedPct = isLoading || !data ? null : data.approved_pct;
+  const inReview = isLoading || !data ? null : data.in_review_today;
+
   return (
     <div className="mb-8 inline-flex animate-[rise_0.55s_cubic-bezier(0.16,0.84,0.44,1)_0.16s_both] items-center gap-4 rounded-full border border-[var(--border)] bg-white/55 px-3.5 py-2 text-[12px] text-[var(--ink-3)] backdrop-blur">
       <span className="inline-flex items-center gap-1.5 text-[10.5px] font-semibold tracking-[0.08em] text-[var(--ink-4)] uppercase">
@@ -23,26 +35,23 @@ export function LiveStrip() {
         />
         {t("live_label")}
       </span>
-      <span className="inline-flex items-baseline gap-1.5">
-        <span className="font-mono text-[13px] font-semibold tabular-nums text-[var(--ink-1)]">
-          {MOCK.collected}
-        </span>
-        {t("live_collected")}
-      </span>
+      <Stat n={collected} label={t("live_collected")} />
       <span className="h-3 w-px bg-[var(--border)]" aria-hidden />
-      <span className="inline-flex items-baseline gap-1.5">
-        <span className="font-mono text-[13px] font-semibold tabular-nums text-[var(--ink-1)]">
-          {MOCK.approved_pct}%
-        </span>
-        {t("live_approved")}
-      </span>
+      <Stat n={approvedPct} label={t("live_approved")} pct />
       <span className="h-3 w-px bg-[var(--border)]" aria-hidden />
-      <span className="inline-flex items-baseline gap-1.5">
-        <span className="font-mono text-[13px] font-semibold tabular-nums text-[var(--ink-1)]">
-          {MOCK.in_review}
-        </span>
-        {t("live_in_review")}
-      </span>
+      <Stat n={inReview} label={t("live_in_review")} />
     </div>
+  );
+}
+
+function Stat({ n, label, pct = false }: { n: number | null; label: string; pct?: boolean }) {
+  const display = n === null ? "—" : pct ? `${n}%` : n.toLocaleString("ru-RU");
+  return (
+    <span className="inline-flex items-baseline gap-1.5">
+      <span className="font-mono text-[13px] font-semibold tabular-nums text-[var(--ink-1)]">
+        {display}
+      </span>
+      {label}
+    </span>
   );
 }
