@@ -103,6 +103,8 @@
 
 **Files changed:** `web/src/app/login/_components/login.module.css`.
 
+**Phase 1 follow-up (same day):** `-webkit-autofill` override — Chrome autofill белил dark input. Трюк с inset box-shadow 1000px + `transition: background-color 9999s` держит dark theme. Существующий bug (pre-CA-066), починен в рамках Phase 1.
+
 ### Cross-phase technical debt (открытый список)
 
 Issues которые я нашёл в аудитах но user решил оставить — фиксируем чтобы не потерять. Можно вернуться к ним отдельным sweep после design-фаз.
