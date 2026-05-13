@@ -88,6 +88,21 @@ export async function searchBorrower(inn: string): Promise<BorrowerSearchResult>
   return (await r.json()) as BorrowerSearchResult;
 }
 
+export type BankDailyStats = {
+  collected_today: number;
+  approved_pct: number | null;
+  in_review_today: number;
+};
+
+export async function fetchBankDailyStats(): Promise<BankDailyStats> {
+  const r = await fetch("/api/bank/stats/today", {
+    credentials: "same-origin",
+    cache: "no-store",
+  });
+  if (!r.ok) throw new BankApiError(r.status, await readError(r));
+  return (await r.json()) as BankDailyStats;
+}
+
 export async function listDossiers(
   params: ListParams,
 ): Promise<BankDossierListResponse> {

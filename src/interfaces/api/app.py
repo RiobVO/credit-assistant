@@ -21,6 +21,7 @@ from interfaces.api.bank.auth import router as bank_auth_router
 from interfaces.api.bank.dependencies import get_current_analyst
 from interfaces.api.bank.history import router as bank_history_router
 from interfaces.api.bank.search import router as bank_search_router
+from interfaces.api.bank.stats import router as bank_stats_router
 from interfaces.api.shared.data_readiness import router as data_readiness_router
 from interfaces.api.shared.dossier import router as dossier_router
 from interfaces.api.shared.dossier_pdf import router as dossier_pdf_router
@@ -59,6 +60,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.include_router(bank_auth_router)
         app.include_router(bank_search_router)
         app.include_router(bank_history_router)
+        app.include_router(bank_stats_router)
         app.include_router(dossier_router, dependencies=auth_required)
         app.include_router(dossier_pdf_router, dependencies=auth_required)
         app.include_router(draft_router, dependencies=auth_required)
