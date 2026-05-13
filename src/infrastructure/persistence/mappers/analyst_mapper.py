@@ -11,9 +11,15 @@ from infrastructure.persistence.models.analyst import AnalystORM
 
 
 def analyst_from_orm(orm: AnalystORM) -> AnalystIdentity:
-    # `mfa_enabled` в API computed-from-secret: stored bool сжигается, если нет
-    # real-enrollment'а. Это убирает security theater от Phase 5.A seed-flag'а.
-    real_mfa_enabled = orm.mfa_secret is not None
+    # `mfa_enabled` в API computed-from-enrolled_at: secret в БД не означает
+    # завершённый enrollment — /enroll/start пишет secret до verify. Только
+    # после успешного /enroll/verify ставится mfa_enrolled_at = now() — это
+    # и есть «реально включено».
+    # Раньше (до этого fix'а) был computed-from-secret, что приводило к
+    # half-enrolled bug: scan QR → invalid code → secret в БД → API
+    # рапортует mfa_enabled=true → следующий login требует TOTP, но user
+    # не сохранил secret в authenticator → lockout.
+    real_mfa_enabled = orm.mfa_enrolled_at is not None
     return AnalystIdentity(
         id=orm.id,
         email=orm.email,
