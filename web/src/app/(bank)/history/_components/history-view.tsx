@@ -6,18 +6,20 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
-  Filter,
-  MoreHorizontal,
-  Plus,
+  FileSearch,
   Search,
   X,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { BankPageHead } from "@/app/(bank)/_components/page-head";
+import { LiveStrip } from "@/features/search/live-strip";
+import {
+  formatRelativeTime,
+  isFreshTime,
+} from "@/features/history/relative-time";
 import {
   type BankDossierListItem,
   type ListFilter,
@@ -32,8 +34,7 @@ const PAGE_SIZE = 20;
 
 type RecFilter = "all" | "approve" | "review" | "reject";
 type DateFilter = "7" | "30" | "90" | "all";
-
-// ────────────────────── Хелперы ──────────────────────
+type ScoreTone = "good" | "warn" | "bad";
 
 const RU_MONTHS_SHORT = [
   "янв", "фев", "мар", "апр", "май", "июн",
@@ -101,12 +102,9 @@ function thresholdDate(filter: DateFilter): Date | null {
   return d;
 }
 
-// ────────────────────── Main view ──────────────────────
-
 export function HistoryView() {
   const router = useRouter();
   const t = useTranslations("bank.history");
-  const tCta = useTranslations("bank.cta");
   const [filter, setFilter] = useState<ListFilter>("mine");
   const [q, setQ] = useState("");
   const [appliedQ, setAppliedQ] = useState("");
@@ -121,7 +119,6 @@ export function HistoryView() {
     placeholderData: keepPreviousData,
   });
 
-  // Counts для табов — независимые лёгкие запросы (pageSize=1 → только total).
   const mineCount = useQuery({
     queryKey: ["bank", "dossiers", "count", "mine"],
     queryFn: () => listDossiers({ filter: "mine", page: 1, pageSize: 1 }),
@@ -133,9 +130,7 @@ export function HistoryView() {
     staleTime: 30_000,
   });
 
-  // Client-side recommendation + period filter поверх API-страницы.
-  // TODO: вынести в backend параметры — сейчас фильтрация только по
-  // загруженной странице, на много страниц counts будут неточны.
+  // Filtering recommendation + period — пока client-side (TODO: backend).
   const visibleItems = useMemo(() => {
     if (!main.data) return [];
     const cutoff = thresholdDate(dateFilter);
@@ -150,6 +145,8 @@ export function HistoryView() {
     ? Math.max(1, Math.ceil(main.data.total / PAGE_SIZE))
     : 1;
 
+  const apiHasZero = main.data ? main.data.total === 0 : false;
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setAppliedQ(q);
@@ -162,40 +159,35 @@ export function HistoryView() {
         title={t("title")}
         subtitle={t("subtitle")}
         actions={
-          <>
-            <button
-              type="button"
-              onClick={() =>
-                downloadCsv(
-                  visibleItems,
-                  `history-${new Date().toISOString().slice(0, 10)}.csv`,
-                  [
-                    t("col_inn"),
-                    t("col_company"),
-                    t("col_score"),
-                    t("col_recommendation"),
-                    t("col_date"),
-                    t("col_analyst"),
-                  ],
-                  (rec) => t(`rec_${rec}`),
-                )
-              }
-              disabled={visibleItems.length === 0}
-              className="inline-flex h-9 items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-[13px] font-medium text-[var(--ink-1)] transition-colors hover:bg-[var(--surface-2)] disabled:cursor-not-allowed disabled:opacity-55"
-            >
-              <Download className="size-3.5" />
-              {t("export")}
-            </button>
-            <Link
-              href="/manual-input"
-              className="inline-flex h-9 items-center gap-2 rounded-md bg-[var(--brand-primary)] px-3 text-[13px] font-semibold text-white transition-colors hover:bg-[var(--brand-primary-hover)]"
-            >
-              <Plus className="size-3.5" />
-              {tCta("new_application")}
-            </Link>
-          </>
+          <button
+            type="button"
+            onClick={() =>
+              downloadCsv(
+                visibleItems,
+                `history-${new Date().toISOString().slice(0, 10)}.csv`,
+                [
+                  t("col_inn"),
+                  t("col_company"),
+                  t("col_score"),
+                  t("col_recommendation"),
+                  t("col_date"),
+                  t("col_analyst"),
+                ],
+                (rec) => t(`rec_${rec}`),
+              )
+            }
+            disabled={visibleItems.length === 0}
+            className="inline-flex h-9 items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3.5 text-[13px] font-medium text-[var(--ink-1)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-2)] disabled:cursor-not-allowed disabled:opacity-55"
+          >
+            <Download className="size-3.5" />
+            {t("export")}
+          </button>
         }
       />
+
+      <div className="mt-2 mb-6">
+        <LiveStrip />
+      </div>
 
       <Tabs
         value={filter}
@@ -221,7 +213,7 @@ export function HistoryView() {
         }}
       />
 
-      <section className="overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface)]">
+      <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-[0_1px_0_rgba(15,23,42,0.03),0_10px_30px_-22px_rgba(15,23,42,0.18)]">
         {main.isLoading ? (
           <SkeletonRows />
         ) : main.isError ? (
@@ -233,7 +225,7 @@ export function HistoryView() {
             }
           />
         ) : visibleItems.length === 0 ? (
-          <EmptyBlock />
+          apiHasZero ? <EmptyZero /> : <EmptyFiltered />
         ) : (
           <Table
             items={visibleItems}
@@ -242,7 +234,7 @@ export function HistoryView() {
           />
         )}
 
-        {main.data && main.data.total > 0 ? (
+        {main.data && main.data.total > 0 && totalPages > 1 ? (
           <Pagination
             page={page}
             totalPages={totalPages}
@@ -250,13 +242,16 @@ export function HistoryView() {
             apiTotal={main.data.total}
             onSetPage={setPage}
           />
+        ) : main.data && main.data.total > 0 ? (
+          <PaginationFooter
+            shownCount={visibleItems.length}
+            apiTotal={main.data.total}
+          />
         ) : null}
       </section>
     </>
   );
 }
-
-// ────────────────────── Sub-компоненты ──────────────────────
 
 function Tabs({
   value,
@@ -276,7 +271,7 @@ function Tabs({
       { key: "all", label: t("tab_all"), count: allCount },
     ];
   return (
-    <div className="mb-5 inline-flex gap-0 rounded-md bg-[var(--surface-3)] p-[3px]">
+    <div className="mb-5 inline-flex gap-0 rounded-lg bg-[var(--surface-3)] p-[3px]">
       {items.map((it) => {
         const active = value === it.key;
         return (
@@ -285,20 +280,20 @@ function Tabs({
             type="button"
             onClick={() => onChange(it.key)}
             className={cn(
-              "inline-flex items-center gap-1.5 rounded-[4px] px-3.5 py-1.5 text-[14px] font-medium transition-colors",
+              "inline-flex items-center gap-1.5 rounded-md px-3.5 py-1.5 text-[13.5px] font-medium transition-colors",
               active
                 ? "bg-white text-[var(--ink-1)] shadow-[0_1px_1px_rgba(15,23,42,0.04)]"
-                : "text-[var(--ink-2)] hover:text-[var(--ink-1)]",
+                : "text-[var(--ink-3)] hover:text-[var(--ink-1)]",
             )}
           >
             {it.label}
             {it.count != null ? (
               <span
                 className={cn(
-                  "rounded px-1.5 py-px text-[11px]",
+                  "rounded-full px-1.5 py-px text-[11px]",
                   active
                     ? "bg-[var(--surface-2)] text-[var(--ink-3)]"
-                    : "bg-[var(--surface-3)] text-[var(--ink-3)]",
+                    : "bg-[var(--surface-2)] text-[var(--ink-3)]",
                 )}
               >
                 {it.count}
@@ -331,7 +326,7 @@ function Toolbar({
   const t = useTranslations("bank.history");
   return (
     <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
-      <form onSubmit={onSubmit} className="flex-1" style={{ maxWidth: 480 }}>
+      <form onSubmit={onSubmit} className="flex-1" style={{ maxWidth: 460 }}>
         <div className="relative flex items-center">
           <Search className="pointer-events-none absolute left-3 size-4 text-[var(--ink-4)]" />
           <input
@@ -339,7 +334,7 @@ function Toolbar({
             placeholder={t("search_placeholder")}
             value={q}
             onChange={(e) => onQ(e.target.value)}
-            className="h-[38px] w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-9 text-[14px] text-[var(--ink-1)] outline-none transition-colors placeholder:text-[var(--ink-4)] focus:border-[var(--brand-primary)] focus:shadow-[0_0_0_3px_var(--brand-primary-ring)]"
+            className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-9 text-[13.5px] text-[var(--ink-1)] outline-none transition-colors placeholder:text-[var(--ink-4)] focus:border-[var(--brand-primary)] focus:shadow-[0_0_0_4px_var(--brand-primary-ring)]"
           />
           {q ? (
             <button
@@ -354,7 +349,7 @@ function Toolbar({
         </div>
       </form>
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-2">
         <FilterSelect
           label={t("filter_recommendation")}
           value={recFilter}
@@ -377,14 +372,6 @@ function Toolbar({
             { v: "all", l: t("period_all") },
           ]}
         />
-        <button
-          type="button"
-          title={t("filter_more")}
-          className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2.5 text-[13px] text-[var(--ink-2)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--ink-1)]"
-        >
-          <Filter className="size-3.5 text-[var(--ink-4)]" />
-          {t("filter_more")}
-        </button>
       </div>
     </div>
   );
@@ -403,7 +390,7 @@ function FilterSelect({
 }) {
   const current = options.find((o) => o.v === value) ?? options[0];
   return (
-    <label className="relative inline-flex h-8 items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2.5 text-[13px] text-[var(--ink-2)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--ink-1)]">
+    <label className="relative inline-flex h-8 items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 text-[13px] text-[var(--ink-2)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--ink-1)]">
       <span className="text-[12px] text-[var(--ink-3)]">{label}:</span>
       <span className="text-[var(--ink-1)]">{current?.l ?? ""}</span>
       <ChevronDown className="size-3.5 text-[var(--ink-4)]" />
@@ -433,8 +420,8 @@ function Table({
 }) {
   return (
     <div className={cn("transition-opacity", isStale && "opacity-70")}>
-      <table className="w-full border-collapse text-[14px]">
-        <thead>
+      <table className="w-full border-collapse text-[13.5px]">
+        <thead className="sticky top-0 z-[1]">
           <tr>
             <TableHeaders />
           </tr>
@@ -453,13 +440,13 @@ function TableHeaders() {
   const t = useTranslations("bank.history");
   return (
     <>
-      <Th width={150}>{t("col_inn")}</Th>
+      <Th width={140}>{t("col_inn")}</Th>
       <Th>{t("col_company")}</Th>
-      <Th width={180}>{t("col_score")}</Th>
+      <Th width={140}>{t("col_score")}</Th>
       <Th width={160}>{t("col_recommendation")}</Th>
-      <Th width={180}>{t("col_date")}</Th>
-      <Th width={170}>{t("col_analyst")}</Th>
-      <Th width={40} />
+      <Th width={200}>{t("col_date")}</Th>
+      <Th width={180}>{t("col_analyst")}</Th>
+      <Th width={32} />
     </>
   );
 }
@@ -468,7 +455,7 @@ function Th({ children, width }: { children?: React.ReactNode; width?: number })
   return (
     <th
       style={width ? { width } : undefined}
-      className="border-b border-[var(--border)] bg-[var(--surface-2)] px-4 py-2.5 text-left text-[12px] font-medium tracking-[0.01em] whitespace-nowrap text-[var(--ink-3)]"
+      className="bg-[var(--surface)] px-[18px] pt-3.5 pb-3 text-left text-[10.5px] font-medium tracking-[0.08em] whitespace-nowrap text-[var(--ink-4)] uppercase shadow-[inset_0_-1px_0_var(--border)]"
     >
       {children}
     </th>
@@ -485,76 +472,69 @@ function Row({
   return (
     <tr
       onClick={onClick}
-      className="cursor-pointer border-b border-[var(--border)] transition-colors last:border-b-0 hover:bg-[var(--surface-2)]"
+      className="group cursor-pointer border-b border-[var(--border)] transition-colors last:border-b-0 hover:bg-[var(--surface-2)]"
     >
-      <td className="px-4 py-3.5 font-mono tabular-nums text-[13px] text-[var(--ink-1)]">
+      <td className="px-[18px] py-3.5 font-mono text-[12.5px] tabular-nums text-[var(--ink-2)]">
         {item.borrower_inn_masked}
       </td>
-      <td className="px-4 py-3.5 font-medium text-[var(--ink-1)]">
+      <td className="px-[18px] py-3.5 font-semibold text-[var(--ink-1)]">
         {item.borrower_name}
       </td>
-      <td className="px-4 py-3.5">
-        <ScoreBar score={item.display_score} />
+      <td className="px-[18px] py-3.5">
+        <ScoreCell score={item.display_score} rec={item.recommendation} />
       </td>
-      <td className="px-4 py-3.5">
+      <td className="px-[18px] py-3.5">
         <RecBadge rec={item.recommendation} />
       </td>
-      <td className="px-4 py-3.5 text-[13px] text-[var(--ink-3)]">
-        {formatRuDate(item.created_at)}
+      <td className="px-[18px] py-3.5">
+        <DateCell iso={item.created_at} />
       </td>
-      <td className="px-4 py-3.5">
+      <td className="px-[18px] py-3.5">
         <AnalystCell name={item.analyst_full_name} />
       </td>
-      <td className="px-4 py-3.5">
-        <ActionsButton
-          onClick={(e) => {
-            e.stopPropagation();
-            // TODO: контекстное меню (открыть, дублировать, экспортировать)
-          }}
+      <td className="px-[18px] py-3.5">
+        <ChevronRight
+          className="size-3.5 -translate-x-1 text-[var(--brand-primary)] opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100"
+          aria-hidden
         />
       </td>
     </tr>
   );
 }
 
-function ActionsButton({
-  onClick,
+function ScoreCell({
+  score,
+  rec,
 }: {
-  onClick: (e: React.MouseEvent) => void;
+  score: number;
+  rec: BankDossierListItem["recommendation"];
 }) {
-  const t = useTranslations("bank.history");
-  return (
-    <button
-      type="button"
-      aria-label={t("row_actions")}
-      onClick={onClick}
-      className="grid size-7 place-items-center rounded text-[var(--ink-3)] hover:bg-[var(--surface-3)] hover:text-[var(--ink-1)]"
-    >
-      <MoreHorizontal className="size-4" />
-    </button>
-  );
-}
-
-function ScoreBar({ score }: { score: number }) {
-  const band = scoreBand(score) ?? "warn";
-  const fill: Record<"good" | "warn" | "bad", string> = {
-    good: "#059669",
-    warn: "#D97706",
-    bad: "#DC2626",
+  // Цвет акцент-полоски — по recommendation (как ScoreRing в /search).
+  // Число тоном — по score band (отдельная семантика «качество vs решение»).
+  const recBand = recommendationBand(rec);
+  const numBand: ScoreTone = scoreBand(score) ?? "warn";
+  const stripColor: Record<"good" | "warn" | "bad", string> = {
+    good: "var(--state-ok-fg)",
+    warn: "var(--state-warn-fg)",
+    bad: "var(--state-bad-fg)",
+  };
+  const numColor: Record<ScoreTone, string> = {
+    good: "var(--state-ok-fg)",
+    warn: "var(--state-warn-fg)",
+    bad: "var(--state-bad-fg)",
   };
   return (
-    <span className="inline-flex items-center gap-2.5 tabular-nums">
-      <span className="min-w-[28px] font-semibold text-[var(--ink-1)]">
+    <span className="inline-flex items-center gap-2.5">
+      <span
+        aria-hidden
+        className="block h-[22px] w-[3px] rounded-[3px]"
+        style={{ background: stripColor[recBand] }}
+      />
+      <span
+        className="font-mono text-[16px] font-semibold tabular-nums"
+        style={{ color: numColor[numBand], letterSpacing: "-0.01em" }}
+      >
         {score}
-      </span>
-      <span className="block h-1 w-24 overflow-hidden rounded-full bg-[var(--surface-3)]">
-        <span
-          className="block h-full rounded-full"
-          style={{
-            width: `${Math.min(100, Math.max(0, score))}%`,
-            background: fill[band],
-          }}
-        />
       </span>
     </span>
   );
@@ -571,7 +551,7 @@ function RecBadge({ rec }: { rec: BankDossierListItem["recommendation"] }) {
   const c = colors[band];
   return (
     <span
-      className="inline-flex items-center gap-1.5 rounded px-2 py-0.5 text-[13px] font-medium whitespace-nowrap"
+      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[12.5px] font-medium whitespace-nowrap"
       style={{ color: c.fg, background: c.bg }}
     >
       <span
@@ -584,16 +564,57 @@ function RecBadge({ rec }: { rec: BankDossierListItem["recommendation"] }) {
   );
 }
 
+function DateCell({ iso }: { iso: string }) {
+  const t = useTranslations("bank.history");
+  const rel = formatRelativeTime(iso);
+  const fresh = isFreshTime(iso);
+  let relText: string | null = null;
+  if (rel) {
+    if (rel.key === "rel_just_now") {
+      relText = t("rel_just_now");
+    } else if (rel.key === "rel_yesterday") {
+      relText = t("rel_yesterday", rel.values);
+    } else {
+      relText = t(rel.key, rel.values);
+    }
+  }
+  return (
+    <span className="flex flex-col leading-tight">
+      <span className="text-[13px] text-[var(--ink-2)]">
+        {formatRuDate(iso)}
+      </span>
+      {relText ? (
+        <span
+          className={cn(
+            "mt-0.5 text-[11px]",
+            fresh
+              ? "font-medium text-[var(--state-ok-fg)]"
+              : "text-[var(--ink-4)]",
+          )}
+        >
+          {relText}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
 function AnalystCell({ name }: { name: string | null }) {
   if (!name) {
-    return <span className="text-[13px] text-[var(--ink-4)]">—</span>;
+    return <span className="text-[12px] text-[var(--ink-4)]">—</span>;
   }
   return (
     <span className="inline-flex items-center gap-2">
-      <span className="grid size-[22px] shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#D88E73] to-[#B5624A] text-[10px] font-semibold text-white">
+      <span
+        className="grid size-[24px] shrink-0 place-items-center rounded-full text-[10px] font-bold text-white"
+        style={{
+          background:
+            "linear-gradient(135deg, var(--brand-primary-soft) 0%, var(--brand-primary) 100%)",
+        }}
+      >
         {initials(name)}
       </span>
-      <span className="text-[13px] text-[var(--ink-1)]">{name}</span>
+      <span className="text-[12.5px] text-[var(--ink-1)]">{name}</span>
     </span>
   );
 }
@@ -614,12 +635,16 @@ function Pagination({
   const t = useTranslations("bank.history");
   const pages = pageNumbers(page, totalPages);
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-[13px] text-[var(--ink-3)]">
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-[12.5px] text-[var(--ink-3)]">
       <span>
         {t.rich("pagination_shown", {
           shown: shownCount,
           total: apiTotal,
-          b: (chunks) => <b className="text-[var(--ink-1)]">{chunks}</b>,
+          b: (chunks) => (
+            <b className="font-mono font-semibold tabular-nums text-[var(--ink-1)]">
+              {chunks}
+            </b>
+          ),
         })}
       </span>
       <div className="flex items-center gap-1">
@@ -632,18 +657,11 @@ function Pagination({
         </PageBtn>
         {pages.map((p, i) =>
           p === "gap" ? (
-            <span
-              key={`gap-${i}`}
-              className="px-1.5 text-[var(--ink-4)]"
-            >
+            <span key={`gap-${i}`} className="px-1.5 text-[var(--ink-4)]">
               …
             </span>
           ) : (
-            <PageBtn
-              key={p}
-              active={p === page}
-              onClick={() => onSetPage(p)}
-            >
+            <PageBtn key={p} active={p === page} onClick={() => onSetPage(p)}>
               {p}
             </PageBtn>
           ),
@@ -656,6 +674,29 @@ function Pagination({
           <ChevronRight className="size-3.5" />
         </PageBtn>
       </div>
+    </div>
+  );
+}
+
+function PaginationFooter({
+  shownCount,
+  apiTotal,
+}: {
+  shownCount: number;
+  apiTotal: number;
+}) {
+  const t = useTranslations("bank.history");
+  return (
+    <div className="border-t border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-[12.5px] text-[var(--ink-3)]">
+      {t.rich("pagination_shown", {
+        shown: shownCount,
+        total: apiTotal,
+        b: (chunks) => (
+          <b className="font-mono font-semibold tabular-nums text-[var(--ink-1)]">
+            {chunks}
+          </b>
+        ),
+      })}
     </div>
   );
 }
@@ -678,10 +719,10 @@ function PageBtn({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "inline-flex h-7 min-w-[28px] items-center justify-center rounded px-2 text-[13px] font-medium tabular-nums transition-colors",
+        "inline-flex h-7 min-w-[28px] items-center justify-center rounded-md px-2 font-mono text-[12.5px] font-semibold tabular-nums transition-colors",
         active
           ? "bg-[var(--ink-1)] text-white hover:bg-[var(--ink-1)]"
-          : "bg-transparent text-[var(--ink-2)] hover:bg-[var(--surface-2)] hover:text-[var(--ink-1)]",
+          : "bg-transparent text-[var(--ink-2)] hover:bg-[var(--surface-3)] hover:text-[var(--ink-1)]",
         disabled && "cursor-not-allowed opacity-40 hover:bg-transparent",
       )}
       {...rest}
@@ -713,11 +754,64 @@ function ErrorBlock({ message }: { message: string }) {
   );
 }
 
-function EmptyBlock() {
+function EmptyFiltered() {
   const t = useTranslations("bank.history");
   return (
-    <div className="px-5 py-12 text-center text-[13px] text-[var(--ink-3)]">
-      {t("empty")}
+    <EmptyState
+      title={t("empty_title")}
+      desc={t("empty_desc")}
+      icon={<Search className="size-7" />}
+    />
+  );
+}
+
+function EmptyZero() {
+  const t = useTranslations("bank.history");
+  return (
+    <EmptyState
+      title={t("empty_zero_title")}
+      desc={t("empty_zero_desc")}
+      icon={<FileSearch className="size-7" />}
+    />
+  );
+}
+
+function EmptyState({
+  title,
+  desc,
+  icon,
+}: {
+  title: string;
+  desc: string;
+  icon: React.ReactNode;
+}) {
+  return (
+    <div className="px-6 py-16 text-center">
+      <div className="relative mx-auto mb-5 size-[72px]">
+        <div
+          aria-hidden
+          className="absolute -inset-9 opacity-70"
+          style={{
+            background:
+              "radial-gradient(circle, var(--brand-primary-soft) 0%, transparent 70%)",
+          }}
+        />
+        <div
+          className="relative grid size-full place-items-center rounded-2xl border border-[var(--brand-primary-soft)] text-[var(--brand-primary-ink)]"
+          style={{
+            background:
+              "linear-gradient(180deg, var(--surface) 0%, var(--brand-primary-soft) 100%)",
+          }}
+        >
+          {icon}
+        </div>
+      </div>
+      <div className="text-[16px] font-semibold text-[var(--ink-1)]">
+        {title}
+      </div>
+      <div className="mx-auto mt-1.5 max-w-[380px] text-[13px] leading-[1.5] text-[var(--ink-3)]">
+        {desc}
+      </div>
     </div>
   );
 }
