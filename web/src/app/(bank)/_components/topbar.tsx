@@ -4,6 +4,7 @@ import { Bell, ChevronRight, HelpCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { usePathname } from "next/navigation";
 
+import { LocaleSwitcher } from "@/components/locale-switcher";
 import { useBrand } from "@/lib/brand-context";
 
 type TitleKey =
@@ -59,6 +60,7 @@ export function BankTopbar() {
           />
           {t("systems_ok")}
         </span>
+        <LocaleSwitcher />
         <button
           type="button"
           aria-label={tShared("bell_aria")}
