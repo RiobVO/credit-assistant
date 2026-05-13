@@ -12,13 +12,16 @@ from application.dto.brand_config import BrandConfig
 from application.dto.dossier_pdf_bundle import DossierPdfBundle
 from application.dto.dossier_record import DossierRecord
 from application.dto.dossier_view_record import DossierViewRecord
+from application.dto.pdf_messages import PdfMessages
 from application.use_cases.load_dossier_for_view import LoadDossierForView
-from application.use_cases.render_dossier_pdf import RenderDossierPdf
+from application.use_cases.render_dossier_pdf import Lang, RenderDossierPdf
 from domain.entities.borrower import Borrower, LegalForm
 from domain.entities.borrower_snapshot import BorrowerSnapshot
 from domain.entities.counterparty import Counterparty
-from domain.rules.rule import RuleRegistry
+from domain.rules.rule import Rule, RuleRegistry
+from domain.value_objects.flag_severity import FlagSeverity
 from domain.value_objects.inn import INN
+from infrastructure.i18n.pdf_messages import load_pdf_messages
 
 
 def _brand() -> BrandConfig:
@@ -37,6 +40,10 @@ def _brand() -> BrandConfig:
 
 def _empty_registry() -> RuleRegistry:
     return RuleRegistry(rules=[])
+
+
+def _messages_loader(lang: Lang) -> PdfMessages:
+    return load_pdf_messages(lang)
 
 
 class _FakeRepo:
@@ -97,7 +104,11 @@ async def test_returns_none_when_dossier_missing() -> None:
     loader = LoadDossierForView(_FakeRepo(None))
     renderer = _FakeRenderer()
     use_case = RenderDossierPdf(
-        loader, renderer, rule_registry=_empty_registry(), brand_loader=_brand,
+        loader,
+        renderer,
+        rule_registry=_empty_registry(),
+        brand_loader=_brand,
+        pdf_messages_loader=_messages_loader,
     )
 
     result = await use_case.execute(uuid4())
@@ -112,7 +123,11 @@ async def test_passes_enriched_bundle_to_renderer() -> None:
     loader = LoadDossierForView(_FakeRepo(record))
     renderer = _FakeRenderer()
     use_case = RenderDossierPdf(
-        loader, renderer, rule_registry=_empty_registry(), brand_loader=_brand,
+        loader,
+        renderer,
+        rule_registry=_empty_registry(),
+        brand_loader=_brand,
+        pdf_messages_loader=_messages_loader,
     )
 
     result = await use_case.execute(record.dossier_id)
@@ -134,3 +149,103 @@ async def test_passes_enriched_bundle_to_renderer() -> None:
     assert bundle.observations.risks == ()
     # Phase 10: rule_names mapping из registry (пустой → {})
     assert bundle.rule_names == {}
+    # T0.4: default lang = "ru", messages резолвятся через injected loader
+    assert bundle.lang == "ru"
+    assert bundle.messages.locale == "ru"
+
+
+@pytest.mark.asyncio
+async def test_lang_uz_propagates_to_bundle() -> None:
+    """T0.4: ``execute(dossier_id, lang="uz")`` → bundle.lang == 'uz'
+    + messages.locale == 'uz'."""
+    record = _record_with_buyers()
+    loader = LoadDossierForView(_FakeRepo(record))
+    renderer = _FakeRenderer()
+    use_case = RenderDossierPdf(
+        loader,
+        renderer,
+        rule_registry=_empty_registry(),
+        brand_loader=_brand,
+        pdf_messages_loader=_messages_loader,
+    )
+
+    await use_case.execute(record.dossier_id, lang="uz")
+
+    bundle = renderer.calls[0]
+    assert bundle.lang == "uz"
+    assert bundle.messages.locale == "uz"
+
+
+@pytest.mark.asyncio
+async def test_rule_names_resolved_per_lang() -> None:
+    """T0.4: rule_names в UZ-ветке использует ``rule.name_uz``; RU — ``rule.name``."""
+
+    def _fn(_snapshot: BorrowerSnapshot) -> None:
+        return None
+
+    rule = Rule(
+        id="FAKE_RULE",
+        version="v1",
+        severity=FlagSeverity.LOW,
+        source="test",
+        category="financial",
+        fn=_fn,
+        name="RU имя",
+        name_uz="UZ nomi",
+    )
+    registry = RuleRegistry(rules=[rule])
+    record = _record_with_buyers()
+
+    for lang, expected_name in (("ru", "RU имя"), ("uz", "UZ nomi")):
+        loader = LoadDossierForView(_FakeRepo(record))
+        renderer = _FakeRenderer()
+        use_case = RenderDossierPdf(
+            loader,
+            renderer,
+            rule_registry=registry,
+            brand_loader=_brand,
+            pdf_messages_loader=_messages_loader,
+        )
+
+        await use_case.execute(record.dossier_id, lang=lang)  # type: ignore[arg-type]
+
+        assert renderer.calls[0].rule_names == {"FAKE_RULE": expected_name}
+
+
+@pytest.mark.asyncio
+async def test_rule_name_uz_empty_falls_back_to_ru() -> None:
+    """T0.4: inline test-fixture с пустым name_uz получает RU-fallback в UZ-ветке.
+
+    Real production rules валидируются YAML schema (name_uz required), но
+    тестовые Rule() напрямую могут опустить name_uz — fallback бережёт
+    test-fixtures от обязательной миграции.
+    """
+
+    def _fn(_snapshot: BorrowerSnapshot) -> None:
+        return None
+
+    rule = Rule(
+        id="LEGACY_INLINE",
+        version="v1",
+        severity=FlagSeverity.LOW,
+        source="test",
+        category="financial",
+        fn=_fn,
+        name="RU only",
+        # name_uz не задан → default ""
+    )
+    registry = RuleRegistry(rules=[rule])
+    record = _record_with_buyers()
+    loader = LoadDossierForView(_FakeRepo(record))
+    renderer = _FakeRenderer()
+    use_case = RenderDossierPdf(
+        loader,
+        renderer,
+        rule_registry=registry,
+        brand_loader=_brand,
+        pdf_messages_loader=_messages_loader,
+    )
+
+    await use_case.execute(record.dossier_id, lang="uz")
+
+    assert renderer.calls[0].rule_names == {"LEGACY_INLINE": "RU only"}

@@ -16,6 +16,7 @@ from datetime import date
 from decimal import Decimal
 
 from application.dto.brand_config import BrandConfig
+from application.dto.pdf_messages import PdfMessages
 from application.services.observations_builder import Observations
 from application.use_cases.load_dossier_for_view import DossierViewBundle
 from domain.value_objects.money import Money
@@ -66,4 +67,11 @@ class DossierPdfBundle:
     observations: Observations
     # rule_id → human-readable name из YAML (Phase 10). Шаблон рендерит
     # F-секцию по имени правила, не по техническому rule_id (как было в v1).
+    # T0.4 / ADR-0015: для UZ-локали маппинг должен содержать ``rule.name_uz``
+    # (RenderDossierPdf резолвит per-lang).
     rule_names: dict[str, str]
+    # T0.4 / ADR-0015: локаль рендера + полный pack messages (template +
+    # observations + Python labels). ``RenderDossierPdf`` инжектит через
+    # ``pdf_messages_loader`` callable из infrastructure.i18n.
+    lang: str
+    messages: PdfMessages

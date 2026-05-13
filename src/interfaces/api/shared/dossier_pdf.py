@@ -20,6 +20,7 @@ from fastapi.responses import Response
 from application.use_cases.load_dossier_for_view import LoadDossierForView
 from application.use_cases.render_dossier_pdf import RenderDossierPdf
 from infrastructure.brand.brand_config import load_brand
+from infrastructure.i18n.pdf_messages import default_pdf_messages
 from infrastructure.persistence.repositories.audit_log_repository import (
     SqlAlchemyAuditLogRepository,
 )
@@ -59,6 +60,9 @@ async def download_dossier_pdf(
         renderer=_get_pdf_renderer(),
         rule_registry=get_rule_registry(),
         brand_loader=load_brand,
+        # T0.4 / ADR-0015: default_pdf_messages — singleton с lru_cache(maxsize=2)
+        # на ru+uz. ``?lang=`` query param добавляется в commit 8.
+        pdf_messages_loader=default_pdf_messages,
     )
 
     try:
