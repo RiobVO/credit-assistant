@@ -77,7 +77,7 @@
 | 1 | Login | **DONE** | `2026-05-13-login-phase1-preview.html` | `0a1c86c`..`34d97f6` |
 | 2 | Search | **DONE** (design statement + 4 hotfix) | `2026-05-13-search-phase2-preview.html` | `c9afbce` → `022dfcf` |
 | 3 | History | **DONE** (design statement) | `2026-05-13-history-phase3-preview.html` | `8bbc154` |
-| 4 | Help | **DONE** (design statement) | `2026-05-13-help-phase4-preview.html` | (next commit) |
+| 4 | Help | **DONE** (design statement) | `2026-05-13-help-phase4-preview.html` | `cb8b046` |
 | 5 | Settings | pending | — | — |
 | 6 | Manual-input Step 1 (Borrower) | pending | — | — |
 | 7 | Manual-input Step 2 (Financial) | pending | — | — |
