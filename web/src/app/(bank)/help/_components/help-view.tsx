@@ -4,11 +4,13 @@ import {
   AlertTriangle,
   ArrowRight,
   BarChart3,
+  Check,
   ChevronDown,
   Clock,
   Database,
   FileSpreadsheet,
   LifeBuoy,
+  Link2,
   Mail,
   MessageSquare,
   Phone,
@@ -35,6 +37,14 @@ const SUPPORT_EMAIL = "ops@uzbekbank.uz";
 const SLACK_CHANNEL = "#credit-assistant";
 const DOCS_URL = "https://docs.credit-assistant";
 const DOCS_LABEL = "docs.credit-assistant";
+
+type OperatorStatus = "available" | "on_call" | "break";
+
+const CURRENT_OPERATOR = {
+  name: "Мадина А.",
+  initials: "МА",
+  status: "available" as OperatorStatus,
+};
 
 type FaqId =
   | "scoring"
@@ -67,6 +77,26 @@ const FAQ_ICONS: Record<FaqId, typeof BarChart3> = {
 
 export function HelpView() {
   const t = useTranslations("bank.help");
+  const [activeHash, setActiveHash] = useState<FaqId | null>(null);
+
+  useEffect(() => {
+    const FAQ_SET = new Set<string>(FAQ_IDS);
+    const read = () => {
+      const raw = window.location.hash.replace(/^#/, "");
+      const id = FAQ_SET.has(raw) ? (raw as FaqId) : null;
+      setActiveHash(id);
+      if (id) {
+        requestAnimationFrame(() => {
+          document
+            .getElementById(`faq-${id}`)
+            ?.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+      }
+    };
+    read();
+    window.addEventListener("hashchange", read);
+    return () => window.removeEventListener("hashchange", read);
+  }, []);
 
   return (
     <>
@@ -92,7 +122,12 @@ export function HelpView() {
             </header>
             <div>
               {FAQ_IDS.map((id, idx) => (
-                <FaqRow key={id} id={id} defaultOpen={idx === 0} />
+                <FaqRow
+                  key={id}
+                  id={id}
+                  initialOpen={idx === 0}
+                  forceOpenFromHash={activeHash === id}
+                />
               ))}
             </div>
           </section>
@@ -154,10 +189,38 @@ function IncidentBand() {
   );
 }
 
-function FaqRow({ id, defaultOpen }: { id: FaqId; defaultOpen?: boolean }) {
+function FaqRow({
+  id,
+  initialOpen,
+  forceOpenFromHash,
+}: {
+  id: FaqId;
+  initialOpen?: boolean;
+  forceOpenFromHash?: boolean;
+}) {
   const t = useTranslations("bank.help");
-  const [open, setOpen] = useState(defaultOpen ?? false);
+  const [open, setOpen] = useState(initialOpen ?? false);
+  const [copied, setCopied] = useState(false);
   const Icon = FAQ_ICONS[id];
+
+  useEffect(() => {
+    if (!forceOpenFromHash) return undefined;
+    const tId = setTimeout(() => setOpen(true), 0);
+    return () => clearTimeout(tId);
+  }, [forceOpenFromHash]);
+
+  const onCopyLink = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const url = `${window.location.origin}${window.location.pathname}#${id}`;
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      void navigator.clipboard.writeText(url);
+    }
+    window.history.replaceState(null, "", `#${id}`);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1500);
+  };
+
+  const toggle = () => setOpen((v) => !v);
 
   const answer: ReactNode = t.rich(`faq_${id}_a`, {
     b: (chunks) => <b>{chunks}</b>,
@@ -174,14 +237,26 @@ function FaqRow({ id, defaultOpen }: { id: FaqId; defaultOpen?: boolean }) {
   });
 
   return (
-    <div className="border-b border-[var(--border)] last:border-b-0">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
+    <div
+      id={`faq-${id}`}
+      className="border-b border-[var(--border)] last:border-b-0 scroll-mt-24"
+    >
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={toggle}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            toggle();
+          }
+        }}
         aria-expanded={open}
+        aria-controls={`faq-${id}-panel`}
         className={cn(
-          "group grid w-full grid-cols-[44px_1fr_auto] items-start gap-3.5 px-5 py-3.5 text-left transition-colors",
+          "group grid w-full cursor-pointer grid-cols-[44px_1fr_auto] items-start gap-3.5 px-5 py-3.5 text-left transition-colors",
           "hover:bg-[var(--surface-2)]",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary-ring)] focus-visible:ring-offset-[-2px]",
           open && "bg-[var(--surface-2)]",
         )}
       >
@@ -202,14 +277,33 @@ function FaqRow({ id, defaultOpen }: { id: FaqId; defaultOpen?: boolean }) {
             {t(`faq_${id}_q`)}
           </span>
         </span>
-        <ChevronDown
-          className={cn(
-            "mt-2 size-4 shrink-0 text-[var(--ink-3)] transition-transform duration-[400ms] ease-[cubic-bezier(0.34,1.56,0.64,1)]",
-            open && "rotate-180 text-[var(--brand-primary)]",
-          )}
-        />
-      </button>
+        <div className="mt-1 flex items-center gap-1">
+          <button
+            type="button"
+            onClick={onCopyLink}
+            aria-label={t("faq_copy_link")}
+            title={copied ? t("faq_link_copied") : t("faq_copy_link")}
+            className={cn(
+              "grid size-7 place-items-center rounded-md text-[var(--ink-4)] transition-all duration-200",
+              "hover:bg-[var(--brand-primary-soft)] hover:text-[var(--brand-primary)]",
+              open
+                ? "opacity-100"
+                : "opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto",
+              copied && "text-[var(--state-ok-fg)]",
+            )}
+          >
+            {copied ? <Check className="size-3.5" /> : <Link2 className="size-3.5" />}
+          </button>
+          <ChevronDown
+            className={cn(
+              "size-4 shrink-0 text-[var(--ink-3)] transition-transform duration-[400ms] ease-[cubic-bezier(0.34,1.56,0.64,1)]",
+              open && "rotate-180 text-[var(--brand-primary)]",
+            )}
+          />
+        </div>
+      </div>
       <div
+        id={`faq-${id}-panel`}
         className={cn(
           "grid transition-[grid-template-rows,opacity] duration-[320ms] ease-out",
           open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
@@ -221,6 +315,12 @@ function FaqRow({ id, defaultOpen }: { id: FaqId; defaultOpen?: boolean }) {
             <div className="rounded-r-lg border-l-2 border-[var(--brand-primary)] bg-gradient-to-r from-[var(--brand-primary-soft)] to-transparent py-2.5 pl-3.5 pr-5 text-[13.5px] leading-[1.6] text-[var(--ink-2)] [&_code]:rounded [&_code]:bg-[var(--surface-3)] [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[12px] [&_code]:text-[var(--ink-1)] [&_p]:m-0 [&_p:not(:last-child)]:mb-2">
               {answer}
             </div>
+            {copied ? (
+              <div className="mt-2 inline-flex items-center gap-1 pl-3.5 text-[11.5px] text-[var(--state-ok-fg)] [animation:rise_280ms_ease-out]">
+                <Check className="size-3" />
+                {t("faq_link_copied")}
+              </div>
+            ) : null}
           </div>
         </div>
       </div>
@@ -351,6 +451,46 @@ function HotlinePrimaryCard() {
       <div className="mt-1.5 text-[11.5px] leading-snug text-[var(--ink-3)]">
         {t("contact_hotline_hours_note")}
       </div>
+      {status?.open ? <OperatorPresence /> : null}
     </a>
   );
 }
+
+function OperatorPresence() {
+  const t = useTranslations("bank.help");
+  const dotClass = STATUS_DOT_CLASS[CURRENT_OPERATOR.status];
+  return (
+    <div className="mt-3.5 flex items-center gap-2.5 border-t border-dashed border-[color:color-mix(in_srgb,var(--brand-primary)_25%,transparent)] pt-3">
+      <div className="relative">
+        <span className="grid size-8 place-items-center rounded-full bg-gradient-to-br from-[var(--brand-primary-soft)] to-[var(--brand-primary)] text-[10.5px] font-semibold tracking-wide text-white shadow-[0_2px_8px_-3px_var(--brand-primary-ring)]">
+          {CURRENT_OPERATOR.initials}
+        </span>
+        <span
+          aria-hidden
+          className={cn(
+            "absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2 border-[var(--brand-primary-soft)]",
+            dotClass,
+          )}
+        />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="text-[10.5px] font-medium uppercase tracking-[0.06em] text-[var(--brand-primary-ink)]">
+          {t("operator_eyebrow")}
+        </div>
+        <div className="flex items-baseline gap-1.5 text-[12.5px] leading-tight text-[var(--ink-1)]">
+          <span className="font-semibold">{CURRENT_OPERATOR.name}</span>
+          <span className="text-[var(--ink-4)]">·</span>
+          <span className="text-[11.5px] text-[var(--ink-3)]">
+            {t(`operator_status_${CURRENT_OPERATOR.status}`)}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const STATUS_DOT_CLASS: Record<OperatorStatus, string> = {
+  available: "pulse-ring-ok bg-[var(--state-ok-fg)]",
+  on_call: "bg-[var(--state-warn-fg)]",
+  break: "bg-[var(--ink-4)]",
+};
