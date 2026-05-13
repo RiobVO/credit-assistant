@@ -6,11 +6,21 @@
 
 ## Current Status
 
-**Phase:** 4 закрыта (Bank Mode UI) + UI Design System sweep 2026-05-13 (Phase 0-8 плана + Phase 9 partial) + post-plan design-parity sweep (CA-066) + post-CA-066 cleanup (CA-067) + CA-065 commit writer + Design Sweep 2026-05-13 (Phase 1-4 DONE: Login + Search + History + Help) + **Design Sweep 2026-05-14 Phase 5 DONE: Settings full backend wiring** (CA-DS-PHASE5). Specs: `docs/superpowers/specs/2026-05-11-phase-4-bank-mode-design.md`, `docs/superpowers/plans/2026-05-13-ui-design-system.md`, ADR-0009, ADR-0011.
+**Phase:** 5 закрыта целиком (Settings UI + real 2FA — backend ADR-TBD + frontend + 3 hotfix во время smoke). Specs: `docs/superpowers/specs/2026-05-11-phase-4-bank-mode-design.md`, ADR-0009, ADR-0011.
 
-**Активная ветка:** `main`. Серия CA-060..CA-063b (design system + brand-layer + i18n) + CA-066 design-parity + Design Sweep Phase 1-4 + **Phase 5 Settings (2026-05-14)** — production-grade /settings экран с 4 секциями (profile/appearance/security/about), real backend wiring: `analysts +password_changed_at +mfa_enabled`, новая table `system_uptime_day` (UPSERT при каждом health-check), endpoint `GET /api/system/health` (Postgres ping + WeasyPrint check, plain-language services list 5 шт), endpoint `GET /api/system/health/history?days=30` (uptime calendar feed). Frontend: `features/settings/{profile,appearance,security,about}-section.tsx` + `use-appearance.ts` (theme/density/font/motion → localStorage + CSS-variables) + `use-system-health.ts` (useQuery hooks). Уptime-calendar рендерит 30 квадратов из real БД (grey-day для пропусков «до запуска»). Phase 5 Settings ожидает merge.
+**Активная ветка:** `main`. Phase 5 = Phase 5.A (Settings UI, `06f0ae4`) + Phase 5.B backend foundation (`06f0ae4`) + **Phase 5.B frontend + 3 hotfix (2026-05-14)** — real TOTP 2FA сквозной flow от UI до login. Frontend: `features/settings/{mfa-section,mfa-enroll-modal,mfa-disable-modal}.tsx` (3-stage enrollment с canvas-rendering QR через `qrcode@1.5.4` pinned + 10 backup-codes copy/download/confirm); login step-2 в `login-view.tsx` с TOTP/backup toggle. BFF: 4 новых route handlers под `/api/auth/mfa/*`. Lib: `lib/mfa.ts` + расширенный `lib/auth.ts` (union `LoginResult`). i18n: ~62 keys в `bank.{settings.mfa,login.mfa_*}` ru+uz.
 
-**Verify status:** ruff + mypy --strict (239 src files) + 666+ backend tests passed (включая 5 новых system_health_test + 2 me-расширения) + tsc + eslint (no-restricted-syntax ban hardcoded hex/rgba) + next build (18 routes + новые `/api/system/health(/history)`) + vitest (95 tests) — зелёные. Docker smoke: admin@bank.uz auth → `/me` возвращает `mfa_enabled=true`, `password_changed_at`, `created_at` real. Health endpoint UPSERT'ит today в `system_uptime_day` (verified).
+**Critical hotfixes during smoke (commits `d9387c0`, `6d625b1`, `59bb172`):**
+- `fix(mfa)`: computed `mfa_enabled` от `mfa_enrolled_at`, не от `mfa_secret` — half-enrolled lockout-bug fix. `/enroll/start` пишет secret в БД до verify; раньше computed flag это путало с enrolled state → следующий login требовал TOTP, но secret в authenticator не сохранён → lockout без backup-кодов.
+- `feat(mfa)`: RFC 5233 subaddress в provisioning URI (`admin+a1b2c3@bank.uz` вместо `admin@bank.uz`) — обход Microsoft Authenticator iOS + iCloud-cache dedup. MS Auth дедупит по подстроке-email независимо от full account_name; уникальный local-part спасает re-enrollment scenario.
+- `feat(mfa,web)`: `useRef` guard на enrollment-effect — фикс React 19 strict-mode (dev) double-fire `useEffect`, который делал 2× POST `/enroll/start` за одно открытие модалки → 2 разных secret в БД → race-condition в QR vs verify.
+
+**Verify status:** tsc + eslint + 95 vitest + next build (22 routes, +4 новых `/api/auth/mfa/*`); ruff + mypy --strict (240 src files); 3/3 новых unit-тестов в `analyst_mapper_test.py` passed; full E2E smoke 2026-05-14 на real Docker stack:
+- ✅ enrollment через manual-entry secret (workaround для MS Auth iCloud)
+- ✅ enrollment через scan QR (после email-suffix patch; диалог MS «уже существует» игнорируется, аккаунт всё равно добавляется)
+- ✅ disable через UI с password + TOTP re-auth
+- ✅ login → MFA challenge → TOTP code → /search
+- ✅ login → MFA challenge → backup-code → /search (код одноразовый — повторно invalid)
 
 ---
 
@@ -26,7 +36,11 @@
 - TODO[CA-064]: ship error.tsx в real observability (Sentry / posthog) когда подключим. Сейчас только `console.error`.
 - TODO[CA-068]: backend endpoint `POST /api/auth/change-password` — bcrypt verify(current) → hash(new) → UPDATE `password_changed_at`. Сейчас UI security-form имитирует ответ через `setTimeout(600)`. После реализации заменить imitation на real fetch + onError проброс backend-сообщения.
 - TODO[CA-DS9]: real uptime-history collector — `system_uptime_day` сейчас UPSERT'ится при каждом GET /api/system/health (от user или liveness-probe), что для bank-mode на one user redundantly: если никто не открыл settings и LB не пингует — день пустой. Нужен background-cron (ARQ или внешний systemd-timer) который ping'ает health раз в минуту. После — calendar честно показывает uptime без зависимости от user-traffic.
-- TODO[CA-DS10]: real TOTP/SMS enrollment-flow для 2FA. Сейчас `mfa_enabled` — просто stored bool, ставится seed-скриптом для admin@. Pilot потребует real enrollment: QR-код для TOTP-app (Google Authenticator/Authy), backup-codes, verify-on-login flow.
+- ~~TODO[CA-DS10]: real TOTP/SMS enrollment-flow для 2FA~~ — **закрыт 2026-05-14** (`06f0ae4` backend + `d9387c0`/`6d625b1`/`59bb172` Phase 5.B frontend + hotfixes). Production-grade TOTP с QR + backup-codes + login step-2. См. блок «End-user 2FA guide» ниже.
+- TODO[CA-DS13]: admin-reset 2FA endpoint — сценарий «аналитик потерял телефон + backup-codes». Сейчас workaround через прямой SQL/seed. Нужен `POST /api/bank/admin/analysts/{id}/reset-mfa` доступный только senior_analyst, с audit-логом и automatic logout затронутого аналитика.
+- TODO[CA-DS14]: `/help` секция «Что делать при смене телефона» — explain «диалог "уже существует" в MS Authenticator — нажми Отмена, аккаунт всё равно добавится». Сценарий редкий (раз в N лет на аналитика), но без объяснения user встанет колом.
+- TODO[CA-DS15]: рассмотреть WebAuthn/Passkeys как alternative 2FA-фактор — нет third-party app, биометрия на телефоне, нет TOTP-кодов вообще. UX-вин для non-tech аналитиков. Требует FIDO2-server в `infrastructure/auth/`.
+- TODO[CA-DS16]: убрать legacy stored bool `analysts.mfa_enabled` через миграцию. Сейчас computed-from-`enrolled_at` в API — stored bool сжигается, но колонка всё ещё в БД. Drop после подтверждения что нигде не читается (`grep mfa_enabled = ` показал только репозиторий-уровень).
 - TODO[CA-DS11]: faktura.uz API integration. Сейчас сервис в `/api/system/health` всегда `not_implemented`. После реализации — реальный ping + статус ok/degraded.
 - ~~TODO[CA-067]: rm orphaned `back-target.ts`~~ — **закрыт 2026-05-13** (`56ada78`). `web/src/features/dossier/back-target.ts` удалён + `rememberBackTarget("/search"|"/history")` убраны из search/history-view.
 - ~~TODO[CA-065]: `scripts/seed_demo_borrowers.py --commit`~~ — **закрыт 2026-05-13** (`04665b1`). Пишет 3 demo bank-mode dossier'а через стандартный E2E (build_borrower_snapshot → run_rules → save). 2 годовых + 24 monthly из seasonality. `source_mode='bank'`, `created_by_analyst_id=NULL`. Smoke real Postgres: 3 dossiers score=0/approve (зелёный demo-borrower). Запуск: `docker compose exec api bash -c "cd /app && PYTHONPATH=/app/src uv run --no-sync python -m scripts.seed_demo_borrowers --commit"`.
@@ -67,6 +81,98 @@
 - **CA-066 dossier layout (design-parity):** `features/dossier/sub-header.tsx` — чистый `<h1>` + meta-line `ИНН · ОПФ · ОКВЭД` + правые [Пересобрать] [Скачать PDF]; убраны eyebrow `application_label`, status-badge, кнопки «Документы» / «Карточка клиента». `KpiRow` теперь 4 карточки `EBIT / ROE / Долг·EBIT / Готовность данных` (revenue_ltm выкинут — отдельная карточка не нужна, число всё равно в Раздел A карточке). `ReadinessBadge` → `ReadinessKpiCard` (4-я в KPI-row), отдельный pill сверху удалён. Нижний `ActionBar` удалён физически (`action-bar.tsx`); действия только в шапке. `back-target.ts` + `rememberBackTarget()` в search/history оставлены orphaned (no-op writes в sessionStorage), могут пригодиться при возврате back-кнопки в шапку — отдельный TODO[CA-067] на удаление если решим что не вернём.
 - **CA-066 t.rich gotcha (history pagination fix):** `t.rich(key, {x: () => <b/>})` падает с «Functions are not valid as a React child» если в message используется value-плейсхолдер `{x}` (не tag-плейсхолдер `<x></x>`). next-intl пытается подставить функцию как value → React traceback. Правильно: либо value-плейсхолдер `{x}` + value-substitution через `t(key, {x: 42})` (но тогда нельзя ReactNode), либо tag-плейсхолдер `<x>{value}</x>` + `t.rich(key, {value, x: (chunks) => <b>{chunks}</b>})`. Применяй tag-syntax везде где нужна обёртка вокруг подстановки.
 - **CA-063 i18n infra:** `next-intl` 4.4.1, статичная локаль через `NEXT_PUBLIC_LOCALE` env (ru | uz), один UI-язык на инсталляцию (без routing-switcher). Keys в `web/src/i18n/{ru,uz}.json`, keyspace разбит на `shared/bank/accountant/dossier`. Loader `web/src/i18n/index.ts`, server-config `web/src/i18n/request.ts`, plugin в `next.config.ts` (`createNextIntlPlugin("./src/i18n/request.ts")`). `NextIntlClientProvider` в `RootLayout` оборачивает `<Providers>`. `<html lang>` берётся из resolved locale. **Useпаттерн:** client → `import { useTranslations } from "next-intl"; const t = useTranslations("section");`. Server → `import { getTranslations } from "next-intl/server"; const t = await getTranslations("section");`. **Тесты:** RTL-тесты на компонент с `t()` оборачивать в `<NextIntlClientProvider locale="ru" messages={ru}>` (см. `global-topbar.test.tsx`). Swept ru-strings → keys в 8 surfaces (bank sidebar, search-view, history-view, login-view, accountant sidebar, GlobalTopbar, CommandPalette, DossierError + error/not-found pages); остальное — TODO[CA-063b]. **Brand-strings типа «Uzbekbank Credit», «CreditScope», «Bank Mode · Андижон» — НЕ локализуются**, это tenant-config (`config/brands/<id>.json#name|tagline`) или ad-hoc copy.
+
+---
+
+## End-user 2FA guide (для smoke + pilot setup)
+
+Документация для **тебя** на следующий раз когда захочешь проверить 2FA с нуля, или для IT-офицера банка при onboarding'е аналитика.
+
+### Подготовка окружения
+
+1. Backend в Docker bank-mode:
+   ```powershell
+   $env:APP_MODE='bank'; docker compose up -d --build api
+   ```
+   ⚠️ Если запустить без `$env:APP_MODE='bank'` префикса — bank-router не зарегистрируется, login будет 404. .env с APP_MODE=bank — TODO (см. memory).
+
+2. Seed admin с известным паролем (upsert по email):
+   ```powershell
+   docker compose exec -T api bash -c "cd /app/src && uv run --no-sync python -m interfaces.cli.seed_analysts --email admin@bank.uz --password 'Admin2026!' --full-name 'Admin A.' --role senior_analyst"
+   ```
+
+3. Frontend dev:
+   ```powershell
+   cd web; $env:NEXT_PUBLIC_APP_MODE='bank'; $env:NEXT_PUBLIC_BRAND_ID='uzbekbank'; npm run dev
+   ```
+
+4. Telegram-like TOTP app на телефоне — поставь **Microsoft Authenticator** или **Google Authenticator** (Google не имеет iCloud-quirk).
+
+### Smoke 4 путей (≈10 минут)
+
+#### Путь 1 — Enrollment
+
+1. Открой `http://localhost:3000/login` → `admin@bank.uz` / `Admin2026!` → Войти → `/search`
+2. Sidebar → **Настройки** → nav **Безопасность**
+3. Карточка «Двухфакторная аутентификация · Не настроена» → кнопка **«Включить 2FA»**
+4. Модалка stage QR:
+   - Сканируй QR в Authenticator-приложении
+   - **Если MS Authenticator пишет «уже существует»** — нажми Отмена. Аккаунт всё равно добавится в список (после email-suffix patch label выглядит `admin+a1b2c3@bank.uz`)
+   - Альтернативно — клик «Показать» под manual-entry secret → копируй → в Authenticator «+ → Other → Ввести вручную» → paste secret
+5. Клик «Продолжить» → stage Verify
+6. Введи 6-значный код из Authenticator → «Подтвердить»
+7. Stage Backup-codes:
+   - **СКАЧАЙ .txt** (обязательно — plain никогда не повторится)
+   - Открой блокнотом, проверь 10 строк по 8 символов
+   - Отметь checkbox «Я сохранил коды в надёжном месте» → «Готово»
+8. Карточка 2FA стала зелёной «Активна» ✅
+
+#### Путь 2 — Login через TOTP
+
+1. Sidebar внизу → user-card → Выйти
+2. `/login` → email + пароль → Войти
+3. Должен переключиться на step-2 «Двухфакторная аутентификация · Введите 6-значный код»
+4. Свежий код из Authenticator → Подтвердить → `/search` ✅
+
+#### Путь 3 — Login через backup-код
+
+1. Logout
+2. `/login` → email + пароль → Войти → step-2
+3. Клик ссылку **«Использовать резервный код»** (под input полем)
+4. Поле меняется: placeholder `XXXXXXXX`, разрешает буквы и цифры
+5. Введи **один** из сохранённых backup-кодов (8 символов, A-Z 0-9) → Подтвердить → `/search` ✅
+6. ⚠️ Использованный код **сгорает** — повторный ввод того же даст invalid_code
+
+#### Путь 4 — Disable
+
+1. Залогинен через Путь 2 или 3
+2. `/settings` → Безопасность → карточка 2FA → красная кнопка **«Отключить»**
+3. Модалка: пароль `Admin2026!` + свежий TOTP-код → Подтвердить
+4. Карточка стала серой «Не настроена» ✅
+
+### Если invalid_code не уходит
+
+Backend ping для самопроверки:
+
+```powershell
+# 1. Текущий secret в БД для admin@
+docker compose exec -T postgres psql -U credit -d credit_assistant -c "SELECT mfa_secret, mfa_enrolled_at FROM analysts WHERE email='admin@bank.uz';"
+
+# 2. Скопируй secret, посмотри что сервер ожидает прямо сейчас
+docker compose exec -T api bash -c "PYTHONPATH=/app/src uv run --no-sync python -c 'import pyotp,time; print(pyotp.TOTP(\"PASTE_SECRET_HERE\").now())'"
+```
+
+Если код из Authenticator **не совпадает** с тем что выдаёт probe — Authenticator имеет другой secret (старая запись от race-condition не очищенная + iCloud cache, либо вторая запись с тем же label). Удали ВСЕ «Credit Assistant» из Authenticator, добавь заново через manual entry.
+
+### Восстановление в случае lockout
+
+Если потерял все: телефон + backup-codes — есть только прямой SQL до того как `TODO[CA-DS13]` admin-reset endpoint появится:
+
+```powershell
+docker compose exec -T postgres psql -U credit -d credit_assistant -c "UPDATE analysts SET mfa_secret=NULL, mfa_enrolled_at=NULL, mfa_backup_codes_hash=NULL WHERE email='YOUR_EMAIL';"
+```
+
+После — login сразу пускает без 2FA, можешь заново enroll'нуться.
 
 ---
 
@@ -375,6 +481,7 @@ Issues которые я нашёл в аудитах но user решил ос�
 | 2026-05-13 | Design Sweep | **Phase 3 History DONE — design statement.** Premium data-grid: убрана `+ Новая заявка` сверху (дубль sidebar CTA), оставлен `Экспорт CSV`. `LiveStrip` из Phase 2 переиспользован между PageHead и Tabs. Table headers: white bg + 10.5px uppercase letter-spacing 0.08 + ink-4 + inset bottom-shadow + sticky top:0 (был мутный surface-2). `ScoreCell` — vertical accent strip 3×22 (color = recommendation band) + crisp число mono 16px (color = score band, Tinkoff/Brex pattern). `DateCell` 2-line: абс. дата + relative time (свежие ≤сегодня/вчера → зелёный; ≥7д → скрыт). `AnalystCell` gradient на `brand-primary-soft → brand-primary` (был hardcoded #D88E73→#B5624A). Trailing chevron column opacity 0→1 на row hover (заменил dead `⋯`). EmptyState split: `EmptyZero` (total=0 «Пока никого не проверяли») vs `EmptyFiltered` (filtered=0). Pagination split: footer-only когда totalPages=1. Toolbar: убрана dead «Ещё». Новый `features/history/relative-time.ts` + 11 unit-тестов (ICU-plural ru+uz, календарный yesterday). i18n keyspace: +`rel_*`, +`empty_zero_*`, –`filter_more`, –`row_actions`. Verify: tsc + eslint + 88 vitest + next build (16 routes) — зелёные. | `8bbc154` |
 | 2026-05-13 | Design Sweep | **Phase 4 Help DONE — design statement.** Info-страница подтягивается под Phase 2/3 эстетику без structural rewrites. `BankPageHead.actions` слот → status-card pill (pulse-ring-ok + «API v1.2 · Справка обновлена 13.05.2026»). `IncidentBand` full-width между title и content — критическая инфа compliance с `state-bad-{fg,bg,border}` + CTA-кнопка «Позвонить compliance» (tel: link, тот же hotline-номер). `FaqSection` rewrite: header с counter `7 ТЕМ` (uppercase, ICU-plural), 7 rows с leading icon-tile (BarChart3/AlertTriangle/Database/FileSpreadsheet/RotateCcw/ScrollText/LifeBuoy) в brand-primary-soft + category eyebrow + chevron rotate→brand-primary on open. **Expanded answer в accent-block**: `border-l-2 brand-primary` + `bg-gradient-to-r brand-primary-soft→transparent` + `rounded-r-lg`. Gap question↔answer 10px (был -4px → слипалось). ContactStack tier-hierarchy: **T1 Hotline primary** (gradient card, mono phone 18px, dynamic «● Сейчас открыто · до 18:00» / «Закрыто · откроется в 09:00» через `getHotlineStatus()` helper, hover lift+ring-shadow); **T2 Slack + Email** обычные cards, hover → brand-primary border; **T3 Docs** ghost-link с dashed-top-border + arrow translate-x on hover. Bottom notes-bar «Время ответа: Slack ≤ 1ч · Email ≤ 4ч (раб. дни)». GridPattern `tone="default"` lazy-load + `<div className="relative z-[1]">` wrap. Новый `features/help/business-hours.ts`: `getHotlineStatus(now): {open:true,untilHour:18}\|{open:false,opensAtHour:9}`, Asia/Tashkent через `Intl.DateTimeFormat({timeZone})`, Mon-Fri 09:00 inclusive / 18:00 exclusive, 7 unit-тестов с inject `now`. `HotlinePrimaryCard` initial state `null` + `setTimeout(update, 0)` + `setInterval(update, 60_000)` — обход ESLint `react-hooks/set-state-in-effect`. i18n `bank.help` +13 keys, phone/email/Slack/Docs — hardcoded brand-strings. Verify: tsc + eslint + 95 vitest (88→95, +7) + next build (16 routes) — зелёные. | `cb8b046` |
 | 2026-05-13 | Design Sweep | **Phase 4 hotfix серия (6 коммитов).** (1) FAQ expand animation grid-row 0fr→1fr + opacity fade 320ms + chevron bouncy cubic-bezier 400ms + icon-tile scale-110 при open/hover; slack/email tile-bug fix (tile сливался с soft-card на hover → теперь white bg + brand icon + scale + ring) `9815d70`. (2) Deep-link на FAQ (copy-icon hover, hash auto-scroll/auto-open) добавлен и **revert'ed** — overkill для 7 вопросов, public-docs pattern не подходит internal-tool; в той же серии добавлен operator-presence в Hotline (avatar gradient + pulse-ring-ok dot + «СЕЙЧАС НА СМЕНЕ · Мадина А.») который оставлен `ea1a5f7`→`f8b5df8`. (3) Dismissable incident-band с X + localStorage `ca:help-incident-dismissed` + grid-row collapse добавлен и **revert'ed** — без undo-механизма случайный X = потеря critical-cue, banner теперь persistent baseline; в той же серии FAQ all-closed на mount (`defaultOpen={idx===0}` снят — Notion/GitHub pattern) `2d4eb91`→`2816ac4`. (4) Sidebar Help section перенесена из `mt-auto`-внизу прямо под Workspace + thin divider `color-mix(nav-border 60%, transparent)`; `mt-auto` теперь на user-card; Workspace+Help читаются как single navigation tree `91c4090`. **Lesson:** wow-features (deep-link, dismissable) для internal banking-tool обычно cost > benefit; safer revert чем держать в production. **Open TODOs:** CA-DS6 (support в brand-config), CA-DS7 (operator endpoint), CA-DS8 (отдельный compliance phone). | `cb8b046`..`91c4090` |
+| 2026-05-14 | Phase 5.B | **2FA frontend + 3 hotfix серия (commits `d9387c0`, `6d625b1`, `59bb172`)** — закрыта Phase 5.B end-to-end. **Frontend (16 файлов):** `lib/auth.ts` расширен union `LoginResult = AnalystSummary \| MfaChallenge` + `submitMfaChallenge` + `isMfaChallenge`; новый `lib/mfa.ts` (startEnroll/verifyEnroll/disableMfa). 4 BFF routes под `app/api/auth/mfa/*` (3 auth-required + challenge без auth и пакует cookies на success). `app/api/auth/login/route.ts` пробрасывает `requires_mfa` payload без cookies. `features/settings/mfa-section.tsx` (карточка status + CTA), `mfa-enroll-modal.tsx` 3-stage (QR canvas через `qrcode@1.5.4` pinned + manual-entry secret + 6-digit verify + 10 backup-codes screen с copy/download/confirm-checkbox), `mfa-disable-modal.tsx` (password + TOTP re-auth). `login-view.tsx` extended `MfaStep` компонент с TOTP/backup toggle (6 цифр vs 8+ alphanumeric). i18n: `bank.settings.mfa.*` (~47 keys) + `bank.login.mfa_*` (~15 keys) × ru/uz. **Backend hotfix #1 `d9387c0`:** `analyst_mapper.computed_mfa_enabled` теперь от `mfa_enrolled_at IS NOT NULL` (не `mfa_secret IS NOT NULL`) — фикс half-enrolled lockout: `/enroll/start` пишет secret в БД до verify, без fix'а computed flag путал scan-без-verify с enrolled state → следующий login требовал TOTP, но secret в authenticator не сохранён → unrecoverable lockout. `mfa.py:challenge` + `mfa.py:disable` guards тоже на `enrolled_at`. +1 unit-test `test_analyst_from_orm_mfa_disabled_when_half_enrolled` с подробным комментарием. **Backend hotfix #2 `6d625b1`:** `generate_enrollment` использует RFC 5233 subaddress (`admin+a1b2c3@bank.uz`) — обход Microsoft Authenticator iOS + iCloud cache dedup quirk (приложение дедупит по подстроке-email независимо от account_name suffix, MS-облако помнит локально-удалённые аккаунты). Уникальный local-part спасает re-enrollment-сценарий «смена телефона». `_suffix_factory` инжектируется для детерминизма в тестах. **Frontend hotfix #3 (в составе `59bb172`):** `useRef` guard на enrollment-effect фикс React 19 strict-mode (dev) double-fire `useEffect` — без guard'а каждое открытие модалки делало 2× POST `/enroll/start`, в БД оставался последний secret, в QR показывался один из двух → race-condition → verify_totp всегда invalid. Не используем cancelled-flag (cleanup в strict-mode заблокировал бы setStage после guard'а → loading навсегда). **Smoke E2E на real Docker (2026-05-14 03:00-04:00 Ташкент):** ✅ enrollment через manual-entry secret; ✅ enrollment через scan QR (после email-suffix patch, диалог MS Auth «уже существует» игнорируется); ✅ disable с password+TOTP re-auth; ✅ login → MFA challenge → TOTP → /search; ✅ login → MFA challenge → backup-code → /search (одноразовый, повторно invalid). **Lessons:** (1) MS Authenticator iCloud-cache → email-substring dedup, не account_name. (2) React 19 strict-mode + dev — useEffect mount→cleanup→mount требует useRef guard для одноразовых side-effects типа enrollment-fetch. (3) `mfa_enabled` computed-from-X семантически точно: X = «enrollment завершён», не «secret есть». (4) Backend `docker compose up -d --build api` без `$env:APP_MODE='bank'` префикса возвращает default `accountant` → bank-router не зарегистрирован → 404 на всё `/api/bank/*` → BFF login возвращает в UI «invalid email or password» (misleading). **Open TODOs:** CA-DS13 (admin-reset 2FA endpoint), CA-DS14 (/help секция «диалог MS Auth — нажми Отмена»), CA-DS15 (WebAuthn/Passkeys как alt 2FA factor), CA-DS16 (drop legacy stored bool `analysts.mfa_enabled`). См. блок «End-user 2FA guide» в шапке CLAUDE.md для пошаговой инструкции smoke. |
 | 2026-05-14 | Design Sweep | **Phase 5 Settings DONE — full backend wiring.** Production-grade /settings с 4 секциями. **Backend:** alembic migration `7b3c5f08e2a1` — `analysts +password_changed_at (default now()) +mfa_enabled (default false)`; новая table `system_uptime_day` (PK=day, status enum ok/degraded/down, worst-of-day escalation). ORM: `SystemUptimeDayORM` + `SqlAlchemySystemUptimeRepository` (upsert_today + list_last_n_days + first_seen_day). `AnalystResponse` Pydantic + `AnalystIdentity` dataclass расширены 3 полями (`created_at`, `password_changed_at`, `mfa_enabled`); `/api/bank/auth/me` + `/login` пробрасывают. Новый router `shared/system.py`: `GET /api/system/health` (Postgres SELECT 1 + WeasyPrint lazy import-check + UPSERT today в system_uptime_day), `GET /api/system/health/history?days=30`. 5 services с stable keys: search/dossiers_db/soliq_import/pdf_generation/faktura_uz (последний всегда `not_implemented`, см. TODO[CA-DS11]). Seed-script `--mfa-enabled` flag; admin@bank.uz переseeded с mfa_enabled=true как «enrolled в банковский SSO/AD». **Frontend:** `features/settings/` 6 файлов — `profile-section` (avatar 44px + security-strip с conditional chips 2FA/Password/Network + 6 prod-fields с copy-button + footer-strip), `appearance-section` (4 controls: theme swatches mini-preview + density segmented + font S/M/L + reduced-motion toggle, всё через `use-appearance` хук → localStorage + CSS-vars на `<html data-*>`), `security-section` (existing form + password-strength meter 4-bar + status row из real `password_changed_at`), `about-section` (brand-header через `useBrand()` + health-strip с pulse-tile + uptime-calendar 30 days из real БД + 2 expandable rows: «Что нового» с 3 release-items + «Что работает прямо сейчас» с 5 service-rows plain-language). Settings-view shell rewrite: nav 4-item с icon-tile + chevron-reveal + brand-primary inset-left на active; SessionPill в page-head actions. **i18n:** `bank.settings.*` keyspace расширен ~80 keys (ru + uz). **BFF routes:** `/api/system/health` + `/api/system/health/history` без auth (proxy без Bearer). Globals.css: density/font-scale/reduced-motion CSS-vars + `.ds-pulse-ok` + `.ds-exp-panel` (Phase 4 grid-row 0fr→1fr accordion). **Tests:** 5 новых integration на system_health (happy + idempotent UPSERT + history + 422 на days=0/999) + 2 расширения на /me (new fields + mfa_enabled-from-seed). **Verify:** ruff + mypy --strict + 19 targeted integration green + tsc + eslint + 95 vitest + next build (18 routes, +`/api/system/health(/history)`). Real Docker smoke: admin@ login → /me returns `mfa_enabled=true`, real timestamps; health endpoint UPSERT'ит today. **Open TODOs:** CA-068 (real /api/auth/change-password), CA-DS9 (cron uptime collector), CA-DS10 (real TOTP enrollment), CA-DS11 (faktura.uz integration). |
 
 > Сжатая история. Полные decomposition / smoke numbers / per-step rationale — в commit messages (`git log --oneline`) и `docs/adr/`.
