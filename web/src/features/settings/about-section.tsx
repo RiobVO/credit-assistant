@@ -11,7 +11,7 @@ import {
   Search,
   Zap,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { type ReactNode, useState } from "react";
 
 import { useBrand } from "@/lib/brand-context";
@@ -178,6 +178,9 @@ function formatRelativeShort(when: Date): string {
 
 function FieldsList() {
   const t = useTranslations("bank.settings");
+  // Динамически реагируем на CA-DS29 cookie-switcher: «русский (ru-RU)» / «узбекский (uz-UZ)».
+  const locale = useLocale();
+  const localeFullKey = locale === "uz" ? "locale_uz_full" : "locale_ru_full";
   return (
     <dl className="m-0 flex flex-col px-6">
       <SimpleRow label={t("field_version")} value={APP_VERSION} mono />
@@ -195,7 +198,7 @@ function FieldsList() {
         value={<ServicesValueText />}
         body={<ServicesPanel />}
       />
-      <SimpleRow label={t("field_locale")} value={t("locale_ru_full")} />
+      <SimpleRow label={t("field_locale")} value={t(localeFullKey)} />
       <SimpleRow label={t("field_timezone")} value="Asia/Tashkent · UTC+5" last />
     </dl>
   );
