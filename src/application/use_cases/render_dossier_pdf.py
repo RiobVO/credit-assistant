@@ -61,15 +61,12 @@ class RenderDossierPdf:
 
         snapshot = view_bundle.view.snapshot
         messages = self._messages_loader(lang)
-        # observations_builder получает messages в commit 6 (rewrite f-strings
-        # → format). Сейчас он остаётся на RU-hardcode; в UZ ветке F-секция
-        # подхватит rule.name_uz через ``rule_names`` ниже, но cover-observations
-        # будут RU до commit 6.
         observations = build_observations(
             snapshot=snapshot,
             kpis=view_bundle.kpis,
             red_flags=view_bundle.view.dossier.red_flags,
             registry=self._registry,
+            messages=messages,
         )
         bundle = DossierPdfBundle(
             view_bundle=view_bundle,
