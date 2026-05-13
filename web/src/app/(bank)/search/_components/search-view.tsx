@@ -9,14 +9,25 @@ import {
   X,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import { AmbientOrbs } from "@/features/search/ambient-orbs";
-import { GridPattern } from "@/features/search/grid-pattern";
 import { LiveStrip } from "@/features/search/live-strip";
 import { RecentChips } from "@/features/search/recent-chips";
 import { ResultCard } from "@/features/search/result-card";
+
+// AmbientOrbs + GridPattern — pure decoration, не блокируют hero. Lazy-load
+// с ssr:false → не уходят в initial JS bundle. Ускоряет навигацию между
+// страницами (особенно в dev-mode где turbopack recompiles).
+const AmbientOrbs = dynamic(
+  () => import("@/features/search/ambient-orbs").then((m) => m.AmbientOrbs),
+  { ssr: false },
+);
+const GridPattern = dynamic(
+  () => import("@/features/search/grid-pattern").then((m) => m.GridPattern),
+  { ssr: false },
+);
 import {
   type BorrowerSearchResult,
   searchBorrower,
