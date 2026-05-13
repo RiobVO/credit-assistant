@@ -20,6 +20,7 @@ from config.settings import Settings, get_settings
 from interfaces.api.bank.auth import router as bank_auth_router
 from interfaces.api.bank.dependencies import get_current_analyst
 from interfaces.api.bank.history import router as bank_history_router
+from interfaces.api.bank.mfa import router as bank_mfa_router
 from interfaces.api.bank.search import router as bank_search_router
 from interfaces.api.bank.stats import router as bank_stats_router
 from interfaces.api.shared.data_readiness import router as data_readiness_router
@@ -29,6 +30,7 @@ from interfaces.api.shared.draft import router as draft_router
 from interfaces.api.shared.health import router as health_router
 from interfaces.api.shared.manual_input_parse import router as manual_input_parse_router
 from interfaces.api.shared.soliq_upload import router as soliq_upload_router
+from interfaces.api.shared.system import router as system_router
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -51,6 +53,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
 
     app.include_router(health_router)
+    # system_router — без auth, доступен в обоих режимах. Используется UI
+    # Settings → О системе (Phase 5) и k8s/load-balancer probes (как health).
+    app.include_router(system_router)
 
     if settings.app_mode == "bank":
         # Bank Mode: auth-роут открыт (login сам выдаёт токен), всё остальное
@@ -58,6 +63,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # и проставляют analyst-id + audit (см. shared/dossier.py).
         auth_required = [Depends(get_current_analyst)]
         app.include_router(bank_auth_router)
+        # MFA: enrollment + disable требуют auth (рантайм через CurrentAnalyst в
+        # handler'ах); /challenge открыт, защищён через short-lived JWT.
+        app.include_router(bank_mfa_router)
         app.include_router(bank_search_router)
         app.include_router(bank_history_router)
         app.include_router(bank_stats_router)

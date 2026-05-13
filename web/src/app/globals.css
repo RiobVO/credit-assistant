@@ -281,4 +281,58 @@
     0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
     50% { transform: translate3d(50px, -40px, 0) scale(0.96); }
   }
+
+  /* Phase 5 Settings — appearance preferences проброшены через data-атрибуты
+     на <html> хуком useAppearance (web/src/features/settings/use-appearance.ts).
+     Все CSS-vars имеют sensible defaults — отсутствие data-атрибутов даёт
+     стандартный «standard / M / no reduced motion» вид. */
+  :root {
+    --density-scale: 1;
+    --font-scale: 1;
+  }
+  :root[data-density="compact"] {
+    --density-scale: 0.92;
+  }
+  :root[data-density="standard"] {
+    --density-scale: 1;
+  }
+  :root[data-font-scale="s"] {
+    --font-scale: 0.94;
+    font-size: 15px;
+  }
+  :root[data-font-scale="m"] {
+    --font-scale: 1;
+    font-size: 16px;
+  }
+  :root[data-font-scale="l"] {
+    --font-scale: 1.06;
+    font-size: 17px;
+  }
+  /* Reduced-motion override: глобально снижает duration анимаций.
+     OS-preference обслуживается через useReducedMotion hook (Phase 2);
+     этот override срабатывает поверх когда user явно выбрал в настройках. */
+  :root[data-reduced-motion="true"] *,
+  :root[data-reduced-motion="true"] *::before,
+  :root[data-reduced-motion="true"] *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+
+  /* Phase 5 — pulse-ring для status-indicator dots (security strip, health
+     strip, session cue). Тот же ритм 2.2s что в Phase 4 hotline-card. */
+  @keyframes pulse-ring-ok {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(15, 138, 95, 0.6); }
+    50%      { box-shadow: 0 0 0 5px rgba(15, 138, 95, 0); }
+  }
+  .ds-pulse-ok {
+    animation: pulse-ring-ok 2.2s ease-in-out infinite;
+  }
+
+  /* Phase 5 — fade-in для expandable rows в /settings → О системе.
+     Используется inline через `animation: ds-row-fade-in 220ms ease-out`. */
+  @keyframes ds-row-fade-in {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
 }

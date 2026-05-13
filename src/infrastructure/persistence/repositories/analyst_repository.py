@@ -31,6 +31,7 @@ class SqlAlchemyAnalystRepository:
         full_name: str,
         role: str = "analyst",
         is_active: bool = True,
+        mfa_enabled: bool = False,
     ) -> UUID:
         orm = AnalystORM(
             email=email,
@@ -38,6 +39,7 @@ class SqlAlchemyAnalystRepository:
             full_name=full_name,
             role=role,
             is_active=is_active,
+            mfa_enabled=mfa_enabled,
         )
         self._session.add(orm)
         await self._session.flush()
@@ -60,3 +62,8 @@ class SqlAlchemyAnalystRepository:
         """
         stmt = select(AnalystORM).where(AnalystORM.email == email)
         return (await self._session.execute(stmt)).scalar_one_or_none()
+
+    async def get_orm(self, analyst_id: UUID) -> AnalystORM | None:
+        """ORM-доступ для MFA-flow: записать secret/enrolled_at/backup_codes_hash
+        требует mutation на ORM-инстансе. Не используй выше application слоя."""
+        return await self._session.get(AnalystORM, analyst_id)
