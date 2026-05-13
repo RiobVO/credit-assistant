@@ -4,13 +4,11 @@ import {
   AlertTriangle,
   ArrowRight,
   BarChart3,
-  Check,
   ChevronDown,
   Clock,
   Database,
   FileSpreadsheet,
   LifeBuoy,
-  Link2,
   Mail,
   MessageSquare,
   Phone,
@@ -77,26 +75,6 @@ const FAQ_ICONS: Record<FaqId, typeof BarChart3> = {
 
 export function HelpView() {
   const t = useTranslations("bank.help");
-  const [activeHash, setActiveHash] = useState<FaqId | null>(null);
-
-  useEffect(() => {
-    const FAQ_SET = new Set<string>(FAQ_IDS);
-    const read = () => {
-      const raw = window.location.hash.replace(/^#/, "");
-      const id = FAQ_SET.has(raw) ? (raw as FaqId) : null;
-      setActiveHash(id);
-      if (id) {
-        requestAnimationFrame(() => {
-          document
-            .getElementById(`faq-${id}`)
-            ?.scrollIntoView({ behavior: "smooth", block: "start" });
-        });
-      }
-    };
-    read();
-    window.addEventListener("hashchange", read);
-    return () => window.removeEventListener("hashchange", read);
-  }, []);
 
   return (
     <>
@@ -122,12 +100,7 @@ export function HelpView() {
             </header>
             <div>
               {FAQ_IDS.map((id, idx) => (
-                <FaqRow
-                  key={id}
-                  id={id}
-                  initialOpen={idx === 0}
-                  forceOpenFromHash={activeHash === id}
-                />
+                <FaqRow key={id} id={id} defaultOpen={idx === 0} />
               ))}
             </div>
           </section>
@@ -189,38 +162,10 @@ function IncidentBand() {
   );
 }
 
-function FaqRow({
-  id,
-  initialOpen,
-  forceOpenFromHash,
-}: {
-  id: FaqId;
-  initialOpen?: boolean;
-  forceOpenFromHash?: boolean;
-}) {
+function FaqRow({ id, defaultOpen }: { id: FaqId; defaultOpen?: boolean }) {
   const t = useTranslations("bank.help");
-  const [open, setOpen] = useState(initialOpen ?? false);
-  const [copied, setCopied] = useState(false);
+  const [open, setOpen] = useState(defaultOpen ?? false);
   const Icon = FAQ_ICONS[id];
-
-  useEffect(() => {
-    if (!forceOpenFromHash) return undefined;
-    const tId = setTimeout(() => setOpen(true), 0);
-    return () => clearTimeout(tId);
-  }, [forceOpenFromHash]);
-
-  const onCopyLink = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const url = `${window.location.origin}${window.location.pathname}#${id}`;
-    if (typeof navigator !== "undefined" && navigator.clipboard) {
-      void navigator.clipboard.writeText(url);
-    }
-    window.history.replaceState(null, "", `#${id}`);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1500);
-  };
-
-  const toggle = () => setOpen((v) => !v);
 
   const answer: ReactNode = t.rich(`faq_${id}_a`, {
     b: (chunks) => <b>{chunks}</b>,
@@ -237,26 +182,14 @@ function FaqRow({
   });
 
   return (
-    <div
-      id={`faq-${id}`}
-      className="border-b border-[var(--border)] last:border-b-0 scroll-mt-24"
-    >
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={toggle}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            toggle();
-          }
-        }}
+    <div className="border-b border-[var(--border)] last:border-b-0">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        aria-controls={`faq-${id}-panel`}
         className={cn(
-          "group grid w-full cursor-pointer grid-cols-[44px_1fr_auto] items-start gap-3.5 px-5 py-3.5 text-left transition-colors",
+          "group grid w-full grid-cols-[44px_1fr_auto] items-start gap-3.5 px-5 py-3.5 text-left transition-colors",
           "hover:bg-[var(--surface-2)]",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary-ring)] focus-visible:ring-offset-[-2px]",
           open && "bg-[var(--surface-2)]",
         )}
       >
@@ -277,33 +210,14 @@ function FaqRow({
             {t(`faq_${id}_q`)}
           </span>
         </span>
-        <div className="mt-1 flex items-center gap-1">
-          <button
-            type="button"
-            onClick={onCopyLink}
-            aria-label={t("faq_copy_link")}
-            title={copied ? t("faq_link_copied") : t("faq_copy_link")}
-            className={cn(
-              "grid size-7 place-items-center rounded-md text-[var(--ink-4)] transition-all duration-200",
-              "hover:bg-[var(--brand-primary-soft)] hover:text-[var(--brand-primary)]",
-              open
-                ? "opacity-100"
-                : "opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto",
-              copied && "text-[var(--state-ok-fg)]",
-            )}
-          >
-            {copied ? <Check className="size-3.5" /> : <Link2 className="size-3.5" />}
-          </button>
-          <ChevronDown
-            className={cn(
-              "size-4 shrink-0 text-[var(--ink-3)] transition-transform duration-[400ms] ease-[cubic-bezier(0.34,1.56,0.64,1)]",
-              open && "rotate-180 text-[var(--brand-primary)]",
-            )}
-          />
-        </div>
-      </div>
+        <ChevronDown
+          className={cn(
+            "mt-2 size-4 shrink-0 text-[var(--ink-3)] transition-transform duration-[400ms] ease-[cubic-bezier(0.34,1.56,0.64,1)]",
+            open && "rotate-180 text-[var(--brand-primary)]",
+          )}
+        />
+      </button>
       <div
-        id={`faq-${id}-panel`}
         className={cn(
           "grid transition-[grid-template-rows,opacity] duration-[320ms] ease-out",
           open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
@@ -315,12 +229,6 @@ function FaqRow({
             <div className="rounded-r-lg border-l-2 border-[var(--brand-primary)] bg-gradient-to-r from-[var(--brand-primary-soft)] to-transparent py-2.5 pl-3.5 pr-5 text-[13.5px] leading-[1.6] text-[var(--ink-2)] [&_code]:rounded [&_code]:bg-[var(--surface-3)] [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[12px] [&_code]:text-[var(--ink-1)] [&_p]:m-0 [&_p:not(:last-child)]:mb-2">
               {answer}
             </div>
-            {copied ? (
-              <div className="mt-2 inline-flex items-center gap-1 pl-3.5 text-[11.5px] text-[var(--state-ok-fg)] [animation:rise_280ms_ease-out]">
-                <Check className="size-3" />
-                {t("faq_link_copied")}
-              </div>
-            ) : null}
           </div>
         </div>
       </div>

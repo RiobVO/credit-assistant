@@ -160,8 +160,6 @@
       "incident_title": "Срочные инциденты",
       "incident_text": "Если данные клиента стали видны другому аналитику — немедленно позвоните в compliance.",
       "incident_cta": "Позвонить compliance",
-      "faq_copy_link": "Скопировать ссылку на вопрос",
-      "faq_link_copied": "Ссылка скопирована",
       "operator_eyebrow": "Сейчас на смене",
       "operator_role_senior": "Старший оператор",
       "operator_status_available": "Доступен",
