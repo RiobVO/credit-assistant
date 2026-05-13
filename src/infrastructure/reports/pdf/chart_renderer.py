@@ -10,6 +10,9 @@ Backend ``matplotlib.use("Agg")`` ставится при импорте мод�
 без Tk. PNG сериализуется в ``BytesIO`` и встраивается в шаблон через
 data-URI base64 (``WeasyPrintPdfRenderer`` делает encode).
 
+T0.4 / ADR-0015: empty-state title/hint + ось X читаются из ``PdfMessages``.
+Sparkline tone (цвет линии) — design token, не локализуется.
+
 Сетка цветов синхронизирована с frontend ``globals.css``: основной — Indigo
 ``#1E55C9``, акцент пиков — Warning Amber ``#B8730E``, тренд — Primary Blue
 700 ``#1947AA``. Шрифт оси — DejaVu Sans (системный fallback в python:slim);
@@ -23,6 +26,8 @@ from collections.abc import Sequence
 from decimal import Decimal
 
 import matplotlib
+
+from application.dto.pdf_messages import PdfMessages
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -42,19 +47,15 @@ COLOR_GRID = "#E4E7EC"  # ca-border для горизонтальной сетк
 DPI_DEFAULT = 144
 SPARKLINE_DPI = 144
 
-_RU_MONTHS = (
-    "янв", "фев", "мар", "апр", "май", "июн",
-    "июл", "авг", "сен", "окт", "ноя", "дек",
-)
 
-
-def _format_month_short(month_index: int, year: int) -> str:
-    """``2025-12`` → ``"дек 25"``. Используется для оси X."""
-    return f"{_RU_MONTHS[month_index - 1]} {year % 100:02d}"
+def _format_month_short(messages: PdfMessages, month_index: int, year: int) -> str:
+    """``2025-12 → "дек 25"`` / ``"dek 25"`` — для оси X."""
+    return f"{messages.month_short[month_index - 1]} {year % 100:02d}"
 
 
 def render_revenue_24m(
     points: Sequence[MonthlyRevenuePoint],
+    messages: PdfMessages,
     *,
     width_in: float = 8.5,
     height_in: float = 2.6,
@@ -70,27 +71,21 @@ def render_revenue_24m(
     Аналитик не должен видеть «нет данных», когда годовые показатели в
     разделе B уже сформированы — это два разных уровня детализации.
 
-    * ``True``  → «Помесячная динамика недоступна» (годовые из FORM_2 есть,
-      нужен ESF CSV из my3.soliq.uz для помесячной разбивки).
-    * ``False`` → «Нет данных о выручке» (INSUFFICIENT: ни годовых, ни
-      помесячных — флоу загрузки на Шаге 2).
+    * ``True``  → «Помесячная динамика недоступна» / UZ analog (годовые из
+      FORM_2 есть, нужен ESF CSV из my3.soliq.uz для помесячной разбивки).
+    * ``False`` → «Нет данных о выручке» / UZ analog (INSUFFICIENT: ни
+      годовых, ни помесячных — флоу загрузки на Шаге 2).
     """
     fig: Figure
     fig, ax = plt.subplots(figsize=(width_in, height_in), dpi=dpi)
 
     if not points:
         if has_annual_revenue:
-            title = "Помесячная динамика недоступна"
-            hint = (
-                "Годовая выручка вычислена из Формы №2. Загрузите ESF CSV\n"
-                "из my3.soliq.uz для помесячной разбивки."
-            )
+            title = messages.chart_empty_no_monthly_title
+            hint = messages.chart_empty_no_monthly_hint
         else:
-            title = "Нет данных о выручке"
-            hint = (
-                "Загрузите выгрузку Soliq на Шаге 2 формы или укажите\n"
-                "помесячный оборот вручную."
-            )
+            title = messages.chart_empty_no_revenue_title
+            hint = messages.chart_empty_no_revenue_hint
         # Light-grey placeholder rect — даёт PNG полную ширину и визуальную
         # границу чарта (как .chart-placeholder в design-reference). Без него
         # ``bbox_inches="tight"`` обрезал PNG до bounding-box центрированного
@@ -129,7 +124,10 @@ def render_revenue_24m(
     revenues = [float(p.revenue) for p in points]
     trend = [float(p.trend) for p in points]
     colors = [COLOR_PEAK if p.is_peak else COLOR_BAR for p in points]
-    labels = [_format_month_short(p.month_start.month, p.month_start.year) for p in points]
+    labels = [
+        _format_month_short(messages, p.month_start.month, p.month_start.year)
+        for p in points
+    ]
     xs = list(range(len(points)))
 
     ax.bar(xs, revenues, color=colors, width=0.72, edgecolor="none")
@@ -164,6 +162,7 @@ def render_sparkline(
     ``tone="up"`` — green stroke (положительный YoY), ``"down"`` — red.
     Без оси, без grid: рисует только линию по точкам ``series``. Пустой
     ``series`` или 1 точка → пустой PNG (шаблон не показывает sparkline).
+    Не локализуется: чисто визуальный элемент.
     """
     fig, ax = plt.subplots(figsize=(width_in, height_in), dpi=dpi)
     ax.set_axis_off()

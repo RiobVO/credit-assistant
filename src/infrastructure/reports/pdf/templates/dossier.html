@@ -12,7 +12,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8" />
-<title>Кредитное досье — {{ borrower.name }}</title>
+<title>{{ t.cover_eyebrow_memorandum }} — {{ borrower.name }}</title>
 <style>
   /* Bundled TTF (CA-010, ADR-0008): WeasyPrint резолвит url(...) относительно
      base_url, который рендерер выставляет на директорию pdf/. Inter — основной
@@ -41,7 +41,7 @@
       color: #7a8497;
     }
     @bottom-right {
-      content: "Стр. " counter(page) " из " counter(pages);
+      content: "{{ t.page_footer.part1 }}" counter(page) "{{ t.page_footer.part2 }}" counter(pages) "{{ t.page_footer.part3 }}";
       font: 8.5pt "Inter", "DejaVu Sans", sans-serif;
       color: #7a8497;
     }
@@ -608,17 +608,17 @@
     </div>
   </header>
 
-  <div class="eyebrow" style="color: {{ brand.primary_ink }}">Кредитный меморандум</div>
+  <div class="eyebrow" style="color: {{ brand.primary_ink }}">{{ t.cover_eyebrow_memorandum }}</div>
   <h1 class="cover-title">{{ borrower.name }}</h1>
   <p class="cover-subtitle">
-    ИНН&nbsp;<span class="mono">{{ borrower.inn.value | fmt_inn }}</span> ·
+    {{ t.running_head_inn_prefix }}&nbsp;<span class="mono">{{ borrower.inn.value | fmt_inn }}</span> ·
     {{ legal_form_label }} ·
-    основной ОКВЭД&nbsp;{{ borrower.okved_main }}
+    {{ t.identity_okved_label }}&nbsp;{{ borrower.okved_main }}
   </p>
 
   <div class="cover-divider"></div>
 
-  <div class="eyebrow" style="color: {{ brand.primary_ink }}">Сводная оценка</div>
+  <div class="eyebrow" style="color: {{ brand.primary_ink }}">{{ t.cover_eyebrow_summary }}</div>
 
   <div class="decision-block">
     <div class="gauge-col">
@@ -643,7 +643,7 @@
     <div class="verdict-col">
       <h2 class="recommend {{ recommendation }}">{{ recommendation_label }}</h2>
       <p class="signal-line">
-        Сработавших сигналов <strong>{{ red_flags | length }}</strong>{% if signal_breakdown %}:
+        {{ t.cover_signals_fired }} <strong>{{ red_flags | length }}</strong>{% if signal_breakdown %}:
         {% for chunk in signal_breakdown %}<span class="{{ chunk.severity }}">{{ chunk.label }}</span>{% if not loop.last %} · {% endif %}{% endfor %}
         {% endif %}
       </p>
@@ -652,22 +652,22 @@
 
   <div class="decision-meta">
     {% if loan_request %}
-    <div class="k">Кредитная заявка</div>
-    <div class="v"><span class="mono">{{ loan_request.amount | fmt_uzs_amount_only }}</span> сум <span class="dim">·</span> {{ loan_request.term_months }} мес <span class="dim">·</span> ставка {{ loan_request.rate_pct }}% годовых</div>
+    <div class="k">{{ t.cover_loan_request_label }}</div>
+    <div class="v"><span class="mono">{{ loan_request.amount | fmt_uzs_amount_only }}</span> {{ t.cover_loan_request_uzs_suffix }} <span class="dim">·</span> {{ loan_request.term_months }} {{ t.cover_loan_term_unit }} <span class="dim">·</span> {{ loan_request.rate_pct }}{{ t.cover_loan_rate_suffix }}</div>
     {% endif %}
 
-    <div class="k">Данные на</div>
+    <div class="k">{{ t.cover_data_as_of_label }}</div>
     <div class="v">{{ snapshot.as_of | fmt_date_ru }}</div>
 
-    <div class="k">Методика</div>
-    <div class="v"><span class="mono">{{ rules_version }}</span> <span class="dim">·</span> просчитано {{ rules_evaluated }} правил</div>
+    <div class="k">{{ t.cover_methodology_label }}</div>
+    <div class="v"><span class="mono">{{ rules_version }}</span> <span class="dim">·</span> {{ t.cover_methodology_evaluated_prefix }} {{ rules_evaluated }} {{ t.cover_methodology_evaluated_suffix }}</div>
   </div>
 
   <div class="observations">
-    <div class="eyebrow" style="color: {{ brand.primary_ink }}">Ключевые наблюдения</div>
+    <div class="eyebrow" style="color: {{ brand.primary_ink }}">{{ t.cover_observations_title }}</div>
     <div class="obs-grid">
       <div class="obs-col strength">
-        <h4>Сильные стороны</h4>
+        <h4>{{ t.cover_strengths_title }}</h4>
         {% if observations.strengths %}
         <ul>
           {% for obs in observations.strengths %}
@@ -678,11 +678,11 @@
           {% endfor %}
         </ul>
         {% else %}
-        <p class="empty">Не выявлено выраженных позитивных индикаторов в данном snapshot.</p>
+        <p class="empty">{{ t.cover_strengths_empty }}</p>
         {% endif %}
       </div>
       <div class="obs-col risk">
-        <h4>Зоны риска</h4>
+        <h4>{{ t.cover_risks_title }}</h4>
         {% if observations.risks %}
         <ul>
           {% for obs in observations.risks %}
@@ -693,7 +693,7 @@
           {% endfor %}
         </ul>
         {% else %}
-        <p class="empty">Сигналы не сработали — заёмщик в зелёной зоне.</p>
+        <p class="empty">{{ t.cover_risks_empty }}</p>
         {% endif %}
       </div>
     </div>
@@ -711,7 +711,7 @@
     </div>
     <div class="ctx">
       <span class="mono">{{ application_id }}</span> · {{ borrower.name }}<br/>
-      ИНН <span class="mono">{{ borrower.inn.value | fmt_inn }}</span> · {{ snapshot.as_of | fmt_date_ru_short }}
+      {{ t.running_head_inn_prefix }} <span class="mono">{{ borrower.inn.value | fmt_inn }}</span> · {{ snapshot.as_of | fmt_date_ru_short }}
     </div>
   </header>
 
@@ -719,64 +719,64 @@
     <div class="sec-head">
       <div class="left">
         <span class="sec-tag" style="color: {{ brand.primary_ink }}">A</span>
-        <h2>Идентификация заёмщика</h2>
+        <h2>{{ t.section_a_title }}</h2>
       </div>
-      <span class="src">Источник: реестр юрлиц РУз · stat.uz</span>
+      <span class="src">{{ t.section_a_source }}</span>
     </div>
 
     <div class="id-hero">
       <div class="id-avatar" style="background: {{ brand.primary }}">{{ borrower_initials }}</div>
       <div class="id-hero-text">
         <div class="name">{{ borrower.name }}</div>
-        <div class="meta">ИНН <span class="mono">{{ borrower.inn.value | fmt_inn }}</span> · {{ legal_form_short }} · зарегистрирована {{ borrower.registration_date | fmt_date_ru }}</div>
+        <div class="meta">{{ t.running_head_inn_prefix }} <span class="mono">{{ borrower.inn.value | fmt_inn }}</span> · {{ legal_form_short }} · {{ t.identity_registered_at }} {{ borrower.registration_date | fmt_date_ru }}</div>
       </div>
     </div>
 
     <div class="id-stats">
       <div class="stat-tile" style="border-top-color: {{ brand.primary }}">
         <div class="stat-num">{{ business_age_years }} <span class="unit">{{ business_age_unit }}</span></div>
-        <div class="stat-label">В бизнесе</div>
-        <div class="stat-sub">с {{ borrower.registration_date | fmt_date_ru_month }}</div>
+        <div class="stat-label">{{ t.identity_business_age_label }}</div>
+        <div class="stat-sub">{{ t.identity_business_age_since }} {{ borrower.registration_date | fmt_date_ru_month }}</div>
       </div>
       <div class="stat-tile" style="border-top-color: {{ brand.primary }}">
         <div class="stat-num{% if region_city | length > 10 %} long{% endif %}">{{ region_city }}</div>
-        <div class="stat-label">Регион</div>
+        <div class="stat-label">{{ t.identity_region_label }}</div>
         <div class="stat-sub">{{ region_district }}</div>
       </div>
       <div class="stat-tile" style="border-top-color: {{ brand.primary }}">
         <div class="stat-num mono">{{ borrower.okved_main }}</div>
-        <div class="stat-label">ОКВЭД</div>
+        <div class="stat-label">{{ t.identity_okved_label }}</div>
         <div class="stat-sub">{{ okved_short_label }}</div>
       </div>
     </div>
 
     <div class="id-details">
       <div class="row">
-        <div class="k">Директор</div>
-        <div class="v">{{ borrower.director_name }} <span class="dim">· назначен {{ borrower.director_appointed_at | fmt_date_ru }}</span></div>
+        <div class="k">{{ t.identity_director_label }}</div>
+        <div class="v">{{ borrower.director_name }} <span class="dim">· {{ t.identity_director_appointed }} {{ borrower.director_appointed_at | fmt_date_ru }}</span></div>
       </div>
       <div class="row">
-        <div class="k">Юридический адрес</div>
+        <div class="k">{{ t.identity_legal_address }}</div>
         <div class="v">{{ borrower.registered_address }}</div>
       </div>
       <div class="row">
-        <div class="k">Основной вид деятельности</div>
+        <div class="k">{{ t.identity_main_activity }}</div>
         <div class="v">{{ borrower.okved_main }} — {{ okved_full_label }}</div>
       </div>
       {% if gnk_certificate %}
       <div class="row">
-        <div class="k">Справка ГНК</div>
+        <div class="k">{{ t.identity_gnk_label }}</div>
         <div class="v">
-          {% if gnk_certificate.status == 'active' %}✓ Активный плательщик НДС
-          {% elif gnk_certificate.status == 'suspended' %}⚠ Регистрация НДС приостановлена
-          {% elif gnk_certificate.status == 'revoked' %}✗ Снят с учёта НДС
-          {% else %}? Статус НДС не определён
+          {% if gnk_certificate.status == 'active' %}✓ {{ t.gnk_status.active }}
+          {% elif gnk_certificate.status == 'suspended' %}⚠ {{ t.gnk_status.suspended }}
+          {% elif gnk_certificate.status == 'revoked' %}✗ {{ t.gnk_status.revoked }}
+          {% else %}? {{ t.gnk_status.unknown }}
           {% endif %}
           {% if gnk_certificate.cert_id %}<span class="dim mono">· № {{ gnk_certificate.cert_id }}</span>{% endif %}
           <span class="dim">·
-            {% if gnk_certificate.source == 'uploaded' %}загружено аналитиком
-            {% elif gnk_certificate.source == 'gnk_live' %}live из ГНК
-            {% elif gnk_certificate.source == 'gnk_cached' %}кэш ГНК
+            {% if gnk_certificate.source == 'uploaded' %}{{ t.gnk_source.uploaded }}
+            {% elif gnk_certificate.source == 'gnk_live' %}{{ t.gnk_source.live }}
+            {% elif gnk_certificate.source == 'gnk_cached' %}{{ t.gnk_source.cached }}
             {% else %}fallback
             {% endif %}
           </span>
@@ -790,37 +790,37 @@
     <div class="sec-head">
       <div class="left">
         <span class="sec-tag" style="color: {{ brand.primary_ink }}">B</span>
-        <h2>Финансовые показатели · 3 года</h2>
+        <h2>{{ t.section_b_title }}</h2>
       </div>
-      <span class="src">Источник: годовая отчётность · my3.soliq.uz</span>
+      <span class="src">{{ t.section_b_source }}</span>
     </div>
 
     {% if annual_reports %}
     <table class="t">
       <thead>
         <tr>
-          <th>Показатель</th>
+          <th>{{ t.financials_indicator }}</th>
           {% for r in annual_reports %}<th class="num" style="text-align: right">{{ r.period.start.year }}</th>{% endfor %}
         </tr>
       </thead>
       <tbody>
         <tr>
-          <td>Выручка</td>
+          <td>{{ t.financials_revenue }}</td>
           {% for r in annual_reports %}<td class="num{% if loop.last %} b{% endif %}">{{ r.revenue | fmt_uzs_amount_only }}</td>{% endfor %}
         </tr>
         <tr>
-          <td>Чистая прибыль</td>
+          <td>{{ t.financials_net_profit }}</td>
           {% for r in annual_reports %}<td class="num{% if loop.last %} b{% endif %}">{{ r.net_profit | fmt_uzs_amount_only }}</td>{% endfor %}
         </tr>
         <tr>
-          <td>Налоги уплачено</td>
+          <td>{{ t.financials_taxes_paid }}</td>
           {% for r in annual_reports %}<td class="num">{{ r.taxes_paid | fmt_uzs_amount_only }}</td>{% endfor %}
         </tr>
       </tbody>
     </table>
-    <p style="font-size: 8.5pt; color: var(--ink-4); margin: 6pt 0 0; text-align: right">Суммы в узбекских сумах</p>
+    <p style="font-size: 8.5pt; color: var(--ink-4); margin: 6pt 0 0; text-align: right">{{ t.financials_amounts_in_uzs_footnote }}</p>
     {% else %}
-    <p class="disclaimer">Годовая отчётность не загружена.</p>
+    <p class="disclaimer">{{ t.financials_no_annual_disclaimer }}</p>
     {% endif %}
 
     <div class="kpi-row">
@@ -829,7 +829,7 @@
         <div class="label">{{ slot.label }}</div>
         {% if slot.value is none %}
           <div class="value empty">—</div>
-          <div class="hint">Нет данных</div>
+          <div class="hint">{{ t.financials_no_data_hint }}</div>
         {% else %}
           <div class="value">{{ slot.value }}</div>
           {% if slot.yoy_pct is not none %}
@@ -853,7 +853,7 @@
     </div>
     <div class="ctx">
       <span class="mono">{{ application_id }}</span> · {{ borrower.name }}<br/>
-      ИНН <span class="mono">{{ borrower.inn.value | fmt_inn }}</span> · {{ snapshot.as_of | fmt_date_ru_short }}
+      {{ t.running_head_inn_prefix }} <span class="mono">{{ borrower.inn.value | fmt_inn }}</span> · {{ snapshot.as_of | fmt_date_ru_short }}
     </div>
   </header>
 
@@ -861,12 +861,12 @@
     <div class="sec-head">
       <div class="left">
         <span class="sec-tag" style="color: {{ brand.primary_ink }}">C</span>
-        <h2>Динамика помесячной выручки · 24 месяца</h2>
+        <h2>{{ t.section_c_title }}</h2>
       </div>
-      <span class="src">Источник: ЭСФ-реестр · api.faktura.uz</span>
+      <span class="src">{{ t.section_c_source }}</span>
     </div>
     <div class="chart-block">
-      <img src="data:image/png;base64,{{ chart_revenue_24m_b64 }}" alt="Выручка по месяцам" />
+      <img src="data:image/png;base64,{{ chart_revenue_24m_b64 }}" alt="{{ t.chart_alt_revenue }}" />
     </div>
   </section>
 
@@ -874,37 +874,37 @@
     <div class="sec-head">
       <div class="left">
         <span class="sec-tag" style="color: {{ brand.primary_ink }}">D</span>
-        <h2>Топ контрагентов</h2>
+        <h2>{{ t.section_d_title }}</h2>
       </div>
-      <span class="src">Источник: ЭСФ-реестр</span>
+      <span class="src">{{ t.section_d_source }}</span>
     </div>
 
     <div class="two-col">
       <div>
-        <h3>Покупатели</h3>
+        <h3>{{ t.counterparties_buyers }}</h3>
         {% if top_buyers %}
         <table class="t">
           <thead>
-            <tr><th style="width: 22pt">#</th><th>Контрагент</th><th class="num" style="text-align: right; width: 50pt">Доля</th></tr>
+            <tr><th style="width: 22pt">#</th><th>{{ t.counterparties_table_counterparty }}</th><th class="num" style="text-align: right; width: 50pt">{{ t.counterparties_table_share }}</th></tr>
           </thead>
           <tbody>
             {% for b in top_buyers %}
             <tr>
               <td class="dim">{{ loop.index }}</td>
-              <td>{{ b.name }}{% if b.is_new %} <span class="sev-pill medium">новый</span>{% endif %}</td>
+              <td>{{ b.name }}{% if b.is_new %} <span class="sev-pill medium">{{ t.counterparties_new_pill }}</span>{% endif %}</td>
               <td class="num">{{ b.share_pct | fmt_pct_share }}</td>
             </tr>
             {% endfor %}
           </tbody>
         </table>
-        {% else %}<p class="disclaimer">Нет данных о покупателях.</p>{% endif %}
+        {% else %}<p class="disclaimer">{{ t.counterparties_no_buyers }}</p>{% endif %}
       </div>
       <div>
-        <h3>Поставщики</h3>
+        <h3>{{ t.counterparties_suppliers }}</h3>
         {% if top_suppliers %}
         <table class="t">
           <thead>
-            <tr><th style="width: 22pt">#</th><th>Контрагент</th><th class="num" style="text-align: right; width: 50pt">Доля</th></tr>
+            <tr><th style="width: 22pt">#</th><th>{{ t.counterparties_table_counterparty }}</th><th class="num" style="text-align: right; width: 50pt">{{ t.counterparties_table_share }}</th></tr>
           </thead>
           <tbody>
             {% for s in top_suppliers %}
@@ -916,7 +916,7 @@
             {% endfor %}
           </tbody>
         </table>
-        {% else %}<p class="disclaimer">Нет данных о поставщиках.</p>{% endif %}
+        {% else %}<p class="disclaimer">{{ t.counterparties_no_suppliers }}</p>{% endif %}
       </div>
     </div>
   </section>
@@ -933,7 +933,7 @@
     </div>
     <div class="ctx">
       <span class="mono">{{ application_id }}</span> · {{ borrower.name }}<br/>
-      ИНН <span class="mono">{{ borrower.inn.value | fmt_inn }}</span> · {{ snapshot.as_of | fmt_date_ru_short }}
+      {{ t.running_head_inn_prefix }} <span class="mono">{{ borrower.inn.value | fmt_inn }}</span> · {{ snapshot.as_of | fmt_date_ru_short }}
     </div>
   </header>
 
@@ -941,27 +941,26 @@
     <div class="sec-head">
       <div class="left">
         <span class="sec-tag" style="color: {{ brand.primary_ink }}">E</span>
-        <h2>Налоговая дисциплина</h2>
+        <h2>{{ t.section_e_title }}</h2>
       </div>
-      <span class="src">Источник: ГНК РУз · my3.soliq.uz</span>
+      <span class="src">{{ t.section_e_source }}</span>
     </div>
 
     {% if tax_summary.delays or tax_summary.penalties_total or tax_summary.has_freezes_12m %}
     <p class="tax-summary">
-      За последние 3 года зафиксировано <strong>{{ tax_summary.delays | length }}</strong>
-      {% if tax_summary.delays | length == 1 %}эпизод{% else %}эпизодов{% endif %} просрочек уплаты налоговых
-      обязательств{% if tax_summary.max_delay_days %}, максимальная — <strong>{{ tax_summary.max_delay_days }} дн</strong>{% endif %}.
-      {% if tax_summary.penalties_total %}Совокупная сумма штрафов и пени — <strong>{{ tax_summary.penalties_total | fmt_uzs }}</strong>.{% endif %}
-      Блокировок банковского счёта за последние 12 месяцев: <strong>{{ tax_summary.account_freezes_count_12m }}</strong>.
+      {{ t.tax_summary_intro }} <strong>{{ tax_summary.delays | length }}</strong>
+      {% if tax_summary.delays | length == 1 %}{{ t.tax_episode.singular }}{% else %}{{ t.tax_episode.plural }}{% endif %} {{ t.tax_delays_suffix }}{% if tax_summary.max_delay_days %}, {{ t.tax_max_delay_prefix }} <strong>{{ tax_summary.max_delay_days }} {{ t.tax_max_delay_unit }}</strong>{% endif %}.
+      {% if tax_summary.penalties_total %}{{ t.tax_penalties_total }} <strong>{{ tax_summary.penalties_total | fmt_uzs }}</strong>.{% endif %}
+      {{ t.tax_freezes_12m }} <strong>{{ tax_summary.account_freezes_count_12m }}</strong>.
     </p>
 
     {% if tax_summary.delays %}
     <table class="t">
       <thead>
         <tr>
-          <th>Дата уплаты</th>
-          <th class="num" style="text-align: right">Сумма, сум</th>
-          <th class="num" style="text-align: right">Просрочка, дн</th>
+          <th>{{ t.tax_table_date }}</th>
+          <th class="num" style="text-align: right">{{ t.tax_table_sum }}</th>
+          <th class="num" style="text-align: right">{{ t.tax_table_delay }}</th>
         </tr>
       </thead>
       <tbody>
@@ -976,7 +975,7 @@
     </table>
     {% endif %}
     {% else %}
-    <p class="disclaimer">Налоговых событий за окно snapshot не зафиксировано.</p>
+    <p class="disclaimer">{{ t.tax_no_events_disclaimer }}</p>
     {% endif %}
   </section>
 
@@ -984,7 +983,7 @@
     <div class="sec-head">
       <div class="left">
         <span class="sec-tag" style="color: {{ brand.primary_ink }}">F</span>
-        <h2>Сработавшие сигналы ({{ red_flags | length }})</h2>
+        <h2>{{ t.section_f_title }} ({{ red_flags | length }})</h2>
       </div>
       <span class="src">Red-flag engine · {{ rules_version }}</span>
     </div>
@@ -996,8 +995,8 @@
           <div class="title"><span class="sev-pill {{ f.severity }}">{{ f.severity_label }}</span>{{ f.name }}</div>
           <div class="desc">{{ f.description }}</div>
           <div class="src">
-            Правило <span class="rule-id">{{ f.rule_id }}</span> ·
-            Источник: {{ f.source }}
+            {{ t.flag_rule_prefix }} <span class="rule-id">{{ f.rule_id }}</span> ·
+            {{ t.flag_source_prefix }} {{ f.source }}
           </div>
         </div>
         <div class="evidence">
@@ -1007,20 +1006,15 @@
       </div>
       {% endfor %}
     {% else %}
-    <p class="disclaimer">Сигналы не сработали. Все правила прошли успешно — заёмщик в зелёной зоне.</p>
+    <p class="disclaimer">{{ t.flag_no_signals_disclaimer }}</p>
     {% endif %}
   </section>
 
   <div class="disclaimer">
-    <strong>Методология.</strong> Полный список из 17 правил с нормативными
-    ссылками (ЦБ РУз, Базель III, отраслевые методики) и аудитный трейл
-    расчёта доступны по запросу в банке-операторе.
+    <strong>{{ t.methodology_label }}</strong> {{ methodology_body_text }}
   </div>
   <div class="disclaimer">
-    <strong>Дисклеймер.</strong> Документ сформирован автоматически системой
-    Credit Assistant (версия правил {{ rules_version }}). Решение о выдаче
-    кредита принимается уполномоченным лицом банка-оператора на основании
-    настоящего отчёта и иных внутренних процедур андеррайтинга.
+    <strong>{{ t.disclaimer_label }}</strong> {{ disclaimer_body_text }}
   </div>
 
 </body>

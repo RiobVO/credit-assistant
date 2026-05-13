@@ -8,6 +8,12 @@
 2. Jinja2 рендер HTML.
 3. WeasyPrint ``HTML(string=...).write_pdf()`` → bytes.
 
+T0.4 / ADR-0015: per-render локаль резолвится через ``bundle.messages``
+(``PdfMessages``). Closure-инжектные filters (``fmt_uzs``, ``fmt_date_ru``,
+``severity_label``) пересобираются на каждый render — overhead микросекунды.
+Template читает ``t = messages`` для всех локализованных строк, через
+context-keys для pre-formatted (например ``methodology_body``).
+
 Импорт WeasyPrint ленивый: на Windows-хосте без GTK runtime он падает,
 но юнит-тесты на других слоях не должны страдать. Импорт триггерится
 только при первом вызове ``render``.
@@ -30,22 +36,22 @@ import jinja2
 
 from application.dto.dossier_pdf_bundle import DossierPdfBundle
 from application.dto.kpi_bundle import KpiUnit, KpiValue
-from domain.entities.borrower import LegalForm
+from application.dto.pdf_messages import PdfMessages
 from infrastructure.catalog.okved_catalog import default_catalog as default_okved_catalog
 from infrastructure.reports.pdf import chart_renderer
 from infrastructure.reports.pdf.template_filters import (
-    fmt_date_ru,
-    fmt_date_ru_month,
-    fmt_date_ru_short,
-    fmt_datetime_ru,
     fmt_inn,
     fmt_pct,
     fmt_pct_share,
-    fmt_uzs,
     fmt_uzs_amount_only,
+    make_fmt_date,
+    make_fmt_date_month,
+    make_fmt_date_short,
+    make_fmt_datetime,
+    make_fmt_uzs,
+    make_severity_label,
     severity_bg,
     severity_color,
-    severity_label,
 )
 
 if TYPE_CHECKING:
@@ -59,56 +65,6 @@ TEMPLATE_NAME = "dossier.html"
 # работает одинаково на Windows-хосте и в Linux-контейнере (ADR-0008).
 _BASE_URL = PDF_DIR.as_uri()
 
-_RECOMMENDATION_LABEL = {
-    "approve": "Одобрить",
-    "review": "К пересмотру",
-    "reject": "Отклонить",
-}
-
-_LEGAL_FORM_LABEL = {
-    LegalForm.LLC: "Общество с ограниченной ответственностью",
-    LegalForm.PE: "Частное предприятие",
-    LegalForm.LTD: "Ltd",
-    LegalForm.JSC: "Акционерное общество",
-    LegalForm.IE: "Индивидуальный предприниматель",
-    LegalForm.OTHER: "Иная форма",
-}
-
-_LEGAL_FORM_SHORT = {
-    LegalForm.LLC: "ООО",
-    LegalForm.PE: "ЧП",
-    LegalForm.LTD: "Ltd",
-    LegalForm.JSC: "АО",
-    LegalForm.IE: "ИП",
-    LegalForm.OTHER: "—",
-}
-
-_KPI_LABEL = {
-    "revenue_ltm": "Revenue LTM",
-    # CA-037: показываем EBIT-прокси до подключения D&A (FORM_5 / PROFIT_TAX).
-    "ebit": "EBIT (прокси EBITDA)",
-    "roe": "ROE",
-    "debt_to_ebit": "Долг / EBIT",
-}
-
-# OKVED labels (CA-DS17): источник — ``config/okved/uz_msb.json`` через
-# ``infrastructure.catalog.okved_catalog``. Синхронен с frontend OkvedAutocomplete
-# (читает тот же JSON через ``GET /api/system/okved``). PDF использует RU
-# (Phase 10 brand-tenant lock — banking output РУ-only).
-
-_SIGNAL_BREAKDOWN_LABEL = {
-    "critical": "критических",
-    "high": "высокий",
-    "medium": "средних",
-    "low": "низкий",
-}
-_SIGNAL_PLURAL_LABEL = {
-    "critical": "критических",
-    "high": "высоких",
-    "medium": "средних",
-    "low": "низких",
-}
-
 
 class WeasyPrintPdfRenderer:
     """Sync PDF-renderer. Используется через ``asyncio.to_thread`` в use case."""
@@ -120,16 +76,11 @@ class WeasyPrintPdfRenderer:
             loader=jinja2.FileSystemLoader(str(TEMPLATES_DIR)),
             autoescape=jinja2.select_autoescape(["html"]),
         )
-        self._env.filters["fmt_uzs"] = fmt_uzs
+        # Локало-независимые filters регистрируются один раз.
         self._env.filters["fmt_uzs_amount_only"] = fmt_uzs_amount_only
         self._env.filters["fmt_pct"] = fmt_pct
         self._env.filters["fmt_pct_share"] = fmt_pct_share
-        self._env.filters["fmt_date_ru"] = fmt_date_ru
-        self._env.filters["fmt_date_ru_short"] = fmt_date_ru_short
-        self._env.filters["fmt_date_ru_month"] = fmt_date_ru_month
-        self._env.filters["fmt_datetime_ru"] = fmt_datetime_ru
         self._env.filters["fmt_inn"] = fmt_inn
-        self._env.filters["severity_label"] = severity_label
         self._env.filters["severity_color"] = severity_color
         self._env.filters["severity_bg"] = severity_bg
 
@@ -138,10 +89,23 @@ class WeasyPrintPdfRenderer:
         # недоступны на dev-хосте. Сам модуль импортируется без них.
         from weasyprint import HTML
 
+        # T0.4: locale-зависимые filters пересобираются per-render через
+        # closure'ы. Filter-registry env'а перезаписывается — env shared,
+        # cost микросекунды.
+        self._register_locale_filters(bundle.messages)
+
         context = self._build_context(bundle)
         html = self._env.get_template(TEMPLATE_NAME).render(**context)
         pdf_bytes: bytes = HTML(string=html, base_url=_BASE_URL).write_pdf()
         return pdf_bytes
+
+    def _register_locale_filters(self, messages: PdfMessages) -> None:
+        self._env.filters["fmt_uzs"] = make_fmt_uzs(messages)
+        self._env.filters["fmt_date_ru"] = make_fmt_date(messages)
+        self._env.filters["fmt_date_ru_short"] = make_fmt_date_short(messages)
+        self._env.filters["fmt_date_ru_month"] = make_fmt_date_month(messages)
+        self._env.filters["fmt_datetime_ru"] = make_fmt_datetime(messages)
+        self._env.filters["severity_label"] = make_severity_label(messages)
 
     # ----------------------------- context build -----------------------------
 
@@ -151,6 +115,7 @@ class WeasyPrintPdfRenderer:
         snapshot = view.snapshot
         dossier = view.dossier
         borrower = snapshot.borrower
+        messages = bundle.messages
 
         application_id = _format_application_id(view.dossier_id, view.created_at)
         display_score = max(0, min(100, 100 - dossier.score))
@@ -164,15 +129,22 @@ class WeasyPrintPdfRenderer:
         chart_b64 = base64.b64encode(
             chart_renderer.render_revenue_24m(
                 view_bundle.monthly_revenue_24m,
+                messages,
                 has_annual_revenue=view_bundle.kpis.revenue_ltm is not None,
             ),
         ).decode("ascii")
 
         okved_short, okved_full = _resolve_okved(borrower.okved_main)
-        region_city, region_district = _parse_region(borrower.registered_address)
-        age_years, age_unit = _business_age(borrower.registration_date, snapshot.as_of)
+        region_city, region_district = _parse_region(
+            borrower.registered_address, messages.region_district_full,
+        )
+        age_years, age_unit = _business_age(
+            borrower.registration_date, snapshot.as_of, messages,
+        )
 
         return {
+            "t": messages,
+            "lang": bundle.lang,
             "brand": bundle.brand,
             "application_id": application_id,
             "generated_at": self._now(),
@@ -185,17 +157,25 @@ class WeasyPrintPdfRenderer:
             "gnk_certificate": snapshot.gnk_certificate,
             "rules_version": dossier.rules_version,
             "rules_evaluated": dossier.rules_evaluated,
+            "rules_count": dossier.rules_evaluated,
+            # Pre-formatted paragraphs (.format() с rules_count/rules_version):
+            "methodology_body_text": messages.methodology_body.format(
+                rules_count=dossier.rules_evaluated,
+            ),
+            "disclaimer_body_text": messages.disclaimer_body.format(
+                rules_version=dossier.rules_version,
+            ),
             "display_score": display_score,
             "gauge_angle_deg": f"{gauge_angle_deg:.2f}",
             "recommendation": dossier.recommendation,
-            "recommendation_label": _RECOMMENDATION_LABEL.get(
+            "recommendation_label": messages.recommendation.get(
                 dossier.recommendation, dossier.recommendation,
             ),
-            "signal_breakdown": _build_signal_breakdown(dossier.red_flags),
-            "legal_form_label": _LEGAL_FORM_LABEL.get(
-                borrower.legal_form, borrower.legal_form.value,
+            "signal_breakdown": _build_signal_breakdown(dossier.red_flags, messages),
+            "legal_form_label": messages.legal_form_full.get(
+                borrower.legal_form.value, borrower.legal_form.value,
             ),
-            "legal_form_short": _LEGAL_FORM_SHORT.get(borrower.legal_form, "—"),
+            "legal_form_short": messages.legal_form_short.get(borrower.legal_form.value, "—"),
             "business_age_years": age_years,
             "business_age_unit": age_unit,
             "region_city": region_city,
@@ -203,12 +183,12 @@ class WeasyPrintPdfRenderer:
             "okved_short_label": okved_short,
             "okved_full_label": okved_full,
             "annual_reports": list(snapshot.annual_reports),
-            "kpi_slots": _build_kpi_slots(view_bundle),
+            "kpi_slots": _build_kpi_slots(view_bundle, messages),
             "chart_revenue_24m_b64": chart_b64,
             "top_buyers": list(bundle.top_buyers),
             "top_suppliers": list(bundle.top_suppliers),
             "tax_summary": bundle.tax_summary,
-            "red_flags": _build_red_flags_view(dossier, bundle.rule_names),
+            "red_flags": _build_red_flags_view(dossier, bundle.rule_names, messages),
             "observations": bundle.observations,
         }
 
@@ -227,6 +207,8 @@ def _derive_initials(name: str) -> str:
 
     Игнорируем юр.префиксы (ООО, ЧП, АО, ИП, ОАО, ЗАО) и кавычки. Берём
     первую букву первых двух значимых слов. Если слово одно — одна буква.
+    Не локализуется: префиксы фиксированы для UZ-банковской бумажной
+    практики (кириллица).
     """
     junk = {"ООО", "ЧП", "АО", "ИП", "ОАО", "ЗАО", "Ltd"}
     tokens = [t.strip("«»\"'.,") for t in name.replace("«", " ").replace("»", " ").split()]
@@ -237,11 +219,12 @@ def _derive_initials(name: str) -> str:
     return "".join(letters)
 
 
-def _business_age(reg_date: date, as_of: date) -> tuple[int, str]:
-    """Возраст компании в годах. Возвращает ``(N, unit)`` где unit = «год»/«года»/«лет».
+def _business_age(reg_date: date, as_of: date, messages: PdfMessages) -> tuple[int, str]:
+    """Возраст компании в годах. Возвращает ``(N, unit)``.
 
-    Используется на cover stat-tile. Один год — «1 год», 2-4 — «2 года», 5+ —
-    «5 лет», 11-14 — «лет» (русские падежи).
+    RU: год / года / лет (русский plural agreement); UZ: всегда «yil»
+    (одна форма). Ключ выбирается на основе last_two/last_one — для UZ
+    все три ключа резолвятся в одно и то же значение.
     """
     years = as_of.year - reg_date.year
     if (as_of.month, as_of.day) < (reg_date.month, reg_date.day):
@@ -251,25 +234,24 @@ def _business_age(reg_date: date, as_of: date) -> tuple[int, str]:
     last_two = years % 100
     last_one = years % 10
     if 11 <= last_two <= 14:
-        unit = "лет"
+        plural_key = "many"
     elif last_one == 1:
-        unit = "год"
+        plural_key = "one"
     elif 2 <= last_one <= 4:
-        unit = "года"
+        plural_key = "few"
     else:
-        unit = "лет"
-    return years, unit
+        plural_key = "many"
+    return years, messages.business_age_year[plural_key]
 
 
-def _parse_region(address: str) -> tuple[str, str]:
-    """«г. Ташкент, Юнусабадский р-н, ул. Амира Темура, д. 108» → ("Ташкент", "Юнусабадский район").
+def _parse_region(address: str, district_full_word: str) -> tuple[str, str]:
+    """«г. Ташкент, Юнусабадский р-н, ул. Амира Темура» → ("Ташкент", "Юнусабадский район").
 
-    Naive parsing для UZ-формата. Поддерживает два кейса:
+    «р-н» → ``district_full_word`` (RU: «район»; UZ: «tuman»). Naive parsing
+    для UZ-формата. Поддерживает два кейса:
       * Адрес с запятыми → берём первый сегмент как city, второй как district.
       * Адрес без запятых (фриформ из manual-input) → первый токен как city,
-        остальное как district. Это лучше, чем сваливать всю строку в stat-num
-        (22pt) и ломать визуальный rhythm 3-tile-grid (см. CA-DS17 lessons).
-    Если структура не угадана, возвращаем ("—", "—").
+        остальное как district.
     """
     if not address or not address.strip():
         return ("—", "—")
@@ -277,22 +259,21 @@ def _parse_region(address: str) -> tuple[str, str]:
     parts = [p.strip() for p in address.split(",") if p.strip()]
     if len(parts) >= 2:
         city_part = parts[0]
-        district_part = parts[1].replace("р-н", "район").strip()
+        district_part = parts[1].replace("р-н", district_full_word).strip()
     else:
-        # Single-segment fallback: split by whitespace, не по запятым.
         tokens = [t for t in address.split() if t.strip()]
         if not tokens:
             return ("—", "—")
         city_part = tokens[0]
-        district_part = " ".join(tokens[1:]).replace("р-н", "район").strip() or "—"
+        district_part = (
+            " ".join(tokens[1:]).replace("р-н", district_full_word).strip() or "—"
+        )
 
-    # Strip "г. " / "г." / "город " prefix из city (city = «Ташкент», не «г. Ташкент»).
+    # Strip "г. " / "г." / "город " prefix из city.
     for prefix in ("г. ", "г.", "город "):
         if city_part.lower().startswith(prefix.lower()):
             city_part = city_part[len(prefix):].strip()
             break
-    # Очистка noise-символов которые приходят из плохо нормализованного manual-input
-    # (фикстуры показывали «Ташкент^» как литералку из формы Шага 1).
     city_part = city_part.rstrip("^.,;:")
 
     return (city_part or "—", district_part or "—")
@@ -302,7 +283,9 @@ def _resolve_okved(code: str) -> tuple[str, str]:
     """OKVED код → (short_label, full_label). Unknown → (code, «—»).
 
     Источник — singleton-catalog (``default_okved_catalog``), JSON парсится
-    один раз при первом обращении. RU только — banking PDF РУ-локализован.
+    один раз при первом обращении. RU только — banking PDF tenant-strings
+    не локализуются на уровне catalog (CA-DS17 пометил OKVED как
+    catalog-data, не PdfMessages).
     """
     entry = default_okved_catalog().get(code)
     if entry is None:
@@ -310,8 +293,15 @@ def _resolve_okved(code: str) -> tuple[str, str]:
     return (entry.short_ru, entry.full_ru)
 
 
-def _build_signal_breakdown(red_flags: tuple[Any, ...]) -> list[dict[str, object]]:
-    """Returns ordered list of {severity, label, count} for «1 высокий · 2 средних · 1 низкий»."""
+def _build_signal_breakdown(
+    red_flags: tuple[Any, ...], messages: PdfMessages
+) -> list[dict[str, object]]:
+    """Returns ordered list of {severity, label, count} for «1 высокий · 2 средних».
+
+    T0.4: единая форма per-severity из messages.signal_breakdown (UZ
+    plural-agnostic; RU теряет singular/plural split — изначально кривое
+    «1 критических», см. ADR-0015 Trade-offs).
+    """
     counts: dict[str, int] = {"critical": 0, "high": 0, "medium": 0, "low": 0}
     for flag in red_flags:
         sev = str(flag.severity)
@@ -323,29 +313,38 @@ def _build_signal_breakdown(red_flags: tuple[Any, ...]) -> list[dict[str, object
         n = counts[sev]
         if n == 0:
             continue
-        word = _SIGNAL_BREAKDOWN_LABEL[sev] if n == 1 else _SIGNAL_PLURAL_LABEL[sev]
+        word = messages.signal_breakdown.get(sev, sev)
         out.append({"severity": sev, "label": f"{n} {word}", "count": n})
     return out
 
 
-def _build_kpi_slots(view_bundle: DossierViewBundle) -> list[dict[str, object]]:
+def _build_kpi_slots(
+    view_bundle: DossierViewBundle, messages: PdfMessages
+) -> list[dict[str, object]]:
     """4 карточки в порядке: revenue_ltm / ebit / roe / debt_to_ebit.
 
-    Если значение ``None`` — карточка показывает «—» + «Нет данных».
+    Если значение ``None`` — карточка показывает «—» + локализованный hint.
     """
     kpis = view_bundle.kpis
+    fmt_uzs = make_fmt_uzs(messages)
     return [
-        _kpi_slot("revenue_ltm", kpis.revenue_ltm),
-        _kpi_slot("ebit", kpis.ebit),
-        _kpi_slot("roe", kpis.roe),
-        _kpi_slot("debt_to_ebit", kpis.debt_to_ebit),
+        _kpi_slot("revenue_ltm", kpis.revenue_ltm, messages, fmt_uzs),
+        _kpi_slot("ebit", kpis.ebit, messages, fmt_uzs),
+        _kpi_slot("roe", kpis.roe, messages, fmt_uzs),
+        _kpi_slot("debt_to_ebit", kpis.debt_to_ebit, messages, fmt_uzs),
     ]
 
 
-def _kpi_slot(key: str, kpi: KpiValue | None) -> dict[str, object]:
+def _kpi_slot(
+    key: str,
+    kpi: KpiValue | None,
+    messages: PdfMessages,
+    fmt_uzs: Any,
+) -> dict[str, object]:
+    label = messages.kpi_label.get(key, key)
     if kpi is None:
         return {
-            "label": _KPI_LABEL[key],
+            "label": label,
             "value": None,
             "yoy_pct": None,
             "yoy_positive": False,
@@ -370,7 +369,7 @@ def _kpi_slot(key: str, kpi: KpiValue | None) -> dict[str, object]:
     level_tone = kpi.level_tone.value if kpi.level_tone is not None else None
 
     return {
-        "label": _KPI_LABEL[key],
+        "label": label,
         "value": value_str,
         "yoy_pct": kpi.yoy_pct,
         "yoy_positive": yoy_positive,
@@ -380,9 +379,12 @@ def _kpi_slot(key: str, kpi: KpiValue | None) -> dict[str, object]:
 
 
 def _build_red_flags_view(
-    dossier: Any, rule_names: dict[str, str]
+    dossier: Any, rule_names: dict[str, str], messages: PdfMessages
 ) -> list[dict[str, object]]:
-    """RedFlag → flat dict для шаблона. ``rule_names`` маппит rule_id → human name."""
+    """RedFlag → flat dict для шаблона. ``rule_names`` маппит rule_id → human name
+    (уже per-lang, резолвится в RenderDossierPdf).
+    """
+    severity_label = make_severity_label(messages)
     rendered: list[dict[str, object]] = []
     for f in dossier.red_flags:
         sev_str = str(f.severity)
@@ -395,8 +397,8 @@ def _build_red_flags_view(
                 "severity": sev_str,
                 "severity_label": severity_label(sev_str),
                 "source": f.source,
-                "evidence_value": _format_evidence_value(f.evidence),
-                "evidence_label": _format_evidence_label(f.evidence),
+                "evidence_value": _format_evidence_value(f.evidence, messages),
+                "evidence_label": _format_evidence_label(f.evidence, messages),
             },
         )
     return rendered
@@ -407,13 +409,7 @@ def _build_red_flags_view(
 # Каждое правило кладёт в ``evidence`` все surfaces для аудитного трейла:
 # vat_declared, sum_seller_esf_vat, diff_pct, period и т.д. PDF F-секция должна
 # показать **одно** число справа от title — самое informative для аналитика.
-#
-# Старый ``next(iter(...))`` тупо брал первый ключ — это давало в PDF Python
-# repr list-литералов («['2026-03-01', '2026-03-31']» вместо «23%»). Новая
-# логика: whitelist primary-ключей по приоритету + типизированный форматтер.
 
-# Приоритет ключей — первый match выигрывает. delta-метрики (diff/yoy/margin)
-# и счётчики идут перед абсолютными величинами и list-полями (period/quarters).
 _PRIMARY_EVIDENCE_KEYS: tuple[str, ...] = (
     "diff_pct",
     "yoy_pct",
@@ -440,22 +436,6 @@ _UZS_EVIDENCE_KEYS: frozenset[str] = frozenset({
     "vat_declared", "sum_seller_esf_vat",
 })
 
-_EVIDENCE_LABEL_RU: dict[str, str] = {
-    "diff_pct": "Разрыв",
-    "yoy_pct": "YoY",
-    "vat_growth_pct": "Рост НДС",
-    "margin": "Маржа",
-    "max_supplier_share": "Доля топ-1",
-    "max_buyer_share": "Доля топ-1",
-    "ratio": "К выручке",
-    "days_since_change": "Дней назад",
-    "shell_count": "Контрагентов",
-    "cycle_count": "Циклов",
-    "annual_reports_count": "Годовых отчётов",
-    "equity": "Капитал",
-    "loan": "Сумма заявки",
-}
-
 
 def _pick_primary_evidence(evidence: dict[str, Any]) -> tuple[str, Any] | None:
     """Возвращает (key, value) для primary-evidence или ``None``."""
@@ -464,14 +444,13 @@ def _pick_primary_evidence(evidence: dict[str, Any]) -> tuple[str, Any] | None:
     for k in _PRIMARY_EVIDENCE_KEYS:
         if k in evidence:
             return (k, evidence[k])
-    # Fallback: первый scalar (не list/tuple/dict — не отрисуем красиво).
     for k, v in evidence.items():
         if not isinstance(v, (list, tuple, dict)):
             return (k, v)
     return None
 
 
-def _format_evidence_value(evidence: dict[str, Any]) -> str:
+def _format_evidence_value(evidence: dict[str, Any], messages: PdfMessages) -> str:
     """Форматирует primary-значение для F-секции (правый блок флага)."""
     from decimal import Decimal, InvalidOperation
 
@@ -493,6 +472,7 @@ def _format_evidence_value(evidence: dict[str, Any]) -> str:
 
     if key in _UZS_EVIDENCE_KEYS:
         try:
+            fmt_uzs = make_fmt_uzs(messages)
             return fmt_uzs(Decimal(str(value)), billions=True)
         except (InvalidOperation, TypeError, ValueError):
             pass
@@ -507,12 +487,12 @@ def _format_evidence_value(evidence: dict[str, Any]) -> str:
     return str(value)
 
 
-def _format_evidence_label(evidence: dict[str, Any]) -> str:
-    """RU-метка под evidence-числом."""
+def _format_evidence_label(evidence: dict[str, Any], messages: PdfMessages) -> str:
+    """Локализованная метка под evidence-числом."""
     picked = _pick_primary_evidence(evidence)
     if picked is None:
         return ""
     key, _ = picked
-    if key in _EVIDENCE_LABEL_RU:
-        return _EVIDENCE_LABEL_RU[key]
+    if key in messages.evidence_label:
+        return messages.evidence_label[key]
     return key.replace("_", " ").capitalize()

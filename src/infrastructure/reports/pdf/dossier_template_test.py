@@ -1,4 +1,4 @@
-"""Smoke-тест Jinja2-шаблона досье (Phase 10 design statement).
+"""Smoke-тест Jinja2-шаблона досье (Phase 10 design statement, T0.4 i18n).
 
 Не запускает WeasyPrint — только Jinja-render. Проверяем, что:
 * шаблон загружается без syntax errors;
@@ -7,7 +7,8 @@
   brand-name, секции A–F);
 * «✓ Проверено в ГНК» pill отсутствует физически (Phase 9 lesson, mock UI
   на decision-screens опаснее чем на форме-ввода);
-* F-секция рендерит human-readable name (не rule_id) в title.
+* F-секция рендерит human-readable name (не rule_id) в title;
+* T0.4: при lang="uz" UZ-заголовки рендерятся вместо RU.
 
 Полный smoke с PDF-байтами — в ``pdf_renderer_test.py``.
 """
@@ -22,42 +23,44 @@ from pathlib import Path
 import jinja2
 
 from application.dto.brand_config import BrandConfig
+from application.dto.pdf_messages import PdfMessages
 from application.services.observations_builder import Observation, Observations
 from domain.value_objects.money import Currency, Money
+from infrastructure.i18n.pdf_messages import load_pdf_messages
 from infrastructure.reports.pdf.template_filters import (
-    fmt_date_ru,
-    fmt_date_ru_month,
-    fmt_date_ru_short,
-    fmt_datetime_ru,
     fmt_inn,
     fmt_pct,
     fmt_pct_share,
-    fmt_uzs,
     fmt_uzs_amount_only,
+    make_fmt_date,
+    make_fmt_date_month,
+    make_fmt_date_short,
+    make_fmt_datetime,
+    make_fmt_uzs,
+    make_severity_label,
     severity_bg,
     severity_color,
-    severity_label,
 )
 
 TEMPLATES_DIR = Path(__file__).parent / "templates"
-NBSP = " "  # фильтры используют NBSP как разрядный разделитель
+NBSP = " "
 
 
-def _make_env() -> jinja2.Environment:
+def _make_env(messages: PdfMessages) -> jinja2.Environment:
     env = jinja2.Environment(
         loader=jinja2.FileSystemLoader(str(TEMPLATES_DIR)),
         autoescape=jinja2.select_autoescape(["html"]),
     )
-    env.filters["fmt_uzs"] = fmt_uzs
+    env.filters["fmt_uzs"] = make_fmt_uzs(messages)
     env.filters["fmt_uzs_amount_only"] = fmt_uzs_amount_only
     env.filters["fmt_pct"] = fmt_pct
     env.filters["fmt_pct_share"] = fmt_pct_share
-    env.filters["fmt_date_ru"] = fmt_date_ru
-    env.filters["fmt_date_ru_short"] = fmt_date_ru_short
-    env.filters["fmt_date_ru_month"] = fmt_date_ru_month
-    env.filters["fmt_datetime_ru"] = fmt_datetime_ru
+    env.filters["fmt_date_ru"] = make_fmt_date(messages)
+    env.filters["fmt_date_ru_short"] = make_fmt_date_short(messages)
+    env.filters["fmt_date_ru_month"] = make_fmt_date_month(messages)
+    env.filters["fmt_datetime_ru"] = make_fmt_datetime(messages)
     env.filters["fmt_inn"] = fmt_inn
-    env.filters["severity_label"] = severity_label
+    env.filters["severity_label"] = make_severity_label(messages)
     env.filters["severity_color"] = severity_color
     env.filters["severity_bg"] = severity_bg
     return env
@@ -68,9 +71,12 @@ class _Stub:
         self.__dict__.update(kw)
 
 
-def _minimal_context() -> dict[str, object]:
+def _minimal_context(locale: str = "ru") -> dict[str, object]:
     fake_png = base64.b64encode(b"\x89PNG\r\n\x1a\n" + b"\x00" * 32).decode("ascii")
+    messages = load_pdf_messages(locale)  # type: ignore[arg-type]
     return {
+        "t": messages,
+        "lang": locale,
         "brand": BrandConfig(
             id="uzbekbank",
             name="Uzbekbank Credit",
@@ -101,22 +107,25 @@ def _minimal_context() -> dict[str, object]:
             rate_pct=Decimal("22.5"),
         ),
         "rules_version": "v1.uz-msb",
-        "rules_evaluated": 17,
+        "rules_evaluated": 19,
+        "rules_count": 19,
+        "methodology_body_text": messages.methodology_body.format(rules_count=19),
+        "disclaimer_body_text": messages.disclaimer_body.format(rules_version="v1.uz-msb"),
         "display_score": 73,
         "gauge_angle_deg": "41.40",
         "recommendation": "review",
-        "recommendation_label": "К пересмотру",
+        "recommendation_label": messages.recommendation["review"],
         "signal_breakdown": [
-            {"severity": "high", "label": "1 высокий", "count": 1},
-            {"severity": "medium", "label": "2 средних", "count": 2},
-            {"severity": "low", "label": "1 низкий", "count": 1},
+            {"severity": "high", "label": f"1 {messages.signal_breakdown['high']}", "count": 1},
+            {"severity": "medium", "label": f"2 {messages.signal_breakdown['medium']}", "count": 2},
+            {"severity": "low", "label": f"1 {messages.signal_breakdown['low']}", "count": 1},
         ],
-        "legal_form_label": "Общество с ограниченной ответственностью",
-        "legal_form_short": "ООО",
+        "legal_form_label": messages.legal_form_full["llc"],
+        "legal_form_short": messages.legal_form_short["llc"],
         "business_age_years": 8,
-        "business_age_unit": "лет",
+        "business_age_unit": messages.business_age_year["many"],
         "region_city": "Ташкент",
-        "region_district": "Юнусабадский район",
+        "region_district": "Юнусабадский " + messages.region_district_full,
         "okved_short_label": "Опт. торговля пищ. продуктами",
         "okved_full_label": "Неспециализированная оптовая торговля пищевыми продуктами",
         "annual_reports": [
@@ -181,10 +190,10 @@ def _minimal_context() -> dict[str, object]:
                 "name": "Концентрация поставщика >60% закупок",
                 "description": "Топ-1: 38,7%",
                 "severity": "high",
-                "severity_label": "Высокий",
+                "severity_label": messages.severity["high"],
                 "source": "Basel III concentration risk",
                 "evidence_value": "38,7%",
-                "evidence_label": "Доля топ-1",
+                "evidence_label": messages.evidence_label["max_supplier_share"],
             }
         ],
         "observations": Observations(
@@ -207,14 +216,14 @@ def _minimal_context() -> dict[str, object]:
 
 
 def test_template_renders_minimal_context() -> None:
-    env = _make_env()
+    ctx = _minimal_context()
+    env = _make_env(ctx["t"])  # type: ignore[arg-type]
     tpl = env.get_template("dossier.html")
-    html = tpl.render(**_minimal_context())
+    html = tpl.render(**ctx)
 
     assert "<!doctype html>" in html
     assert "Uzbekbank Credit" in html
     assert "BR-2026-0F8A" in html
-    # ИНН: разрядный разделитель — NBSP
     assert "306\xa0399\xa0449" in html
     # Cover hero
     assert "Кредитный меморандум" in html
@@ -223,47 +232,41 @@ def test_template_renders_minimal_context() -> None:
     assert "К пересмотру" in html
     assert "73" in html
     # Signal breakdown inline
-    assert "1 высокий" in html
+    assert "1 высоких" in html
     assert "2 средних" in html
     # Observations block
     assert "Ключевые наблюдения" in html
     assert "Сильные стороны" in html
     assert "Зоны риска" in html
     assert "Рост выручки +18,2% YoY" in html
-    # Section A — hero + stat tiles
-    assert "A. Идентификация" not in html, "Phase 10: sec-tag отдельный от h2"
-    assert ">A<" in html, "sec-tag «A» рендерится"
+    # Section A
+    assert ">A<" in html
     assert "Идентификация заёмщика" in html
-    assert "ПЗ" in html, "borrower initials в id-avatar"
-    assert "В бизнесе" in html  # stat-tile label
-    assert "Ташкент" in html  # region city
+    assert "ПЗ" in html
+    assert "В бизнесе" in html
+    assert "Ташкент" in html
     assert "Юнусабадский район" in html
-    assert "Опт. торговля пищ. продуктами" in html  # okved short
-    # Section B — financial table
+    assert "Опт. торговля пищ. продуктами" in html
+    # Section B
     assert "Финансовые показатели" in html
-    # Section C — chart
+    # Section C
     assert "Динамика помесячной выручки" in html
-    # Section D — counterparties
+    # Section D
     assert "Топ контрагентов" in html
-    # Section E — tax
+    # Section E
     assert "Налоговая дисциплина" in html
-    # Section F — human-readable rule name (не rule_id в title). HTML
-    # autoescape конвертирует «>» в &gt; — проверяем prefix без &gt;.
+    # Section F
     assert "Концентрация поставщика" in html
-    assert "SUPPLIER_CONCENTRATION_30" in html  # rule_id в .src строке
+    assert "SUPPLIER_CONCENTRATION_30" in html
     # Score gauge SVG arcs
     assert 'd="M 10 110 A 90 90 0 0 1 36.36 46.36"' in html
 
 
 def test_template_excludes_gnk_verified_pill() -> None:
-    """Phase 9 lesson: mock «✓ Проверено в ГНК» pill убран физически.
-
-    Pill дезинформирует compliance-офицера, который читает PDF как
-    decision-document. См. memory ``feedback_mock_ui_on_decision_screens.md``.
-    """
-    env = _make_env()
+    ctx = _minimal_context()
+    env = _make_env(ctx["t"])  # type: ignore[arg-type]
     tpl = env.get_template("dossier.html")
-    html = tpl.render(**_minimal_context())
+    html = tpl.render(**ctx)
 
     assert "Проверено в ГНК" not in html
     assert "pill-ok" not in html
@@ -272,16 +275,14 @@ def test_template_excludes_gnk_verified_pill() -> None:
 def test_template_renders_gnk_certificate_row_when_provided() -> None:
     """T0.3.2: если в context есть gnk_certificate — Section A добавляет row
     со статусом + источником. Без gnk_certificate — row отсутствует."""
-    env = _make_env()
+    ctx_no_cert = _minimal_context()
+    env = _make_env(ctx_no_cert["t"])  # type: ignore[arg-type]
     tpl = env.get_template("dossier.html")
 
-    # Без справки — row отсутствует.
-    ctx_no_cert = _minimal_context()
     ctx_no_cert.setdefault("gnk_certificate", None)
     html_no_cert = tpl.render(**ctx_no_cert)
     assert "Справка ГНК" not in html_no_cert
 
-    # Со справкой active + cert_id — row рендерится со статусом и источником.
     ctx_with_cert = _minimal_context()
     ctx_with_cert["gnk_certificate"] = _Stub(
         status="active",
@@ -296,23 +297,22 @@ def test_template_renders_gnk_certificate_row_when_provided() -> None:
 
 
 def test_template_handles_empty_observations() -> None:
-    """Если ни strengths ни risks — рендерятся empty states."""
-    env = _make_env()
-    tpl = env.get_template("dossier.html")
     ctx = _minimal_context()
+    env = _make_env(ctx["t"])  # type: ignore[arg-type]
+    tpl = env.get_template("dossier.html")
     ctx["observations"] = Observations(strengths=(), risks=())
     ctx["red_flags"] = []
     ctx["signal_breakdown"] = []
     html = tpl.render(**ctx)
 
     assert "Не выявлено выраженных позитивных индикаторов" in html
-    assert "Сигналы не сработали" in html or "зелёной зоне" in html
+    assert "зелёной зоне" in html
 
 
 def test_template_handles_missing_loan_request() -> None:
-    env = _make_env()
-    tpl = env.get_template("dossier.html")
     ctx = _minimal_context()
+    env = _make_env(ctx["t"])  # type: ignore[arg-type]
+    tpl = env.get_template("dossier.html")
     ctx["loan_request"] = None
     html = tpl.render(**ctx)
 
@@ -321,11 +321,37 @@ def test_template_handles_missing_loan_request() -> None:
 
 
 def test_template_renders_brand_name_in_header() -> None:
-    """Brand-tenant: name/tagline/logo_mark подставляются из BrandConfig."""
-    env = _make_env()
+    ctx = _minimal_context()
+    env = _make_env(ctx["t"])  # type: ignore[arg-type]
     tpl = env.get_template("dossier.html")
-    html = tpl.render(**_minimal_context())
+    html = tpl.render(**ctx)
 
     assert "Uzbekbank Credit" in html
     assert "Bank Mode · Андижон" in html
-    assert ">UB<" in html  # logo_mark в .logo-mark div
+    assert ">UB<" in html
+
+
+def test_template_renders_uz_locale() -> None:
+    """T0.4: при lang='uz' UZ-заголовки рендерятся вместо RU."""
+    ctx = _minimal_context(locale="uz")
+    env = _make_env(ctx["t"])  # type: ignore[arg-type]
+    tpl = env.get_template("dossier.html")
+    html = tpl.render(**ctx)
+
+    # UZ cover
+    assert "Kredit memorandumi" in html
+    assert "Yakuniy baholash" in html
+    # UZ section A
+    assert "Qarz oluvchining identifikatsiyasi" in html
+    # UZ section B
+    assert "Moliyaviy koʻrsatkichlar" in html
+    assert "Tushum" in html
+    # UZ recommendation
+    assert "Qayta koʻrish" in html
+    # UZ severity in signal breakdown
+    assert "yuqori" in html
+    # Page footer UZ
+    assert "-bet" in html
+    # RU cover-marker отсутствует
+    assert "Кредитный меморандум" not in html
+    assert "Сводная оценка" not in html

@@ -6,6 +6,7 @@
   "cover_signals_fired": "Ishga tushgan signallar",
   "cover_loan_request_label": "Kredit soʻrovi",
   "cover_loan_request_uzs_suffix": "soʻm",
+  "currency_billion_short": "mlrd",
   "cover_loan_term_unit": "oy",
   "cover_loan_rate_suffix": "% yillik",
   "cover_data_as_of_label": "Maʼlumotlar sanasi",
@@ -167,8 +168,10 @@
   "page_footer.part2": "-bet · ",
   "page_footer.part3": " dan",
 
-  "methodology_paragraph": "**Metodologiya.** Normativ havolalar bilan barcha {rules_count} qoidaning toʻliq roʻyxati (OʻzR MB, Bazel III, tarmoq metodikalari) va hisoblash audit izi bank-operatorga soʻrov asosida taqdim etiladi.",
-  "disclaimer_paragraph": "**Diskleymer.** Hujjat Credit Assistant tizimi tomonidan avtomatik tarzda yaratilgan (qoidalar versiyasi {rules_version}). Kredit berish boʻyicha qaror bank-operatorning vakolatli shaxsi tomonidan ushbu hisobot va boshqa ichki anderrayting protseduralari asosida qabul qilinadi.",
+  "methodology_label": "Metodologiya.",
+  "methodology_body": "Normativ havolalar bilan barcha {rules_count} qoidaning toʻliq roʻyxati (OʻzR MB, Bazel III, tarmoq metodikalari) va hisoblash audit izi bank-operatorga soʻrov asosida taqdim etiladi.",
+  "disclaimer_label": "Diskleymer.",
+  "disclaimer_body": "Hujjat Credit Assistant tizimi tomonidan avtomatik tarzda yaratilgan (qoidalar versiyasi {rules_version}). Kredit berish boʻyicha qaror bank-operatorning vakolatli shaxsi tomonidan ushbu hisobot va boshqa ichki anderrayting protseduralari asosida qabul qilinadi.",
 
   "running_head_inn_prefix": "INN"
 }

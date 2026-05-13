@@ -6,12 +6,14 @@ from datetime import date
 from decimal import Decimal
 
 from application.dto.kpi_bundle import MonthlyRevenuePoint
+from infrastructure.i18n.pdf_messages import load_pdf_messages
 from infrastructure.reports.pdf.chart_renderer import (
     render_revenue_24m,
     render_sparkline,
 )
 
 PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
+_RU = load_pdf_messages("ru")
 
 
 def _point(
@@ -29,14 +31,14 @@ def test_revenue_24m_returns_png_for_full_series() -> None:
     points = [_point(m, 1_000_000_000 + m * 100_000_000) for m in range(1, 13)]
     points[5] = _point(6, 5_000_000_000, peak=True)
 
-    png = render_revenue_24m(points)
+    png = render_revenue_24m(points, _RU)
 
     assert png.startswith(PNG_MAGIC), "должны быть PNG magic bytes"
     assert len(png) > 1500, f"PNG слишком маленький: {len(png)} bytes"
 
 
 def test_revenue_24m_empty_input_returns_placeholder_png() -> None:
-    png = render_revenue_24m([])
+    png = render_revenue_24m([], _RU)
 
     assert png.startswith(PNG_MAGIC)
     # Плейсхолдер с текстом — всё равно валидный PNG, размер ненулевой
@@ -47,8 +49,8 @@ def test_revenue_24m_empty_with_annual_revenue_renders_different_placeholder() -
     """CA-046: при `has_annual_revenue=True` копирайт меняется на «недоступна»
     вместо «нет данных». Разные тексты → разные PNG (matplotlib рисует строку).
     """
-    no_data = render_revenue_24m([])
-    annual_only = render_revenue_24m([], has_annual_revenue=True)
+    no_data = render_revenue_24m([], _RU)
+    annual_only = render_revenue_24m([], _RU, has_annual_revenue=True)
 
     assert no_data.startswith(PNG_MAGIC)
     assert annual_only.startswith(PNG_MAGIC)

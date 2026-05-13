@@ -65,8 +65,8 @@ class TestLoadPdfMessagesHappyPath:
             msg = load_pdf_messages(locale)
             assert "{pct}" in msg.obs_revenue_growth_head
             assert "{ratio}" in msg.obs_debt_ratio_head
-            assert "{rules_count}" in msg.methodology_paragraph
-            assert "{rules_version}" in msg.disclaimer_paragraph
+            assert "{rules_count}" in msg.methodology_body
+            assert "{rules_version}" in msg.disclaimer_body
 
 
 class TestLoadPdfMessagesFailure:

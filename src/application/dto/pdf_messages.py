@@ -45,6 +45,7 @@ class PdfMessages:
     cover_signals_fired: str
     cover_loan_request_label: str
     cover_loan_request_uzs_suffix: str
+    currency_billion_short: str
     cover_loan_term_unit: str
     cover_loan_rate_suffix: str
     cover_data_as_of_label: str
@@ -138,8 +139,10 @@ class PdfMessages:
 
     # --- Misc ---
     region_district_full: str
-    methodology_paragraph: str
-    disclaimer_paragraph: str
+    methodology_label: str
+    methodology_body: str
+    disclaimer_label: str
+    disclaimer_body: str
     running_head_inn_prefix: str
 
     # --- Grouped (loader склеивает dotted-keys в Mapping) ---

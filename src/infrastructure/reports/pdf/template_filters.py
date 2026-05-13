@@ -1,57 +1,31 @@
 """Jinja2-фильтры для PDF-шаблона.
 
-Регистрируются в ``WeasyPrintPdfRenderer`` при инициализации Environment.
+T0.4 / ADR-0015: фильтры строятся per-render через closure'ы поверх
+``PdfMessages`` — currency suffix, месяцы, severity labels резолвятся
+из i18n JSON, не из module-level RU-констант. Closure-инжект сделан
+через ``make_filter_*`` фабрики, регистрируемые в
+``WeasyPrintPdfRenderer.render`` при каждом вызове (overhead — микросекунды).
+
 Все фильтры толерантны к ``None`` — на пустых данных возвращают ``"—"``.
 """
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import date, datetime
 from decimal import Decimal
 
+from application.dto.pdf_messages import PdfMessages
 from domain.value_objects.money import Money
 
 # NBSP как разрядный разделитель — число "1\xa0500\xa0000" не разорвётся
 # при переносе строки. Типографически правильнее ASCII-пробела.
 _NBSP = " "
+_DASH = "—"  # em-dash
+_MINUS = "−"  # Unicode minus
 
-_RU_MONTHS_GENITIVE = (
-    "января",
-    "февраля",
-    "марта",
-    "апреля",
-    "мая",
-    "июня",
-    "июля",
-    "августа",
-    "сентября",
-    "октября",
-    "ноября",
-    "декабря",
-)
-
-_RU_MONTHS_SHORT = (
-    "янв",
-    "фев",
-    "мар",
-    "апр",
-    "мая",
-    "июн",
-    "июл",
-    "авг",
-    "сен",
-    "окт",
-    "ноя",
-    "дек",
-)
-
-_SEVERITY_LABEL = {
-    "critical": "Критический",
-    "high": "Высокий",
-    "medium": "Средний",
-    "low": "Низкий",
-}
-
+# Severity палитра остаётся module-level — это design tokens (CSS-цвета),
+# не локализуемый контент.
 _SEVERITY_COLOR = {
     "critical": "#7A0F0A",
     "high": "#B42318",
@@ -66,35 +40,35 @@ _SEVERITY_BG = {
     "low": "#E6F4EE",
 }
 
-# Слово "сум" в Unicode escape — некоторые редакторы любят подменять
-# кириллицу копипастом, явные escape-ы дают независимость от пайплайна.
-_SUM_WORD = "сум"  # "сум"
-_BILLIONS_WORD = "млрд"  # "млрд"
-_DASH = "—"  # "—" em-dash
-_MINUS = "−"  # "−" Unicode minus
+
+# --- closure factories ----------------------------------------------------
 
 
-def fmt_uzs(value: Money | Decimal | int | None, *, billions: bool = False) -> str:
-    """Форматирует сумму в сумах. ``billions=True`` → "21,5 млрд сум"."""
-    if value is None:
-        return _DASH
-    amount = value.amount if isinstance(value, Money) else Decimal(value)
+def make_fmt_uzs(messages: PdfMessages) -> Callable[..., str]:
+    """Создаёт ``fmt_uzs`` filter: «21,5 млрд сум» / «21.5 mlrd soʻm»."""
+    billion_word = messages.currency_billion_short
+    sum_word = messages.cover_loan_request_uzs_suffix
 
-    if billions:
-        billions_value = amount / Decimal("1000000000")
-        head = f"{billions_value:.1f}".replace(".", ",")
-        return f"{head}{_NBSP}{_BILLIONS_WORD}{_NBSP}{_SUM_WORD}"
+    def _fmt_uzs(value: Money | Decimal | int | None, *, billions: bool = False) -> str:
+        if value is None:
+            return _DASH
+        amount = value.amount if isinstance(value, Money) else Decimal(value)
+        if billions:
+            billions_value = amount / Decimal("1000000000")
+            head = f"{billions_value:.1f}".replace(".", ",")
+            return f"{head}{_NBSP}{billion_word}{_NBSP}{sum_word}"
+        integer = amount.quantize(Decimal("1"))
+        return f"{integer:,}".replace(",", _NBSP) + f"{_NBSP}{sum_word}"
 
-    integer = amount.quantize(Decimal("1"))
-    return f"{integer:,}".replace(",", _NBSP) + f"{_NBSP}{_SUM_WORD}"
+    return _fmt_uzs
 
 
 def fmt_uzs_amount_only(value: Money | Decimal | int | None) -> str:
     """Сумма с разрядным разделителем БЕЗ слова «сум».
 
-    Используется в шаблоне когда «сум» рендерится отдельным текстом
+    Используется в шаблоне, когда «сум»/«soʻm» рендерится отдельным текстом
     (cover decision-meta) или в табличной колонке с подписью «Суммы в сумах»
-    в footer'е (Phase 10). На ``None`` → "—".
+    в footer'е. На ``None`` → "—". Не зависит от локали.
     """
     if value is None:
         return _DASH
@@ -106,11 +80,7 @@ def fmt_uzs_amount_only(value: Money | Decimal | int | None) -> str:
 def fmt_pct(value: Decimal | None, *, with_sign: bool = False, decimals: int = 1) -> str:
     """Форматирует число как проценты. Принимает значение **уже в процентах**.
 
-    CA-043: ``Decimal("18.2")`` → ``"18,2%"`` (не fraction). Это контракт всего
-    стека — ``kpi_calculator`` производит ``yoy_pct = (a - b) / b * 100``,
-    frontend ``formatYoy(-14.4) → "−14,4%"``, ``revenue_drop_yoy_50`` пишет
-    evidence как percent. Прежнее ``* 100`` внутри фильтра удваивало масштаб
-    (PDF показывал ``−1442,9%`` вместо ``−14,4%``).
+    CA-043: ``Decimal("18.2")`` → ``"18,2%"`` (не fraction). Не зависит от локали.
     """
     if value is None:
         return _DASH
@@ -127,54 +97,73 @@ def fmt_pct(value: Decimal | None, *, with_sign: bool = False, decimals: int = 1
 
 
 def fmt_pct_share(value: Decimal | None, *, decimals: int = 1) -> str:
-    """Доля в процентах 0..100 (как ``CounterpartyShare.share_pct``).
-
-    Не умножает на 100 — значения уже в нужной шкале.
-    """
+    """Доля в процентах 0..100 (как ``CounterpartyShare.share_pct``)."""
     if value is None:
         return _DASH
     formatted = f"{Decimal(value):.{decimals}f}".replace(".", ",")
     return f"{formatted}%"
 
 
-def fmt_date_ru(value: date | datetime | None) -> str:
-    """``date(2026, 5, 10)`` → "10 мая 2026"."""
-    if value is None:
-        return _DASH
-    d = value.date() if isinstance(value, datetime) else value
-    month = _RU_MONTHS_GENITIVE[d.month - 1]
-    return f"{d.day} {month} {d.year}"
+def make_fmt_date(messages: PdfMessages) -> Callable[[date | datetime | None], str]:
+    """RU: ``date(2026,5,10) → "10 мая 2026"``. UZ: ``"10 may 2026"``."""
+    months = messages.month_full
+
+    def _fmt_date(value: date | datetime | None) -> str:
+        if value is None:
+            return _DASH
+        d = value.date() if isinstance(value, datetime) else value
+        return f"{d.day} {months[d.month - 1]} {d.year}"
+
+    return _fmt_date
 
 
-def fmt_datetime_ru(value: datetime | None) -> str:
-    """``datetime(2026, 5, 10, 14, 32)`` → "10 мая 2026, 14:32"."""
-    if value is None:
-        return _DASH
-    return f"{fmt_date_ru(value.date())}, {value.hour:02d}:{value.minute:02d}"
+def make_fmt_datetime(messages: PdfMessages) -> Callable[[datetime | None], str]:
+    """``datetime(2026,5,10,14,32) → "10 мая 2026, 14:32"``."""
+    fmt_date = make_fmt_date(messages)
+
+    def _fmt_datetime(value: datetime | None) -> str:
+        if value is None:
+            return _DASH
+        return f"{fmt_date(value.date())}, {value.hour:02d}:{value.minute:02d}"
+
+    return _fmt_datetime
 
 
-def fmt_date_ru_short(value: date | datetime | None) -> str:
-    """``date(2026, 4, 30)`` → "30 апр 2026". Для running head банковской шапки."""
-    if value is None:
-        return _DASH
-    d = value.date() if isinstance(value, datetime) else value
-    month = _RU_MONTHS_SHORT[d.month - 1]
-    return f"{d.day} {month} {d.year}"
+def make_fmt_date_short(messages: PdfMessages) -> Callable[[date | datetime | None], str]:
+    """``date(2026,4,30) → "30 апр 2026"`` / ``"30 apr 2026"``."""
+    months = messages.month_short
+
+    def _fmt_date_short(value: date | datetime | None) -> str:
+        if value is None:
+            return _DASH
+        d = value.date() if isinstance(value, datetime) else value
+        return f"{d.day} {months[d.month - 1]} {d.year}"
+
+    return _fmt_date_short
 
 
-def fmt_date_ru_month(value: date | datetime | None) -> str:
-    """``date(2018, 3, 14)`` → "марта 2018". Для stat-tile «с марта 2018»."""
-    if value is None:
-        return _DASH
-    d = value.date() if isinstance(value, datetime) else value
-    month = _RU_MONTHS_GENITIVE[d.month - 1]
-    return f"{month} {d.year}"
+def make_fmt_date_month(messages: PdfMessages) -> Callable[[date | datetime | None], str]:
+    """``date(2018,3,14) → "марта 2018"`` / ``"mart 2018"`` — для stat-tile."""
+    months = messages.month_full
+
+    def _fmt_date_month(value: date | datetime | None) -> str:
+        if value is None:
+            return _DASH
+        d = value.date() if isinstance(value, datetime) else value
+        return f"{months[d.month - 1]} {d.year}"
+
+    return _fmt_date_month
 
 
-def severity_label(value: str | None) -> str:
-    if value is None:
-        return _DASH
-    return _SEVERITY_LABEL.get(value.lower(), value.capitalize())
+def make_severity_label(messages: PdfMessages) -> Callable[[str | None], str]:
+    """RU: ``"critical" → "Критический"``; UZ: ``"Kritik"``."""
+
+    def _severity_label(value: str | None) -> str:
+        if value is None:
+            return _DASH
+        return messages.severity.get(value.lower(), value.capitalize())
+
+    return _severity_label
 
 
 def severity_color(value: str | None) -> str:
@@ -190,7 +179,7 @@ def severity_bg(value: str | None) -> str:
 
 
 def fmt_inn(value: str | None) -> str:
-    """ИНН с разрядным разделителем: "306399449" → "306\xa0399\xa0449"."""
+    """ИНН с разрядным разделителем: "306399449" → "306 399 449"."""
     if not value:
         return _DASH
     digits = value.strip()
