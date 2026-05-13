@@ -180,21 +180,22 @@ function FaqRow({ id, defaultOpen }: { id: FaqId; defaultOpen?: boolean }) {
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         className={cn(
-          "grid w-full grid-cols-[44px_1fr_auto] items-start gap-3.5 px-5 py-3.5 text-left transition-colors",
+          "group grid w-full grid-cols-[44px_1fr_auto] items-start gap-3.5 px-5 py-3.5 text-left transition-colors",
           "hover:bg-[var(--surface-2)]",
           open && "bg-[var(--surface-2)]",
         )}
       >
         <span
           className={cn(
-            "grid size-8 place-items-center rounded-[9px] bg-[var(--brand-primary-soft)] text-[var(--brand-primary-ink)] transition-transform",
-            "group-hover:scale-105",
+            "grid size-8 place-items-center rounded-[9px] bg-[var(--brand-primary-soft)] text-[var(--brand-primary-ink)] transition-all duration-200",
+            "group-hover:scale-110 group-hover:shadow-[0_4px_14px_-6px_var(--brand-primary-ring)]",
+            open && "scale-110 shadow-[0_4px_14px_-6px_var(--brand-primary-ring)]",
           )}
         >
           <Icon className="size-4" />
         </span>
         <span className="pt-1.5">
-          <span className="mb-0.5 block text-[10.5px] font-medium uppercase tracking-[0.06em] text-[var(--ink-4)]">
+          <span className="mb-0.5 block text-[10.5px] font-medium uppercase tracking-[0.06em] text-[var(--ink-4)] transition-colors group-hover:text-[var(--brand-primary)]">
             {t(`faq_cat_${id}`)}
           </span>
           <span className="block text-[14px] font-medium leading-snug text-[var(--ink-1)]">
@@ -203,20 +204,26 @@ function FaqRow({ id, defaultOpen }: { id: FaqId; defaultOpen?: boolean }) {
         </span>
         <ChevronDown
           className={cn(
-            "mt-2 size-4 shrink-0 text-[var(--ink-3)] transition-transform duration-200",
+            "mt-2 size-4 shrink-0 text-[var(--ink-3)] transition-transform duration-[400ms] ease-[cubic-bezier(0.34,1.56,0.64,1)]",
             open && "rotate-180 text-[var(--brand-primary)]",
           )}
         />
       </button>
-      {open ? (
-        <div className="pl-[64px] pr-5 pb-4">
-          <div
-            className="rounded-r-lg border-l-2 border-[var(--brand-primary)] bg-gradient-to-r from-[var(--brand-primary-soft)] to-transparent py-2.5 pl-3.5 pr-5 text-[13.5px] leading-[1.6] text-[var(--ink-2)] [&_code]:rounded [&_code]:bg-[var(--surface-3)] [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[12px] [&_code]:text-[var(--ink-1)] [&_p]:m-0 [&_p:not(:last-child)]:mb-2"
-          >
-            {answer}
+      <div
+        className={cn(
+          "grid transition-[grid-template-rows,opacity] duration-[320ms] ease-out",
+          open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
+        )}
+        aria-hidden={!open}
+      >
+        <div className="min-h-0 overflow-hidden">
+          <div className="pl-[64px] pr-5 pb-4 pt-1">
+            <div className="rounded-r-lg border-l-2 border-[var(--brand-primary)] bg-gradient-to-r from-[var(--brand-primary-soft)] to-transparent py-2.5 pl-3.5 pr-5 text-[13.5px] leading-[1.6] text-[var(--ink-2)] [&_code]:rounded [&_code]:bg-[var(--surface-3)] [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[12px] [&_code]:text-[var(--ink-1)] [&_p]:m-0 [&_p:not(:last-child)]:mb-2">
+              {answer}
+            </div>
           </div>
         </div>
-      ) : null}
+      </div>
     </div>
   );
 }
@@ -233,9 +240,11 @@ function ContactStack() {
 
       <a
         href={`https://uzbekbank.slack.com/channels/${SLACK_CHANNEL.slice(1)}`}
-        className="group flex items-start gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3.5 transition-colors hover:border-[var(--brand-primary)] hover:bg-[var(--brand-primary-soft)]"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="group flex items-start gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3.5 transition-all duration-200 hover:-translate-y-px hover:border-[var(--brand-primary)] hover:bg-[var(--brand-primary-soft)] hover:shadow-[0_8px_24px_-12px_var(--brand-primary-ring)]"
       >
-        <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-[var(--surface-3)] text-[var(--ink-2)] transition-colors group-hover:bg-[var(--brand-primary-soft)] group-hover:text-[var(--brand-primary-ink)]">
+        <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-[var(--surface-3)] text-[var(--ink-2)] transition-all duration-200 group-hover:scale-110 group-hover:bg-[var(--surface)] group-hover:text-[var(--brand-primary)] group-hover:shadow-[0_3px_10px_-4px_var(--brand-primary-ring)]">
           <MessageSquare className="size-4" />
         </span>
         <div className="min-w-0 flex-1">
@@ -253,9 +262,9 @@ function ContactStack() {
 
       <a
         href={`mailto:${SUPPORT_EMAIL}`}
-        className="group flex items-start gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3.5 transition-colors hover:border-[var(--brand-primary)] hover:bg-[var(--brand-primary-soft)]"
+        className="group flex items-start gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3.5 transition-all duration-200 hover:-translate-y-px hover:border-[var(--brand-primary)] hover:bg-[var(--brand-primary-soft)] hover:shadow-[0_8px_24px_-12px_var(--brand-primary-ring)]"
       >
-        <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-[var(--surface-3)] text-[var(--ink-2)] transition-colors group-hover:bg-[var(--brand-primary-soft)] group-hover:text-[var(--brand-primary-ink)]">
+        <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-[var(--surface-3)] text-[var(--ink-2)] transition-all duration-200 group-hover:scale-110 group-hover:bg-[var(--surface)] group-hover:text-[var(--brand-primary)] group-hover:shadow-[0_3px_10px_-4px_var(--brand-primary-ring)]">
           <Mail className="size-4" />
         </span>
         <div className="min-w-0 flex-1">
@@ -273,6 +282,8 @@ function ContactStack() {
 
       <a
         href={DOCS_URL}
+        target="_blank"
+        rel="noopener noreferrer"
         className="group mt-0.5 flex items-center gap-2.5 border-t border-dashed border-[var(--border)] px-1 pt-3.5 text-[var(--ink-2)] transition-colors hover:text-[var(--brand-primary)]"
       >
         <div className="flex-1">
