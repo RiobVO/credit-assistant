@@ -74,7 +74,7 @@
 
 | # | Phase | Status | Preview file | Commit |
 |---|---|---|---|---|
-| 1 | Login | done | `2026-05-13-login-phase1-preview.html` | TBD-commit |
+| 1 | Login | **DONE** | `2026-05-13-login-phase1-preview.html` | `0a1c86c`..`34d97f6` |
 | 2 | Search | pending | — | — |
 | 3 | History | pending | — | — |
 | 4 | Help | pending | — | — |
@@ -103,7 +103,9 @@
 
 **Files changed:** `web/src/app/login/_components/login.module.css`.
 
-**Phase 1 follow-up (same day):** `-webkit-autofill` override — Chrome autofill белил dark input. Трюк с inset box-shadow 1000px + `transition: background-color 9999s` держит dark theme. Существующий bug (pre-CA-066), починен в рамках Phase 1.
+**Phase 1 follow-ups (same day):**
+- `-webkit-autofill` override (`4997d5b`) — Chrome autofill белил dark input. Inset box-shadow 1000px + `transition: background-color 9999s` держит dark theme.
+- Card fine-tune (`8dc74cb` 395→380, `34d97f6` 380→355) — user итерировал размер до final **355px** (focused-positioning: Stripe/Linear/Tinkoff territory, не enterprise wide как TBC/Chase).
 
 ### Cross-phase technical debt (открытый список)
 
@@ -209,6 +211,7 @@ Issues которые я нашёл в аудитах но user решил ос�
 | 2026-05-13 | UI sweep | **CI hotfix** — ruff RUF059 в seed-test (q5..q8 unused) → переписан unpacking. `package-lock.json` desync (`@swc/helpers 0.5.15` < peer-req `>=0.5.17`) → fresh `rm node_modules && npm install`. | `fd005a1` |
 | 2026-05-13 | post-plan | **Design-parity sweep (CA-066)** — после смотра против локального target-state-preview закрыты 4 расхождения: (1) `BrandProvider` + `useBrand()` для client surfaces — bank `Sidebar` + `BankTopbar` тянут name/tagline/logoMark из `config/brands/<id>.json` (uzbekbank tagline → «Bank Mode · Андижон»). (2) Dossier layout: новый `SubHeader` (чистый title + meta-line ИНН/ОПФ/ОКВЭД + правые [Пересобрать] [Скачать PDF]), `ReadinessBadge` → `ReadinessKpiCard` как 4-я карточка `KpiRow` (revenue_ltm выкинут), нижний `ActionBar` удалён физически (`action-bar.tsx`). (3) Manual-input `info-banner` на `--state-info-{bg,fg}` + border через `color-mix` — теперь uzbekbank-tenant даёт терракотово-коричневую плашку вместо синей. (4) ⌘K палитра: keyboard nav (↑↓Enter), `↵` kbd на active item. Bug fix во время прохода: `t.rich(key, {x: () => <b/>})` с value-плейсхолдером `{x}` падал «Functions are not valid as a React child» в `bank/history` пагинации — переделан на tag-syntax `<b>{shown}</b>` + formatter `(chunks) => <b>{chunks}</b>`. Verify: tsc + eslint + 61 vitest зелёные. |
 | 2026-05-13 | post-CA-066 | **CA-067 + CA-065** — rm orphaned `back-target.ts` (`56ada78`); `scripts/seed_demo_borrowers.py --commit` E2E писатель (`04665b1`): 3 demo bank-mode dossier'а через build_snapshot→rules→save. Dockerfile + COPY scripts/. Real smoke на real Postgres: 3 dossiers score=0/approve. **Запуск scripts:** `cd /app && PYTHONPATH=/app/src` (scripts/ это пакет в root, не в src/). |
+| 2026-05-13 | Design Sweep | **Phase 1 Login DONE** — план фаз (`6c45af3`), subtle scale-up (`0a1c86c`: title 30/inputs 48/CTA 50, +4..9%), `-webkit-autofill` override (`4997d5b`), card final 355px (`8dc74cb` 395→380, `34d97f6` 380→355 — focused-positioning, Stripe/Linear territory). 5 cross-phase tech-debt issues (CA-DS1..CA-DS5) отложены. Готово к Phase 2 Search в новой сессии. |
 | 2026-05-13 | UI sweep | **i18n sweep — финал (CA-063b)** — 5 коммитов закрыли все оставшиеся surfaces. (1) `recommendationLabel` удалён из `bank-api.ts`, callsites на `bank.history.rec_*`. (2) shared `components/topbar.tsx` (draft-state badges). (3) bank shell: `(bank)/_components/topbar` (TITLE_MAP→keys), `settings-view` (4 секции), `help-view` (FAQ через `t.rich` с тегами `b/code/good/warn/bad`). (4) dossier sub-views: sub-header / borrower-card / kpi-row / risk-signals (19 rule labels через `t.has`+fallback) / revenue-24m-chart / score-gauge / readiness-badge (тест обёрнут в Provider). (5) manual-input wizard (14 файлов: page-head/stepper/form-footer/info-banner + step-1..3 + financial-table/dscr-summary/parsed-files-dropzone/soliq-upload/checklist). `classifyDscrRisk` теперь возвращает `key`, не `label`. ICU-plural для files/fields counts, `t.rich` для FAQ. Brand-strings (Bank Mode, DSCR, UZS, ИНН, my3.soliq.uz, ops@uzbekbank.uz) не локализованы. | `757d0ba`..`d923051` |
 
 > Сжатая история. Полные decomposition / smoke numbers / per-step rationale — в commit messages (`git log --oneline`) и `docs/adr/`.
