@@ -38,6 +38,7 @@ out/
 # --- IDE / OS ---
 .vscode/
 .idea/
+.claude/
 *.swp
 *.swo
 .DS_Store
@@ -65,7 +66,9 @@ redisdata/
 tests/fixtures/**/*_full.*
 
 # --- Scratch scripts (smoke runners against local real-data, never commit) ---
-scripts/_smoke_*.py
+scripts/_smoke_*
+scripts/unpacked-*/
 
 # --- Design handoff bundles (extracted prototypes, not source) ---
 .design-bundle/
+web/design-reference/
