@@ -166,11 +166,17 @@ async def test_me_returns_analyst_with_valid_access_token(
     assert body["mfa_enabled"] is False
 
 
-async def test_me_returns_mfa_enabled_only_when_secret_set(
+async def test_me_returns_mfa_enabled_only_when_enrolled(
     api_client: httpx.AsyncClient, pg_session: AsyncSession
 ) -> None:
-    """Phase 5.B: mfa_enabled computed-from-secret. Stored bool=True без secret
-    игнорируется (сжигает security theater от Phase 5.A seed-flag'а)."""
+    """Phase 5.B + hotfix `d9387c0`: mfa_enabled computed-from-enrolled_at,
+    не от mfa_secret. /enroll/start пишет secret до verify (half-enrolled
+    state) — этот state НЕ должен показывать mfa_enabled=True, иначе
+    следующий login потребует TOTP без сохранённого secret → lockout.
+    Stored bool=True тоже игнорируется (сжигает security theater Phase 5.A).
+    """
+    from datetime import UTC, datetime
+
     hasher = PasswordHasher(rounds=4)
     admin_orm = AnalystORM(
         email="admin@bank.uz",
@@ -178,7 +184,7 @@ async def test_me_returns_mfa_enabled_only_when_secret_set(
         full_name="Admin A.",
         role="senior_analyst",
         is_active=True,
-        # Stored bool=True, но secret отсутствует → API должен вернуть False.
+        # Stored bool=True, но enrolled_at отсутствует → API должен вернуть False.
         mfa_enabled=True,
     )
     pg_session.add(admin_orm)
@@ -194,18 +200,27 @@ async def test_me_returns_mfa_enabled_only_when_secret_set(
         headers={"Authorization": f"Bearer {login['access_token']}"},
     )
     assert me_resp.status_code == 200
-    # Stored bool=True игнорируется — секрета нет.
+    # Stored bool=True + нет enrolled_at → False.
     assert me_resp.json()["mfa_enabled"] is False
 
-    # Симулируем real enrollment: ставим secret напрямую.
+    # Half-enrolled state: secret записан /enroll/start, verify не прошёл.
+    # mfa_enabled всё ещё False (это и есть смысл fix'а).
     admin_orm.mfa_secret = "JBSWY3DPEHPK3PXP"
     await pg_session.flush()
-
     me_resp2 = await api_client.get(
         "/api/bank/auth/me",
         headers={"Authorization": f"Bearer {login['access_token']}"},
     )
-    assert me_resp2.json()["mfa_enabled"] is True
+    assert me_resp2.json()["mfa_enabled"] is False
+
+    # Симулируем успешный /enroll/verify: ставим enrolled_at.
+    admin_orm.mfa_enrolled_at = datetime.now(tz=UTC)
+    await pg_session.flush()
+    me_resp3 = await api_client.get(
+        "/api/bank/auth/me",
+        headers={"Authorization": f"Bearer {login['access_token']}"},
+    )
+    assert me_resp3.json()["mfa_enabled"] is True
 
 
 async def test_me_returns_401_without_token(api_client: httpx.AsyncClient) -> None:
