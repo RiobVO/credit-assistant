@@ -23,16 +23,16 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
       href={item.href}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "flex items-center gap-3 rounded-md px-[10px] py-2 text-[14px] font-medium transition-colors",
+        "flex items-center gap-3 rounded-md px-[10px] py-2 text-[13.5px] font-medium transition-colors",
         active
-          ? "bg-[var(--nav-bg-hover)] text-white"
+          ? "bg-white text-[var(--nav-text)] font-semibold shadow-[inset_2px_0_0_var(--brand-primary),0_1px_0_rgba(14,21,37,0.04)]"
           : "text-[var(--nav-text-2)] hover:bg-[var(--nav-bg-hover)] hover:text-[var(--nav-text)]",
       )}
     >
       <span className="flex shrink-0 items-center">{item.icon}</span>
       <span className="truncate">{item.label}</span>
       {item.count != null ? (
-        <span className="ml-auto rounded-full bg-white/[0.08] px-[6px] py-px text-[11px] font-medium text-[var(--nav-text-2)]">
+        <span className="ml-auto rounded-full bg-[var(--surface-3)] px-[6px] py-px text-[11px] font-medium text-[var(--nav-text-2)]">
           {item.count}
         </span>
       ) : null}
@@ -86,27 +86,39 @@ export function BankSidebar() {
     <aside className="sticky top-0 flex h-screen flex-col border-r border-[var(--nav-border)] bg-[var(--nav-bg)] text-[var(--nav-text)]">
       {/* Brand */}
       <div className="flex items-center gap-[10px] border-b border-[var(--nav-border)] px-5 pt-[18px] pb-4">
-        <div className="grid size-7 shrink-0 place-items-center rounded-md bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-primary-hover)] text-[13px] font-bold tracking-[-0.02em] text-white">
+        <div className="grid size-7 shrink-0 place-items-center rounded-md bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-primary-hover)] text-[13px] font-bold tracking-[-0.02em] text-white shadow-[0_1px_0_rgba(255,255,255,0.4)_inset,0_4px_10px_-4px_color-mix(in_oklab,var(--brand-primary)_55%,transparent)]">
           {brand.logoMark}
         </div>
         <div className="min-w-0">
-          <div className="truncate text-[14px] font-semibold tracking-[-0.01em] text-white">
+          <div className="truncate text-[14px] font-semibold tracking-[-0.01em] text-[var(--nav-text)]">
             {brand.name}
           </div>
-          <div className="mt-0.5 text-[11px] tracking-[0.02em] text-[var(--nav-text-3)]">
+          <div className="mt-0.5 truncate text-[11px] tracking-[0.02em] text-[var(--nav-text-3)]">
             {brand.tagline}
           </div>
         </div>
       </div>
 
-      {/* CTA «+ Новая заявка» — terracotta accent (CA-051 sustained). */}
+      {/* Premium card CTA «+ Новая заявка» — Phase 2 DS-PHASE-2 pattern.
+          Белая карточка с brand-soft icon-tile + rotating plus на hover.
+          Pattern: Linear / Notion / Mercury «Create new». */}
       <div className="px-3 pt-4">
         <Link
           href="/manual-input"
-          className="flex items-center justify-center gap-2 rounded-md bg-[var(--brand-primary)] px-3 py-[10px] text-[13.5px] font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-primary-hover)]"
+          className="group flex items-center gap-[10px] rounded-[10px] border border-[color-mix(in_oklab,var(--ink-1)_7%,transparent)] bg-white px-[9px] py-[9px] text-[var(--ink-1)] shadow-[0_1px_0_rgba(255,255,255,0.6)_inset,0_1px_2px_rgba(14,21,37,0.02),0_6px_14px_-10px_rgba(14,21,37,0.12)] transition-all duration-200 ease-out hover:-translate-y-px hover:border-[var(--brand-primary)] hover:shadow-[0_1px_0_rgba(255,255,255,0.7)_inset,0_1px_2px_rgba(14,21,37,0.02),0_12px_22px_-10px_color-mix(in_oklab,var(--brand-primary)_50%,transparent)]"
         >
-          <Plus className="size-4" />
-          {tCta("new_application")}
+          <span
+            className="grid size-[26px] shrink-0 place-items-center rounded-[7px] border text-[var(--brand-primary)] transition-transform duration-220 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:rotate-90"
+            style={{
+              background: "var(--brand-primary-soft)",
+              borderColor: "color-mix(in oklab, var(--brand-primary) 18%, transparent)",
+            }}
+          >
+            <Plus className="size-[14px]" strokeWidth={2.6} />
+          </span>
+          <span className="flex-1 text-[12.5px] font-semibold tracking-[-0.005em]">
+            {tCta("new_application")}
+          </span>
         </Link>
       </div>
 
@@ -142,17 +154,25 @@ export function BankSidebar() {
         </nav>
       </div>
 
-      {/* User card */}
-      <div className="flex items-center gap-3 border-t border-[var(--nav-border)] p-4">
-        <div className="grid size-8 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-primary-hover)] text-[12px] font-semibold text-white">
-          {analyst ? initials(analyst.full_name) : "—"}
+      {/* User card — gradient bg + online-dot + role · онлайн */}
+      <div className="m-3 mt-1 flex items-center gap-3 rounded-[10px] border border-[color-mix(in_oklab,var(--ink-1)_6%,transparent)] bg-gradient-to-b from-white/60 to-white/30 p-[10px]">
+        <div className="relative">
+          <div className="grid size-8 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[var(--brand-primary-soft)] to-[color-mix(in_oklab,var(--brand-primary)_25%,white)] text-[12px] font-semibold text-[var(--brand-primary-ink)]">
+            {analyst ? initials(analyst.full_name) : "—"}
+          </div>
+          {/* Online dot: pulse-ring-ok keyframe. border 2px = bg cream поверх state-ok. */}
+          <span
+            aria-hidden
+            className="pulse-ring-ok absolute -right-[1px] -bottom-[1px] size-[10px] rounded-full border-2 border-[var(--nav-bg)]"
+            style={{ background: "var(--state-ok-fg)" }}
+          />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="truncate text-[13px] font-medium leading-tight text-white">
+          <div className="truncate text-[12.5px] leading-tight font-semibold text-[var(--nav-text)]">
             {analyst?.full_name ?? "—"}
           </div>
-          <div className="mt-0.5 truncate text-[11px] text-[var(--nav-text-3)]">
-            {roleLabel(analyst?.role)}
+          <div className="mt-0.5 truncate text-[10.5px] text-[var(--nav-text-3)]">
+            {roleLabel(analyst?.role)} · {tSidebar("online")}
           </div>
         </div>
         <button

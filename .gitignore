@@ -75,3 +75,5 @@ web/design-reference/
 
 # --- Personal screenshots & demo PDFs for design sweep (sensitive data) ---
 photos/
+photo_*.jpg
+photo_*.png
