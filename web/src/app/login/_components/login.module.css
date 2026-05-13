@@ -171,8 +171,9 @@
 }
 .card {
   width: 100%;
-  /* DS-PHASE-1: subtle scale-up — card width +2.9% (384→395), padding unchanged. */
-  max-width: 395px;
+  /* DS-PHASE-1: card slightly compacted (384→380, -1% от оригинала),
+     content внутри scaled-up — плотнее, content читается крупнее. */
+  max-width: 380px;
   background: linear-gradient(180deg, rgba(17, 21, 31, 0.78) 0%, rgba(13, 16, 25, 0.78) 100%);
   backdrop-filter: blur(14px) saturate(120%);
   -webkit-backdrop-filter: blur(14px) saturate(120%);
