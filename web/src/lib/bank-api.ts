@@ -4,6 +4,27 @@
 
 import type { Recommendation } from "./api";
 
+// SearchCardMonthlyPoint — точка sparkline 12 мес, приходит с backend как
+// {month: "YYYY-MM", revenue: "<decimal-str>"}.
+export type SearchCardMonthlyPoint = {
+  month: string;
+  revenue: string;
+};
+
+// SearchCardData — расширенные данные result-card для богатой карточки
+// (ScoreRing + mini-meta + RevenueSparkline). Заполнено только когда
+// borrower имеет bank-mode досье (dossier_id !== null).
+export type SearchCardData = {
+  legal_form: string;
+  recommendation: Recommendation;
+  revenue_ltm: string | null;
+  yoy_pct: number | null;
+  business_age_months: number | null;
+  signals_total: number;
+  signals_evaluated: number;
+  monthly_revenue_12m: SearchCardMonthlyPoint[];
+};
+
 export type BorrowerSearchResult = {
   found: boolean;
   borrower_name: string | null;
@@ -11,6 +32,7 @@ export type BorrowerSearchResult = {
   score: number | null;
   display_score: number | null;
   created_at: string | null;
+  card: SearchCardData | null;
 };
 
 export type BankDossierListItem = {

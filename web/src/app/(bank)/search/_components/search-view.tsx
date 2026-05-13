@@ -1,9 +1,7 @@
 "use client";
 
 import {
-  ArrowRight,
   Building,
-  FileText,
   FileX,
   Info,
   Plus,
@@ -14,10 +12,13 @@ import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import { BankPageHead } from "@/app/(bank)/_components/page-head";
+import { AmbientOrbs } from "@/features/search/ambient-orbs";
+import { GridPattern } from "@/features/search/grid-pattern";
+import { LiveStrip } from "@/features/search/live-strip";
+import { RecentChips } from "@/features/search/recent-chips";
+import { ResultCard } from "@/features/search/result-card";
 import {
   type BorrowerSearchResult,
-  scoreBand,
   searchBorrower,
 } from "@/lib/bank-api";
 import { cn } from "@/lib/utils";
@@ -85,13 +86,12 @@ type State =
 
 export function SearchView() {
   const t = useTranslations("bank.search");
-  const tCta = useTranslations("bank.cta");
   const [inn, setInn] = useState("");
   const [state, setState] = useState<State>({ kind: "idle" });
   const [recent, setRecent] = useState<string[]>([]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage post-mount load; init со SSR [] для избежания hydration-mismatch
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage post-mount load
     setRecent(loadRecent());
   }, []);
 
@@ -140,148 +140,146 @@ export function SearchView() {
   const isValid = inn.length === 9 || inn.length === 14;
   const isLoading = state.kind === "loading";
 
+  // Active chip sparkline: sync на текущий result.card если ИНН совпадает.
+  const activePoints =
+    state.kind === "result" && state.inn === inn && state.data.card
+      ? state.data.card.monthly_revenue_12m
+      : null;
+
   return (
     <>
-      <BankPageHead
-        title={t("title")}
-        subtitle={t("subtitle")}
-        actions={
-          <Link
-            href="/manual-input"
-            className="inline-flex h-9 items-center gap-2 rounded-md bg-[var(--brand-primary)] px-3 text-[13px] font-semibold text-white transition-colors hover:bg-[var(--brand-primary-hover)]"
-          >
-            <Plus className="size-3.5" />
-            {tCta("new_application")}
-          </Link>
-        }
-      />
+      {/* Page-level decorations — only on /search (showroom screen). */}
+      <GridPattern />
+      <AmbientOrbs />
 
-      <form
-        onSubmit={handleSubmit}
-        className="mb-3 flex items-stretch gap-3"
-        noValidate
-      >
-        <div className="relative flex-1">
-          <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-[var(--ink-4)]" />
-          <input
-            type="text"
-            inputMode="numeric"
-            autoFocus
-            placeholder="000 000 000"
-            value={inn}
-            onChange={(e) => handleChange(e.target.value)}
-            disabled={isLoading}
-            maxLength={14}
-            className={cn(
-              "h-[44px] w-full rounded-md border bg-[var(--surface)] pr-9 pl-9 font-mono text-[15px] tracking-[0.04em] text-[var(--ink-1)] outline-none transition-colors",
-              "border-[var(--border)] placeholder:text-[var(--ink-4)]",
-              "focus:border-[var(--brand-primary)] focus:shadow-[0_0_0_3px_var(--brand-primary-ring)]",
-              "disabled:cursor-wait disabled:opacity-60",
-            )}
-          />
-          {inn ? (
-            <button
-              type="button"
-              onClick={() => {
-                setInn("");
-                setState({ kind: "idle" });
-              }}
-              aria-label={t("clear_aria")}
-              className="absolute top-1/2 right-2 grid size-[22px] -translate-y-1/2 place-items-center rounded text-[var(--ink-4)] hover:bg-[var(--surface-2)] hover:text-[var(--ink-2)]"
-            >
-              <X className="size-3.5" />
-            </button>
-          ) : null}
-        </div>
-        <button
-          type="submit"
-          disabled={!isValid || isLoading}
-          className={cn(
-            "inline-flex h-[44px] items-center justify-center rounded-md bg-[var(--brand-primary)] px-5 text-[15px] font-semibold text-white transition-colors",
-            "hover:bg-[var(--brand-primary-hover)] disabled:cursor-not-allowed disabled:opacity-55",
-          )}
+      <div className="relative z-[1]">
+        {/* Hero: title + sub + live-strip */}
+        <header className="mb-7 animate-[rise_0.55s_cubic-bezier(0.16,0.84,0.44,1)_0.05s_both]">
+          <h1 className="m-0 mb-[10px] text-[34px] leading-[1.08] font-semibold tracking-[-0.025em] text-[var(--ink-1)]">
+            {t("title")}
+          </h1>
+          <p className="m-0 mb-[22px] max-w-[62ch] text-[15px] leading-[1.55] text-[var(--ink-3)] animate-[rise_0.55s_cubic-bezier(0.16,0.84,0.44,1)_0.12s_both]">
+            {t("subtitle")}
+          </p>
+          <LiveStrip />
+        </header>
+
+        {/* Search form */}
+        <form
+          onSubmit={handleSubmit}
+          className="mb-[14px] grid grid-cols-[1fr_auto] gap-[10px] animate-[rise_0.55s_cubic-bezier(0.16,0.84,0.44,1)_0.2s_both]"
+          noValidate
         >
-          {isLoading ? t("submit_loading") : t("submit")}
-        </button>
-      </form>
+          <div className="relative">
+            <SearchIcon className="pointer-events-none absolute top-1/2 left-[18px] size-[18px] -translate-y-1/2 text-[var(--ink-3)] transition-colors" />
+            <input
+              type="text"
+              inputMode="numeric"
+              autoFocus
+              placeholder="000 000 000"
+              value={inn}
+              onChange={(e) => handleChange(e.target.value)}
+              disabled={isLoading}
+              maxLength={14}
+              className={cn(
+                "h-[56px] w-full rounded-[12px] border-[1.5px] bg-[var(--surface)] pr-[50px] pl-[50px] font-mono text-[16px] tracking-[0.04em] text-[var(--ink-1)] outline-none transition-all",
+                "border-[var(--border)] placeholder:text-[var(--ink-4)]",
+                "focus:border-[var(--ink-1)] focus:shadow-[0_1px_0_rgba(255,255,255,0.6)_inset,0_0_0_5px_rgba(14,21,37,0.08)]",
+                "disabled:cursor-wait disabled:opacity-60",
+              )}
+            />
+            {inn ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setInn("");
+                  setState({ kind: "idle" });
+                }}
+                aria-label={t("clear_aria")}
+                className="absolute top-1/2 right-[14px] grid size-6 -translate-y-1/2 place-items-center rounded-md text-[var(--ink-4)] hover:bg-[var(--surface-3)] hover:text-[var(--ink-2)]"
+              >
+                <X className="size-3.5" />
+              </button>
+            ) : null}
+          </div>
+          <button
+            type="submit"
+            disabled={!isValid || isLoading}
+            className={cn(
+              "inline-flex h-[56px] items-center gap-[9px] rounded-[12px] bg-[var(--brand-primary)] px-[26px] text-[14px] font-semibold text-white shadow-[0_1px_0_rgba(255,255,255,0.1)_inset,0_10px_22px_-10px_color-mix(in_oklab,var(--brand-primary)_55%,transparent)] transition-all",
+              "hover:-translate-y-px hover:bg-[var(--brand-primary-hover)] hover:shadow-[0_1px_0_rgba(255,255,255,0.12)_inset,0_14px_28px_-10px_color-mix(in_oklab,var(--brand-primary)_70%,transparent)] disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-45 disabled:shadow-none",
+            )}
+          >
+            {isLoading ? t("submit_loading") : t("submit")}
+          </button>
+        </form>
 
-      <HintRow
-        recent={recent}
-        onChipClick={handleChipClick}
-        showHelper={state.kind === "idle"}
-        recentLabel={t("recent")}
-        enterHint={t("enter_hint")}
-      />
+        {/* Recent chips with active-spark synced на текущий result */}
+        <RecentChips
+          recent={recent}
+          activeInn={inn}
+          activePoints={activePoints}
+          onChipClick={handleChipClick}
+        />
 
-      {state.kind === "error" ? (
-        <ErrorState message={state.message} />
-      ) : state.kind === "result" ? (
-        <ResultStates result={state.data} inn={state.inn} />
-      ) : state.kind === "idle" ? (
-        <EmptyHero />
-      ) : null}
+        {state.kind === "error" ? (
+          <ErrorState message={state.message} />
+        ) : state.kind === "result" ? (
+          <ResultStates result={state.data} inn={state.inn} />
+        ) : state.kind === "idle" ? (
+          <EmptyHero />
+        ) : null}
+      </div>
     </>
   );
 }
 
 // ─────────────── Sub-views ───────────────
 
-function HintRow({
-  recent,
-  onChipClick,
-  showHelper,
-  recentLabel,
-  enterHint,
-}: {
-  recent: string[];
-  onChipClick: (inn: string) => void;
-  showHelper: boolean;
-  recentLabel: string;
-  enterHint: string;
-}) {
-  if (recent.length === 0 && !showHelper) return null;
-  return (
-    <div className="mb-8 flex flex-wrap items-center gap-3 text-[13px] text-[var(--ink-3)]">
-      {recent.length > 0 ? (
-        <>
-          <span className="text-[13px] text-[var(--ink-3)]">{recentLabel}</span>
-          {recent.map((r) => (
-            <button
-              key={r}
-              type="button"
-              onClick={() => onChipClick(r)}
-              className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-2.5 py-1 font-mono text-[12px] text-[var(--ink-2)] transition-colors hover:border-[#CBD5E1] hover:bg-[var(--surface-3)] hover:text-[var(--ink-1)]"
-            >
-              {formatInn(r)}
-            </button>
-          ))}
-        </>
-      ) : null}
-      {showHelper ? (
-        <span className="ml-auto inline-flex items-center gap-2 text-[12px] text-[var(--ink-3)]">
-          {enterHint}
-          <kbd className="rounded border border-b-2 border-[var(--border)] bg-[var(--surface)] px-1.5 py-0.5 font-mono text-[11px] text-[var(--ink-2)]">
-            Enter
-          </kbd>
-        </span>
-      ) : null}
-    </div>
-  );
-}
-
 function EmptyHero() {
   const t = useTranslations("bank.search");
   return (
-    <div className="flex flex-col items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-8 py-14 text-center">
-      <div className="grid size-10 place-items-center rounded-md bg-[var(--surface-3)] text-[var(--ink-2)]">
-        <Building className="size-5" />
+    <div className="relative overflow-hidden rounded-[16px] border border-[var(--border)] bg-[var(--surface)] px-7 py-12 text-center shadow-[0_1px_0_rgba(255,255,255,0.8)_inset,0_14px_36px_-24px_rgba(14,21,37,0.08)] animate-[rise-card_0.6s_cubic-bezier(0.16,0.84,0.44,1)_both]">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute top-[-80px] left-1/2 h-[280px] w-[460px] -translate-x-1/2"
+        style={{
+          background:
+            "radial-gradient(closest-side, color-mix(in oklab, var(--brand-primary) 9%, transparent) 0%, transparent 72%)",
+          animation: "ds-orb-drift-a 24s ease-in-out infinite",
+        }}
+      />
+      <div
+        className="relative z-[1] mx-auto mb-4 grid size-[52px] place-items-center rounded-[14px] border text-[var(--brand-primary-ink)] shadow-[0_8px_22px_-12px_color-mix(in_oklab,var(--brand-primary)_40%,transparent)]"
+        style={{
+          background:
+            "linear-gradient(135deg, var(--brand-primary-soft) 0%, color-mix(in oklab, var(--brand-primary) 18%, white) 100%)",
+          borderColor: "color-mix(in oklab, var(--brand-primary) 16%, transparent)",
+        }}
+      >
+        <Building className="size-[24px]" strokeWidth={1.7} />
       </div>
-      <h3 className="m-0 text-[16px] font-semibold tracking-[-0.01em] text-[var(--ink-1)]">
+      <h3 className="relative z-[1] m-0 mb-2 text-[18px] font-semibold tracking-[-0.015em] text-[var(--ink-1)]">
         {t("empty_hero_title")}
       </h3>
-      <p className="m-0 max-w-[56ch] text-[14px] text-[var(--ink-3)]">
+      <p className="relative z-[1] m-0 mx-auto mb-4 max-w-[54ch] text-[13.5px] leading-[1.6] text-[var(--ink-3)]">
         {t("empty_hero_text")}
       </p>
+      <div className="relative z-[1] inline-flex gap-3 text-[11.5px] text-[var(--ink-3)]">
+        <span className="inline-flex items-center gap-1.5">
+          {t("empty_hero_ex_prefix")}{" "}
+          <code className="rounded-[5px] bg-[var(--surface-3)] px-1.5 py-0.5 font-mono text-[11px] text-[var(--ink-1)]">
+            201 308 534
+          </code>
+        </span>
+        <span style={{ color: "var(--border-strong)" }}>·</span>
+        <span className="inline-flex items-center gap-1.5">
+          {t("empty_hero_ex_or")}{" "}
+          <code className="rounded-[5px] bg-[var(--surface-3)] px-1.5 py-0.5 font-mono text-[11px] text-[var(--ink-1)]">
+            123 321 123
+          </code>
+        </span>
+      </div>
     </div>
   );
 }
@@ -290,7 +288,7 @@ function ErrorState({ message }: { message: string }) {
   return (
     <div
       role="alert"
-      className="rounded-lg border border-[#FCA5A5] bg-[var(--state-bad-bg)] px-5 py-4 text-[13.5px] text-[var(--state-bad-fg)]"
+      className="rounded-lg border border-[var(--state-bad-border)] bg-[var(--state-bad-bg)] px-5 py-4 text-[13.5px] text-[var(--state-bad-fg)]"
     >
       {message}
     </div>
@@ -304,8 +302,8 @@ function ResultStates({
   result: BorrowerSearchResult;
   inn: string;
 }) {
-  if (result.found && result.dossier_id) {
-    return <FoundWithDossier result={result} inn={inn} />;
+  if (result.found && result.dossier_id && result.card) {
+    return <ResultCard result={result} inn={inn} card={result.card} />;
   }
   if (result.found) {
     return <NoDossierState inn={inn} name={result.borrower_name ?? "—"} />;
@@ -313,116 +311,19 @@ function ResultStates({
   return <NotFoundState inn={inn} />;
 }
 
-function FoundWithDossier({
-  result,
-  inn,
-}: {
-  result: BorrowerSearchResult;
-  inn: string;
-}) {
-  const t = useTranslations("bank.search");
-  const band = scoreBand(result.display_score) ?? "warn";
-  const colors: Record<"good" | "warn" | "bad", { fg: string; bg: string; line: string }> = {
-    good: { fg: "var(--state-ok-fg)", bg: "var(--state-ok-bg)", line: "#059669" },
-    warn: { fg: "var(--state-warn-fg)", bg: "var(--state-warn-bg)", line: "#D97706" },
-    bad: { fg: "var(--state-bad-fg)", bg: "var(--state-bad-bg)", line: "#DC2626" },
-  };
-  const c = colors[band];
-
-  return (
-    <div className="overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface)]">
-      <div className="grid gap-5 border-b border-[var(--border)] p-6 md:grid-cols-[1fr_auto]">
-        <div className="min-w-0">
-          <div className="mb-1.5 flex items-center gap-2 text-[13px] text-[var(--ink-3)]">
-            <Building className="size-3.5" />
-            <span className="font-mono">{formatInn(inn)}</span>
-            <span className="text-[var(--border)]">·</span>
-            <span
-              className="inline-flex items-center gap-1.5 rounded px-2 py-0.5 text-[12px] font-medium"
-              style={{ color: "var(--state-ok-fg)", background: "var(--state-ok-bg)" }}
-            >
-              <span
-                className="size-1.5 rounded-full"
-                style={{ background: "var(--state-ok-fg)" }}
-              />
-              {t("found_pill")}
-            </span>
-          </div>
-          <h2 className="m-0 text-[22px] font-semibold tracking-[-0.015em] text-[var(--ink-1)]">
-            {result.borrower_name ?? "—"}
-          </h2>
-          {result.created_at ? (
-            <p className="mt-1.5 text-[13px] text-[var(--ink-3)]">
-              {t("found_last_updated")}{" "}
-              {new Date(result.created_at).toLocaleDateString("ru", {
-                day: "2-digit",
-                month: "long",
-                year: "numeric",
-              })}
-            </p>
-          ) : null}
-        </div>
-
-        <div className="flex flex-col items-end gap-1.5 md:min-w-[180px]">
-          <span className="text-[11px] font-semibold tracking-[0.08em] text-[var(--ink-3)] uppercase">
-            {t("found_scoring_label")}
-          </span>
-          <div className="font-semibold tabular-nums text-[36px] leading-none tracking-[-0.03em] text-[var(--ink-1)]">
-            {result.display_score ?? "—"}
-            <span className="ml-1 text-[16px] font-medium text-[var(--ink-3)]">
-              / 100
-            </span>
-          </div>
-          {result.display_score != null ? (
-            <div className="block h-1.5 w-[180px] overflow-hidden rounded-full bg-[var(--surface-3)]">
-              <span
-                className="block h-full rounded-full"
-                style={{
-                  width: `${result.display_score}%`,
-                  background: c.line,
-                }}
-              />
-            </div>
-          ) : null}
-        </div>
-      </div>
-
-      <div
-        className="flex flex-wrap justify-end gap-3 p-4"
-        style={{ background: "var(--surface)" }}
-      >
-        <Link
-          href={`/dossier/${result.dossier_id}`}
-          className="inline-flex h-9 items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-[13px] font-medium text-[var(--ink-1)] transition-colors hover:bg-[var(--surface-2)]"
-        >
-          <FileText className="size-3.5" />
-          {t("found_open_dossier")}
-        </Link>
-        <Link
-          href={`/manual-input?inn=${encodeURIComponent(inn)}`}
-          className="inline-flex h-9 items-center gap-2 rounded-md bg-[var(--brand-primary)] px-3 text-[13px] font-semibold text-white transition-colors hover:bg-[var(--brand-primary-hover)]"
-        >
-          {t("found_rebuild")}
-          <ArrowRight className="size-3.5" />
-        </Link>
-      </div>
-    </div>
-  );
-}
-
 function NoDossierState({ inn, name }: { inn: string; name: string }) {
   const t = useTranslations("bank.search");
   return (
-    <div className="flex flex-col items-start gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-8">
-      <div className="grid size-10 place-items-center rounded-md bg-[var(--state-info-bg)] text-[var(--state-info-fg)]">
+    <div className="flex flex-col items-start gap-3 rounded-[16px] border border-[var(--border)] bg-[var(--surface)] p-7 animate-[rise-card_0.6s_cubic-bezier(0.16,0.84,0.44,1)_both]">
+      <div className="grid size-11 place-items-center rounded-[12px] bg-[var(--state-info-bg)] text-[var(--state-info-fg)]">
         <Info className="size-5" />
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <h3 className="m-0 text-[16px] font-semibold tracking-[-0.01em] text-[var(--ink-1)]">
+        <h3 className="m-0 text-[18px] font-semibold tracking-[-0.015em] text-[var(--ink-1)]">
           {t("no_dossier_title")}
         </h3>
         <span
-          className="rounded px-2 py-0.5 text-[12px] font-medium"
+          className="rounded-full px-2.5 py-0.5 text-[12px] font-medium"
           style={{ color: "var(--state-info-fg)", background: "var(--state-info-bg)" }}
         >
           {t("no_dossier_new_client")}
@@ -434,17 +335,17 @@ function NoDossierState({ inn, name }: { inn: string; name: string }) {
         </div>
         <div className="flex flex-wrap items-center gap-3 text-[13px]">
           <span className="font-mono text-[var(--ink-1)]">{formatInn(inn)}</span>
-          <span className="text-[var(--border)]">·</span>
+          <span className="text-[var(--border-strong)]">·</span>
           <span className="text-[var(--ink-1)]">{name}</span>
         </div>
       </div>
-      <p className="m-0 max-w-[56ch] text-[14px] text-[var(--ink-3)]">
+      <p className="m-0 max-w-[56ch] text-[13.5px] text-[var(--ink-3)]">
         {t("no_dossier_text")}
       </p>
       <div className="mt-2 flex flex-wrap gap-2">
         <Link
           href={`/manual-input?inn=${encodeURIComponent(inn)}`}
-          className="inline-flex h-8 items-center gap-1.5 rounded-md bg-[var(--brand-primary)] px-3 text-[13px] font-semibold text-white transition-colors hover:bg-[var(--brand-primary-hover)]"
+          className="inline-flex h-9 items-center gap-1.5 rounded-[9px] bg-[var(--brand-primary)] px-3 text-[13px] font-semibold text-white shadow-[0_6px_16px_-8px_color-mix(in_oklab,var(--brand-primary)_55%,transparent)] transition-all hover:-translate-y-px hover:bg-[var(--brand-primary-hover)]"
         >
           <Plus className="size-3.5" />
           {t("no_dossier_submit")}
@@ -457,21 +358,31 @@ function NoDossierState({ inn, name }: { inn: string; name: string }) {
 function NotFoundState({ inn }: { inn: string }) {
   const t = useTranslations("bank.search");
   return (
-    <div className="flex flex-col items-start gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-8">
-      <div className="grid size-10 place-items-center rounded-md bg-[var(--state-warn-bg)] text-[var(--state-warn-fg)]">
+    <div className="relative flex flex-col items-start gap-3 overflow-hidden rounded-[16px] border border-[var(--border)] bg-[var(--surface)] p-7 shadow-[0_1px_0_rgba(255,255,255,0.8)_inset,0_12px_30px_-22px_rgba(14,21,37,0.1)] animate-[rise-card_0.6s_cubic-bezier(0.16,0.84,0.44,1)_both]">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(520px 180px at 0% 0%, color-mix(in oklab, var(--state-warn-fg) 6%, transparent) 0%, transparent 72%)",
+        }}
+      />
+      <div className="relative z-[1] grid size-11 place-items-center rounded-[12px] border bg-[var(--state-warn-bg)] text-[var(--state-warn-fg)] border-[var(--state-warn-border)]">
         <FileX className="size-5" />
       </div>
-      <h3 className="m-0 text-[16px] font-semibold tracking-[-0.01em] text-[var(--ink-1)]">
+      <h3 className="relative z-[1] m-0 text-[18px] font-semibold tracking-[-0.015em] text-[var(--ink-1)]">
         {t("not_found_title")}
       </h3>
-      <p className="m-0 max-w-[56ch] text-[14px] text-[var(--ink-3)]">
-        <span className="font-mono text-[var(--ink-1)]">{formatInn(inn)}</span>{" "}
+      <p className="relative z-[1] m-0 max-w-[58ch] text-[13.5px] leading-[1.55] text-[var(--ink-3)]">
+        <span className="rounded-[4px] bg-[var(--surface-3)] px-1.5 py-0.5 font-mono text-[13px] text-[var(--ink-1)]">
+          {formatInn(inn)}
+        </span>{" "}
         {t("not_found_text")}
       </p>
-      <div className="mt-2 flex flex-wrap gap-2">
+      <div className="relative z-[1] mt-2 flex flex-wrap gap-2">
         <Link
           href={`/manual-input?inn=${encodeURIComponent(inn)}`}
-          className="inline-flex h-8 items-center gap-1.5 rounded-md bg-[var(--brand-primary)] px-3 text-[13px] font-semibold text-white transition-colors hover:bg-[var(--brand-primary-hover)]"
+          className="inline-flex h-9 items-center gap-1.5 rounded-[9px] bg-[var(--brand-primary)] px-3.5 text-[13px] font-semibold text-white shadow-[0_6px_16px_-8px_color-mix(in_oklab,var(--brand-primary)_55%,transparent)] transition-all hover:-translate-y-px hover:bg-[var(--brand-primary-hover)]"
         >
           <Plus className="size-3.5" />
           {t("not_found_submit")}
