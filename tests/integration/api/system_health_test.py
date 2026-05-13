@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 import httpx
 import pytest
 import pytest_asyncio
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from config.settings import Settings
@@ -63,9 +63,7 @@ async def test_system_health_upserts_today_row(
 ) -> None:
     """При каждом вызове создаётся / обновляется row на сегодня."""
     # Очищаем seed-row из миграции, чтобы проверить чистый INSERT-path.
-    await pg_session.execute(
-        SystemUptimeDayORM.__table__.delete()
-    )
+    await pg_session.execute(delete(SystemUptimeDayORM))
     await pg_session.flush()
 
     await api_client.get("/api/system/health")
@@ -85,7 +83,7 @@ async def test_system_health_does_not_create_duplicate_today_row(
     api_client: httpx.AsyncClient, pg_session: AsyncSession
 ) -> None:
     """Два вызова в один день — один row, last_seen_at обновлён."""
-    await pg_session.execute(SystemUptimeDayORM.__table__.delete())
+    await pg_session.execute(delete(SystemUptimeDayORM))
     await pg_session.flush()
 
     await api_client.get("/api/system/health")
