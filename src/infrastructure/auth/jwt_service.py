@@ -13,7 +13,10 @@ from uuid import UUID, uuid4
 
 from jose import JWTError, jwt
 
-TokenType = Literal["access", "refresh"]
+TokenType = Literal["access", "refresh", "mfa_challenge"]
+# `mfa_challenge` (Phase 5.B) — короткий 5-минутный JWT, выдаётся после успешной
+# password-проверки если у аналитика включён real-TOTP. Verify TOTP-code'а потом
+# проходит на /api/bank/auth/mfa/challenge, в обмен выдаются нормальные access+refresh.
 
 
 class InvalidTokenError(Exception):
@@ -46,6 +49,11 @@ class JwtService:
 
     def issue_refresh(self, analyst_id: UUID) -> str:
         return self._issue(analyst_id, "refresh", self._refresh_ttl)
+
+    def issue_mfa_challenge(self, analyst_id: UUID) -> str:
+        """5-минутный challenge-token. Короткий TTL — защита от brute-force-флоу
+        и retry-после-выхода. Срок не настраивается; жёстко прибит на 5 мин."""
+        return self._issue(analyst_id, "mfa_challenge", timedelta(minutes=5))
 
     def decode(self, token: str, *, expected_type: TokenType) -> TokenClaims:
         try:

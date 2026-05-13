@@ -8,6 +8,7 @@ use case'ами после успешной аутентификации и в `
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 from uuid import UUID
 
 
@@ -18,3 +19,6 @@ class AnalystIdentity:
     full_name: str
     role: str
     is_active: bool
+    created_at: datetime
+    password_changed_at: datetime
+    mfa_enabled: bool

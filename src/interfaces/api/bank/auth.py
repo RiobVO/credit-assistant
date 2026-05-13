@@ -18,6 +18,7 @@ from interfaces.api.bank.auth_schema import (
     AnalystResponse,
     LoginRequest,
     LoginResponse,
+    MfaRequiredResponse,
     RefreshRequest,
     RefreshResponse,
 )
@@ -41,14 +42,18 @@ def _client_ip(request: Request) -> str | None:
     return request.client.host
 
 
-@router.post("/login", response_model=LoginResponse)
+@router.post(
+    "/login",
+    response_model=LoginResponse | MfaRequiredResponse,
+    responses={401: {"description": "invalid_credentials"}},
+)
 async def login(
     payload: LoginRequest,
     request: Request,
     authn: AuthnDep,
     jwt_service: JwtServiceDep,
     audit_log: AuditLogRepoDep,
-) -> LoginResponse:
+) -> LoginResponse | MfaRequiredResponse:
     use_case = AuthenticateAnalyst(authn, jwt_service, audit_log)
     result = await use_case.execute(
         email=payload.email,
@@ -60,6 +65,13 @@ async def login(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="invalid_credentials",
         )
+    # Phase 5.B: если у user real-TOTP enrollment — НЕ выдаём access/refresh.
+    # Вместо этого короткий challenge_token (5 мин); frontend перенаправляет
+    # на step-2 «введите код», итог через /mfa/challenge.
+    if result.analyst.mfa_enabled:
+        challenge_token = jwt_service.issue_mfa_challenge(result.analyst.id)
+        return MfaRequiredResponse(challenge_token=challenge_token)
+
     return LoginResponse(
         access_token=result.access_token,
         refresh_token=result.refresh_token,
@@ -68,6 +80,9 @@ async def login(
             email=result.analyst.email,
             full_name=result.analyst.full_name,
             role=result.analyst.role,
+            created_at=result.analyst.created_at,
+            password_changed_at=result.analyst.password_changed_at,
+            mfa_enabled=result.analyst.mfa_enabled,
         ),
     )
 
@@ -116,4 +131,7 @@ async def me(analyst: CurrentAnalyst) -> AnalystResponse:
         email=analyst.email,
         full_name=analyst.full_name,
         role=analyst.role,
+        created_at=analyst.created_at,
+        password_changed_at=analyst.password_changed_at,
+        mfa_enabled=analyst.mfa_enabled,
     )
