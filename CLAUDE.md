@@ -6,7 +6,7 @@
 
 ## Current Status
 
-**Phase:** 4 закрыта (Bank Mode UI) + UI Design System sweep 2026-05-13 (Phase 0-8 плана + Phase 9 partial) + post-plan design-parity sweep 2026-05-13 (CA-066). Specs: `docs/superpowers/specs/2026-05-11-phase-4-bank-mode-design.md`, `docs/superpowers/plans/2026-05-13-ui-design-system.md`, ADR-0009, ADR-0011.
+**Phase:** 4 закрыта (Bank Mode UI) + UI Design System sweep 2026-05-13 (Phase 0-8 плана + Phase 9 partial) + post-plan design-parity sweep 2026-05-13 (CA-066) + post-CA-066 cleanup (CA-067) + CA-065 commit writer + Design Sweep 2026-05-13 (Phase 1 Login done, 9 фаз pending). Specs: `docs/superpowers/specs/2026-05-11-phase-4-bank-mode-design.md`, `docs/superpowers/plans/2026-05-13-ui-design-system.md`, ADR-0009, ADR-0011.
 
 **Активная ветка:** `main`. Серия CA-060..CA-063b (один design system + brand-layer): semantic tokens, ESLint guard hex, useAppMode shells, error boundaries, GlobalTopbar + ⌘K палитра, JetBrains Mono на KPI, pulse-dot draft-save, formatBusinessAge, login sync с brand, demo-seed 3 UZ MSB, i18n infra (next-intl + ru/uz) + полный sweep всех UI surfaces (8 ключевых в CA-063 + manual-input wizard + dossier sub-views + bank shell/settings/help + shared topbar + bank-api.recommendationLabel в CA-063b). + CA-066 post-plan design-parity: brand-context client-side, info-banner на state-info токены, ⌘K keyboard nav, dossier layout aligned with target preview (clean sub-header + Готовность как 4-й KPI, ActionBar удалён). Phase 5 (E2E папы / pilot-демо) ожидает старта.
 
@@ -63,6 +63,55 @@
 - **CA-066 dossier layout (design-parity):** `features/dossier/sub-header.tsx` — чистый `<h1>` + meta-line `ИНН · ОПФ · ОКВЭД` + правые [Пересобрать] [Скачать PDF]; убраны eyebrow `application_label`, status-badge, кнопки «Документы» / «Карточка клиента». `KpiRow` теперь 4 карточки `EBIT / ROE / Долг·EBIT / Готовность данных` (revenue_ltm выкинут — отдельная карточка не нужна, число всё равно в Раздел A карточке). `ReadinessBadge` → `ReadinessKpiCard` (4-я в KPI-row), отдельный pill сверху удалён. Нижний `ActionBar` удалён физически (`action-bar.tsx`); действия только в шапке. `back-target.ts` + `rememberBackTarget()` в search/history оставлены orphaned (no-op writes в sessionStorage), могут пригодиться при возврате back-кнопки в шапку — отдельный TODO[CA-067] на удаление если решим что не вернём.
 - **CA-066 t.rich gotcha (history pagination fix):** `t.rich(key, {x: () => <b/>})` падает с «Functions are not valid as a React child» если в message используется value-плейсхолдер `{x}` (не tag-плейсхолдер `<x></x>`). next-intl пытается подставить функцию как value → React traceback. Правильно: либо value-плейсхолдер `{x}` + value-substitution через `t(key, {x: 42})` (но тогда нельзя ReactNode), либо tag-плейсхолдер `<x>{value}</x>` + `t.rich(key, {value, x: (chunks) => <b>{chunks}</b>})`. Применяй tag-syntax везде где нужна обёртка вокруг подстановки.
 - **CA-063 i18n infra:** `next-intl` 4.4.1, статичная локаль через `NEXT_PUBLIC_LOCALE` env (ru | uz), один UI-язык на инсталляцию (без routing-switcher). Keys в `web/src/i18n/{ru,uz}.json`, keyspace разбит на `shared/bank/accountant/dossier`. Loader `web/src/i18n/index.ts`, server-config `web/src/i18n/request.ts`, plugin в `next.config.ts` (`createNextIntlPlugin("./src/i18n/request.ts")`). `NextIntlClientProvider` в `RootLayout` оборачивает `<Providers>`. `<html lang>` берётся из resolved locale. **Useпаттерн:** client → `import { useTranslations } from "next-intl"; const t = useTranslations("section");`. Server → `import { getTranslations } from "next-intl/server"; const t = await getTranslations("section");`. **Тесты:** RTL-тесты на компонент с `t()` оборачивать в `<NextIntlClientProvider locale="ru" messages={ru}>` (см. `global-topbar.test.tsx`). Swept ru-strings → keys в 8 surfaces (bank sidebar, search-view, history-view, login-view, accountant sidebar, GlobalTopbar, CommandPalette, DossierError + error/not-found pages); остальное — TODO[CA-063b]. **Brand-strings типа «Uzbekbank Credit», «CreditScope», «Bank Mode · Андижон» — НЕ локализуются**, это tenant-config (`config/brands/<id>.json#name|tagline`) или ad-hoc copy.
+
+---
+
+## Design Sweep 2026-05-13 (10 фаз, in-progress)
+
+**Процесс:** 1 фаза = preview HTML в `web/design-reference/2026-05-13-{phase}-preview.html` → user approves → 1 commit → переход к следующей. Строго по очереди, без перепрыгивания.
+
+**Фазы (по E2E flow аналитика + sub-views):**
+
+| # | Phase | Status | Preview file | Commit |
+|---|---|---|---|---|
+| 1 | Login | done | `2026-05-13-login-phase1-preview.html` | TBD-commit |
+| 2 | Search | pending | — | — |
+| 3 | History | pending | — | — |
+| 4 | Help | pending | — | — |
+| 5 | Settings | pending | — | — |
+| 6 | Manual-input Step 1 (Borrower) | pending | — | — |
+| 7 | Manual-input Step 2 (Financial) | pending | — | — |
+| 8 | Manual-input Step 3 (Loan) | pending | — | — |
+| 9 | Dossier view | pending | — | — |
+| 10 | PDF document | pending | — | — |
+
+### Phase 1 — Login (scope) — DONE 2026-05-13
+
+**Final values (decided 2026-05-13):** subtle scale-up (≤+9%, card-width только +2.9%, padding unchanged). Card footprint почти оригинальный, content — title/inputs/CTA — увеличен. Все animations сохранены (drift A/B, mousemove spotlight, parallax card, pulse-dot, focus rings).
+
+Изменения (9 значений):
+- Card `max-width` 384px → **395px** (+2.9%)
+- Card padding 36/32 → **36/32** (unchanged)
+- Title (h1) 28px → **30px** (+7%)
+- Subtitle 13px → **13.5px** (+4%)
+- Input height 44px → **48px** (+9%), font 13.5px → **14px** (+4%)
+- Label font 10.5px → **11px** (+5%)
+- CTA height 46px → **50px** (+9%), font 13.5px → **14px** (+4%)
+- Form gap 14px → **15px** (+7%)
+
+**Out-of-scope (отложено на cross-phase tech-debt, см. ниже):** #1 brand-context wiring, #2 mock-кнопки (Remember-me/Forgot-password), #3 outline CTA → filled, #4 «AUTHENTICATION» i18n, #5 hardcoded © 2026 + tenant.
+
+**Files changed:** `web/src/app/login/_components/login.module.css`.
+
+### Cross-phase technical debt (открытый список)
+
+Issues которые я нашёл в аудитах но user решил оставить — фиксируем чтобы не потерять. Можно вернуться к ним отдельным sweep после design-фаз.
+
+- **CA-DS1 (login):** Brand «UB / Uzbekbank Credit / BANK MODE» захардкожены в `LoginView.tsx`. CA-066 brand-context до Login не дошёл. На любом не-UB tenant сломает Phase 5 pilot demo. Fix: `useBrand()` для brand-mark + name + tagline.
+- **CA-DS2 (login):** «Запомнить» checkbox + «Забыли пароль?» link — оба no-op (mock). Либо implement, либо удалить.
+- **CA-DS3 (login):** Eyebrow «AUTHENTICATION» — единственный english string в UI. CA-063b sweep пропустил.
+- **CA-DS4 (login):** `© 2026 Uzbekbank` — год + tenant hardcoded. `placeholder="имя@uzbekbank.uz"` тоже. Заменить на `getFullYear()` + brand-config + i18n.
+- **CA-DS5 (login CSS):** ~25 hex значений в `login.module.css` (dark-theme tokens), ESLint guard CSS не покрывает. Нужен dark-theme semantic слой.
 
 ---
 
