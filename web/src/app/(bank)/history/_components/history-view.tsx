@@ -15,10 +15,9 @@ import {
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { BankPageHead } from "@/app/(bank)/_components/page-head";
-import { rememberBackTarget } from "@/features/dossier/back-target";
 import {
   type BankDossierListItem,
   type ListFilter,
@@ -114,10 +113,6 @@ export function HistoryView() {
   const [recFilter, setRecFilter] = useState<RecFilter>("all");
   const [dateFilter, setDateFilter] = useState<DateFilter>("30");
   const [page, setPage] = useState(1);
-
-  useEffect(() => {
-    rememberBackTarget("/history");
-  }, []);
 
   const main = useQuery({
     queryKey: ["bank", "dossiers", { filter, q: appliedQ, page }],

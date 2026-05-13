@@ -15,7 +15,6 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { BankPageHead } from "@/app/(bank)/_components/page-head";
-import { rememberBackTarget } from "@/features/dossier/back-target";
 import {
   type BorrowerSearchResult,
   scoreBand,
@@ -92,7 +91,6 @@ export function SearchView() {
   const [recent, setRecent] = useState<string[]>([]);
 
   useEffect(() => {
-    rememberBackTarget("/search");
     // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage post-mount load; init со SSR [] для избежания hydration-mismatch
     setRecent(loadRecent());
   }, []);
