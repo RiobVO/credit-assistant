@@ -37,8 +37,11 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
 
 # Теперь исходники + конфиг Alembic + YAML-правила (registry грузит на старте).
+# scripts/ — operational tooling (seed_demo_borrowers, etc.), запускается из
+# /app с PYTHONPATH=/app/src. `_smoke_*` остаются вне image (gitignored, dev-only).
 COPY src/ ./src/
 COPY config/ ./config/
+COPY scripts/ ./scripts/
 COPY alembic.ini ./
 
 # Финальная установка проекта (после COPY src — иначе уплыл бы в кеш).
