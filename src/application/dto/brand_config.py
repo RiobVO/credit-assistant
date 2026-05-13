@@ -83,3 +83,6 @@ class BrandConfig:
     # BrandConfig без новых секций.
     support: SupportConfig | None = None
     business_hours: BusinessHours | None = None
+    # T0.4 / ADR-0015: per-tenant дефолтная локаль PDF-досье. ``None`` →
+    # fallback на "ru". ``uzbekbank`` brand-tenant получает "uz" — UZ-демо.
+    default_lang: str | None = None

@@ -136,3 +136,32 @@ def test_support_not_an_object_raises(
     _write_brand(tmp_path, monkeypatch, payload)
     with pytest.raises(BrandConfigError, match="'support' must be an object"):
         load_brand("minimal")
+
+
+# T0.4 / ADR-0015: optional defaultLang.
+
+
+def test_brand_default_lang_none_when_absent() -> None:
+    """default.json без defaultLang → None (endpoint fallback на 'ru')."""
+    brand = load_brand("default")
+    assert brand.default_lang is None
+
+
+def test_brand_default_lang_parsed_when_uz(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    payload = dict(_MINIMAL_BRAND)
+    payload["defaultLang"] = "uz"
+    _write_brand(tmp_path, monkeypatch, payload)
+    brand = load_brand("minimal")
+    assert brand.default_lang == "uz"
+
+
+def test_brand_default_lang_invalid_raises(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    payload = dict(_MINIMAL_BRAND)
+    payload["defaultLang"] = "en"
+    _write_brand(tmp_path, monkeypatch, payload)
+    with pytest.raises(BrandConfigError, match="defaultLang"):
+        load_brand("minimal")

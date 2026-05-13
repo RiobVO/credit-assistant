@@ -4,6 +4,10 @@
 ``GET /api/dossier/{id}``, плюс ``WeasyPrintPdfRenderer`` за
 ``PdfReportPort``-портом.
 
+T0.4 / ADR-0015: ``?lang=ru|uz`` query param определяет локаль рендера.
+Fallback chain: ``query.lang → brand.default_lang → "ru"``. Audit-log
+``download_pdf`` payload включает resolved ``lang`` для compliance трейла.
+
 WeasyPrint требует Pango/HarfBuzz (см. ADR 0008). На Windows-хосте без GTK
 endpoint вернёт 503 при первом обращении, в Docker (compose-сервис ``api``)
 работает штатно.
@@ -12,13 +16,14 @@ endpoint вернёт 503 при первом обращении, в Docker (com
 from __future__ import annotations
 
 from functools import lru_cache
+from typing import Literal
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import Response
 
 from application.use_cases.load_dossier_for_view import LoadDossierForView
-from application.use_cases.render_dossier_pdf import RenderDossierPdf
+from application.use_cases.render_dossier_pdf import Lang, RenderDossierPdf
 from infrastructure.brand.brand_config import load_brand
 from infrastructure.i18n.pdf_messages import default_pdf_messages
 from infrastructure.persistence.repositories.audit_log_repository import (
@@ -31,11 +36,23 @@ from interfaces.api.shared.dossier_storage import SessionDep, StorageDep
 
 router = APIRouter(prefix="/api", tags=["dossier"])
 
+LangQuery = Literal["ru", "uz"]
+_DEFAULT_LANG: Lang = "ru"
+
 
 @lru_cache(maxsize=1)
 def _get_pdf_renderer() -> WeasyPrintPdfRenderer:
     """Singleton: Jinja2 Environment + filter registry создаются один раз."""
     return WeasyPrintPdfRenderer()
+
+
+def _resolve_lang(query_lang: LangQuery | None, brand_default: str | None) -> Lang:
+    """T0.4: query > brand.default_lang > "ru"."""
+    if query_lang is not None:
+        return query_lang
+    if brand_default in ("ru", "uz"):
+        return brand_default  # type: ignore[return-value]
+    return _DEFAULT_LANG
 
 
 @router.get(
@@ -54,19 +71,28 @@ async def download_dossier_pdf(
     storage: StorageDep,
     session: SessionDep,
     analyst: OptionalAnalyst,
+    lang: LangQuery | None = Query(  # noqa: B008
+        default=None,
+        description=(
+            "Локаль PDF. ``ru`` или ``uz``. Если не задана — резолвится из "
+            "``brand.default_lang`` (см. ``config/brands/<id>.json``); итоговый "
+            "fallback — ``ru``."
+        ),
+    ),
 ) -> Response:
+    brand = load_brand()
+    effective_lang = _resolve_lang(lang, brand.default_lang)
+
     use_case = RenderDossierPdf(
         loader=LoadDossierForView(storage.dossier),
         renderer=_get_pdf_renderer(),
         rule_registry=get_rule_registry(),
         brand_loader=load_brand,
-        # T0.4 / ADR-0015: default_pdf_messages — singleton с lru_cache(maxsize=2)
-        # на ru+uz. ``?lang=`` query param добавляется в commit 8.
         pdf_messages_loader=default_pdf_messages,
     )
 
     try:
-        pdf_bytes = await use_case.execute(dossier_id)
+        pdf_bytes = await use_case.execute(dossier_id, lang=effective_lang)
     except OSError as exc:
         # WeasyPrint падает с OSError при отсутствии libpango/libgobject —
         # отдаём осмысленный 503 вместо 500.
@@ -88,6 +114,7 @@ async def download_dossier_pdf(
             analyst_id=analyst.id,
             target_type="dossier",
             target_id=dossier_id,
+            payload={"lang": effective_lang},
         )
 
     filename = _build_filename(dossier_id)

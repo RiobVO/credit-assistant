@@ -90,6 +90,21 @@ def _parse_business_hours(raw: object) -> BusinessHours | None:
         raise BrandConfigError(f"missing key in businessHours: {exc}") from exc
 
 
+def _parse_default_lang(raw: object) -> str | None:
+    """T0.4 / ADR-0015: ``defaultLang`` — опциональное поле в brand-config.
+
+    Принимает только {"ru", "uz"} (whitelist matches PdfMessages loader).
+    None → endpoint резолвит fallback на "ru".
+    """
+    if raw is None:
+        return None
+    if not isinstance(raw, str) or raw not in ("ru", "uz"):
+        raise BrandConfigError(
+            f"'defaultLang' must be 'ru' or 'uz', got {raw!r}"
+        )
+    return raw
+
+
 def load_brand(brand_id: str | None = None) -> BrandConfig:
     """Резолвит brand-config по id. None → env ``BRAND_ID`` → ``default``.
 
@@ -117,6 +132,7 @@ def load_brand(brand_id: str | None = None) -> BrandConfig:
             primary_ring=raw["primaryRing"],
             support=_parse_support(raw.get("support")),
             business_hours=_parse_business_hours(raw.get("businessHours")),
+            default_lang=_parse_default_lang(raw.get("defaultLang")),
         )
     except KeyError as exc:
         raise BrandConfigError(f"missing key in {path}: {exc}") from exc
