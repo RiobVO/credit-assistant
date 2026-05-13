@@ -11,11 +11,18 @@ import {
   X,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { BankPageHead } from "@/app/(bank)/_components/page-head";
 import { LiveStrip } from "@/features/search/live-strip";
+
+// Pure decoration — lazy-load, без SSR (тогда нет flash при route mount).
+const GridPattern = dynamic(
+  () => import("@/features/search/grid-pattern").then((m) => m.GridPattern),
+  { ssr: false },
+);
 import {
   formatRelativeTime,
   isFreshTime,
@@ -155,6 +162,8 @@ export function HistoryView() {
 
   return (
     <>
+      <GridPattern tone="brand" />
+      <div className="relative z-[1]">
       <BankPageHead
         title={t("title")}
         subtitle={t("subtitle")}
@@ -249,6 +258,7 @@ export function HistoryView() {
           />
         ) : null}
       </section>
+      </div>
     </>
   );
 }
