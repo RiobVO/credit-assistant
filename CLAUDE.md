@@ -7,6 +7,8 @@
 
 ## Current Status
 
+**T0.4 (UZ-локализация PDF) закрыт 2026-05-18 базово**, но live-browser walkthrough на BR-EDFD выявил 5 gaps в локализации (B1–B5) — частично fix'ы внесены, осталось 4 task'а в активной работе. См. секцию «T0.4 follow-up» ниже. Tier 1 на паузе до закрытия B1+B2+B3+B4.
+
 **Phase 10 (PDF document) закрыта 2026-05-15** (`a8f2b66`, CI `25934169074`). Финальная фаза Design Sweep — credit memorandum aesthetic: hero decision-block, observations pros/cons split, Section A identity hero с avatar + 3 stat tiles, brand-tenant через `BRAND_ID` env → `config/brands/<id>.json`, F-секция рендерит `rule.name` из YAML.
 
 **Direction B (Design Sweep tail) — 8 batch'ей закрыто 2026-05-16:**
@@ -40,12 +42,48 @@ Heads-up: **live-browser smoke** через `/`, `/search`, `/history`, `/dossie
 
 **Активная ветка:** `main`.
 
+**Stack state на 2026-05-18:**
+- Docker compose поднят: `credit-api` (8000), `credit-postgres` (5433), `credit-redis` (6379). Все healthy.
+- Backend `APP_MODE=bank`, `BRAND_ID=default` (default brand без `defaultLang` — fallback на «ru»; `uzbekbank.json` пока тоже без `defaultLang`, добавится после UZ-демо validation).
+- Frontend Next dev (Turbopack) `npm run dev` в web/ — порт 3000.
+- Seeded analyst для smoke: **email `t04@bank.uz`** / **password `T04Smoke!`**, без MFA.
+- Существующих dossier'ов в БД: 5. Главный smoke-target — **BR-2026-0081** («кадр дон нон», ИНН 201308534, 4 red flags, score 50, recommendation REVIEW).
+- Папка `smoke-pdfs/` (в .gitignore) — три PDF сравнения ru/uz/nolang.
+
+**Hotfix внутри сессии 2026-05-18:**
+- `5eccce6` — T0.3 integration test auth contract (URL prefix `/api/auth/login` → `/api/bank/auth/login` + Authorization header instead of cookie). CI с T0.3 closure был красный 5 коммитов подряд.
+- `5a873d0` — `httpx` в production deps (T0.2 regression: cbu_client делал `import httpx` на runtime, а dep лежал только в `[dependency-groups.dev]` → Docker `uv sync --no-dev` падал на ModuleNotFoundError при первом импорте). Pyproject + uv.lock обновлены.
+
 ---
 
 ## Pre-Demo Roadmap
 
 > **Полный документ:** `docs/pre-demo-roadmap.md` (Tier-декомпозиция, acceptance, заблокированные, backlog).
 > **Critical rule:** работаю ТОЛЬКО над активным Tier. Всё что не в Tier 0–4 — Frozen.
+
+### T0.4 follow-up — UZ-локализация gaps (Active)
+
+После закрытия T0.4 base scope (8 коммитов до `a7de8a3`) live-browser walkthrough на BR-EDFD (UZ-mode dossier UI + PDF) выявил, что **«UZ everywhere»** не достигнут — ADR-0015 покрыл PDF chrome + observations, но пропустил несколько кластеров hardcoded RU. Closer audit нашёл 5 багов:
+
+**Уже закрыто follow-up'ом:**
+- `0d29e58` — frontend `?lang=` forwarding из cookie `ca_locale` в SubHeader + BFF route.
+- `8985ac3` — LocaleSwitcher в BankTopbar (был только в GlobalTopbar — bank-shell не покрывался).
+- `8de5b95` — `/settings` «Язык интерфейса» row реагирует на `useLocale()` (был хардкод `t("locale_ru_full")`).
+
+**Открытый backlog (Active — Tier 1 на паузе):**
+- **B1 source_uz** — `Rule.source` хардкод RU/EN mix. ADR-0015 покрыл `name_uz`, но `source` поле в YAML — single field. Тратебуется `RuleSpecYaml.source_uz: str = Field(min_length=1)` + 19 source-cite на ревью. **Compliance-конвенция**: regulatory doc names («ЦБ РУз положение №27-п», «Базель III IRB», «Group-IB Uzbekistan fraud report 2024-2025») **не переводятся** — только descriptive phrases. Большая часть source_uz будет identical to source.
+- **B2 RedFlag.message** — 16 файлов в `src/domain/rules/**/*.py` имеют `message=f"..."` хардкод на RU. Tabular review + переход на `messages.X.format(...)` поверх `PdfMessages` (аналогично observations_builder rewrite в T0.4 commit 6). Backend domain rules + новые ключи в `config/pdf-i18n/{ru,uz}.json` + новые ключи в `web/src/i18n/{ru,uz}.json` (UI читает message из API). Frontend `flag.description` уже бы получал локализованный — gap derives from backend.
+- **B3 OKVED locale picker** (изолированный) — `pdf_renderer.py:_resolve_okved` хардкодит `entry.short_ru` / `entry.full_ru`. Каталог имеет `short_uz` / `full_uz` (CA-DS17). Фикс: передать `messages.locale` или `bundle.lang` в `_resolve_okved`, switch picker. Без ревью.
+- **B4 formatBigUzs локализация** (изолированный) — `web/src/features/dossier/format.ts:formatBigUzs` хардкодит «млрд / млн / тыс / сум» на кириллице. Callers — KPI tiles dossier-view, search sparkline, manual-input financial table. Фикс: `formatBigUzs(amount, locale)` или новые i18n keys + `useLocale()` в callers. Без ревью.
+
+**Workflow agreed 2026-05-18:**
+- B3 + B4 → один коммит сейчас, без ревью.
+- B1 source_uz → tabular review (короткий: большинство rows = identical-copy citation).
+- B2 RedFlag.message → tabular review (16 messages, как 19 rules в T0.4 commit 3).
+
+**Lessons:**
+- Перед мержем claim «X everywhere» обязательно `grep -rn` на hardcoded strings того класса, который локализуется. Я провалил это 3 раза (T0.4 base, LocaleSwitcher в BankTopbar, locale_full в Settings) — паттерн `feedback_nested_anchor_rtl_blind` extends: RTL/jsdom не ловит «забыл прокинуть» в shared-зоне consumers.
+- Memory `feedback_dont_pause_between_commits.md` + `feedback_nbsp_write_loses_literal.md` добавлены 2026-05-18.
 
 ### Active Tier 0 — Deal-breakers
 - **T0.1** Real soliq fixtures via personal ETSP (3–4 фирмы × 5 типов = 15–20 xltx, gitignore + анонимизированные в git). Инфра готова (`6ee7a12`), 3 фирмы (22 файла) на месте, см. `tests/parsers/real_xltx_test.py`.
