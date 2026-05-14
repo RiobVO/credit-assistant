@@ -1,16 +1,74 @@
 "use client";
 
-import { differenceInDays, parse, isValid } from "date-fns";
-import { CheckCircle2, Search, TriangleAlert } from "lucide-react";
+import { differenceInDays, isValid, parse } from "date-fns";
+import {
+  Building2,
+  CheckCircle2,
+  ChevronDown,
+  Loader2,
+  TriangleAlert,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
-import { Controller, useFormContext } from "react-hook-form";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import {
+  Controller,
+  useFormContext,
+  useWatch,
+} from "react-hook-form";
 
 import { cn } from "@/lib/utils";
 
 import { formatBusinessAge } from "../lib/duration";
-import { type FormValues, legalForms } from "../schema";
+import { type FormValues, type Step1Values } from "../schema";
 
-import { Field, FieldInput, fieldInputClass } from "./field";
+import { DatePicker } from "./date-picker";
+import { Field, FieldInput } from "./field";
+
+// Phase 6 Step 1 design statement: section-card в стиле Phase 4 (leading
+// icon-tile + counter), ИНН 3-state (idle/checking/verified) с mock GNK
+// lookup, OKVED autocomplete (поверх hardcoded списка — TODO[CA-DS17] на
+// real catalog endpoint), ОПФ как segmented radio, custom date picker для
+// дат (без native <input type="date">).
+//
+// Сохранено: CA-038 (≥15 симв + цифра), CA-039 (isRecentDirectorAppointment
+// + amber warning), CA-058 prefill через sessionStorage.
+
+const CHECK_DELAY_MS = 700;
+
+// TODO[CA-DS17]: вынести каталог ОКВЭД (УзКВЭД 2024 редакция) в backend-
+// endpoint /api/system/okved-catalog или статичный JSON в config/. Сейчас
+// 16 наиболее частых для МСБ-сегмента кодов хардкодом — этого хватает для
+// papa-фирм (ритейл / общепит / производство / IT-услуги).
+const OKVED_UZ_MSB: ReadonlyArray<{ code: string; descKey: string }> = [
+  { code: "47.11", descKey: "okved_47_11" },
+  { code: "47.19", descKey: "okved_47_19" },
+  { code: "10.71", descKey: "okved_10_71" },
+  { code: "13.10", descKey: "okved_13_10" },
+  { code: "14.13", descKey: "okved_14_13" },
+  { code: "41.20", descKey: "okved_41_20" },
+  { code: "43.39", descKey: "okved_43_39" },
+  { code: "45.20", descKey: "okved_45_20" },
+  { code: "46.31", descKey: "okved_46_31" },
+  { code: "49.41", descKey: "okved_49_41" },
+  { code: "52.10", descKey: "okved_52_10" },
+  { code: "56.10", descKey: "okved_56_10" },
+  { code: "62.01", descKey: "okved_62_01" },
+  { code: "68.20", descKey: "okved_68_20" },
+  { code: "85.10", descKey: "okved_85_10" },
+  { code: "86.21", descKey: "okved_86_21" },
+];
+
+const OPF_OPTIONS = [
+  { code: "llc" as const, shortKey: "opf_llc_short" },
+  { code: "ie" as const, shortKey: "opf_ie_short" },
+  { code: "jsc" as const, shortKey: "opf_jsc_short" },
+];
 
 export function Step1Borrower() {
   const t = useTranslations("accountant.manual_input");
@@ -18,232 +76,577 @@ export function Step1Borrower() {
     register,
     control,
     formState: { errors, touchedFields },
-    watch,
+    setValue,
   } = useFormContext<FormValues>();
 
-  const innValue = watch("step1.inn");
-  const innValid = /^\d{9}$/.test(innValue ?? "");
-
-  const regDate = watch("step1.registrationDate");
-  const apptDate = watch("step1.directorAppointedAt");
+  // Чтобы counter (заполнено N/8) обновлялся живо, держим всю под-форму Шага 1
+  // в watch. Перерасчёт счётчика дёшев — 8 boolean-проверок.
+  const step1 = useWatch({ control, name: "step1" });
 
   const innErr = errors.step1?.inn?.message;
+  const innTouched = touchedFields.step1?.inn;
   const nameErr = errors.step1?.name?.message;
   const regErr = errors.step1?.registrationDate?.message;
   const okvedErr = errors.step1?.okvedMain?.message;
   const dirErr = errors.step1?.directorName?.message;
   const apptErr = errors.step1?.directorAppointedAt?.message;
   const addrErr = errors.step1?.registeredAddress?.message;
-  const innTouched = touchedFields.step1?.inn;
+
+  const filledCount = useMemo(() => countFilled(step1), [step1]);
+
+  // Bound для date-picker'а назначения директора — не раньше регистрации.
+  const apptMin = useMemo(() => parseIsoSafe(step1?.registrationDate), [step1?.registrationDate]);
 
   return (
-    <section className="rounded-[10px] border border-[var(--border)] bg-[var(--surface)] shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
-      <header className="flex items-center gap-2.5 border-b border-[var(--border)] px-[22px] py-[18px]">
+    <section className="rounded-[14px] border border-[var(--border)] bg-[var(--surface)] overflow-hidden">
+      <header className="grid grid-cols-[40px_1fr_auto] items-center gap-[14px] border-b border-[var(--border)] bg-gradient-to-b from-white to-[var(--surface-2)] px-[22px] py-[16px]">
+        <div className="grid size-9 place-items-center rounded-[10px] bg-[var(--brand-primary-soft)] text-[var(--brand-primary-ink)]">
+          <Building2 className="size-[18px]" />
+        </div>
         <div>
-          <h2 className="m-0 text-[15px] font-semibold text-[var(--ink-1)]">
+          <h2 className="m-0 text-[15px] font-semibold tracking-[-0.005em] text-[var(--ink-1)]">
             {t("s1_section_title")}
           </h2>
           <p className="m-0 mt-0.5 text-[12.5px] text-[var(--ink-3)]">
             {t("s1_section_sub")}
           </p>
         </div>
+        <div className="text-right">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--ink-4)]">
+            {t("s1_filled_label")}
+          </div>
+          <div className="mt-1 flex items-center justify-end gap-1.5">
+            <div className="relative h-1 w-[60px] overflow-hidden rounded-[2px] bg-[var(--surface-3)]">
+              <div
+                className="absolute inset-y-0 left-0 rounded-[2px] bg-[var(--brand-primary)] transition-[width] duration-[240ms]"
+                style={{ width: `${(filledCount / 8) * 100}%` }}
+              />
+            </div>
+            <span className="font-mono text-[11.5px] font-bold text-[var(--brand-primary)] tabular-nums">
+              {t("s1_filled_value", { filled: filledCount, total: 8 })}
+            </span>
+          </div>
+        </div>
       </header>
 
-      <div className="p-[22px]">
-        <div className="grid grid-cols-1 gap-x-5 gap-y-[18px] md:grid-cols-2">
-          {/* ИНН */}
-          <Field
-            label={t("s1_inn_label")}
-            required
-            help={t("s1_inn_help")}
-            error={innTouched ? innErr : undefined}
-            badge={
-              innValid ? (
-                <span className="inline-flex items-center gap-1 rounded-full border border-[#BFE2D2] bg-[var(--state-ok-bg)] px-[7px] py-px text-[11.5px] font-semibold text-[var(--state-ok-fg)]">
-                  <CheckCircle2 className="size-3" />
-                  {t("s1_inn_badge_verified")}
-                </span>
-              ) : null
-            }
-          >
-            <div className="relative flex items-center">
-              <input
-                {...register("step1.inn")}
-                inputMode="numeric"
-                maxLength={9}
-                placeholder="123456789"
-                className={cn(
-                  fieldInputClass,
-                  "pr-[38px] font-mono tracking-[0.5px]",
-                  innValid &&
-                    "border-[#7CC2A6] focus:shadow-[0_0_0_3px_rgba(15,138,95,0.15)]",
-                )}
+      <div className="grid grid-cols-1 gap-x-5 gap-y-[18px] p-[22px] md:grid-cols-2">
+        {/* ИНН */}
+        <Field
+          label={t("s1_inn_label")}
+          required
+          error={innTouched ? innErr : undefined}
+        >
+          <Controller
+            control={control}
+            name="step1.inn"
+            render={({ field }) => (
+              <InnInput
+                value={field.value ?? ""}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                invalid={Boolean(innTouched && innErr)}
               />
-              {innValid ? (
-                <div className="pointer-events-none absolute right-[10px]">
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="var(--state-ok-fg)"
-                    strokeWidth="2.2"
-                  >
-                    <circle
-                      cx="12"
-                      cy="12"
-                      r="9.5"
-                      fill="var(--state-ok-bg)"
-                      stroke="var(--state-ok-stroke)"
-                    />
-                    <path d="m7.5 12.2 3 3 6-6.5" />
-                  </svg>
-                </div>
-              ) : null}
-            </div>
-          </Field>
+            )}
+          />
+        </Field>
 
-          {/* Наименование */}
-          <Field
-            label={t("s1_name_label")}
-            required
-            help={t("s1_name_help")}
-            error={nameErr}
-          >
-            <FieldInput
-              {...register("step1.name")}
-              placeholder={t("s1_name_placeholder")}
-              invalid={Boolean(nameErr)}
-            />
-          </Field>
+        {/* Наименование */}
+        <Field
+          label={t("s1_name_label")}
+          required
+          help={t("s1_name_help")}
+          error={nameErr}
+        >
+          <FieldInput
+            {...register("step1.name")}
+            placeholder={t("s1_name_placeholder")}
+            invalid={Boolean(nameErr)}
+          />
+        </Field>
 
-          {/* ОПФ */}
-          <Field label={t("s1_opf_label")} required>
-            <Controller
-              control={control}
-              name="step1.legalForm"
-              render={({ field }) => (
-                <div className="relative">
-                  <select
-                    {...field}
-                    className={cn(
-                      fieldInputClass,
-                      "appearance-none pr-9",
-                    )}
-                  >
-                    {legalForms.map((opf) => (
-                      <option key={opf.code} value={opf.code}>
-                        {opf.label}
-                      </option>
-                    ))}
-                  </select>
-                  <span
-                    aria-hidden
-                    className="pointer-events-none absolute top-1/2 right-[14px] size-2 -translate-y-[70%] rotate-45 border-r-[1.5px] border-b-[1.5px] border-[var(--ink-3)]"
-                  />
-                </div>
-              )}
-            />
-          </Field>
+        {/* ОПФ — segmented */}
+        <Field
+          label={t("s1_opf_label")}
+          required
+          help={t("s1_opf_help")}
+        >
+          <Controller
+            control={control}
+            name="step1.legalForm"
+            render={({ field }) => (
+              <OpfSegmented value={field.value} onChange={field.onChange} />
+            )}
+          />
+        </Field>
 
-          {/* Дата регистрации */}
-          <Field
-            label={t("s1_reg_label")}
-            required
-            help={formatBusinessAgeHint(regDate, t("s1_reg_age_prefix"))}
-            error={regErr}
-          >
-            <FieldInput
-              {...register("step1.registrationDate")}
-              type="date"
-              max={todayIso()}
-              invalid={Boolean(regErr)}
-            />
-          </Field>
-
-          {/* ОКВЭД */}
-          <Field
-            label={t("s1_okved_label")}
-            required
-            help={t("s1_okved_help")}
-            error={okvedErr}
-          >
-            <div className="relative flex items-center">
-              <input
-                {...register("step1.okvedMain")}
-                placeholder={t("s1_okved_placeholder")}
-                className={cn(
-                  fieldInputClass,
-                  "pr-[38px] font-mono",
-                )}
+        {/* Дата регистрации */}
+        <Field
+          label={t("s1_reg_label")}
+          required
+          help={formatBusinessAgeHint(step1?.registrationDate, t("s1_reg_age_prefix"))}
+          error={regErr}
+        >
+          <Controller
+            control={control}
+            name="step1.registrationDate"
+            render={({ field }) => (
+              <DatePicker
+                value={field.value || undefined}
+                onChange={(iso) => {
+                  field.onChange(iso ?? "");
+                  // Если новая регистрация позже текущего назначения директора —
+                  // чистим назначение, чтобы пользователь не оставил невалидный
+                  // refine ("назначение раньше регистрации" из schema).
+                  const appt = parseIsoSafe(step1?.directorAppointedAt);
+                  const reg = parseIsoSafe(iso);
+                  if (appt && reg && appt < reg) {
+                    setValue("step1.directorAppointedAt", "", { shouldDirty: true });
+                  }
+                }}
+                max={new Date()}
+                invalid={Boolean(regErr)}
+                placeholder={t("s1_date_placeholder")}
+                ariaLabel={t("s1_reg_label")}
               />
-              <Search className="pointer-events-none absolute right-[10px] size-4 text-[var(--ink-3)]" />
-            </div>
-          </Field>
+            )}
+          />
+        </Field>
 
-          {/* Директор */}
-          <Field
-            label={t("s1_director_label")}
-            required
-            help={t("s1_director_help")}
-            error={dirErr}
-          >
-            <FieldInput
-              {...register("step1.directorName")}
-              placeholder={t("s1_director_placeholder")}
-              invalid={Boolean(dirErr)}
-            />
-          </Field>
+        {/* ОКВЭД autocomplete */}
+        <Field
+          label={t("s1_okved_label")}
+          required
+          help={t("s1_okved_help")}
+          error={okvedErr}
+        >
+          <Controller
+            control={control}
+            name="step1.okvedMain"
+            render={({ field }) => (
+              <OkvedAutocomplete
+                value={field.value ?? ""}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                invalid={Boolean(okvedErr)}
+              />
+            )}
+          />
+        </Field>
 
-          {/* Дата назначения */}
-          <Field
-            label={t("s1_appt_label")}
-            required
-            help={formatBusinessAgeHint(apptDate, t("s1_appt_age_prefix"))}
-            error={apptErr}
-          >
-            <FieldInput
-              {...register("step1.directorAppointedAt")}
-              type="date"
-              min={regDate || undefined}
-              max={todayIso()}
-              invalid={Boolean(apptErr)}
-            />
-            {/* CA-039: pre-warning — формальной error нет, поле валидно,
-                но смена директора <90 дней — будущий risk signal в досье. */}
-            {!apptErr && isRecentDirectorAppointment(apptDate) ? (
-              <div
-                role="note"
-                className="mt-1.5 inline-flex items-start gap-1.5 rounded-md border border-[#F1D9A6] bg-[#FFF6E5] px-2 py-1 text-[12px] text-[var(--state-warn-fg)]"
-              >
-                <TriangleAlert className="mt-px size-3.5 shrink-0" />
-                <span>{t("s1_recent_director_warning")}</span>
-              </div>
-            ) : null}
-          </Field>
+        {/* Директор */}
+        <Field
+          label={t("s1_director_label")}
+          required
+          help={t("s1_director_help")}
+          error={dirErr}
+        >
+          <FieldInput
+            {...register("step1.directorName")}
+            placeholder={t("s1_director_placeholder")}
+            invalid={Boolean(dirErr)}
+          />
+        </Field>
 
-          {/* Юридический адрес */}
-          <Field
-            label={t("s1_address_label")}
-            required
-            help={t("s1_address_help")}
-            error={addrErr}
-            className="md:col-span-2"
-          >
-            <FieldInput
-              {...register("step1.registeredAddress")}
-              placeholder={t("s1_address_placeholder")}
-              invalid={Boolean(addrErr)}
-            />
-          </Field>
-        </div>
+        {/* Дата назначения директора */}
+        <Field
+          label={t("s1_appt_label")}
+          required
+          error={apptErr}
+        >
+          <Controller
+            control={control}
+            name="step1.directorAppointedAt"
+            render={({ field }) => (
+              <DatePicker
+                value={field.value || undefined}
+                onChange={(iso) => field.onChange(iso ?? "")}
+                max={new Date()}
+                min={apptMin ?? undefined}
+                invalid={Boolean(apptErr)}
+                placeholder={t("s1_date_placeholder")}
+                ariaLabel={t("s1_appt_label")}
+              />
+            )}
+          />
+          {/* CA-039: amber pre-warning — формальной error нет, поле валидно. */}
+          {!apptErr && isRecentDirectorAppointment(step1?.directorAppointedAt) ? (
+            <DirectorRecentWarning />
+          ) : null}
+        </Field>
+
+        {/* Юридический адрес */}
+        <Field
+          label={t("s1_address_label")}
+          required
+          help={t("s1_address_help")}
+          error={addrErr}
+          className="md:col-span-2"
+        >
+          <FieldInput
+            {...register("step1.registeredAddress")}
+            placeholder={t("s1_address_placeholder")}
+            invalid={Boolean(addrErr)}
+          />
+        </Field>
       </div>
     </section>
   );
 }
 
-// CA-039: «свежее» назначение директора (<90 дней) — pre-warning о будущем risk-сигнале.
-// Чистая функция, экспортируется для unit-теста.
+// ─────────────────────────────────────────────────────────────────
+// ИНН 3-state input
+// ─────────────────────────────────────────────────────────────────
+
+type InnState =
+  | { kind: "idle" }
+  | { kind: "checking" }
+  | { kind: "verified"; summaryKey: "s1_inn_summary_mock" }
+  | { kind: "invalid" };
+
+function InnInput({
+  value,
+  onChange,
+  onBlur,
+  invalid,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onBlur: () => void;
+  invalid: boolean;
+}) {
+  const t = useTranslations("accountant.manual_input");
+  const [state, setState] = useState<InnState>({ kind: "idle" });
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  // При очистке поля или нового ввода сбрасываем state. verified остаётся
+  // только пока value неизменен; при правке возвращаемся в idle до blur.
+  // ESLint react-hooks/set-state-in-effect запрещает синхронный setState в
+  // effect body — обходим через macrotask (setTimeout 0), консистентно с
+  // CA-066 паттерном в HotlinePrimaryCard.
+  useEffect(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    const t = setTimeout(() => setState({ kind: "idle" }), 0);
+    return () => clearTimeout(t);
+  }, [value]);
+
+  const handleBlur = useCallback(() => {
+    onBlur();
+    if (!value) {
+      setState({ kind: "idle" });
+      return;
+    }
+    if (!/^\d{9}$/.test(value)) {
+      setState({ kind: "invalid" });
+      return;
+    }
+    setState({ kind: "checking" });
+    // Mock GNK lookup. TODO[CA-003]: реальный запрос /api/system/gnk/{inn}.
+    timerRef.current = setTimeout(() => {
+      setState({ kind: "verified", summaryKey: "s1_inn_summary_mock" });
+    }, CHECK_DELAY_MS);
+  }, [onBlur, value]);
+
+  const verified = state.kind === "verified";
+
+  return (
+    <div>
+      <div className="relative flex items-center">
+        <input
+          value={value}
+          onChange={(e) => onChange(e.target.value.replace(/\D/g, "").slice(0, 9))}
+          onBlur={handleBlur}
+          inputMode="numeric"
+          maxLength={9}
+          placeholder="123456789"
+          aria-invalid={invalid || undefined}
+          className={cn(
+            "h-10 w-full rounded-[9px] border bg-[var(--surface)] pr-[38px] pl-3 font-mono text-[14px] tracking-[0.5px] text-[var(--ink-1)] outline-none transition-colors placeholder:text-[#9BA3B3]",
+            "border-[var(--border-strong)] focus:border-[var(--brand-primary)] focus:shadow-[0_0_0_3px_var(--brand-primary-ring)]",
+            verified &&
+              "border-[var(--state-ok-border)] focus:border-[var(--state-ok-fg)] focus:shadow-[0_0_0_3px_rgba(15,138,95,0.15)]",
+            invalid &&
+              "border-[var(--state-bad-fg)] focus:border-[var(--state-bad-fg)] focus:shadow-[0_0_0_3px_rgba(180,35,24,0.15)]",
+          )}
+        />
+        <div className="pointer-events-none absolute right-[10px] flex items-center">
+          {state.kind === "checking" ? (
+            <Loader2 className="size-4 animate-spin text-[var(--brand-primary-ink)]" />
+          ) : verified ? (
+            <CheckCircle2 className="size-[18px] text-[var(--state-ok-fg)]" />
+          ) : null}
+        </div>
+      </div>
+      <div className="mt-2 flex min-h-[22px] items-center gap-[10px]">
+        {state.kind === "idle" ? (
+          <span className="inline-flex items-center rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-2 py-[3px] text-[11.5px] font-semibold text-[var(--ink-4)]">
+            {t("s1_inn_state_idle")}
+          </span>
+        ) : null}
+        {state.kind === "checking" ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--brand-primary-soft)] bg-[var(--brand-primary-soft)] px-2 py-[3px] text-[11.5px] font-semibold text-[var(--brand-primary-ink)]">
+            <Loader2 className="size-3 animate-spin" />
+            {t("s1_inn_state_checking")}
+          </span>
+        ) : null}
+        {state.kind === "verified" ? (
+          <>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--state-ok-border)] bg-[var(--state-ok-bg)] px-2 py-[3px] text-[11.5px] font-semibold text-[var(--state-ok-fg)]">
+              <span className="size-1.5 rounded-full bg-[var(--state-ok-fg)]" />
+              {t("s1_inn_state_verified")}
+            </span>
+            <span className="text-[11.5px] text-[var(--ink-3)]">
+              {t(state.summaryKey)}
+            </span>
+          </>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// ОПФ segmented
+// ─────────────────────────────────────────────────────────────────
+
+function OpfSegmented({
+  value,
+  onChange,
+}: {
+  value: Step1Values["legalForm"];
+  onChange: (v: Step1Values["legalForm"]) => void;
+}) {
+  const t = useTranslations("accountant.manual_input");
+  return (
+    <div
+      role="radiogroup"
+      className="grid grid-cols-3 gap-1.5 rounded-[10px] border border-[var(--border-strong)] bg-[var(--surface)] p-1"
+    >
+      {OPF_OPTIONS.map((opt) => {
+        const active = opt.code === value;
+        return (
+          <button
+            key={opt.code}
+            type="button"
+            role="radio"
+            aria-checked={active}
+            onClick={() => onChange(opt.code)}
+            className={cn(
+              "h-8 rounded-[7px] text-[12.5px] font-semibold transition-colors",
+              active
+                ? "bg-[var(--brand-primary)] text-white shadow-[0_2px_8px_-2px_var(--brand-primary-ring)]"
+                : "text-[var(--ink-3)] hover:bg-[var(--surface-2)] hover:text-[var(--ink-1)]",
+            )}
+          >
+            {t(opt.shortKey)}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// ОКВЭД autocomplete
+// ─────────────────────────────────────────────────────────────────
+
+function OkvedAutocomplete({
+  value,
+  onChange,
+  onBlur,
+  invalid,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onBlur: () => void;
+  invalid: boolean;
+}) {
+  const t = useTranslations("accountant.manual_input");
+  const [open, setOpen] = useState(false);
+  const [highlight, setHighlight] = useState(0);
+  const popoverRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const listboxId = "okved-listbox";
+
+  const filtered = useMemo(() => {
+    const q = value.trim().toLowerCase();
+    if (!q) return OKVED_UZ_MSB;
+    return OKVED_UZ_MSB.filter(
+      (o) =>
+        o.code.startsWith(q) ||
+        t(o.descKey).toLowerCase().includes(q),
+    );
+  }, [value, t]);
+
+  // См. комментарий в InnInput — обход react-hooks/set-state-in-effect.
+  useEffect(() => {
+    const t = setTimeout(() => setHighlight(0), 0);
+    return () => clearTimeout(t);
+  }, [value]);
+
+  // Click outside.
+  useEffect(() => {
+    if (!open) return;
+    function onDoc(e: MouseEvent) {
+      const node = e.target as Node;
+      if (
+        popoverRef.current?.contains(node) ||
+        inputRef.current?.contains(node)
+      ) {
+        return;
+      }
+      setOpen(false);
+    }
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open]);
+
+  const pick = useCallback(
+    (code: string) => {
+      onChange(code);
+      setOpen(false);
+    },
+    [onChange],
+  );
+
+  return (
+    <div className="relative">
+      <div className="relative flex items-center">
+        <input
+          ref={inputRef}
+          value={value}
+          onChange={(e) => {
+            onChange(e.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          onBlur={onBlur}
+          onKeyDown={(e) => {
+            if (e.key === "ArrowDown") {
+              setHighlight((h) => Math.min(h + 1, filtered.length - 1));
+              setOpen(true);
+              e.preventDefault();
+            } else if (e.key === "ArrowUp") {
+              setHighlight((h) => Math.max(h - 1, 0));
+              e.preventDefault();
+            } else if (e.key === "Enter") {
+              const opt = filtered[highlight];
+              if (opt) {
+                pick(opt.code);
+                e.preventDefault();
+              }
+            } else if (e.key === "Escape") {
+              setOpen(false);
+            }
+          }}
+          placeholder={t("s1_okved_placeholder")}
+          aria-invalid={invalid || undefined}
+          role="combobox"
+          aria-autocomplete="list"
+          aria-expanded={open}
+          aria-controls={listboxId}
+          className={cn(
+            "h-10 w-full rounded-[9px] border bg-[var(--surface)] pr-[34px] pl-3 font-mono text-[14px] text-[var(--ink-1)] outline-none transition-colors placeholder:font-sans placeholder:text-[#9BA3B3]",
+            "border-[var(--border-strong)] focus:border-[var(--brand-primary)] focus:shadow-[0_0_0_3px_var(--brand-primary-ring)]",
+            invalid &&
+              "border-[var(--state-bad-fg)] focus:border-[var(--state-bad-fg)] focus:shadow-[0_0_0_3px_rgba(180,35,24,0.15)]",
+          )}
+        />
+        <ChevronDown className="pointer-events-none absolute right-[10px] size-4 text-[var(--ink-3)]" />
+      </div>
+      {open ? (
+        <div
+          ref={popoverRef}
+          id={listboxId}
+          role="listbox"
+          className="absolute top-[calc(100%+6px)] left-0 right-0 z-30 max-h-[260px] overflow-y-auto rounded-[10px] border border-[var(--border-strong)] bg-[var(--surface)] shadow-[0_14px_36px_-12px_rgba(14,21,37,0.18)]"
+        >
+          {filtered.length === 0 ? (
+            <div className="px-3 py-2 text-[12.5px] text-[var(--ink-4)]">
+              {t("s1_okved_empty")}
+            </div>
+          ) : (
+            filtered.map((opt, idx) => (
+              <button
+                key={opt.code}
+                type="button"
+                role="option"
+                aria-selected={idx === highlight}
+                onMouseDown={(e) => {
+                  e.preventDefault(); // не теряем focus с input до клика
+                  pick(opt.code);
+                }}
+                onMouseEnter={() => setHighlight(idx)}
+                className={cn(
+                  "grid w-full grid-cols-[60px_1fr] items-baseline gap-[10px] px-3 py-2 text-left text-[13px]",
+                  idx === highlight
+                    ? "bg-[var(--brand-primary-soft)] text-[var(--brand-primary-ink)]"
+                    : "text-[var(--ink-2)]",
+                )}
+              >
+                <span className="font-mono font-semibold">{opt.code}</span>
+                <span
+                  className={cn(
+                    "text-[12.5px]",
+                    idx === highlight
+                      ? "text-[var(--brand-primary-ink)] opacity-85"
+                      : "text-[var(--ink-3)]",
+                  )}
+                >
+                  {t(opt.descKey)}
+                </span>
+              </button>
+            ))
+          )}
+          <div className="border-t border-dashed border-[var(--border)] bg-[var(--surface-2)] px-3 py-1.5 text-[11.5px] text-[var(--ink-4)]">
+            {t("s1_okved_kbd_hint")}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// CA-039 director-warning block
+// ─────────────────────────────────────────────────────────────────
+
+function DirectorRecentWarning() {
+  const t = useTranslations("accountant.manual_input");
+  return (
+    <div
+      role="note"
+      className="mt-2 grid grid-cols-[28px_1fr] items-start gap-2.5 rounded-r-[9px] border-l-[3px] border-[var(--state-warn-fg)] bg-[var(--state-warn-bg)] px-3 py-2.5"
+    >
+      <div className="grid size-[26px] place-items-center rounded-[7px] bg-white/60 text-[var(--state-warn-fg)]">
+        <TriangleAlert className="size-[14px]" />
+      </div>
+      <div>
+        <div className="text-[12.5px] font-bold text-[var(--state-warn-fg)]">
+          {t("s1_recent_director_title")}
+        </div>
+        <div className="mt-0.5 text-[12px] leading-[1.4] text-[var(--state-warn-fg)] opacity-90">
+          {t("s1_recent_director_body")}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────
+
+// CA-039: «свежее» назначение директора (<90 дней) — pre-warning о будущем
+// risk-сигнале. Чистая функция, экспортируется для unit-теста.
 export function isRecentDirectorAppointment(
   value: string | undefined,
   thresholdDays = 90,
@@ -257,6 +660,12 @@ export function isRecentDirectorAppointment(
   return diff >= 0 && diff < thresholdDays;
 }
 
+function parseIsoSafe(value: string | undefined): Date | null {
+  if (!value) return null;
+  const d = parse(value, "yyyy-MM-dd", new Date());
+  return isValid(d) ? d : null;
+}
+
 function formatBusinessAgeHint(
   value: string | undefined,
   prefix: string,
@@ -265,11 +674,17 @@ function formatBusinessAgeHint(
   return age ? `${prefix}: ${age}` : undefined;
 }
 
-function todayIso(): string {
-  const d = new Date();
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
+function countFilled(s: FormValues["step1"] | undefined): number {
+  if (!s) return 0;
+  let n = 0;
+  if (/^\d{9}$/.test(s.inn ?? "")) n++;
+  if ((s.name ?? "").trim().length >= 2) n++;
+  if (s.legalForm) n++;
+  if (s.registrationDate) n++;
+  if ((s.okvedMain ?? "").trim().length >= 2) n++;
+  if ((s.directorName ?? "").trim().length >= 2) n++;
+  if (s.directorAppointedAt) n++;
+  const addr = s.registeredAddress ?? "";
+  if (addr.trim().length >= 15 && /\d/.test(addr)) n++;
+  return n;
 }
-

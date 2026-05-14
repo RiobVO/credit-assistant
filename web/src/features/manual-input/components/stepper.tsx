@@ -13,6 +13,10 @@ const STEP_TITLE_KEYS = [
   "stepper_step_3_title",
 ] as const;
 
+// Phase 6 Step 1: connector между шагами убран — на active-шаге нет
+// «прогресса позади», который мог бы быть нарисован, и серая линия для
+// pending-шагов читалась как шум. 3 кружка с label'ами достаточно для
+// orientation; «1/3» подкреплён status-card в PageHead (Phase 4 паттерн).
 export function Stepper({ activeStep }: { activeStep: StepIdx }) {
   const t = useTranslations("accountant.manual_input");
   return (
@@ -21,57 +25,61 @@ export function Stepper({ activeStep }: { activeStep: StepIdx }) {
       aria-valuenow={activeStep}
       aria-valuemin={1}
       aria-valuemax={3}
-      className="relative mb-5 grid grid-cols-3 gap-0 rounded-[10px] border border-[var(--border)] bg-[var(--surface)] px-[18px] py-[14px]"
+      className="mb-5 rounded-[14px] border border-[var(--border)] bg-[var(--surface)] px-[22px] py-[18px]"
     >
-      {[1, 2, 3].map((idx) => {
-        const isActive = idx === activeStep;
-        const isDone = idx < activeStep;
-        const title = t(STEP_TITLE_KEYS[idx - 1]);
-        return (
-          <div
-            key={idx}
-            className="relative flex items-center gap-3 px-[10px] py-1.5"
-          >
+      <div className="grid grid-cols-3">
+        {[1, 2, 3].map((idx) => {
+          const isActive = idx === activeStep;
+          const isDone = idx < activeStep;
+          const isPending = !isActive && !isDone;
+          const title = t(STEP_TITLE_KEYS[idx - 1]);
+          const eyebrow = isActive
+            ? t("stepper_step_active_eyebrow", { n: idx })
+            : isDone
+              ? t("stepper_step_done_eyebrow", { n: idx })
+              : t("stepper_step_pending_eyebrow", { n: idx });
+          return (
             <div
-              className={cn(
-                "z-[1] grid size-7 flex-none place-items-center rounded-full border text-[13px] font-semibold",
-                isDone &&
-                  "border-[var(--state-ok-fg)] bg-[var(--state-ok-fg)] text-white",
-                isActive &&
-                  "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white",
-                !isActive &&
-                  !isDone &&
-                  "border-[var(--border)] bg-[var(--surface)] text-[var(--ink-3)]",
-              )}
+              key={idx}
+              className="grid grid-cols-[36px_1fr] items-center gap-3 px-1"
             >
-              {isDone ? <Check className="size-3.5" /> : idx}
-            </div>
-            <div className="flex flex-col leading-[1.2]">
-              <span
+              <div
                 className={cn(
-                  "text-[11px] tracking-[0.6px] uppercase",
-                  isActive
-                    ? "text-[var(--brand-primary)]"
-                    : "text-[var(--ink-4)]",
+                  "grid size-8 place-items-center rounded-full font-mono text-[13px] font-bold transition-colors",
+                  isDone && "bg-[var(--state-ok-fg)] text-white",
+                  isActive && "bg-[var(--brand-primary)] text-white",
+                  isPending &&
+                    "border-[1.5px] border-[var(--border-strong)] bg-[var(--surface)] text-[var(--ink-4)]",
                 )}
               >
-                {t("stepper_step_prefix", { n: idx })}
-                {isDone ? ` · ${t("stepper_done_suffix")}` : ""}
-              </span>
-              <span
-                className={cn(
-                  "mt-0.5 text-[13.5px] font-semibold",
-                  isActive
-                    ? "text-[var(--ink-1)]"
-                    : "text-[var(--ink-2)]",
-                )}
-              >
-                {title}
-              </span>
+                {isDone ? <Check className="size-[14px]" /> : idx}
+              </div>
+              <div className="flex flex-col leading-[1.2]">
+                <span
+                  className={cn(
+                    "text-[10.5px] font-semibold uppercase tracking-[0.09em]",
+                    isActive && "text-[var(--brand-primary)]",
+                    isDone && "text-[var(--state-ok-fg)]",
+                    isPending && "text-[var(--ink-4)]",
+                  )}
+                >
+                  {eyebrow}
+                </span>
+                <span
+                  className={cn(
+                    "mt-0.5 text-[13.5px] font-semibold",
+                    isActive && "text-[var(--ink-1)]",
+                    isDone && "text-[var(--ink-2)]",
+                    isPending && "text-[var(--ink-3)]",
+                  )}
+                >
+                  {title}
+                </span>
+              </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }

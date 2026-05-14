@@ -41,7 +41,7 @@ export function Field({
 }
 
 const inputBase =
-  "h-[38px] w-full rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3 text-[14px] text-[var(--ink-1)] outline-none transition-colors placeholder:text-[#9BA3B3] focus:border-[var(--brand-primary)] focus:shadow-[0_0_0_3px_rgba(30,85,201,0.15)]";
+  "h-10 w-full rounded-[9px] border border-[var(--border-strong)] bg-[var(--surface)] px-3 text-[14px] text-[var(--ink-1)] outline-none transition-colors placeholder:text-[#9BA3B3] focus:border-[var(--brand-primary)] focus:shadow-[0_0_0_3px_var(--brand-primary-ring)]";
 
 export const fieldInputClass = inputBase;
 
@@ -76,7 +76,7 @@ export function InputGroup({
       <div className="[&>input]:rounded-r-none [&>input]:border-r-0 [&>div>input]:rounded-r-none [&>div>input]:border-r-0 flex-1">
         {children}
       </div>
-      <div className="grid place-items-center rounded-r-md border border-l-0 border-[var(--border-strong)] bg-[#FAFBFC] px-3 text-[var(--ink-3)]">
+      <div className="grid place-items-center rounded-r-md border border-l-0 border-[var(--border-strong)] bg-[var(--surface-2)] px-3 text-[var(--ink-3)]">
         {addon}
       </div>
     </div>
