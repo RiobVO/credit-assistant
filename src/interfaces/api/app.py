@@ -11,12 +11,19 @@ Health endpoint доступен в обоих режимах без auth — д
 проверок.
 """
 
+import asyncio
+import contextlib
+import logging
+from collections.abc import AsyncIterator, Callable
+
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from config.constants import APP_NAME, APP_VERSION
 from config.logging import configure_logging
 from config.settings import Settings, get_settings
+from infrastructure.jobs.uptime_collector import uptime_collector_loop
+from infrastructure.persistence.database import get_session_factory
 from interfaces.api.bank.admin import router as bank_admin_router
 from interfaces.api.bank.auth import router as bank_auth_router
 from interfaces.api.bank.dependencies import get_current_analyst
@@ -33,6 +40,45 @@ from interfaces.api.shared.manual_input_parse import router as manual_input_pars
 from interfaces.api.shared.soliq_upload import router as soliq_upload_router
 from interfaces.api.shared.system import router as system_router
 
+logger = logging.getLogger(__name__)
+
+
+def _build_lifespan(
+    settings: Settings,
+) -> Callable[[FastAPI], contextlib.AbstractAsyncContextManager[None]]:
+    """Возвращает lifespan-контекст-менеджер для FastAPI.
+
+    CA-DS9: при `uptime_collector_enabled` запускает фоновую задачу, которая
+    каждые `uptime_collector_interval_seconds` пишет worst-of-day статус в
+    `system_uptime_day`. Это убирает зависимость uptime-calendar от
+    user-traffic к `/api/system/health`.
+
+    Для тестов collector отключается флагом (см. Settings) — никаких
+    фоновых writes на shared pytest session.
+    """
+
+    @contextlib.asynccontextmanager
+    async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+        task: asyncio.Task[None] | None = None
+        if settings.uptime_collector_enabled:
+            session_factory = get_session_factory()
+            task = asyncio.create_task(
+                uptime_collector_loop(
+                    session_factory,
+                    interval_seconds=settings.uptime_collector_interval_seconds,
+                ),
+                name="uptime_collector",
+            )
+        try:
+            yield
+        finally:
+            if task is not None:
+                task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await task
+
+    return lifespan
+
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     """Собирает FastAPI с middleware и роутерами. Тесты могут передавать свои настройки."""
@@ -43,6 +89,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         title=APP_NAME,
         version=APP_VERSION,
         description="Внутренний инструмент банков для досье МСБ-заёмщиков",
+        lifespan=_build_lifespan(settings),
     )
 
     app.add_middleware(

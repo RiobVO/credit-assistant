@@ -34,6 +34,14 @@ class Settings(BaseSettings):
     # Draft form retention. По умолчанию 30 дней; в проде регулируется через .env.
     draft_ttl_days: int = 30
 
+    # CA-DS9: background-task для system_uptime_day. Default выключен — это
+    # безопасное умолчание для unit/integration тестов и host-run dev (где у
+    # бэкенда нет реальной БД под рукой). В docker-compose сервисе ``api``
+    # ставим ``UPTIME_COLLECTOR_ENABLED=true`` явно. См.
+    # infrastructure/jobs/uptime_collector.py.
+    uptime_collector_enabled: bool = False
+    uptime_collector_interval_seconds: float = 60.0
+
     # Auth (Phase 4.B). Дефолт намеренно небезопасный — на dev/local работает,
     # в проде обязан быть переопределён через .env (валидация в проде — задача
     # деплоя, не приложения). Для тестов hardcoded достаточен.
