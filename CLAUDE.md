@@ -81,16 +81,24 @@ Heads-up: **live-browser smoke** через `/`, `/search`, `/history`, `/dossie
   - API: `RedFlagOutput.source_uz` + mapper fallback. Frontend: `RedFlagDto.source_uz`, SignalRow через `useLocale()` + safe fallback на пустую строку.
   - Tabular review закрыл compliance-конвенцию: 5/19 identical (ЦБ РУз, Базель III, Group-IB, supply-chain risk practice, AML compliance), 14/19 переведены (КОʻБ kreditlash standart amaliyoti, banklarning ichki uslublari, aylanmani sunʼiy oshirish итд).
   - Тесты: yaml_schema_test (новый), dossier_mapper_test extend (round-trip + fallback), pdf_renderer_red_flags_view_test (новый), risk-signals.test.tsx (новый, 3 кейса). **Lesson `feedback_vitest_dom_leak_cleanup`**: vitest jsdom singleton — `fireEvent.click()` без явного `afterEach(cleanup)` ломает другие тест-файлы (custom-dropdown.test failed pre-fix). testing-library auto-cleanup не покрывает все случаи в полной vitest run.
+- `10e91c2` — **B2** одним атомарным коммитом (31 файл):
+  - Strategy D (выбран в pre-impl review): `FiringEvidence.message_uz` + `RedFlag.message_uz` параллельно — симметрия с B1. Domain rule-функции формируют **обе** строки рядом через двойной f-string. Pure domain держит UZ-литералы (но это уже делается с RU — semantic-wise neutral).
+  - 20 messages в 16 rule-функциях: 19 чистых добавлений + `LOW_MARGIN_HIGH_TURNOVER` с double `revenue_str_ru` / `revenue_str_uz` (RU числа + «mlrd soʻm» суффикс, консистентно с `formatBigUzs`/`formatRevenueShort`).
+  - Snapshot persistence backward-compat (`message_uz` fallback to `message`), PDF `description` switch, API `RedFlagOutput.message_uz` с RU fallback, frontend SignalRow рендерит `messageText` через `useLocale()`.
+  - Тесты: dossier_mapper_test extend (round-trip + B1+B2 dual fallback), pdf_renderer_red_flags_view_test extend (description picks по locale), risk-signals.test.tsx extend (message + source в одной локали + dual fallback на пустые UZ поля).
+  - UZ-конвенция: QQS (НДС), EHF (ЭСФ), soʻm, tushum (выручка), foyda (прибыль), soliq (налог), kontragent. ОКВЭД сохранён кириллицей (banking convention), YoY оставлен EN (banking term).
+  - **Hygiene**: `tax_penalties_current_year` вынесен `len(penalties)` в локальную `count` — line-length фикс после message_uz.
 
 **Открытый backlog (Active — Tier 1 на паузе):**
-- **B2 RedFlag.message** — 16 файлов в `src/domain/rules/**/*.py` имеют `message=f"..."` хардкод на RU. Tabular review + переход на `messages.X.format(...)` поверх `PdfMessages` (аналогично observations_builder rewrite в T0.4 commit 6). Backend domain rules + новые ключи в `config/pdf-i18n/{ru,uz}.json` + новые ключи в `web/src/i18n/{ru,uz}.json` (UI читает message из API). Frontend `flag.description` уже бы получал локализованный — gap derives from backend.
-- **CA-DS29-apostrophe** (новый, после B3+B4) — 340 ASCII apostrophes по uz.json, bulk fix отдельным коммитом без ревью.
+- **CA-DS29-apostrophe** — 340 ASCII apostrophes по `web/src/i18n/uz.json` в latin-узб словах (`bo'lmadi`, `noto'g'ri`, `ma'lumot`, …). Systemic orthographic regression на весь UZ-каталог. Bulk fix отдельным коммитом без ревью.
 
 **Workflow agreed 2026-05-18:**
-- ~~B3 + B4 → один коммит сейчас~~ ✅ закрыто `23fb311`.
-- ~~B1 source_uz → tabular review~~ ✅ закрыто `6db0061` (scope ~16 файлов вместо ожидаемых 3-4 — гешefte был в snapshot persistence + API + frontend wiring).
-- B2 RedFlag.message → tabular review (16 messages, как 19 rules в T0.4 commit 3).
+- ~~B3 + B4 → один коммит~~ ✅ закрыто `23fb311`.
+- ~~B1 source_uz → tabular review~~ ✅ закрыто `6db0061`.
+- ~~B2 RedFlag.message → tabular review~~ ✅ закрыто `10e91c2`.
 - CA-DS29-apostrophe → bulk fix без ревью.
+
+**Tier 0 follow-up complete.** 4 из 4 gaps закрыты. Стек теперь полностью UZ-локализован сквозь все слои (PDF, dossier UI, search UI, source/message rules). Осталась только косметика orthography (CA-DS29-apostrophe) и базовый Tier 0 scope (T0.1 fixtures 22/20 — формальный набор).
 
 **Lessons:**
 - Перед мержем claim «X everywhere» обязательно `grep -rn` на hardcoded strings того класса, который локализуется. Я провалил это 3 раза (T0.4 base, LocaleSwitcher в BankTopbar, locale_full в Settings) — паттерн `feedback_nested_anchor_rtl_blind` extends: RTL/jsdom не ловит «забыл прокинуть» в shared-зоне consumers.
