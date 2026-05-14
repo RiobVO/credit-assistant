@@ -1,8 +1,12 @@
-// Section-card shell (Phase 6/7/8 pattern): icon-tile 36px + gradient header
-// + optional aux slot (counter / static pill). Visual-only — без i18n bindings.
+// Section-card shell (Phase 6/7/8/9). Premium card-shell с opt-in icon-tile.
 //
-// Используется в Step 2 (Revenue / Profit / Annual), Step 3 (Loan params /
-// DSCR / Checklist). Структура: grid [40px_1fr_auto] + 22px body padding.
+// Wizard surfaces (Phase 6/7/8 Step 1-3) передают `icon` — leading 36px brand-
+// primary-soft tile с lucide-иконой. Phase 9 dossier surfaces icon не передают —
+// read-only data screens минималистичны (banking-density priority): grid header
+// схлопывается с `40px_1fr_auto` до `1fr_auto`. Та же эстетика, одна точка
+// orchestration.
+//
+// Структура body: 22px padding. Border 14px, header divider, gradient header bg.
 
 import type { ReactNode } from "react";
 
@@ -13,18 +17,26 @@ export function SectionCard({
   aux,
   children,
 }: {
-  icon: ReactNode;
+  icon?: ReactNode;
   title: ReactNode;
   sub?: ReactNode;
   aux?: ReactNode;
   children: ReactNode;
 }) {
+  const hasIcon = icon !== undefined && icon !== null;
+  const headerCols = hasIcon
+    ? "grid-cols-[40px_1fr_auto]"
+    : "grid-cols-[1fr_auto]";
   return (
     <section className="overflow-hidden rounded-[14px] border border-[var(--border)] bg-[var(--surface)]">
-      <header className="grid grid-cols-[40px_1fr_auto] items-center gap-[14px] border-b border-[var(--border)] bg-gradient-to-b from-white to-[var(--surface-2)] px-[22px] py-[16px]">
-        <div className="grid size-9 place-items-center rounded-[10px] bg-[var(--brand-primary-soft)] text-[var(--brand-primary-ink)]">
-          {icon}
-        </div>
+      <header
+        className={`grid ${headerCols} items-center gap-[14px] border-b border-[var(--border)] bg-gradient-to-b from-white to-[var(--surface-2)] px-[22px] py-[16px]`}
+      >
+        {hasIcon ? (
+          <div className="grid size-9 place-items-center rounded-[10px] bg-[var(--brand-primary-soft)] text-[var(--brand-primary-ink)]">
+            {icon}
+          </div>
+        ) : null}
         <div>
           <h2 className="m-0 text-[15px] font-semibold tracking-[-0.005em] text-[var(--ink-1)]">
             {title}

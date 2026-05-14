@@ -29,9 +29,9 @@ import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import { Controller, useFormContext, useWatch } from "react-hook-form";
 
+import { CounterChip, SectionCard } from "@/components/section-card";
 import { cn } from "@/lib/utils";
 
-import { CounterChip, SectionCard } from "./section-card";
 import { useSourceTrail } from "../hooks/use-source-trail";
 import {
   computeDebtToAssets,
