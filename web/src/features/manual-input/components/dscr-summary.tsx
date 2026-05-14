@@ -1,7 +1,19 @@
 "use client";
 
+// DSCR pre-score: ежемесячный платёж (аннуитет) + Debt/Revenue + DSCR gauge с
+// классификацией риска. Read-only preview данных Шага 2 + Шага 3.
+//
+// Phase 8 design statement:
+//   • Section card pattern (Phase 6/7/8) — TrendingUp icon + static «обновлено»
+//   • Pulse-dot убран (TODO[CA-DS19] motion-cleanup в банке)
+//   • Sparkbars убраны (decoration без real-data binding)
+//   • Hex sweep на semantic state-{ok,warn,bad}-{bg,border,fg}
+//
+// CA-033: annualRevenue / annualNetProfit nullable — null = «нет данных от
+// Шага 2» (neutral pill «Недостаточно данных»), число = классифицируем риск.
+
 import { format } from "date-fns";
-import { Clock } from "lucide-react";
+import { TrendingUp } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import {
@@ -14,6 +26,7 @@ import {
 } from "../lib/finance";
 
 import { DscrGauge } from "./dscr-gauge";
+import { SectionCard, StaticPill } from "./section-card";
 
 type Props = {
   loanAmount: number;
@@ -44,33 +57,29 @@ export function DscrSummary({
   const todayLabel = format(new Date(), "dd.MM.yyyy");
 
   return (
-    <div className="mt-[22px] overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)]">
-      <div className="flex items-center gap-2.5 border-b border-[#EFF1F5] bg-[var(--surface)] px-[22px] py-3.5">
-        <span className="text-[10.5px] font-semibold tracking-[1.4px] text-[var(--ink-4)] uppercase">
-          {t("dscr_pre_score")}
-        </span>
-        <span className="h-3.5 w-px bg-[var(--border)]" />
-        <span className="text-[14px] font-semibold tracking-[-0.1px] text-[var(--ink-1)]">
-          {t("dscr_summary_title")}
-        </span>
-        <div className="ml-auto flex items-center gap-3.5 font-mono text-[12px] text-[var(--ink-3)]">
-          <span className="inline-flex items-center gap-1.5 text-[var(--state-ok-fg)]">
-            <span className="size-1.5 rounded-full bg-[var(--state-ok-fg)] shadow-[0_0_0_3px_rgba(15,138,95,0.15)]" />
-            {t("dscr_updated")}
+    <SectionCard
+      icon={<TrendingUp className="size-[18px]" />}
+      title={
+        <span className="flex items-center gap-2">
+          {t("s3_calc_heading")}
+          <span className="text-[12px] font-medium text-[var(--ink-4)]">
+            {t("dscr_pre_score_eyebrow")}
           </span>
-          <span className="inline-flex items-center gap-1">
-            <Clock className="size-3" />
-            {t("dscr_annuity_today", { date: todayLabel })}
-          </span>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-[230px_1fr]">
-        <div className="flex flex-col items-center gap-3.5 border-r border-[#EFF1F5] bg-gradient-to-b from-[#FAFBFC] to-white px-[22px] py-6">
+        </span>
+      }
+      sub={t("s3_calc_sub")}
+      aux={
+        <StaticPill>
+          {t("dscr_static_updated", { date: todayLabel })}
+        </StaticPill>
+      }
+    >
+      {/* Inner grid: 230px gauge column + 1fr metrics. Расширяем на всю ширину
+          body, отменяя -22px section-body padding через -m. */}
+      <div className="-m-[22px] grid grid-cols-1 md:grid-cols-[230px_1fr]">
+        <div className="flex flex-col items-center gap-[14px] border-r border-[var(--border)] bg-gradient-to-b from-[var(--surface-2)] to-white px-[22px] py-6">
           <DscrGauge value={dscr} />
-          <div>
-            <RiskChip tone={risk.tone}>{t(risk.key)}</RiskChip>
-          </div>
+          <RiskChip tone={risk.tone}>{t(risk.key)}</RiskChip>
           <div className="font-mono text-[11px] text-[var(--ink-4)]">
             {dscr == null
               ? t("dscr_no_data")
@@ -81,13 +90,13 @@ export function DscrSummary({
         <div className="flex flex-col justify-center gap-[18px] px-[26px] py-[22px]">
           <div className="flex items-end justify-between gap-[18px] border-b border-dashed border-[var(--border)] pb-[18px]">
             <div>
-              <div className="mb-2 text-[11px] font-medium tracking-[0.7px] text-[var(--ink-4)] uppercase">
+              <div className="mb-2 text-[11px] font-medium tracking-[0.07em] text-[var(--ink-4)] uppercase">
                 {t("dscr_monthly_label")}
               </div>
-              <div className="font-mono text-[34px] leading-none font-semibold tracking-[-1px] text-[var(--ink-1)]">
+              <div className="font-mono text-[34px] leading-none font-semibold tracking-[-0.03em] text-[var(--ink-1)]">
                 {monthly > 0 ? formatUzs(String(monthly)) : "—"}
                 {monthly > 0 ? (
-                  <span className="ml-1.5 text-[14px] font-medium tracking-[0.4px] text-[var(--ink-4)]">
+                  <span className="ml-1.5 text-[14px] font-medium tracking-[0.04em] text-[var(--ink-4)]">
                     UZS
                   </span>
                 ) : null}
@@ -99,7 +108,6 @@ export function DscrSummary({
                 })}
               </div>
             </div>
-            <Sparkbars />
           </div>
 
           <div className="grid grid-cols-[1fr_1px_1fr_1px_1fr] items-center">
@@ -109,7 +117,7 @@ export function DscrSummary({
               unit={loanAmount > 0 ? "UZS" : undefined}
               hint={t("dscr_loan_hint", { months: termMonths })}
             />
-            <span className="h-9 w-px bg-[#EFF1F5]" />
+            <span className="h-9 w-px bg-[var(--border)]" />
             <SecondaryMetric
               label={t("dscr_overpay_label")}
               value={overpayment > 0 ? formatUzs(String(overpayment)) : "—"}
@@ -123,7 +131,7 @@ export function DscrSummary({
                 </>
               }
             />
-            <span className="h-9 w-px bg-[#EFF1F5]" />
+            <span className="h-9 w-px bg-[var(--border)]" />
             <SecondaryMetric
               label={t("dscr_dr_label")}
               value={
@@ -137,7 +145,7 @@ export function DscrSummary({
           </div>
         </div>
       </div>
-    </div>
+    </SectionCard>
   );
 }
 
@@ -148,12 +156,16 @@ function RiskChip({
   tone: "success" | "warning" | "danger" | "neutral";
   children: React.ReactNode;
 }) {
+  // CA-033: neutral для «нет данных» — серая палитра surface-2, не путать
+  // с warning amber.
   const palette = {
-    success: "bg-[var(--state-ok-bg)] border-[#BFE2D2] text-[var(--state-ok-fg)]",
-    warning: "bg-[#FFF6E5] border-[#F1D9A6] text-[var(--state-warn-fg)]",
-    danger: "bg-[#FCE7E5] border-[#F2BCBA] text-[var(--state-bad-fg)]",
-    // CA-033: нейтральный «нет данных» — серая палитра, не путать с warning.
-    neutral: "bg-[#F1F4F8] border-[#D4D9E0] text-[var(--ink-3)]",
+    success:
+      "bg-[var(--state-ok-bg)] border-[var(--state-ok-border)] text-[var(--state-ok-fg)]",
+    warning:
+      "bg-[var(--state-warn-bg)] border-[var(--state-warn-border)] text-[var(--state-warn-fg)]",
+    danger:
+      "bg-[var(--state-bad-bg)] border-[var(--state-bad-border)] text-[var(--state-bad-fg)]",
+    neutral: "bg-[var(--surface-2)] border-[var(--border-strong)] text-[var(--ink-3)]",
   }[tone];
   const dot = {
     success: "bg-[var(--state-ok-fg)]",
@@ -163,7 +175,7 @@ function RiskChip({
   }[tone];
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-[5px] text-[11.5px] font-semibold ${palette}`}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-[10px] py-[5px] text-[11.5px] font-semibold ${palette}`}
     >
       <span className={`size-1.5 rounded-full ${dot}`} />
       {children}
@@ -184,10 +196,10 @@ function SecondaryMetric({
 }) {
   return (
     <div className="px-1">
-      <div className="mb-1.5 text-[10.5px] font-medium tracking-[0.6px] text-[var(--ink-4)] uppercase">
+      <div className="mb-1.5 text-[10.5px] font-medium tracking-[0.06em] text-[var(--ink-4)] uppercase">
         {label}
       </div>
-      <div className="flex items-baseline gap-1.5 font-mono text-[17px] font-semibold tracking-[-0.2px] text-[var(--ink-1)]">
+      <div className="flex items-baseline gap-1.5 font-mono text-[17px] font-semibold tracking-[-0.02em] text-[var(--ink-1)]">
         {value}
         {unit ? (
           <span className="text-[11px] font-medium text-[var(--ink-4)]">
@@ -198,28 +210,6 @@ function SecondaryMetric({
       <div className="mt-1 flex items-center gap-1 text-[11px] text-[var(--ink-4)]">
         {hint}
       </div>
-    </div>
-  );
-}
-
-function Sparkbars() {
-  const heights = [32, 46, 40, 58, 52, 70, 62, 84, 92, 100];
-  return (
-    <div
-      aria-hidden
-      className="flex h-12 items-end gap-[3px]"
-    >
-      {heights.map((h, i) => (
-        <span
-          key={i}
-          className={`block w-1.5 rounded-sm ${
-            i >= 7
-              ? "bg-gradient-to-b from-[#2459B5] to-[var(--brand-primary)]"
-              : "bg-[#D6DEEC]"
-          }`}
-          style={{ height: `${h}%` }}
-        />
-      ))}
     </div>
   );
 }

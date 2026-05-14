@@ -1,12 +1,34 @@
 "use client";
 
+// Phase 8: Step 3 design statement. Section card pattern (Phase 6/7 — icon-tile
+// + gradient header + counter), CustomDropdown для loanTermMonths вместо
+// native <select>, category pills в nested sub-block на surface-2.
+//
+// Три связанные section-card:
+//   1. «Условия кредита» (этот файл) — Banknote icon + live counter «N/5»
+//   2. DSCR Pre-score (dscr-summary.tsx) — TrendingUp + static «обновлено»
+//   3. Checklist (checklist.tsx) — ClipboardCheck + counter ok/total
+//
+// Schema invariant: 5 required-полей в zod (loanAmount, loanTermMonths,
+// loanRatePct, loanPurpose ≥20 симв, loanCategory enum). Структура form-data
+// не трогается — это UI-only rewrite. Counter «N/5» обновляется по
+// useWatch + 5 предикатов «filled» (см. countFilled).
+//
+// TODO[CA-DS24]: USD-конвертация (USD_RATE_UZS = 12575) — hardcoded.
+// Заменить на real endpoint /api/system/cbu/usd-rate когда понадобится.
+
 import { addMonths, format } from "date-fns";
-import { Info } from "lucide-react";
+import { Banknote } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Controller, useFormContext, useWatch } from "react-hook-form";
 
 import { cn } from "@/lib/utils";
 
+import { Checklist } from "./checklist";
+import { CustomDropdown } from "./custom-dropdown";
+import { DscrSummary } from "./dscr-summary";
+import { Field, fieldInputClass } from "./field";
+import { CounterChip, SectionCard } from "./section-card";
 import {
   digitsOnly,
   formatUzs,
@@ -21,10 +43,7 @@ import {
   loanTerms,
 } from "../schema";
 
-import { Checklist } from "./checklist";
-import { DscrSummary } from "./dscr-summary";
-import { Field, fieldInputClass } from "./field";
-
+// TODO[CA-DS24]: real /api/system/cbu/usd-rate
 const USD_RATE_UZS = 12575;
 
 export function Step3Loan() {
@@ -42,6 +61,7 @@ export function Step3Loan() {
   const termMonths = useWatch({ control, name: "step3.loanTermMonths" });
   const ratePctStr = useWatch({ control, name: "step3.loanRatePct" });
   const purpose = useWatch({ control, name: "step3.loanPurpose" });
+  const category = useWatch({ control, name: "step3.loanCategory" });
 
   const revenue2025 = useWatch({ control, name: "step2.revenue.y2025" });
   const profit2025 = useWatch({ control, name: "step2.netProfit.y2025" });
@@ -64,22 +84,30 @@ export function Step3Loan() {
   const repaymentDate =
     termMonths > 0 ? format(addMonths(new Date(), termMonths), "dd.MM.yyyy") : "—";
 
-  return (
-    <section className="rounded-[10px] border border-[var(--border)] bg-[var(--surface)] shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
-      <header className="flex items-center gap-2.5 border-b border-[var(--border)] px-[22px] py-[18px]">
-        <div>
-          <h2 className="m-0 text-[15px] font-semibold text-[var(--ink-1)]">
-            {t("s3_section_title")}
-          </h2>
-          <p className="m-0 mt-0.5 text-[12.5px] text-[var(--ink-3)]">
-            {t("s3_section_sub")}
-          </p>
-        </div>
-      </header>
+  const filled = countFilled({
+    loanAmount: loanAmountStr ?? "",
+    termMonths: termMonths ?? 0,
+    ratePct: ratePctStr ?? "",
+    purpose: purpose ?? "",
+    category: category ?? "",
+  });
 
-      <div className="p-[22px]">
+  return (
+    <div className="space-y-[18px]">
+      <SectionCard
+        icon={<Banknote className="size-[18px]" />}
+        title={t("s3_section_title")}
+        sub={t("s3_section_sub")}
+        aux={
+          <CounterChip
+            filled={filled}
+            total={5}
+            eyebrow={t("s3_counter_filled")}
+          />
+        }
+      >
         <div className="grid grid-cols-1 gap-x-5 gap-y-[18px] md:grid-cols-2">
-          {/* Сумма кредита (col-2, large) */}
+          {/* Сумма кредита (col-span-2, large) */}
           <Field
             label={t("s3_amount_label")}
             required
@@ -113,13 +141,13 @@ export function Step3Loan() {
                   />
                 )}
               />
-              <div className="grid place-items-center rounded-r-md border border-l-0 border-[var(--border-strong)] bg-[#F4F6F9] px-3 text-[14px] font-semibold text-[var(--ink-2)]">
+              <div className="grid place-items-center rounded-r-md border border-l-0 border-[var(--border-strong)] bg-[var(--surface-2)] px-3 text-[14px] font-semibold text-[var(--ink-2)]">
                 UZS
               </div>
             </div>
           </Field>
 
-          {/* Срок */}
+          {/* Срок — premium custom dropdown */}
           <Field
             label={t("s3_term_label")}
             required
@@ -129,24 +157,14 @@ export function Step3Loan() {
               control={control}
               name="step3.loanTermMonths"
               render={({ field }) => (
-                <div className="relative">
-                  <select
-                    value={String(field.value)}
-                    onChange={(ev) => field.onChange(Number.parseInt(ev.target.value, 10))}
-                    onBlur={field.onBlur}
-                    className={cn(fieldInputClass, "appearance-none pr-9")}
-                  >
-                    {loanTerms.map((opt) => (
-                      <option key={opt.months} value={opt.months}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                  <span
-                    aria-hidden
-                    className="pointer-events-none absolute top-1/2 right-[14px] size-2 -translate-y-[70%] rotate-45 border-r-[1.5px] border-b-[1.5px] border-[var(--ink-3)]"
-                  />
-                </div>
+                <CustomDropdown<number>
+                  value={field.value}
+                  onChange={(next) => field.onChange(next)}
+                  options={loanTerms.map((opt) => ({
+                    value: opt.months,
+                    label: opt.label,
+                  }))}
+                />
               )}
             />
           </Field>
@@ -169,14 +187,14 @@ export function Step3Loan() {
                   "rounded-r-none border-r-0 text-right font-mono",
                 )}
               />
-              <div className="grid place-items-center rounded-r-md border border-l-0 border-[var(--border-strong)] bg-[#FAFBFC] px-3 text-[13px] text-[var(--ink-3)]">
+              <div className="grid place-items-center rounded-r-md border border-l-0 border-[var(--border-strong)] bg-[var(--surface-2)] px-3 text-[13px] font-medium text-[var(--ink-3)]">
                 {t("s3_rate_suffix")}
               </div>
             </div>
             <RateBar value={ratePct} />
           </Field>
 
-          {/* Цель */}
+          {/* Цель + Категория (nested sub-block внутри purpose Field) */}
           <Field
             label={t("s3_purpose_label")}
             required
@@ -188,9 +206,9 @@ export function Step3Loan() {
               rows={5}
               placeholder={t("s3_purpose_placeholder")}
               aria-invalid={Boolean(e?.loanPurpose) || undefined}
-              className="min-h-[120px] w-full resize-y rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-3 text-[14px] leading-[1.5] text-[var(--ink-1)] outline-none focus:border-[var(--brand-primary)] focus:shadow-[0_0_0_3px_rgba(30,85,201,0.15)] aria-invalid:border-[var(--state-bad-fg)]"
+              className="min-h-[120px] w-full resize-y rounded-[9px] border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-3 text-[14px] leading-[1.5] text-[var(--ink-1)] outline-none transition-colors focus:border-[var(--brand-primary)] focus:shadow-[0_0_0_3px_var(--brand-primary-ring)] aria-invalid:border-[var(--state-bad-fg)]"
             />
-            <div className="mt-0.5 flex items-center justify-between">
+            <div className="mt-1 flex items-center justify-between">
               <span className="text-[12px] text-[var(--ink-4)]">
                 {t("s3_purpose_hint")}
               </span>
@@ -198,44 +216,27 @@ export function Step3Loan() {
                 {(purpose ?? "").length} / 2000
               </span>
             </div>
-            <CategoryPills />
+            <CategoryBlock />
           </Field>
         </div>
+      </SectionCard>
 
-        <div className="my-6 h-px bg-[var(--border)]" />
+      <DscrSummary
+        loanAmount={loanAmount}
+        termMonths={termMonths}
+        ratePct={ratePct}
+        annualRevenue={annualRevenue}
+        annualNetProfit={annualNetProfit}
+      />
 
-        <div className="mb-1.5 flex items-end justify-between">
-          <div>
-            <h3 className="m-0 text-[14px] font-semibold text-[var(--ink-1)]">
-              {t("s3_calc_heading")}
-            </h3>
-            <p className="m-0 mt-1 text-[12.5px] text-[var(--ink-3)]">
-              {t("s3_calc_sub")}
-            </p>
-          </div>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-[#A8C0EE] bg-[var(--brand-primary-soft)] px-[7px] py-px text-[11.5px] font-semibold text-[var(--brand-primary-hover)]">
-            <Info className="size-3" />
-            {t("s3_calc_updated")}
-          </span>
-        </div>
-
-        <DscrSummary
-          loanAmount={loanAmount}
-          termMonths={termMonths}
-          ratePct={ratePct}
-          annualRevenue={annualRevenue}
-          annualNetProfit={annualNetProfit}
-        />
-
-        <div className="my-6 h-px bg-[var(--border)]" />
-
-        <Checklist />
-      </div>
-    </section>
+      <Checklist />
+    </div>
   );
 }
 
-function CategoryPills() {
+// Категория — flat sub-block внутри purpose Field на surface-2 (nested).
+// Визуально читается как «параметр цели», не отдельная странная плашка.
+function CategoryBlock() {
   const t = useTranslations("accountant.manual_input");
   const { control } = useFormContext<FormValues>();
   return (
@@ -243,48 +244,56 @@ function CategoryPills() {
       control={control}
       name="step3.loanCategory"
       render={({ field }) => (
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          <span className="mr-1 text-[12px] text-[var(--ink-3)]">
-            {t("s3_category_label")}
-          </span>
-          {loanCategories.map((cat) => {
-            const active = field.value === cat.code;
-            return (
-              <button
-                key={cat.code}
-                type="button"
-                onClick={() => field.onChange(cat.code)}
-                className={cn(
-                  "inline-flex items-center gap-1.5 rounded-full border px-3 py-[7px] text-[13px] transition-colors",
-                  active
-                    ? "border-[#A8C0EE] bg-[var(--brand-primary-soft)] font-semibold text-[var(--brand-primary-hover)]"
-                    : "border-[var(--border-strong)] bg-[var(--surface)] text-[var(--ink-2)] hover:bg-[#FAFBFC]",
-                )}
-              >
-                {cat.label}
-              </button>
-            );
-          })}
+        <div className="mt-[10px] rounded-[11px] border border-[var(--border)] bg-[var(--surface-2)] px-4 py-[14px]">
+          <div className="mb-[10px] flex items-center gap-2">
+            <span className="text-[10.5px] font-semibold tracking-[0.08em] text-[var(--ink-4)] uppercase">
+              {t("s3_category_eyebrow")}
+            </span>
+            <span className="text-[11px] font-bold text-[var(--state-bad-fg)]">
+              *
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {loanCategories.map((cat) => {
+              const active = field.value === cat.code;
+              return (
+                <button
+                  key={cat.code}
+                  type="button"
+                  onClick={() => field.onChange(cat.code)}
+                  className={cn(
+                    "rounded-full border px-[14px] py-[7px] text-[13px] transition-all",
+                    active
+                      ? "border-[color-mix(in_srgb,var(--brand-primary)_45%,transparent)] bg-[var(--brand-primary-soft)] font-semibold text-[var(--brand-primary-ink)]"
+                      : "border-[var(--border-strong)] bg-[var(--surface)] text-[var(--ink-2)] hover:border-[var(--brand-primary)] hover:text-[var(--ink-1)]",
+                  )}
+                >
+                  {cat.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
     />
   );
 }
 
+// Rate-bar slider visualization (14-26% market range). Premium-feel без motion.
 function RateBar({ value }: { value: number }) {
   const min = 14;
   const max = 26;
   const clamped = Math.min(Math.max(value, min), max);
   const pct = ((clamped - min) / (max - min)) * 100;
   return (
-    <div className="mt-1.5 flex items-center gap-3.5">
-      <div className="relative h-2 flex-1 rounded-full bg-[#EAEDF2]">
+    <div className="mt-2 flex items-center gap-[14px]">
+      <div className="relative h-1.5 flex-1 rounded-full bg-[var(--chart-track-light)]">
         <span
           className="absolute top-0 left-0 h-full rounded-full bg-gradient-to-r from-[var(--state-ok-fg)] to-[var(--brand-primary)]"
           style={{ width: `${pct}%` }}
         />
         <span
-          className="absolute -top-0.5 size-3.5 -translate-x-1/2 rounded-full border-[3px] border-[var(--brand-primary)] bg-[var(--surface)] shadow-[0_1px_4px_rgba(0,0,0,0.15)]"
+          className="absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] border-[var(--brand-primary)] bg-[var(--surface)] shadow-[0_1px_4px_rgba(0,0,0,0.15)]"
           style={{ left: `${pct}%` }}
         />
       </div>
@@ -296,3 +305,27 @@ function RateBar({ value }: { value: number }) {
   );
 }
 
+// Counter: 5 предикатов «filled». Категория всегда truthy (default
+// 'working_capital'); сумма/срок/ставка — по naturally-parsed value;
+// purpose — по длине ≥20 (matches zod min(20)).
+function countFilled({
+  loanAmount,
+  termMonths,
+  ratePct,
+  purpose,
+  category,
+}: {
+  loanAmount: string;
+  termMonths: number;
+  ratePct: string;
+  purpose: string;
+  category: string;
+}): number {
+  let n = 0;
+  if (digitsOnly(loanAmount).length > 0) n += 1;
+  if (termMonths > 0) n += 1;
+  if (ratePct.trim().length > 0) n += 1;
+  if (purpose.trim().length >= 20) n += 1;
+  if (category.length > 0) n += 1;
+  return n;
+}
