@@ -10,15 +10,22 @@ import { DayPicker, type Matcher } from "react-day-picker";
 
 import { cn } from "@/lib/utils";
 
-// CA-DS… Phase 6 Step 1: кастомный календарь поверх react-day-picker.
+// Phase 6 Step 1: кастомный календарь поверх react-day-picker.
 // Native <input type="date"> заменён, чтобы (а) убрать разнобой Chrome/Safari
 // UI, (б) контролировать локализацию (RU + Mon-first), (в) единообразный
 // trigger в дизайне Phase 2–5 (40px, моноширинный DD.MM.YYYY).
 //
 // API намеренно строковый (ISO YYYY-MM-DD) — совместимо с react-hook-form
 // зоновой схемой `z.string()`, никакого Date↔string маппинга в callers.
+//
+// Phase 6 audit pass:
+// - `captionLayout="dropdown"` для быстрой навигации по году (важно для
+//   «Дата регистрации» — может быть 10-20 лет назад).
+// - `fixedWeeks` — popover не «прыгает» по высоте при смене месяца.
+// - «Сегодня» кнопка disabled если today вне range min/max.
 
 const ISO_FORMAT = "yyyy-MM-dd";
+const DEFAULT_MIN_YEAR = 1990;
 
 export type DatePickerProps = {
   value: string | undefined;
@@ -71,6 +78,25 @@ export function DatePicker({
     return matchers;
   }, [min, max]);
 
+  // Year range для dropdown caption. Без startMonth/endMonth react-day-picker
+  // фиксирует год = currentMonth.year и dropdown получает 1 опцию — бесполезно.
+  // Берём min/max если заданы, иначе разумные defaults (компании в UZ обычно
+  // зарегистрированы 1990+; будущие даты не нужны, +1 год для запаса).
+  const { startMonth, endMonth } = useMemo(() => {
+    const start = min ?? new Date(DEFAULT_MIN_YEAR, 0, 1);
+    const end = max ?? new Date(new Date().getFullYear() + 1, 11, 31);
+    return { startMonth: start, endMonth: end };
+  }, [min, max]);
+
+  // Today disabled? Используется и для кнопки «Сегодня», и для скрытия
+  // misleading click — у кнопки visible disabled style.
+  const todayDisabled = useMemo(() => {
+    const today = new Date();
+    if (max && today > max) return true;
+    if (min && today < min) return true;
+    return false;
+  }, [min, max]);
+
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger
@@ -120,6 +146,10 @@ export function DatePicker({
               locale={ru}
               weekStartsOn={1}
               showOutsideDays
+              fixedWeeks
+              captionLayout="dropdown"
+              startMonth={startMonth}
+              endMonth={endMonth}
               classNames={dayPickerClassNames}
               footer={
                 <div className="mt-2 flex items-center justify-between border-t border-[var(--border)] pt-2.5">
@@ -135,18 +165,14 @@ export function DatePicker({
                   </button>
                   <button
                     type="button"
+                    disabled={todayDisabled}
                     onClick={() => {
                       const today = new Date();
-                      // Не выбираем today если он disabled по min/max — кнопка остаётся доступной,
-                      // но клик no-op (предсказуемее чем скрытие).
-                      const tooBig = max && today > max;
-                      const tooSmall = min && today < min;
-                      if (tooBig || tooSmall) return;
                       onChange(format(today, ISO_FORMAT));
                       setMonth(today);
                       setOpen(false);
                     }}
-                    className="rounded-md px-2 py-1 text-[12px] font-semibold text-[var(--brand-primary)] hover:bg-[var(--brand-primary-soft)]"
+                    className="rounded-md px-2 py-1 text-[12px] font-semibold text-[var(--brand-primary)] hover:bg-[var(--brand-primary-soft)] disabled:cursor-not-allowed disabled:text-[var(--ink-4)] disabled:hover:bg-transparent"
                   >
                     {t("date_today")}
                   </button>
@@ -170,18 +196,32 @@ function parseIso(value: string | undefined): Date | undefined {
 // без импорта стандартного CSS. Modifier-классы (selected/today/outside)
 // react-day-picker применяет на <td role="gridcell">, не на кнопку, поэтому
 // доступ к кнопке внутри — через `[&_button]:…` arbitrary variants.
+//
+// captionLayout="dropdown" рендерит 2 native <select> (month, year) внутри
+// dropdowns wrapper. Кастомизируем их через классы dropdowns / dropdown.
 const dayPickerClassNames = {
-  root: "w-[262px] text-[var(--ink-1)]",
+  root: "w-[290px] text-[var(--ink-1)]",
   months: "flex flex-col",
   month: "space-y-2",
-  month_caption: "grid grid-cols-[28px_1fr_28px] items-center mb-1.5",
+  month_caption: "relative flex items-center justify-between gap-2 mb-2",
+  // caption_label рендерится react-day-picker внутри dropdown_root как
+  // visible badge с текстом + chevron (см. Dropdown.js v9). Стилизуем
+  // под pill: padding + hover-bg + cursor.
   caption_label:
-    "text-center text-[13px] font-semibold capitalize text-[var(--ink-1)]",
-  nav: "contents",
+    "inline-flex items-center gap-1 rounded-[7px] px-2 py-1 cursor-pointer hover:bg-[var(--surface-2)] transition-colors",
+  dropdowns:
+    "inline-flex items-center gap-1 text-[13px] font-semibold text-[var(--ink-1)]",
+  dropdown_root: "relative inline-flex",
+  // dropdown — native <select>, кладём absolute поверх visible caption_label
+  // как «прозрачный hit-target». Cross-OS look получаем от caption_label,
+  // не от системного select dropdown.
+  dropdown:
+    "absolute inset-0 cursor-pointer opacity-0 outline-none",
+  nav: "inline-flex items-center gap-1",
   button_previous:
-    "col-start-1 row-start-1 grid size-7 place-items-center rounded-[7px] text-[var(--ink-3)] hover:bg-[var(--surface-2)] hover:text-[var(--ink-1)] disabled:cursor-not-allowed disabled:opacity-40",
+    "grid size-7 place-items-center rounded-[7px] text-[var(--ink-3)] hover:bg-[var(--surface-2)] hover:text-[var(--ink-1)] disabled:cursor-not-allowed disabled:opacity-40",
   button_next:
-    "col-start-3 row-start-1 grid size-7 place-items-center rounded-[7px] text-[var(--ink-3)] hover:bg-[var(--surface-2)] hover:text-[var(--ink-1)] disabled:cursor-not-allowed disabled:opacity-40",
+    "grid size-7 place-items-center rounded-[7px] text-[var(--ink-3)] hover:bg-[var(--surface-2)] hover:text-[var(--ink-1)] disabled:cursor-not-allowed disabled:opacity-40",
   chevron: "size-[14px]",
   month_grid: "border-collapse",
   weekdays: "grid grid-cols-7",
@@ -190,15 +230,16 @@ const dayPickerClassNames = {
   week: "grid grid-cols-7 gap-[2px]",
   day: "p-0",
   day_button:
-    "grid h-8 w-full place-items-center rounded-[7px] font-mono text-[12.5px] tabular-nums text-[var(--ink-2)] hover:bg-[var(--brand-primary-soft)] hover:text-[var(--brand-primary-ink)] disabled:cursor-not-allowed disabled:text-[var(--ink-4)] disabled:opacity-35 disabled:hover:bg-transparent",
+    "grid h-9 w-full place-items-center rounded-[7px] font-mono text-[12.5px] tabular-nums text-[var(--ink-2)] hover:bg-[var(--brand-primary-soft)] hover:text-[var(--brand-primary-ink)] disabled:cursor-not-allowed disabled:text-[var(--ink-4)] disabled:opacity-35 disabled:hover:bg-transparent transition-colors",
   // Selected: рисуем brand-primary и перебиваем hover (по умолчанию hover
   // переключает на soft-фон — на выбранной ячейке это даёт «потерял» эффект).
   selected:
     "[&_button]:bg-[var(--brand-primary)] [&_button]:font-bold [&_button]:text-white [&_button]:hover:bg-[var(--brand-primary)] [&_button]:hover:text-white",
   // Today: лёгкая обводка через ring. Когда ячейка одновременно today+selected,
   // brand-primary фон поверх ring читается как «выбран сегодня» — нормально.
+  // Tailwind v4: opacity через `/40` syntax, `ring-opacity-*` устарел.
   today:
-    "[&_button]:font-semibold [&_button]:ring-1 [&_button]:ring-inset [&_button]:ring-[var(--border-strong)]",
+    "[&_button]:font-semibold [&_button]:ring-1 [&_button]:ring-inset [&_button]:ring-[var(--brand-primary)]/40",
   outside: "[&_button]:text-[var(--ink-4)] [&_button]:opacity-55",
   disabled: "[&_button]:opacity-35",
 } as const;

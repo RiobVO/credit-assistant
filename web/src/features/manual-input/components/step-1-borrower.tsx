@@ -348,12 +348,17 @@ function InnInput({
       setState({ kind: "invalid" });
       return;
     }
+    // Skip re-checking если уже verified для текущего value. useEffect [value]
+    // сбрасывает state в idle на любое изменение → если мы здесь и
+    // state.kind === "verified", значит value не менялся, повторный blur
+    // не должен фантомно «проверять заново» с visible flash spinner-а.
+    if (state.kind === "verified") return;
     setState({ kind: "checking" });
     // Mock GNK lookup. TODO[CA-003]: реальный запрос /api/system/gnk/{inn}.
     timerRef.current = setTimeout(() => {
       setState({ kind: "verified", summaryKey: "s1_inn_summary_mock" });
     }, CHECK_DELAY_MS);
-  }, [onBlur, value]);
+  }, [onBlur, value, state.kind]);
 
   const verified = state.kind === "verified";
 
