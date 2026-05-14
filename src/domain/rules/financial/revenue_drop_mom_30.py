@@ -29,6 +29,7 @@ def revenue_drop_mom_30(snapshot: BorrowerSnapshot) -> FiringEvidence | None:
 
     return FiringEvidence(
         message=f"Выручка падает 2 месяца подряд: {mom_1:.0%} и {mom_2:.0%}",
+        message_uz=f"Tushum ketma-ket 2 oy pasaymoqda: {mom_1:.0%} va {mom_2:.0%}",
         evidence={
             "mom_1": str(mom_1),
             "mom_2": str(mom_2),

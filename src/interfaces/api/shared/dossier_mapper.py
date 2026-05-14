@@ -203,6 +203,7 @@ def red_flag_to_output(flag: RedFlag) -> RedFlagOutput:
         source=flag.source,
         source_uz=flag.source_uz or flag.source,
         message=flag.message,
+        message_uz=flag.message_uz or flag.message,
         evidence=_jsonable_dict(flag.evidence),
         detected_at=flag.detected_at,
     )

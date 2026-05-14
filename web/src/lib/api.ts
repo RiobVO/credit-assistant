@@ -20,6 +20,9 @@ export type RedFlagDto = {
   // backend подставляет RU fallback — поле всегда непустое.
   source_uz: string;
   message: string;
+  // T0.4 follow-up B2: UZ-перевод message. Та же fallback-цепочка через
+  // backend mapper — поле всегда непустое.
+  message_uz: string;
   evidence: Record<string, unknown>;
   detected_at: string;
 };

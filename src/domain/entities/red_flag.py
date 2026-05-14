@@ -20,6 +20,8 @@ class RedFlag:
     # и backward-compat с существующими JSONB snapshot'ами (mapper
     # подставляет ``source_uz = source`` при чтении old data).
     source_uz: str = ""
+    # T0.4 follow-up B2: UZ-перевод message. Backward-compat аналогично source_uz.
+    message_uz: str = ""
 
     def __hash__(self) -> int:
         # evidence — dict, не хешируемый. Хешируем по rule_id + detected_at

@@ -33,6 +33,7 @@ def new_counterparty_large_share(snapshot: BorrowerSnapshot) -> FiringEvidence |
 
     return FiringEvidence(
         message=f"Новые контрагенты ({len(new_buyers)}) — {total_share:.0%} выручки",
+        message_uz=f"Yangi kontragentlar ({len(new_buyers)}) — tushumning {total_share:.0%}",
         evidence={
             "new_buyer_count": len(new_buyers),
             "new_buyer_total_share": str(total_share),

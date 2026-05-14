@@ -21,6 +21,7 @@ def negative_profit_3q(snapshot: BorrowerSnapshot) -> FiringEvidence | None:
 
     return FiringEvidence(
         message="Убыток (или ноль) три квартала подряд",
+        message_uz="Ketma-ket 3 chorakda zarar (yoki nol)",
         evidence={
             "profits": [str(q.net_profit.amount) for q in last_three],
             "quarters": [q.period.end.isoformat() for q in last_three],

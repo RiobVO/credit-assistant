@@ -28,6 +28,7 @@ def revenue_drop_yoy_50(snapshot: BorrowerSnapshot) -> FiringEvidence | None:
 
     return FiringEvidence(
         message=f"Годовая выручка упала {yoy:.0%} YoY",
+        message_uz=f"Yillik tushum {yoy:.0%} YoY pasaygan",
         evidence={
             "yoy_pct": str(yoy),
             "previous_year": prev.period.end.year,

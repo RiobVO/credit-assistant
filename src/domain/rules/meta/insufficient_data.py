@@ -30,6 +30,7 @@ def insufficient_data(snapshot: BorrowerSnapshot) -> FiringEvidence | None:
 
     return FiringEvidence(
         message="Недостаточно данных для оценки: нет ни одной точки выручки",
+        message_uz="Baholash uchun maʼlumotlar yetarli emas: birorta tushum nuqtasi yoʻq",
         evidence={
             "annual_reports_count": len(snapshot.annual_reports),
             "quarterly_reports_count": len(snapshot.quarterly_reports),

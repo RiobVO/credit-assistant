@@ -19,5 +19,6 @@ def okved_changed_12m(snapshot: BorrowerSnapshot) -> FiringEvidence | None:
         return None
     return FiringEvidence(
         message=f"Основной ОКВЭД сменился {days_since} дней назад",
+        message_uz=f"Asosiy ОКВЭД {days_since} kun oldin almashgan",
         evidence={"days_since_change": days_since, "current_okved": snapshot.borrower.okved_main},
     )

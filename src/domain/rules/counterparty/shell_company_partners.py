@@ -30,6 +30,7 @@ def shell_company_partners(snapshot: BorrowerSnapshot) -> FiringEvidence | None:
 
     return FiringEvidence(
         message=f"{len(shells)} контрагентов младше 6 мес",
+        message_uz=f"6 oydan kichik {len(shells)} ta kontragent",
         evidence={
             "shell_count": len(shells),
             "shell_inns": sorted(cp.inn.value for cp in shells),

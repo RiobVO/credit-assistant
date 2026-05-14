@@ -42,6 +42,7 @@ def vat_esf_mismatch(snapshot: BorrowerSnapshot) -> FiringEvidence | None:
 
     return FiringEvidence(
         message=f"Декларация НДС vs ЭСФ расходится на {diff_pct:.0%}",
+        message_uz=f"QQS deklaratsiyasi va EHF {diff_pct:.0%} ga farqlanadi",
         evidence={
             "vat_declared": str(vat_declared),
             "sum_seller_esf_vat": str(sum_seller_vat),

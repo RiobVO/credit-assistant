@@ -208,6 +208,9 @@ class RedFlagOutput(_StrictModel):
     # dossier_mapper._red_flag_from_dict), поэтому поле всегда непустое.
     source_uz: str
     message: str
+    # T0.4 follow-up B2: UZ-перевод message. Та же fallback-цепочка через
+    # persistence mapper — поле всегда непустое.
+    message_uz: str
     evidence: dict[str, Any]
     detected_at: date
 

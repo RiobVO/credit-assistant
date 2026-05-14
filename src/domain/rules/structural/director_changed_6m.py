@@ -17,5 +17,6 @@ def director_changed_6m(snapshot: BorrowerSnapshot) -> FiringEvidence | None:
         return None
     return FiringEvidence(
         message=f"Директор сменился {days_since} дней назад",
+        message_uz=f"Direktor {days_since} kun oldin almashgan",
         evidence={"days_since_change": days_since},
     )

@@ -69,6 +69,7 @@ class RuleRegistry:
                     source=rule.source,
                     source_uz=rule.source_uz,
                     message=evidence.message,
+                    message_uz=evidence.message_uz,
                     evidence=evidence.evidence,
                     detected_at=snapshot.as_of,
                 ),

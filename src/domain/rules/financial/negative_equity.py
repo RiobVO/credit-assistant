@@ -32,6 +32,7 @@ def negative_equity(snapshot: BorrowerSnapshot) -> FiringEvidence | None:
     # CA-021: округляем evidence до 2 знаков — Decimal-хвост ломает PDF/UI.
     return FiringEvidence(
         message="Отрицательный или нулевой собственный капитал в последнем годовом отчёте",
+        message_uz="Soʻnggi yillik hisobotda manfiy yoki nol oʻz kapitali",
         evidence={
             "equity": str(equity.quantize(Decimal("0.01"))),
             "year": str(latest.period.end.year),

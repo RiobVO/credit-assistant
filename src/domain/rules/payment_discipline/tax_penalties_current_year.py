@@ -25,10 +25,12 @@ def tax_penalties_current_year(snapshot: BorrowerSnapshot) -> FiringEvidence | N
         (ev.amount.amount for ev in penalties if ev.amount is not None),
         Decimal("0"),
     )
+    count = len(penalties)
     return FiringEvidence(
-        message=f"Пеня по налогам в {current_year} году: {len(penalties)} шт., итого {total}",
+        message=f"Пеня по налогам в {current_year} году: {count} шт., итого {total}",
+        message_uz=f"{current_year} yilida soliq boʻyicha penyalar: {count} ta, jami {total}",
         evidence={
-            "count": len(penalties),
+            "count": count,
             "total_amount": str(total),
             "year": current_year,
         },

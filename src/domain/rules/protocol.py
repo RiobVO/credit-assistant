@@ -18,6 +18,9 @@ from domain.entities.borrower_snapshot import BorrowerSnapshot
 class FiringEvidence:
     message: str
     evidence: dict[str, Any] = field(default_factory=dict)
+    # T0.4 follow-up B2: UZ-перевод message. Soft default="" для test-fixtures.
+    # Production rule-функции формируют обе строки параллельно (strategy D).
+    message_uz: str = ""
 
     def __hash__(self) -> int:
         return hash(self.message)

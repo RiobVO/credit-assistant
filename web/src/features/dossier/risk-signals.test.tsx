@@ -16,7 +16,8 @@ const FLAG: RedFlagDto = {
   severity: "critical",
   source: "НК РУз ст. 256; Soliq внутренние методики",
   source_uz: "НК РУз ст. 256; Soliq ichki uslublari",
-  message: "Расхождение 80%",
+  message: "Декларация НДС vs ЭСФ расходится на 80%",
+  message_uz: "QQS deklaratsiyasi va EHF 80% ga farqlanadi",
   evidence: {},
   detected_at: "2026-05-08",
 };
@@ -35,27 +36,37 @@ function renderSignals(locale: "ru" | "uz", flag: RedFlagDto) {
 // с тестами других файлов и ловить inter-file DOM-leaks.
 afterEach(cleanup);
 
-describe("RiskSignals source локализация", () => {
-  it("locale=ru → показывает RU source", () => {
+describe("RiskSignals source/message локализация", () => {
+  it("locale=ru → RU source и RU message", () => {
     renderSignals("ru", FLAG);
-    // Раскрываем accordion чтобы source стал видимым.
+    // Header collapsed: message виден в строке-saggetion.
+    expect(
+      screen.getAllByText("Декларация НДС vs ЭСФ расходится на 80%").length,
+    ).toBeGreaterThan(0);
+    // Expand accordion: source виден в footer.
     fireEvent.click(screen.getByRole("button", { expanded: false }));
     expect(
       screen.getByText("НК РУз ст. 256; Soliq внутренние методики"),
     ).toBeInTheDocument();
   });
 
-  it("locale=uz → показывает UZ source", () => {
+  it("locale=uz → UZ source и UZ message", () => {
     renderSignals("uz", FLAG);
+    expect(
+      screen.getAllByText("QQS deklaratsiyasi va EHF 80% ga farqlanadi").length,
+    ).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole("button", { expanded: false }));
     expect(
       screen.getByText("НК РУз ст. 256; Soliq ichki uslublari"),
     ).toBeInTheDocument();
   });
 
-  it("locale=uz + пустой source_uz → fallback на RU source", () => {
-    const legacy: RedFlagDto = { ...FLAG, source_uz: "" };
+  it("locale=uz + пустой source_uz/message_uz → fallback на RU обоих полей", () => {
+    const legacy: RedFlagDto = { ...FLAG, source_uz: "", message_uz: "" };
     renderSignals("uz", legacy);
+    expect(
+      screen.getAllByText("Декларация НДС vs ЭСФ расходится на 80%").length,
+    ).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole("button", { expanded: false }));
     expect(
       screen.getByText("НК РУз ст. 256; Soliq внутренние методики"),

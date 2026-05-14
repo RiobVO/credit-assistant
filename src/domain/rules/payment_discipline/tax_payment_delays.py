@@ -25,6 +25,7 @@ def tax_payment_delays(snapshot: BorrowerSnapshot) -> FiringEvidence | None:
     max_delay = max(ev.delay_days for ev in delayed if ev.delay_days is not None)
     return FiringEvidence(
         message=f"Задержки уплаты налогов: {len(delayed)} шт., макс {max_delay} дней",
+        message_uz=f"Soliq toʻlovlarida kechikishlar: {len(delayed)} ta, maks {max_delay} kun",
         evidence={
             "delayed_count": len(delayed),
             "max_delay_days": max_delay,
