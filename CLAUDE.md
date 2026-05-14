@@ -69,21 +69,27 @@ Heads-up: **live-browser smoke** через `/`, `/search`, `/history`, `/dossie
 - `0d29e58` — frontend `?lang=` forwarding из cookie `ca_locale` в SubHeader + BFF route.
 - `8985ac3` — LocaleSwitcher в BankTopbar (был только в GlobalTopbar — bank-shell не покрывался).
 - `8de5b95` — `/settings` «Язык интерфейса» row реагирует на `useLocale()` (был хардкод `t("locale_ru_full")`).
+- `23fb311` — **B3 + B4** одним коммитом:
+  - B3: `_resolve_okved(code, messages)` переключает на `short_uz/full_uz` для UZ-PDF. Catalog UZ-пары с CA-DS17 наконец используются.
+  - B4 (scope расширен в pre-impl review): `formatBigUzs(amount, locale)` + `formatRevenueShort(decimalStr, locale)` required-param — UZ-суффиксы «mlrd / mln / ming soʻm» (U+02BB). Callers (kpi-row, revenue-24m-chart, result-card) читают `useLocale()`. Convention: **RU-числа + UZ-суффикс** (banking UZ habit, консистентно с pdf-i18n/uz.json). `uz.json spark_value_format` ASCII `'` → U+02BB ʻ.
+  - Тесты: 3 pytest (pdf_renderer_okved_resolver_test, новый pure-Python без WeasyPrint) + 10 vitest (format.test.ts dossier, новый) + 4 vitest (format.test.ts search, extend).
+  - **Heads-up CA-DS29-apostrophe**: grep по `web/src/i18n/uz.json` нашёл **340 occurrences** ASCII apostrophe в latin-узб словах (`bo'lmadi`, `noto'g'ri`, `ma'lumot`, …). Systemic orthographic regression на весь UZ-каталог. Требует отдельного коммита-fix (bulk sed `'` → `ʻ` с проверкой каждой строки на false-positive в RU/EN тексте). **Не входит в B4 scope.**
 
 **Открытый backlog (Active — Tier 1 на паузе):**
-- **B1 source_uz** — `Rule.source` хардкод RU/EN mix. ADR-0015 покрыл `name_uz`, но `source` поле в YAML — single field. Тратебуется `RuleSpecYaml.source_uz: str = Field(min_length=1)` + 19 source-cite на ревью. **Compliance-конвенция**: regulatory doc names («ЦБ РУз положение №27-п», «Базель III IRB», «Group-IB Uzbekistan fraud report 2024-2025») **не переводятся** — только descriptive phrases. Большая часть source_uz будет identical to source.
+- **B1 source_uz** — `Rule.source` хардкод RU/EN mix. ADR-0015 покрыл `name_uz`, но `source` поле в YAML — single field. Требуется `RuleSpecYaml.source_uz: str = Field(min_length=1)` + 19 source-cite на ревью. **Compliance-конвенция**: regulatory doc names («ЦБ РУз положение №27-п», «Базель III IRB», «Group-IB Uzbekistan fraud report 2024-2025») **не переводятся** — только descriptive phrases. Большая часть source_uz будет identical to source.
 - **B2 RedFlag.message** — 16 файлов в `src/domain/rules/**/*.py` имеют `message=f"..."` хардкод на RU. Tabular review + переход на `messages.X.format(...)` поверх `PdfMessages` (аналогично observations_builder rewrite в T0.4 commit 6). Backend domain rules + новые ключи в `config/pdf-i18n/{ru,uz}.json` + новые ключи в `web/src/i18n/{ru,uz}.json` (UI читает message из API). Frontend `flag.description` уже бы получал локализованный — gap derives from backend.
-- **B3 OKVED locale picker** (изолированный) — `pdf_renderer.py:_resolve_okved` хардкодит `entry.short_ru` / `entry.full_ru`. Каталог имеет `short_uz` / `full_uz` (CA-DS17). Фикс: передать `messages.locale` или `bundle.lang` в `_resolve_okved`, switch picker. Без ревью.
-- **B4 formatBigUzs локализация** (изолированный) — `web/src/features/dossier/format.ts:formatBigUzs` хардкодит «млрд / млн / тыс / сум» на кириллице. Callers — KPI tiles dossier-view, search sparkline, manual-input financial table. Фикс: `formatBigUzs(amount, locale)` или новые i18n keys + `useLocale()` в callers. Без ревью.
+- **CA-DS29-apostrophe** (новый, после B3+B4) — 340 ASCII apostrophes по uz.json, bulk fix отдельным коммитом без ревью.
 
 **Workflow agreed 2026-05-18:**
-- B3 + B4 → один коммит сейчас, без ревью.
+- ~~B3 + B4 → один коммит сейчас~~ ✅ закрыто `23fb311`.
 - B1 source_uz → tabular review (короткий: большинство rows = identical-copy citation).
 - B2 RedFlag.message → tabular review (16 messages, как 19 rules в T0.4 commit 3).
+- CA-DS29-apostrophe → bulk fix без ревью.
 
 **Lessons:**
 - Перед мержем claim «X everywhere» обязательно `grep -rn` на hardcoded strings того класса, который локализуется. Я провалил это 3 раза (T0.4 base, LocaleSwitcher в BankTopbar, locale_full в Settings) — паттерн `feedback_nested_anchor_rtl_blind` extends: RTL/jsdom не ловит «забыл прокинуть» в shared-зоне consumers.
 - Memory `feedback_dont_pause_between_commits.md` + `feedback_nbsp_write_loses_literal.md` добавлены 2026-05-18.
+- Pre-impl scope-review B4 (2026-05-18): описание в CLAUDE.md ловило только namesake `formatBigUzs`, но live-browser в UZ-mode `/search` дал бы тот же gap через `formatRevenueShort`. Расширение scope **до** коммита спасло 4-й T0.4 hotfix. Lesson: «один namesake = один сценарий» — ложная конвенция; искать **все** формат-хелперы той же семантики.
 
 ### Active Tier 0 — Deal-breakers
 - **T0.1** Real soliq fixtures via personal ETSP (3–4 фирмы × 5 типов = 15–20 xltx, gitignore + анонимизированные в git). Инфра готова (`6ee7a12`), 3 фирмы (22 файла) на месте, см. `tests/parsers/real_xltx_test.py`.
