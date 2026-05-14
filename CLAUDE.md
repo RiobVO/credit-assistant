@@ -7,7 +7,9 @@
 
 ## Current Status
 
-**T1.1 (case_id monotonic sequence) complete 2026-05-18.** Banking-grade BR-YYYY-NNNN на `dossiers.case_id` колонке (compromised B без Phase 4 application entity). Existing 47 dossiers backfilled `BR-2026-0001..0047` по `created_at` ASC. Allocator: `pg_advisory_xact_lock(year)` + `ALTER SEQUENCE RESTART` на year boundary + `nextval`. Закрывает CA-DS18b/c. Драйверы изменений: `_application_id`/`_format_application_id` derived helpers удалены, frontend `formatCaseId` + test удалены. E2E smoke (BR-2026-0048 на новый dossier) ✓.
+**T1.1 (case_id monotonic sequence) complete 2026-05-18** (commit `4c77d7c`, hotfix `65827f1`, CI ✓ run 26006304031). Banking-grade BR-YYYY-NNNN на `dossiers.case_id` колонке (compromised B без Phase 4 application entity). Existing 47 dossiers backfilled `BR-2026-0001..0047` по `created_at` ASC. Allocator: `pg_advisory_xact_lock(year)` + `ALTER SEQUENCE RESTART` на year boundary + `nextval`. Закрывает CA-DS18b/c. Драйверы изменений: `_application_id`/`_format_application_id` derived helpers удалены, frontend `formatCaseId` + test удалены. E2E smoke (BR-2026-0048 на новый dossier) ✓.
+
+**Hotfix 65827f1 (T0.4 B1 регрессия в тестах):** `test_registry_factory.py` inline YAML не получил `source_uz` placeholder после T0.4 B1 commit `6db0061` — CI был красным 5 коммитов подряд начиная с T0.4. Pydantic ValidationError раздавался раньше проверяемой ветки (unknown rule / missing rule / invalid severity / missing name_uz). Поправил 4 inline YAML с `source_uz: src_uz`. Lesson: **pre-push checklist пункт 4** («CI коммита перед твоим зелёный? `gh run list --branch main -L 3`») игнорирование стоит сессии — следующий push наследует красный baseline.
 
 **T0.4 (UZ-локализация PDF) + follow-up complete 2026-05-18.** Все 4 gaps live-browser walkthrough'а закрыты (B1+B2 source/message_uz сквозь стек, B3 OKVED PDF picker, B4 UZS-форматтеры) + CA-DS29-apostrophe (355 ASCII apostrophes → U+02BB ʻ в uz.json). Tier 0 целиком closed.
 
