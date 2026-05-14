@@ -24,13 +24,14 @@ import argparse
 import asyncio
 import json
 import sys
-from datetime import date
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
 from application.dto.dossier_record import DossierRecord
 from application.dto.parsed_data_chunk import ManualChunk
+from application.services.case_id_allocator import SqlAlchemyCaseIdAllocator
 from application.use_cases.build_borrower_snapshot import build_borrower_snapshot
 from domain.entities.borrower import Borrower, LegalForm
 from domain.entities.financial_report import FinancialReport
@@ -271,9 +272,15 @@ async def _commit_borrowers() -> list[dict[str, Any]]:
                 rules_version=RULES_VERSION,
                 rules_evaluated=len(registry.rules),
             )
+            # T1.1: case_id выдаёт allocator под текущий год; sequence
+            # + advisory lock гарантируют monotonic в одной транзакции
+            # с save dossier.
+            allocator = SqlAlchemyCaseIdAllocator(session)
+            case_id = await allocator.allocate(datetime.now(UTC))
             dossier_id = await dossier_repo.save(
                 record,
                 snapshot_id,
+                case_id,
                 source_mode="bank",
                 created_by_analyst_id=None,
             )

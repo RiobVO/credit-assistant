@@ -18,8 +18,10 @@ from application.ports.borrower_repository_port import BorrowerRepositoryPort
 from application.ports.borrower_snapshot_repository_port import (
     BorrowerSnapshotRepositoryPort,
 )
+from application.ports.case_id_allocator_port import CaseIdAllocatorPort
 from application.ports.dossier_repository_port import DossierRepositoryPort
 from application.ports.draft_repository_port import DraftRepositoryPort
+from application.services.case_id_allocator import SqlAlchemyCaseIdAllocator
 from infrastructure.persistence.database import get_session
 from infrastructure.persistence.repositories.borrower_repository import (
     SqlAlchemyBorrowerRepository,
@@ -37,12 +39,17 @@ from infrastructure.persistence.repositories.draft_repository import (
 
 @dataclass(frozen=True, slots=True)
 class DossierStorage:
-    """Контейнер репозиториев. Все три hop'a досье + draft под одну сессию."""
+    """Контейнер репозиториев. Все три hop'a досье + draft под одну сессию.
+
+    T1.1: ``case_id_allocator`` живёт в той же сессии — аллокация case_id
+    участвует в той же транзакции, что и insert dossier (atomic).
+    """
 
     borrower: BorrowerRepositoryPort
     snapshot: BorrowerSnapshotRepositoryPort
     dossier: DossierRepositoryPort
     draft: DraftRepositoryPort
+    case_id_allocator: CaseIdAllocatorPort
 
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
@@ -54,6 +61,7 @@ async def get_dossier_storage(session: SessionDep) -> DossierStorage:
         snapshot=SqlAlchemyBorrowerSnapshotRepository(session),
         dossier=SqlAlchemyDossierRepository(session),
         draft=SqlAlchemyDraftRepository(session),
+        case_id_allocator=SqlAlchemyCaseIdAllocator(session),
     )
 
 

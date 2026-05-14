@@ -102,6 +102,7 @@ def _view(snapshot: BorrowerSnapshot) -> DossierViewRecord:
         ),
         snapshot=snapshot,
         created_at=datetime(2026, 5, 12, tzinfo=UTC),
+        case_id="BR-2026-T002",
     )
 
 

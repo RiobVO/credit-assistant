@@ -96,6 +96,7 @@ def _record_with_buyers() -> DossierViewRecord:
         ),
         snapshot=snap,
         created_at=datetime(2026, 5, 1, 12, 0, tzinfo=UTC),
+        case_id="BR-2026-T003",
     )
 
 

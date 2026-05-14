@@ -82,6 +82,21 @@ async def api_client(pg_session: AsyncSession) -> AsyncIterator[httpx.AsyncClien
         app.dependency_overrides.clear()
 
 
+_case_id_counter = 0
+
+
+def _next_test_case_id() -> str:
+    """Уникальный case_id под UNIQUE constraint для test-инструментов.
+
+    Allocator в этих тестах не используем — здесь проверяется bank/history
+    логика, не sequence-семантика. Простой counter-based id даёт
+    детерминированность + уникальность.
+    """
+    global _case_id_counter
+    _case_id_counter += 1
+    return f"BR-2026-T{_case_id_counter:03d}"
+
+
 async def _make_bank_dossier(
     session: AsyncSession,
     *,
@@ -109,6 +124,7 @@ async def _make_bank_dossier(
     return await SqlAlchemyDossierRepository(session).save(
         record,
         snapshot_id,
+        _next_test_case_id(),
         source_mode=source_mode,
         created_by_analyst_id=analyst_id if source_mode == "bank" else None,
     )

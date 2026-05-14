@@ -7,6 +7,7 @@
 """
 
 from collections.abc import Iterator
+from datetime import datetime
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -50,6 +51,7 @@ class _InMemoryDossierRepo:
         self,
         record: DossierRecord,
         snapshot_id: UUID,
+        case_id: str,
         *,
         source_mode: str = "accountant",
         created_by_analyst_id: UUID | None = None,
@@ -79,12 +81,22 @@ class _InMemoryDraftRepo:
         return 0
 
 
+class _DummyCaseIdAllocator:
+    """Stub allocator: всегда возвращает одну и ту же строку. Тест endpoint'а
+    проверяет интеграцию с use-case'ом, не sequence-семантику.
+    """
+
+    async def allocate(self, now: datetime) -> str:
+        return "BR-2026-T999"
+
+
 def _in_memory_storage() -> DossierStorage:
     return DossierStorage(
         borrower=_InMemoryBorrowerRepo(),
         snapshot=_InMemorySnapshotRepo(),
         dossier=_InMemoryDossierRepo(),
         draft=_InMemoryDraftRepo(),
+        case_id_allocator=_DummyCaseIdAllocator(),
     )
 
 

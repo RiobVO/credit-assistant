@@ -63,6 +63,7 @@ def _make_bundle() -> DossierPdfBundle:
         ),
         snapshot=snapshot,
         created_at=datetime(2026, 5, 10, 14, 32, tzinfo=UTC),
+        case_id="BR-2026-0F8A",
     )
 
     view_bundle = DossierViewBundle(

@@ -38,6 +38,7 @@ class SqlAlchemyDossierRepository:
         self,
         record: DossierRecord,
         snapshot_id: UUID,
+        case_id: str,
         *,
         source_mode: str = "accountant",
         created_by_analyst_id: UUID | None = None,
@@ -54,6 +55,7 @@ class SqlAlchemyDossierRepository:
             rules_evaluated=record.rules_evaluated,
             source_mode=source_mode,
             created_by_analyst_id=created_by_analyst_id,
+            case_id=case_id,
         )
         self._session.add(orm)
         await self._session.flush()
@@ -109,6 +111,7 @@ class SqlAlchemyDossierRepository:
             dossier=dossier_record,
             snapshot=snapshot,
             created_at=dossier_orm.created_at,
+            case_id=dossier_orm.case_id,
         )
 
     async def find_search_hit_by_inn(self, inn: str) -> BorrowerSearchHit:

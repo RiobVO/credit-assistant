@@ -121,9 +121,18 @@ async def test_stats_aggregates_today_dossiers(
     )
     repo = SqlAlchemyDossierRepository(pg_session)
     aid = analyst.id
-    await repo.save(_record("approve"), snapshot_id, source_mode="bank", created_by_analyst_id=aid)
-    await repo.save(_record("approve"), snapshot_id, source_mode="bank", created_by_analyst_id=aid)
-    await repo.save(_record("review"), snapshot_id, source_mode="bank", created_by_analyst_id=aid)
+    await repo.save(
+        _record("approve"), snapshot_id, "BR-2026-D001",
+        source_mode="bank", created_by_analyst_id=aid,
+    )
+    await repo.save(
+        _record("approve"), snapshot_id, "BR-2026-D002",
+        source_mode="bank", created_by_analyst_id=aid,
+    )
+    await repo.save(
+        _record("review"), snapshot_id, "BR-2026-D003",
+        source_mode="bank", created_by_analyst_id=aid,
+    )
 
     headers = await _login(api_client)
     resp = await api_client.get("/api/bank/stats/today", headers=headers)
@@ -146,8 +155,8 @@ async def test_stats_ignores_accountant_mode_dossiers(
         snapshot, borrower_id
     )
     repo = SqlAlchemyDossierRepository(pg_session)
-    await repo.save(_record("approve"), snapshot_id, source_mode="accountant")
-    await repo.save(_record("approve"), snapshot_id, source_mode="accountant")
+    await repo.save(_record("approve"), snapshot_id, "BR-2026-D004", source_mode="accountant")
+    await repo.save(_record("approve"), snapshot_id, "BR-2026-D005", source_mode="accountant")
 
     headers = await _login(api_client)
     resp = await api_client.get("/api/bank/stats/today", headers=headers)
@@ -165,7 +174,7 @@ async def test_stats_repo_filters_by_date(
     )
     repo = SqlAlchemyDossierRepository(pg_session)
     # Today's dossier
-    await repo.save(_record("approve"), snapshot_id, source_mode="bank")
+    await repo.save(_record("approve"), snapshot_id, "BR-2026-D006", source_mode="bank")
     # «Yesterday's» — нельзя установить created_at напрямую через save, но мы
     # проверяем что repo query с date.today() видит todays-only автоматически.
     today = datetime.now(UTC).date()

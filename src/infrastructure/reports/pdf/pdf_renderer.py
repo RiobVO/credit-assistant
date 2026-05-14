@@ -117,7 +117,7 @@ class WeasyPrintPdfRenderer:
         borrower = snapshot.borrower
         messages = bundle.messages
 
-        application_id = _format_application_id(view.dossier_id, view.created_at)
+        application_id = view.case_id
         display_score = max(0, min(100, 100 - dossier.score))
         # Стрелка повторяет логику frontend score-gauge.tsx:
         # 0..100 → угол −90°..+90° (вертикаль вниз = 0).
@@ -194,12 +194,6 @@ class WeasyPrintPdfRenderer:
 
 
 # ----------------------------- helpers --------------------------------------
-
-
-def _format_application_id(dossier_id: object, created_at: datetime) -> str:
-    """``BR-2026-XXXX`` где XXXX — первые 4 hex uuid в верхнем регистре."""
-    suffix = str(dossier_id).replace("-", "")[:4].upper()
-    return f"BR-{created_at.year}-{suffix}"
 
 
 def _derive_initials(name: str) -> str:

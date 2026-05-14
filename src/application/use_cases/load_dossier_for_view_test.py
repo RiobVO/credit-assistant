@@ -74,6 +74,7 @@ def _view_record() -> DossierViewRecord:
         ),
         snapshot=_snapshot_with_12_months(),
         created_at=datetime(2026, 1, 15, 12, 0, tzinfo=UTC),
+        case_id="BR-2026-T001",
     )
 
 

@@ -7,7 +7,7 @@ objects (INN, Money, DateRange). Этот mapper — единственное м
 обратная зависимость гарантирована отсутствием импортов pydantic из domain.
 """
 
-from datetime import date, datetime
+from datetime import date
 from decimal import Decimal
 from typing import Any, cast, get_args
 from uuid import UUID
@@ -285,20 +285,6 @@ def _borrower_to_output(b: Borrower) -> BorrowerOutput:
     )
 
 
-def _application_id(dossier_id: UUID, created_at: datetime) -> str:
-    """Deterministic читабельный код заявки.
-
-    Формат ``BR-YYYY-XXXX``: год создания досье + первые 4 hex-символа UUID
-    (uppercase). Гарантирует, что для одного и того же dossier_id код всегда
-    тот же. Уникальности XXXX в пределах года не гарантирует (16^4 ≈ 65k
-    значений) — для отображения это нормально, для FK на заявку добавим
-    отдельную колонку в Phase 4.
-    """
-    year = created_at.year
-    short_hex = str(dossier_id).replace("-", "")[:4].upper()
-    return f"BR-{year}-{short_hex}"
-
-
 def _kpi_unit_code(unit: KpiUnit) -> KpiUnitCode:
     return unit.value
 
@@ -365,7 +351,7 @@ def build_dossier_view_response(bundle: DossierViewBundle) -> DossierViewRespons
         rules_evaluated=record.rules_evaluated,
         borrower=_borrower_to_output(snapshot.borrower),
         application=ApplicationOutput(
-            id=_application_id(view.dossier_id, view.created_at),
+            id=view.case_id,
             status="in_review",
         ),
         kpis=_kpi_bundle_to_output(bundle.kpis),

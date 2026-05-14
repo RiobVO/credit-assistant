@@ -62,14 +62,15 @@ async def test_get_view_by_id_returns_full_record(pg_session: AsyncSession) -> N
         rules_version="v1",
         rules_evaluated=17,
     )
-    dossier_id = await dossier_repo.save(record, snapshot_id)
+    dossier_id = await dossier_repo.save(record, snapshot_id, "BR-2026-A002")
 
     view = await dossier_repo.get_view_by_id(dossier_id)
     assert view is not None
 
-    # 1. dossier_id и created_at — из таблицы dossiers
+    # 1. dossier_id, created_at, case_id — из таблицы dossiers
     assert view.dossier_id == dossier_id
     assert isinstance(view.created_at, datetime)
+    assert view.case_id == "BR-2026-A002"
 
     # 2. dossier (DossierRecord) — score, recommendation, red_flags восстановлены
     assert view.dossier.score == 12
