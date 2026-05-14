@@ -5,7 +5,7 @@
 
 **Critical rule:** работаю ТОЛЬКО над активным Tier. Всё что не в Tier 0–4 — Frozen.
 
-**Tier 0 status (2026-05-18):** T0.2 / T0.3 / T0.4 / T0.5 done. Active остаток — T0.1 fixtures (3 фирмы × 22 файла на месте, формальный набор 4 фирмы × 20 файлов добивается оставшейся выгрузкой). Tier 1 unblocked.
+**Tier 0 status (2026-05-18):** ✅ **closed**. T0.1 / T0.2 / T0.3 / T0.4 / T0.5 done. T0.4 follow-up (B1+B2+B3+B4 + CA-DS29-apostrophe) тоже closed. **Active — T1.1 case_id sequence** (compromised B на dossiers, не Phase 4 application).
 
 ---
 
@@ -15,6 +15,9 @@
 
 - ~~**T0.4 / pre-impl check**~~ ✅ **resolved 2026-05-17**: `dossier_mapper.py:15-28` сериализует только `rule_id` + `rule_version`, `rule.name` в JSONB не уходит. Backlog: per-version registry loader для historical-name immutability (использовать существующий `rule_version`) — не сейчас.
 - ~~**T0.4 / pick-on-start**~~ ✅ **resolved 2026-05-18**: ADR-0015 зафиксировал гибрид (b) template-level JSON dict + (c) branchless для `rule.name`. T0.4 закрыт.
+- ~~**T1.1 / target-table**~~ ✅ **resolved 2026-05-18**: compromised B — sequence на `dossiers` table, не на Phase 4 application entity (full Phase 4 = 5-10 дней refactor, ставит demo timeline под риск). Dossier = de-facto application proxy в текущей arch; post-demo case_id переносится на applications через FK без потерь.
+- ~~**T1.1 / wizard preview**~~ ✅ **resolved 2026-05-18**: (c) wizard показывает placeholder «case_id будет назначен» pre-submit. Реальный SEQ выдаётся при successful dossier creation. Drop `formatCaseId(draft.draftId)` derived формат и его frontend helper (`web/src/features/manual-input/lib/case-id.ts` + test).
+- ~~**T1.1 / race-safety**~~ ✅ **resolved 2026-05-18**: advisory lock `pg_advisory_xact_lock(year_hash)` на year-boundary reset. Avoids `LOCK TABLE` overhead.
 
 ---
 
@@ -63,10 +66,11 @@ Acceptance: 19 real-xltx pass (form1/form2 ×3 фирмы, vat_decl ×4, vat_ilo
 
 
 
-### T0.1 — Real soliq fixtures via personal ETSP
-- **Цель**: 3–4 собственные фирмы × 5 типов xltx = 15–20 реальных файлов. Выгрузка через личные кабинеты soliq.uz по моим ЭЦП.
-- **Куда**: `tests/fixtures/real/` (gitignore). Анонимизированные версии (замазанные ИНН/имена/суммы) в `tests/fixtures/real_anon/*.xltx` — в git.
-- **Acceptance**: `tests/integration/test_real_xltx.py` прогон через все 5 парсеров → 0 unexpected `parse_warnings` (whitelist допустимых документирован в тесте).
+### T0.1 — Real soliq fixtures via personal ETSP ✅ DONE 2026-05-18
+- ✅ 4 фирмы × 5 типов = formal набор complete. ИНН: 201308534, 305002665, 308747266, **305738460** (последняя добавлена 2026-05-18, sparse ilova как у фирм 1 и 3).
+- ✅ Файлы лежат в `tests/fixtures/soliq_xltx/` (gitignore по pattern `*_full.xltx`). По факту 28 xltx с учётом q4 / monthly variations.
+- ✅ Acceptance: `tests/parsers/real_xltx_test.py` 19/19 pass + 4 xfail (T2.3 profit_tax pending).
+- ⏳ **CA-DS30** anonymize gap: только 1/28 `*_anon.xltx` на месте. Bulk anonymization через openpyxl script (per-format replace правил для ИНН/имён/сумм с сохранением signature-cells) — post-T1 priority в backlog.
 
 ### T0.2 — CBU API real integration (CA-024b) ✅ DONE 2026-05-17 (commit b124af6)
 - ✅ Adapter `infrastructure/external/cbu_client.py` поверх `cbu.uz/oz/arkhiv-kursov-valyut/json/USD/`.
@@ -110,11 +114,20 @@ Live-browser smoke не выполнен в этой сессии (требуе�
 
 ## Tier 1 — Prod-killers (после T0)
 
-### T1.1 — case_id monotonic sequence (CA-DS18b)
-- Postgres sequence `application_case_seq` в `applications` table.
-- Формат `BR-{YYYY}-{seq:04d}`. **Year rollover → application-level reset** (resolved): use-case проверяет `current_year != last_issued_year` и ресетит sequence через `ALTER SEQUENCE ... RESTART`. Trigger в БД отвергнут — application-level гибче для on-prem, явный код, читаемые логи.
-- Frontend `formatCaseId` переключается на чтение `application.case_id` с бэка.
-- Замыкает одновременно CA-DS18c (year edge case).
+### T1.1 — case_id monotonic sequence (CA-DS18b/c) — **ACTIVE**
+**Compromised B** (resolved 2026-05-18, см. Open decisions): sequence на `dossiers` table, не на Phase 4 application entity. Full Phase 4 = 5-10 дней refactor; compromise даёт banking-grade monotonic ID до demo, post-demo миграция на applications через FK без потерь.
+
+- Alembic migration: CREATE SEQUENCE `dossier_case_seq` START WITH 1 + ALTER TABLE dossiers ADD COLUMN case_id VARCHAR(20) UNIQUE + INDEX. **Backfill**: for each existing dossier по `created_at` ASC per year — `BR-{YYYY}-{rownum:04d}`. После backfill: SET NOT NULL + setval по MAX(current_year).
+- Формат `BR-{YYYY}-{seq:04d}`. **Year rollover application-level** (resolved): use-case проверяет current_year vs MAX(year of existing case_id), если новый → `ALTER SEQUENCE ... RESTART WITH 1`. Trigger в БД отвергнут — application-level гибче для on-prem, явный код, читаемые логи.
+- **Race safety** (resolved): `pg_advisory_xact_lock(year_hash)` на year-boundary reset. Avoids `LOCK TABLE dossiers` overhead.
+- **Wizard preview** (resolved): (c) — pre-submit placeholder «case_id будет назначен», реальный SEQ выдаётся при successful dossier creation. **Drop legacy `formatCaseId` frontend helper** + его test.
+- Frontend `manual-input-view.tsx` снимает `formatCaseId(draft.draftId)` pill, заменяет на тонкий placeholder. Sub-header `application.id` уже читается из API (post-create) — не меняется.
+
+**Scope (~10 файлов):** migration + ORM Dossier + `case_id_allocator` service (year-rollover + advisory lock + nextval) + dossier creation use-case + DossierRecord DTO + persistence + interfaces mappers + PDF renderer (drop `_format_application_id`, читать из dossier.case_id) + API DTO `ApplicationOutput.id = dossier.case_id` + frontend wizard placeholder + frontend helper deprecate + tests (allocator + migration round-trip + e2e).
+
+**Acceptance:** новый dossier на 2026 получает `BR-2026-NNNN` с monotonic NNNN. Создание dossier на 2027 reset'ит sequence. Existing dossiers получают backfilled case_id ASC по created_at в их году. Frontend wizard не показывает derived UUID-based ID. Sub-header досье показывает SEQ-based ID.
+
+**Замыкает одновременно CA-DS18c** (year edge case).
 
 ### T1.2 — Refresh-token rotation + Redis denylist (CA-019)
 - Redis сервис в `docker-compose.yml`.
@@ -202,3 +215,4 @@ Live-browser smoke не выполнен в этой сессии (требуе�
 
 - **CA-015b** — VAT-парсер для следующих xltx-форматов сверх T0.1 пакета. Оценить после T0.1.
 - **CA-DS11b** — faktura.uz расширенный scope (queries, history). Оценить после T2.4.
+- **CA-DS30** — anonymize gap для real xltx fixtures. Сейчас 1/28 `*_anon.xltx` на месте. Bulk anonymization через openpyxl script: per-format (VAT_DECLARATION / VAT_REGISTRY_ILOVA / FORM_2 / FORM_1 / PROFIT_TAX) replace правил для ИНН (на dummy ИНН) / имён (синтетика) / сумм (random preserving order-of-magnitude + signature-cells для parser format-detection). Скрипт `scripts/anonymize_xltx.py` + 28 anonymized output → git. **Post-T1 priority** (после T1.1-T1.5 prod-killers).
