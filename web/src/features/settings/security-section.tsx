@@ -8,6 +8,7 @@ import { AuthError, changePassword, useAnalyst } from "@/lib/auth";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 
+import { AdminResetMfaCard } from "./admin-reset-mfa-card";
 import { MfaSection } from "./mfa-section";
 
 const PASSWORD_FRESH_THRESHOLD_DAYS = 90;
@@ -82,9 +83,12 @@ export function SecuritySection() {
     }
   };
 
+  const isSenior = analyst?.role === "senior_analyst";
+
   return (
     <div className="flex flex-col gap-5">
       <MfaSection />
+      {isSenior ? <AdminResetMfaCard /> : null}
       <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-7">
       {analyst ? (
         <PasswordStatusRow passwordChangedAt={analyst.password_changed_at} />

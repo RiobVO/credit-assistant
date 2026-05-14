@@ -67,3 +67,10 @@ class SqlAlchemyAnalystRepository:
         """ORM-доступ для MFA-flow: записать secret/enrolled_at/backup_codes_hash
         требует mutation на ORM-инстансе. Не используй выше application слоя."""
         return await self._session.get(AnalystORM, analyst_id)
+
+    async def get_orm_by_email(self, email: str) -> AnalystORM | None:
+        """ORM lookup по email — для admin-операций (CA-DS13 reset-mfa).
+        Возвращает ORM-инстанс для mutation; password_hash остаётся внутри.
+        """
+        stmt = select(AnalystORM).where(AnalystORM.email == email)
+        return (await self._session.execute(stmt)).scalar_one_or_none()
