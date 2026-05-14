@@ -1,12 +1,19 @@
 "use client";
 
 import { ArrowRight, Building, ExternalLink } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import Link from "next/link";
 
 import type { BorrowerSearchResult, SearchCardData } from "@/lib/bank-api";
 
-import { formatRevenueMillions, formatRevenueShort, formatYoy, parseIsoMonth, splitBusinessAge } from "./format";
+import {
+  formatRevenueMillions,
+  formatRevenueShort,
+  formatYoy,
+  parseIsoMonth,
+  splitBusinessAge,
+  type UzsLocale,
+} from "./format";
 import { RevenueSparkline, type SparklinePoint } from "./revenue-sparkline";
 import { ScoreRing, type Recommendation } from "./score-ring";
 
@@ -39,8 +46,9 @@ export function ResultCard({
   card: SearchCardData;
 }) {
   const t = useTranslations("bank.search");
+  const locale = useLocale() as UzsLocale;
 
-  const revenue = formatRevenueShort(card.revenue_ltm);
+  const revenue = formatRevenueShort(card.revenue_ltm, locale);
   const yoy = card.yoy_pct != null ? formatYoy(card.yoy_pct) : null;
   const age = card.business_age_months != null ? splitBusinessAge(card.business_age_months) : null;
   const ageLabel = age

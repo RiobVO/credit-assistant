@@ -1,26 +1,39 @@
 // Phase 2 (DS-PHASE-2): хелперы форматирования для result-card.
 // Цифры выручки → «4,12 млрд сум» / «560 млн сум»; ISO month → «Май 26»;
 // business_age_months → {years, months} для i18n plural-template.
+// T0.4 B4: locale-aware суффиксы — RU числа + UZ-суффикс (mlrd / mln / soʻm)
+// для bank UZ-mode, консистентно с dossier formatBigUzs.
 
 const MILLION = 1_000_000;
 const BILLION = 1_000_000_000;
 
-export type RevenueDisplay = { value: string; unit: "млрд" | "млн" | "сум" };
+export type UzsLocale = "ru" | "uz";
+
+const SUFFIX = {
+  ru: { billion: "млрд сум", million: "млн сум", currency: "сум" },
+  // U+02BB MODIFIER LETTER TURNED COMMA в "soʻm" — стандартный апостроф
+  // латинского узбекского; см. config/pdf-i18n/uz.json.
+  uz: { billion: "mlrd soʻm", million: "mln soʻm", currency: "soʻm" },
+} as const;
 
 /** Форматирует Decimal-строку (UZS) в компактный display: «4,12 млрд сум». */
-export function formatRevenueShort(decimalStr: string | null): string | null {
+export function formatRevenueShort(
+  decimalStr: string | null,
+  locale: UzsLocale,
+): string | null {
   if (decimalStr == null || decimalStr === "") return null;
   const n = Number(decimalStr);
   if (!Number.isFinite(n) || n === 0) return null;
+  const s = SUFFIX[locale];
   if (n >= BILLION) {
     const v = (n / BILLION).toFixed(2).replace(".", ",");
-    return `${v} млрд сум`;
+    return `${v} ${s.billion}`;
   }
   if (n >= MILLION) {
     const v = (n / MILLION).toFixed(0);
-    return `${v} млн сум`;
+    return `${v} ${s.million}`;
   }
-  return `${n.toLocaleString("ru-RU")} сум`;
+  return `${n.toLocaleString("ru-RU")} ${s.currency}`;
 }
 
 /** Decimal-строка → «N млн сум» для tooltip. Округляем до целых млн. */

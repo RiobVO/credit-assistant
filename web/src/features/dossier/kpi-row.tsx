@@ -1,10 +1,10 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 import type { DossierViewDto, KpiValueDto } from "@/lib/api";
 
-import { formatBigUzs, formatPct, formatRatio } from "./format";
+import { formatBigUzs, formatPct, formatRatio, type UzsLocale } from "./format";
 
 import { KpiCard } from "./kpi-card";
 import { ReadinessKpiCard } from "./readiness-badge";
@@ -31,6 +31,7 @@ export function KpiRow({
 
 function EbitSlot({ kpi }: { kpi: KpiValueDto | null }) {
   const t = useTranslations("dossier.kpi");
+  const locale = useLocale() as UzsLocale;
   // CA-037 контракт: пока depreciation/amortization недоступен, показываем EBIT
   // как прокси EBITDA. Tooltip объясняет honest scoping.
   const label = t("label_ebit");
@@ -49,7 +50,7 @@ function EbitSlot({ kpi }: { kpi: KpiValueDto | null }) {
   return (
     <KpiCard
       label={label}
-      value={formatBigUzs(value)}
+      value={formatBigUzs(value, locale)}
       yoyPct={yoy}
       changeTone={yoy === null || yoy >= 0 ? "positive" : "negative"}
       tooltip={tooltip}

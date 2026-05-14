@@ -134,7 +134,7 @@ class WeasyPrintPdfRenderer:
             ),
         ).decode("ascii")
 
-        okved_short, okved_full = _resolve_okved(borrower.okved_main)
+        okved_short, okved_full = _resolve_okved(borrower.okved_main, messages)
         region_city, region_district = _parse_region(
             borrower.registered_address, messages.region_district_full,
         )
@@ -279,17 +279,18 @@ def _parse_region(address: str, district_full_word: str) -> tuple[str, str]:
     return (city_part or "—", district_part or "—")
 
 
-def _resolve_okved(code: str) -> tuple[str, str]:
+def _resolve_okved(code: str, messages: PdfMessages) -> tuple[str, str]:
     """OKVED код → (short_label, full_label). Unknown → (code, «—»).
 
     Источник — singleton-catalog (``default_okved_catalog``), JSON парсится
-    один раз при первом обращении. RU только — banking PDF tenant-strings
-    не локализуются на уровне catalog (CA-DS17 пометил OKVED как
-    catalog-data, не PdfMessages).
+    один раз при первом обращении. Catalog хранит RU + UZ пары (CA-DS17);
+    locale-picker берёт UZ для ``messages.locale == "uz"``, иначе RU.
     """
     entry = default_okved_catalog().get(code)
     if entry is None:
         return (code, "—")
+    if messages.locale == "uz":
+        return (entry.short_uz, entry.full_uz)
     return (entry.short_ru, entry.full_ru)
 
 
