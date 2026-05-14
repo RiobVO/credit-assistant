@@ -325,3 +325,120 @@ async def test_logout_writes_audit_and_returns_204(
 async def test_logout_requires_auth(api_client: httpx.AsyncClient) -> None:
     resp = await api_client.post("/api/bank/auth/logout")
     assert resp.status_code == 401
+
+
+# ── change-password (CA-068) ────────────────────────────────────────────────
+
+
+async def _login_and_get_access(
+    api_client: httpx.AsyncClient,
+    *,
+    email: str = EMAIL,
+    password: str = PASSWORD,
+) -> str:
+    resp = await api_client.post(
+        "/api/bank/auth/login", json={"email": email, "password": password}
+    )
+    assert resp.status_code == 200, resp.text
+    token: str = resp.json()["access_token"]
+    return token
+
+
+async def test_change_password_happy_path_updates_hash_and_timestamp(
+    api_client: httpx.AsyncClient, pg_session: AsyncSession
+) -> None:
+    """204 → старый пароль 401, новый 200, password_changed_at шагнул вперёд,
+    audit пишет ``password_changed``.
+    """
+    analyst = await _seed_analyst(pg_session)
+    initial_changed_at = analyst.password_changed_at
+    access = await _login_and_get_access(api_client)
+
+    new_password = "N3wPassw0rd!"
+    resp = await api_client.post(
+        "/api/bank/auth/change-password",
+        headers={"Authorization": f"Bearer {access}"},
+        json={"current_password": PASSWORD, "new_password": new_password},
+    )
+    assert resp.status_code == 204
+
+    # Старый пароль больше не работает.
+    old_login = await api_client.post(
+        "/api/bank/auth/login", json={"email": EMAIL, "password": PASSWORD}
+    )
+    assert old_login.status_code == 401
+
+    # Новый — работает.
+    new_login = await api_client.post(
+        "/api/bank/auth/login", json={"email": EMAIL, "password": new_password}
+    )
+    assert new_login.status_code == 200
+
+    await pg_session.refresh(analyst)
+    assert analyst.password_changed_at > initial_changed_at
+
+    log_rows = (
+        await pg_session.execute(
+            select(AuditLogORM).where(
+                AuditLogORM.analyst_id == analyst.id,
+                AuditLogORM.event == "password_changed",
+            )
+        )
+    ).scalars().all()
+    assert len(log_rows) == 1
+
+
+async def test_change_password_rejects_invalid_current(
+    api_client: httpx.AsyncClient, pg_session: AsyncSession
+) -> None:
+    await _seed_analyst(pg_session)
+    access = await _login_and_get_access(api_client)
+
+    resp = await api_client.post(
+        "/api/bank/auth/change-password",
+        headers={"Authorization": f"Bearer {access}"},
+        json={"current_password": "wrong", "new_password": "N3wPassw0rd!"},
+    )
+    assert resp.status_code == 401
+    assert resp.json()["detail"] == "invalid_credentials"
+
+
+async def test_change_password_rejects_same_as_current(
+    api_client: httpx.AsyncClient, pg_session: AsyncSession
+) -> None:
+    """Compliance-policy: запрет реюза текущего пароля. PASSWORD = "S3cret!"
+    короче 12, поэтому Pydantic 422; используем 12+ symbol seed для этой проверки.
+    """
+    long_password = "OldPassword42!"
+    await _seed_analyst(pg_session, password=long_password)
+    access = await _login_and_get_access(api_client, password=long_password)
+
+    resp = await api_client.post(
+        "/api/bank/auth/change-password",
+        headers={"Authorization": f"Bearer {access}"},
+        json={"current_password": long_password, "new_password": long_password},
+    )
+    assert resp.status_code == 400
+    assert resp.json()["detail"] == "password_unchanged"
+
+
+async def test_change_password_rejects_too_short(
+    api_client: httpx.AsyncClient, pg_session: AsyncSession
+) -> None:
+    await _seed_analyst(pg_session)
+    access = await _login_and_get_access(api_client)
+
+    resp = await api_client.post(
+        "/api/bank/auth/change-password",
+        headers={"Authorization": f"Bearer {access}"},
+        json={"current_password": PASSWORD, "new_password": "short"},
+    )
+    assert resp.status_code == 422
+
+
+async def test_change_password_requires_auth(api_client: httpx.AsyncClient) -> None:
+    resp = await api_client.post(
+        "/api/bank/auth/change-password",
+        json={"current_password": "x", "new_password": "yyyyyyyyyyyy"},
+    )
+    assert resp.status_code == 401

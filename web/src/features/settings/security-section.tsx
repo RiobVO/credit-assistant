@@ -4,7 +4,8 @@ import { Check, Clock, KeyRound, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
-import { useAnalyst } from "@/lib/auth";
+import { AuthError, changePassword, useAnalyst } from "@/lib/auth";
+import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 
 import { MfaSection } from "./mfa-section";
@@ -42,6 +43,7 @@ function daysBetween(fromIso: string, now: Date): number {
 export function SecuritySection() {
   const t = useTranslations("bank.settings");
   const { data: analyst } = useAnalyst();
+  const queryClient = useQueryClient();
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -67,18 +69,16 @@ export function SecuritySection() {
     }
     setState({ kind: "submitting" });
     try {
-      // TODO[CA-068]: backend endpoint `/api/auth/change-password` ещё не реализован.
-      // Имитируем ответ для UX-flow; когда endpoint появится — подменим fetch.
-      await new Promise((r) => setTimeout(r, 600));
+      await changePassword({ currentPassword: current, newPassword: next });
       setState({ kind: "ok" });
       setCurrent("");
       setNext("");
       setConfirm("");
+      // password_changed_at обновился на бэкенде → перечитать /me, чтобы
+      // status-row показал свежесть пароля без перезагрузки страницы.
+      await queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
     } catch (err) {
-      setState({
-        kind: "error",
-        message: err instanceof Error ? err.message : t("password_change_failed"),
-      });
+      setState({ kind: "error", message: mapErrorToMessage(err, t) });
     }
   };
 
@@ -143,12 +143,31 @@ export function SecuritySection() {
             )}
             {t("change_password_cta")}
           </button>
-          <span className="text-[11.5px] text-[var(--ink-4)]">{t("endpoint_wip")}</span>
         </div>
       </form>
       </div>
     </div>
   );
+}
+
+function mapErrorToMessage(
+  err: unknown,
+  t: ReturnType<typeof useTranslations>,
+): string {
+  if (err instanceof AuthError) {
+    if (err.status === 401 && err.message === "invalid_credentials") {
+      return t("password_current_invalid");
+    }
+    if (err.status === 400 && err.message === "password_unchanged") {
+      return t("password_unchanged");
+    }
+    if (err.status === 422) {
+      // Pydantic 422 на new_password<12 — UI уже валидирует это до submit,
+      // но fallback на случай рассинхрона правил.
+      return t("password_too_short");
+    }
+  }
+  return err instanceof Error ? err.message : t("password_change_failed");
 }
 
 function PasswordStatusRow({ passwordChangedAt }: { passwordChangedAt: string }) {

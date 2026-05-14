@@ -86,6 +86,31 @@ export async function fetchMe(): Promise<AnalystSummary> {
   return jsonOrThrow<AnalystSummary>(resp);
 }
 
+export async function changePassword(args: {
+  currentPassword: string;
+  newPassword: string;
+}): Promise<void> {
+  const resp = await fetch("/api/auth/change-password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      current_password: args.currentPassword,
+      new_password: args.newPassword,
+    }),
+    credentials: "same-origin",
+  });
+  if (!resp.ok) {
+    let detail = `${resp.status}`;
+    try {
+      const body = (await resp.json()) as { detail?: string };
+      if (body.detail) detail = body.detail;
+    } catch {
+      // non-JSON
+    }
+    throw new AuthError(resp.status, detail);
+  }
+}
+
 export async function logout(): Promise<void> {
   const resp = await fetch("/api/auth/logout", {
     method: "POST",
