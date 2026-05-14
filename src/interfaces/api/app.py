@@ -17,6 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from config.constants import APP_NAME, APP_VERSION
 from config.logging import configure_logging
 from config.settings import Settings, get_settings
+from interfaces.api.bank.admin import router as bank_admin_router
 from interfaces.api.bank.auth import router as bank_auth_router
 from interfaces.api.bank.dependencies import get_current_analyst
 from interfaces.api.bank.history import router as bank_history_router
@@ -69,6 +70,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.include_router(bank_search_router)
         app.include_router(bank_history_router)
         app.include_router(bank_stats_router)
+        # Admin endpoints (senior_analyst only) — role-check внутри handler'а,
+        # router-level guard на auth достаточно: handler сам поднимет 403
+        # если role != senior_analyst.
+        app.include_router(bank_admin_router, dependencies=auth_required)
         app.include_router(dossier_router, dependencies=auth_required)
         app.include_router(dossier_pdf_router, dependencies=auth_required)
         app.include_router(draft_router, dependencies=auth_required)
