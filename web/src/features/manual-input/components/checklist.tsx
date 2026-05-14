@@ -7,13 +7,14 @@
 // - Список missing_capabilities как amber-сноски
 // - confidence_score процентом
 //
-// Tri-state ChecklistRow (ok/warn/pending) расширяет existing 2-state
-// (boolean done). Палитра pending — red, как RiskChip danger в CA-033.
+// Phase 8 design statement: section card pattern (Phase 6/7) — ClipboardCheck
+// icon + live counter «N/M проверок пройдено» (ok-rows / total-rows). Hex
+// палитра tri-state → semantic state-{ok,warn,bad}-{bg,border,fg}.
 
 "use client";
 
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
-import { Check, Info, TriangleAlert, X } from "lucide-react";
+import { Check, ClipboardCheck, Info, TriangleAlert, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
@@ -21,8 +22,9 @@ import { useFormContext, useWatch } from "react-hook-form";
 import { assessReadiness, type DataReadinessRequest } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
-import { digitsOnly, hasAnyQuarterValue, yearTotal } from "../lib/finance";
+import { CounterChip, SectionCard } from "./section-card";
 import { useSourceTrail } from "../hooks/use-source-trail";
+import { digitsOnly, hasAnyQuarterValue, yearTotal } from "../lib/finance";
 import type { FormValues } from "../schema";
 
 type Status = "ok" | "warn" | "pending";
@@ -101,21 +103,38 @@ export function Checklist() {
           })
         : t("checklist_awaiting");
 
+  const readinessStatus: Status = readiness.data
+    ? LEVEL_STATUS[readiness.data.level]
+    : "warn";
+  const missing = readiness.data?.missing_capabilities ?? [];
+
+  // Counter: ok-rows / total-rows. INN + readiness — 2 базовых row'а,
+  // missing_capabilities — warn (не ok), optional_contract — warn (не ok).
+  const okCount =
+    (innValid ? 1 : 0) + (readinessStatus === "ok" ? 1 : 0);
+  const totalRows = 2 + missing.length + 1; // +1 optional_contract
+
   return (
-    <>
-      <h3 className="my-3.5 text-[14px] font-semibold text-[var(--ink-1)]">
-        {t("checklist_heading")}
-      </h3>
-      <div className="flex flex-col gap-2.5">
+    <SectionCard
+      icon={<ClipboardCheck className="size-[18px]" />}
+      title={t("checklist_section_title")}
+      sub={t("checklist_section_sub")}
+      aux={
+        <CounterChip
+          filled={okCount}
+          total={totalRows}
+          eyebrow={t("checklist_counter_eyebrow")}
+        />
+      }
+    >
+      <div className="flex flex-col gap-[10px]">
         <ChecklistRow status={innValid ? "ok" : "warn"}>
           {t("checklist_inn_confirmed")}
         </ChecklistRow>
 
-        <ChecklistRow status={readiness.data ? LEVEL_STATUS[readiness.data.level] : "warn"}>
-          {readinessLine}
-        </ChecklistRow>
+        <ChecklistRow status={readinessStatus}>{readinessLine}</ChecklistRow>
 
-        {readiness.data?.missing_capabilities.map((cap) => (
+        {missing.map((cap) => (
           <CapabilityRow
             key={cap}
             label={CAPABILITY_KEY[cap] ? t(CAPABILITY_KEY[cap]) : cap}
@@ -126,7 +145,7 @@ export function Checklist() {
           {t("checklist_optional_contract")}
         </ChecklistRow>
       </div>
-    </>
+    </SectionCard>
   );
 }
 
@@ -139,15 +158,16 @@ function ChecklistRow({
   children: React.ReactNode;
 }) {
   const palette = {
-    ok: "border-[#BFE2D2] bg-[var(--state-ok-bg)] text-[var(--state-ok-fg)]",
-    warn: "border-[#F1D9A6] bg-[#FFF6E5] text-[var(--state-warn-fg)]",
-    pending: "border-[#F2BCBA] bg-[#FCE7E5] text-[var(--state-bad-fg)]",
+    ok: "border-[var(--state-ok-border)] bg-[var(--state-ok-bg)] text-[var(--state-ok-fg)]",
+    warn: "border-[var(--state-warn-border)] bg-[var(--state-warn-bg)] text-[var(--state-warn-fg)]",
+    pending:
+      "border-[var(--state-bad-border)] bg-[var(--state-bad-bg)] text-[var(--state-bad-fg)]",
   }[status];
   const Icon =
     status === "ok" ? Check : status === "pending" ? X : TriangleAlertSmall;
 
   return (
-    <div className="flex items-center gap-2.5 text-[13px] text-[var(--ink-2)]">
+    <div className="flex items-center gap-[10px] text-[13px] text-[var(--ink-2)]">
       <span
         className={cn(
           "grid size-[18px] flex-none place-items-center rounded border",
