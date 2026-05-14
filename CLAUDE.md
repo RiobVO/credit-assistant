@@ -206,7 +206,7 @@ docker compose exec -T postgres psql -U credit -d credit_assistant -c "UPDATE an
 | 4 | Help | **DONE** (design statement + 6 hotfix) | `2026-05-13-help-phase4-preview.html` | `cb8b046`..`91c4090` |
 | 5 | Settings | **DONE** (визуально + 3 functional holes закрыты 2026-05-14) | — | `06f0ae4` + `d9387c0`/`6d625b1`/`59bb172` + `7d65e29`/`f9dc928`/`5e40acd` |
 | 6 | Manual-input Step 1 (Borrower) | **DONE** 2026-05-15 (design statement) | `2026-05-15-step1-phase6-preview.html` | `d2fb869` + `c116908` (lockfile fix) |
-| 7 | Manual-input Step 2 (Financial) | **DONE** 2026-05-15 (design statement + source-trail) | `2026-05-15-step2-phase7-preview.html` (4 итерации) | _<commit on push>_ |
+| 7 | Manual-input Step 2 (Financial) | **DONE** 2026-05-15 (design statement + source-trail) | `2026-05-15-step2-phase7-preview.html` (4 итерации) | `40c770d` |
 | 8 | Manual-input Step 3 (Loan) | pending | — | — |
 | 9 | Dossier view | pending | — | — |
 | 10 | PDF document | pending | — | — |
