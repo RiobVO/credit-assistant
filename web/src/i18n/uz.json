@@ -732,13 +732,14 @@
       "meta_inn": "STIR {inn}",
       "meta_legal_form": "Shakl {form}",
       "meta_okved": "OKED {code}",
-      "action_rebuild": "Qayta yig'ish",
+      "eyebrow_application": "ARIZA {id}",
+      "eyebrow_as_of": "MA'LUMOTLAR {date} GA",
+      "action_rebuild": "Qo'shimchalar bilan qayta yig'ish",
       "action_download_pdf": "PDF yuklab olish"
     },
     "borrower_card": {
-      "title": "Qarz oluvchi kartochkasi",
-      "inn_prefix": "STIR {inn}",
-      "verified": "STIRda tasdiqlangan",
+      "section_title": "Mijoz kartochkasi",
+      "section_sub": "Yuridik rekvizitlar, direktor va manzil",
       "row_legal_form": "Tashkiliy-huquqiy shakl",
       "row_registration": "Ro'yxatdan o'tish",
       "row_director": "Direktor",
@@ -766,8 +767,9 @@
       "no_debt_pill": "Qarz yo'q"
     },
     "risk": {
-      "title": "Risk signallari",
-      "subtitle": "{evaluated} tekshirilgan qoidadan {count} ta signal",
+      "title": "Qizil bayroqlar",
+      "subtitle": "Reyestrdagi {evaluated} qoidadan {count} ta ishladi",
+      "counter_eyebrow": "Signallar",
       "empty": "Barcha tekshiruvlar o'tdi.",
       "field_rule": "Qoida",
       "field_severity": "Severity",
@@ -818,10 +820,11 @@
       "empty_body_no_data": "Oylik ma'lumotlar yo'q. Forma 2-bosqichida Soliq faylini yuklang yoki oylik aylanmani qo'lda kiriting."
     },
     "score": {
-      "label": "Skoring bali",
-      "rec_approve": "Tavsiya: tasdiqlash",
-      "rec_review": "Tavsiya: tekshirishga",
-      "rec_reject": "Tavsiya: rad etish"
+      "section_title": "Skoring bahosi",
+      "section_sub": "100 ballik shkala · bank UX (yuqori = yaxshiroq)",
+      "rec_approve": "Tasdiqlashga",
+      "rec_review": "Tekshirishga",
+      "rec_reject": "Rad etish"
     },
     "readiness": {
       "level_insufficient": "Ma'lumotlar yetarli emas",

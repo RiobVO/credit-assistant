@@ -1,11 +1,14 @@
 // Полудуга 180° с 4 цветными секторами (red→orange→yellow→green слева направо).
 // Стрелка-указатель: вертикальная линия в центре, повёрнутая на (score-50)*1.8°.
 // Шкала «выше = лучше» (banking-UX), не совпадает с domain risk_score (0-14 = approve);
-// в Phase 3.B будет маппер score→display_score, сейчас mock уже в banking-шкале.
+// маппер score→display_score выполняется на backend (Phase 3.B).
+//
+// Phase 9: SectionCard shell без icon-tile (banking-минимализм для read-only).
 "use client";
 
 import { useTranslations } from "next-intl";
 
+import { SectionCard } from "@/components/section-card";
 import type { Recommendation } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -46,15 +49,11 @@ export function ScoreGauge({
   const needleRotation = (clamped - 50) * 1.8;
 
   return (
-    <div className="rounded-[10px] border border-[var(--border)] bg-[var(--surface)] shadow-[0_1px_2px_rgba(16,24,40,0.05)]">
-      <div className="flex flex-col items-center px-6 pt-6 pb-5">
-        <div className="text-[10.5px] font-semibold tracking-[1.2px] text-[var(--ink-4)] uppercase">
-          {t("label")}
-        </div>
-
+    <SectionCard title={t("section_title")} sub={t("section_sub")}>
+      <div className="flex flex-col items-center pt-2 pb-1">
         <svg
           viewBox="0 0 220 130"
-          className="mt-2 w-full max-w-[280px]"
+          className="w-full max-w-[280px]"
           aria-hidden="true"
         >
           {SECTORS.map((s, i) => (
@@ -80,7 +79,7 @@ export function ScoreGauge({
           <circle cx={110} cy={115} r={6} fill="var(--ink-1)" />
         </svg>
 
-        <div className="mt-3 flex items-baseline gap-1.5">
+        <div className="mt-2 flex items-baseline gap-1.5">
           <span className="font-mono text-[56px] leading-none font-bold tracking-[-2px] text-[var(--ink-1)]">
             {clamped}
           </span>
@@ -99,7 +98,7 @@ export function ScoreGauge({
           {t(RECOMMENDATION_KEY[recommendation])}
         </span>
       </div>
-    </div>
+    </SectionCard>
   );
 }
 

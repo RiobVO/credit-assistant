@@ -27,9 +27,13 @@ const LEGAL_FORM_KEY: Record<
 export function SubHeader({
   dossierId,
   borrower,
+  application,
+  asOf,
 }: {
   dossierId: string;
   borrower: DossierViewDto["borrower"];
+  application: DossierViewDto["application"];
+  asOf: string;
 }) {
   const t = useTranslations("dossier.sub_header");
   const tBorrower = useTranslations("dossier.borrower_card");
@@ -60,6 +64,16 @@ export function SubHeader({
   return (
     <div className="mb-5 flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
       <div className="min-w-0">
+        <div className="mb-1.5 inline-flex items-center gap-2.5 text-[10.5px] font-bold tracking-[0.14em] text-[var(--ink-4)] uppercase">
+          <span className="font-mono">
+            {t("eyebrow_application", { id: application.id })}
+          </span>
+          <span
+            aria-hidden
+            className="size-[3px] rounded-full bg-[var(--ink-4)]"
+          />
+          <span>{t("eyebrow_as_of", { date: formatRuDate(asOf) })}</span>
+        </div>
         <h1 className="m-0 text-[26px] font-semibold tracking-[-0.4px] text-[var(--ink-1)]">
           {borrower.name}
         </h1>
@@ -70,7 +84,7 @@ export function SubHeader({
         <button
           type="button"
           onClick={handleRebuild}
-          className="inline-flex h-[38px] items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-4 text-[13.5px] font-semibold text-[var(--ink-2)] transition-colors hover:bg-[var(--surface-2)]"
+          className="inline-flex h-[40px] items-center gap-2 rounded-[9px] border border-[var(--border)] bg-[var(--surface)] px-4 text-[13.5px] font-semibold text-[var(--ink-2)] transition-colors hover:bg-[var(--surface-2)]"
         >
           <RefreshCw className="size-4" />
           {t("action_rebuild")}
@@ -79,7 +93,7 @@ export function SubHeader({
           href={pdfHref}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex h-[38px] items-center gap-2 rounded-md bg-[var(--brand-primary)] px-5 text-[13.5px] font-semibold text-white transition-colors hover:bg-[var(--brand-primary-hover)]"
+          className="inline-flex h-[40px] items-center gap-2 rounded-[9px] bg-[var(--brand-primary)] px-5 text-[13.5px] font-semibold text-white shadow-[0_1px_2px_rgba(204,120,92,0.18),0_4px_12px_rgba(204,120,92,0.12)] transition-colors hover:bg-[var(--brand-primary-hover)]"
         >
           <Download className="size-4" />
           {t("action_download_pdf")}
@@ -87,4 +101,9 @@ export function SubHeader({
       </div>
     </div>
   );
+}
+
+function formatRuDate(iso: string): string {
+  const [yyyy, mm, dd] = iso.split("-");
+  return `${dd}.${mm}.${yyyy}`;
 }

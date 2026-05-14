@@ -133,7 +133,6 @@ function Card({
       <div className="mt-2 text-[11.5px] text-[var(--ink-3)]">
         {subtitle || " "}
       </div>
-      <div className="mt-3 h-[36px]" aria-hidden="true" />
     </div>
   );
 }
