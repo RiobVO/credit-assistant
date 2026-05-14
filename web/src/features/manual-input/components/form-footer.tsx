@@ -38,9 +38,9 @@ export function FormFooter({
   const showCancel = variant === "step1";
 
   return (
-    <div className="mt-[22px] flex items-center gap-3 rounded-[10px] border border-[var(--border)] bg-[var(--surface)] px-[18px] py-[14px]">
+    <div className="mt-[22px] flex items-center gap-3 rounded-[12px] border border-[var(--border)] bg-[var(--surface)] px-[22px] py-[14px]">
       <div className="flex items-center gap-2 text-[12.5px] text-[var(--ink-3)]">
-        <span className="size-1.5 rounded-full bg-[var(--ink-4)]" />
+        <span className="size-1.5 rounded-full bg-[var(--state-ok-fg)]" />
         {t("footer_autosave_hint")}
       </div>
 
@@ -97,11 +97,11 @@ function FootButton({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "inline-flex h-[38px] items-center gap-2 rounded-md border px-4 text-[13.5px] font-semibold whitespace-nowrap transition-colors",
+        "inline-flex h-10 items-center gap-2 rounded-[9px] border px-4 text-[13.5px] font-semibold whitespace-nowrap transition-colors",
         variant === "ghost" &&
-          "border-[var(--border-strong)] bg-[var(--surface)] text-[var(--ink-2)] hover:bg-[#FAFBFC] disabled:cursor-not-allowed disabled:opacity-50",
+          "border-[var(--border-strong)] bg-[var(--surface)] text-[var(--ink-2)] hover:bg-[var(--surface-2)] disabled:cursor-not-allowed disabled:opacity-50",
         variant === "primary" &&
-          "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white hover:border-[var(--brand-primary-hover)] hover:bg-[var(--brand-primary-hover)] disabled:cursor-not-allowed disabled:border-[#A8BDE2] disabled:bg-[#A8BDE2] disabled:text-[#EAF0FB]",
+          "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white shadow-[0_4px_14px_-5px_var(--brand-primary)] hover:border-[var(--brand-primary-hover)] hover:bg-[var(--brand-primary-hover)] disabled:cursor-not-allowed disabled:border-[var(--border-strong)] disabled:bg-[var(--surface-2)] disabled:text-[var(--ink-4)] disabled:shadow-none",
       )}
     >
       {children}

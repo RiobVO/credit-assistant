@@ -212,10 +212,10 @@ function ManualInputPageInner() {
       <SourceTrailProvider>
       <Topbar crumbs={breadcrumbs} draft={draftIndicator} />
       <div className="w-full max-w-[1180px] px-8 pt-7 pb-[120px]">
-        <PageHead caseId={caseId} />
+        <PageHead caseId={caseId} step={step} />
 
         {draft.isLoading ? (
-          <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-5 py-4 text-[13px] text-[var(--ink-3)]">
+          <div className="rounded-[12px] border border-[var(--border)] bg-[var(--surface)] px-5 py-4 text-[13px] text-[var(--ink-3)]">
             Загружаем черновик…
           </div>
         ) : (
@@ -273,13 +273,13 @@ function ErrorBanner({ error }: { error: unknown }) {
   }
 
   return (
-    <div className="mb-[22px] rounded-lg border border-[#F2BCBA] bg-[#FCE7E5] px-[14px] py-3">
+    <div className="mb-[22px] rounded-[12px] border border-[var(--state-bad-border)] bg-[var(--state-bad-bg)] px-[14px] py-3">
       <div className="flex items-start gap-3">
         <TriangleAlert className="mt-px size-4 flex-none text-[var(--state-bad-fg)]" />
         <div className="text-[13px] leading-[1.5] text-[var(--state-bad-fg)]">
           <b className="font-semibold">Ошибка отправки на скоринг.</b>{" "}
           Проверьте данные и попробуйте снова.
-          <pre className="mt-2 max-h-40 overflow-auto rounded-md border border-[#F2BCBA] bg-[var(--surface)] p-2 font-mono text-[11.5px] text-[var(--ink-2)]">
+          <pre className="mt-2 max-h-40 overflow-auto rounded-md border border-[var(--state-bad-border)] bg-[var(--surface)] p-2 font-mono text-[11.5px] text-[var(--ink-2)]">
             {body}
           </pre>
         </div>
