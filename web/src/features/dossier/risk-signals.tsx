@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronDown, ChevronRight } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { CounterChip, SectionCard } from "@/components/section-card";
@@ -70,6 +70,7 @@ export function RiskSignals({
 
 function SignalRow({ flag }: { flag: RedFlagDto }) {
   const t = useTranslations("dossier.risk");
+  const locale = useLocale();
   const [expanded, setExpanded] = useState(false);
   // t() returns rule label, fall back to raw rule_id если ключа нет.
   const ruleKey = `rule_${flag.rule_id}` as const;
@@ -78,6 +79,11 @@ function SignalRow({ flag }: { flag: RedFlagDto }) {
   const Chevron = expanded ? ChevronDown : ChevronRight;
   const evidenceEntries = Object.entries(flag.evidence ?? {});
   const severityLabel = t(`severity_${flag.severity}`);
+  // T0.4 follow-up B1: locale-aware source. Backend всегда отдаёт source_uz
+  // (для old snapshot'ов = RU fallback), но защищаемся от пустой строки на
+  // случай тестовых mock'ов без поля.
+  const sourceText =
+    locale === "uz" && flag.source_uz ? flag.source_uz : flag.source;
 
   return (
     <li className="px-[22px]">
@@ -140,9 +146,9 @@ function SignalRow({ flag }: { flag: RedFlagDto }) {
               </>
             )}
           </dl>
-          {flag.source ? (
+          {sourceText ? (
             <div className="mt-2 border-t border-dashed border-[var(--border)] pt-2 text-[11.5px] text-[var(--ink-4)]">
-              {flag.source}
+              {sourceText}
             </div>
           ) : null}
         </div>

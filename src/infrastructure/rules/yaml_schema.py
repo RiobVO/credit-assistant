@@ -21,6 +21,11 @@ class RuleSpecYaml(BaseModel):
     category: str = Field(min_length=1)
     severity: FlagSeverity
     source: str = Field(min_length=1)
+    # T0.4 follow-up B1: UZ-перевод source. Required (min_length=1) — fail-fast
+    # на load_registry. Compliance-конвенция: regulatory doc names (ЦБ РУз,
+    # Базель III, НК РУз, Group-IB report titles) остаются identical, только
+    # descriptive RU-phrases переводятся на latin-узб.
+    source_uz: str = Field(min_length=1)
     formula: str = Field(default="", description="Documentation only")
     rationale: str = Field(default="", description="Documentation only")
 

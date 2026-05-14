@@ -203,6 +203,10 @@ class RedFlagOutput(_StrictModel):
     rule_version: str
     severity: SeverityCode
     source: str
+    # T0.4 follow-up B1: UZ-перевод source. Для old snapshot'ов без source_uz
+    # persistence mapper подставляет source RU как fallback (см.
+    # dossier_mapper._red_flag_from_dict), поэтому поле всегда непустое.
+    source_uz: str
     message: str
     evidence: dict[str, Any]
     detected_at: date

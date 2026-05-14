@@ -16,6 +16,9 @@ export type RedFlagDto = {
   rule_version: string;
   severity: Severity;
   source: string;
+  // T0.4 follow-up B1: UZ-перевод source. Для старых dossier-snapshot'ов
+  // backend подставляет RU fallback — поле всегда непустое.
+  source_uz: string;
   message: string;
   evidence: Record<string, unknown>;
   detected_at: string;
