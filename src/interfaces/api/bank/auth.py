@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, HTTPException, Request, Response, status
+from fastapi import APIRouter, Body, HTTPException, Request, Response, status
 
 from application.use_cases.authenticate_analyst import (
     AuthenticateAnalyst,
@@ -21,6 +21,7 @@ from interfaces.api.bank.auth_schema import (
     ChangePasswordRequest,
     LoginRequest,
     LoginResponse,
+    LogoutRequest,
     MfaRequiredResponse,
     RefreshRequest,
     RefreshResponse,
@@ -32,6 +33,7 @@ from interfaces.api.bank.dependencies import (
     CurrentAnalyst,
     HasherDep,
     JwtServiceDep,
+    RefreshDenylistDep,
 )
 
 router = APIRouter(prefix="/api/bank/auth", tags=["bank-auth"])
@@ -96,7 +98,21 @@ async def refresh(
     payload: RefreshRequest,
     jwt_service: JwtServiceDep,
     analyst_repo: AnalystRepoDep,
+    denylist: RefreshDenylistDep,
 ) -> RefreshResponse:
+    """T1.2 (CA-019): refresh rotation + denylist старого jti.
+
+    Поток:
+    1. Decode refresh → claims (signature + typ check).
+    2. is_denied(jti) — fast-path: уже rotated/logged-out → 401 token_reused.
+    3. analyst.is_active в БД — не доверяем токену слепо.
+    4. deny(old_jti, expires_at=old_exp) с NX. NX=False → параллельный refresh
+       уже отыграл, это reuse-attack/race → 401 token_reused.
+    5. Issue новые access + refresh, возвращаем обе.
+
+    Fail-mode при недоступности Redis: redis.ConnectionError всплывает наверх
+    как 500 — fail closed, чтобы compromised tokens не проскочили.
+    """
     try:
         claims = jwt_service.decode(payload.refresh_token, expected_type="refresh")
     except InvalidTokenError as exc:
@@ -105,7 +121,12 @@ async def refresh(
             detail="invalid_token",
         ) from exc
 
-    # Не доверяем токену слепо: проверяем, что analyst активен.
+    if await denylist.is_denied(claims.jti):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="token_reused",
+        )
+
     identity = await analyst_repo.get_by_id(claims.analyst_id)
     if identity is None or not identity.is_active:
         raise HTTPException(
@@ -113,17 +134,46 @@ async def refresh(
             detail="invalid_token",
         )
 
+    denied = await denylist.deny(claims.jti, expires_at=claims.expires_at)
+    if not denied:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="token_reused",
+        )
+
     access = jwt_service.issue_access(identity.id)
-    return RefreshResponse(access_token=access)
+    new_refresh = jwt_service.issue_refresh(identity.id)
+    return RefreshResponse(access_token=access, refresh_token=new_refresh)
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
 async def logout(
     analyst: CurrentAnalyst,
     audit_log: AuditLogRepoDep,
+    jwt_service: JwtServiceDep,
+    denylist: RefreshDenylistDep,
+    payload: LogoutRequest | None = Body(default=None),  # noqa: B008 — FastAPI DI pattern
 ) -> Response:
-    # JWT stateless: серверной инвалидации в v1 нет. Реальный logout — удаление
-    # httpOnly cookie на стороне Next BFF. Здесь только аудит-запись.
+    """T1.2 (CA-019): logout denylist'ит активный refresh из body (best-effort).
+
+    Невалидный/чужой refresh — silently ignore: logout уже подтверждён
+    access-токеном. BFF /logout читает ca_refresh cookie и прокидывает сюда;
+    старые клиенты без поля refresh_token продолжают работать (denylist
+    skip, токен истечёт натурально через TTL).
+    """
+    if payload is not None and payload.refresh_token:
+        try:
+            claims = jwt_service.decode(
+                payload.refresh_token, expected_type="refresh"
+            )
+            # Защита от cross-account abuse: denylist'им только если refresh
+            # принадлежит этому же аналитику (access уже подтвердил identity).
+            if claims.analyst_id == analyst.id:
+                await denylist.deny(claims.jti, expires_at=claims.expires_at)
+        except InvalidTokenError:
+            # Broken/expired refresh — натурального exp достаточно.
+            pass
+
     await audit_log.record(event="logout", analyst_id=analyst.id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 

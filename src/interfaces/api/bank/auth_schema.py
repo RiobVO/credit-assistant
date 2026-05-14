@@ -51,8 +51,19 @@ class RefreshRequest(BaseModel):
 
 
 class RefreshResponse(BaseModel):
+    # T1.2 (CA-019): rotation выдаёт новый refresh параллельно с новым access.
+    # Frontend BFF обновляет ca_refresh cookie из этого поля.
     access_token: str
+    refresh_token: str
     token_type: str = "bearer"
+
+
+class LogoutRequest(BaseModel):
+    """T1.2 (CA-019): optional refresh_token для denylist при logout.
+    Backward-compat — старые клиенты без поля продолжают работать (denylist
+    тогда не выполняется, refresh истечёт натурально через TTL)."""
+
+    refresh_token: str | None = None
 
 
 class ChangePasswordRequest(BaseModel):

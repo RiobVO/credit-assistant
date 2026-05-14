@@ -52,9 +52,14 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
-      # Внутри compose-сети postgres резолвится по имени сервиса на порт 5432.
+      # Внутри compose-сети postgres/redis резолвятся по имени сервиса.
       DATABASE_URL: postgresql+asyncpg://credit:credit@postgres:5432/credit_assistant
+      # T1.2 (CA-019): refresh-token denylist. Override на пустую строку → NullDenylist
+      # (stateless 7-day fallback).
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
       APP_ENV: dev
       LOG_LEVEL: INFO
       # Phase 4: режим инсталляции (bank | accountant). Один режим на инсталляцию.

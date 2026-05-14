@@ -27,6 +27,7 @@ dependencies = [
     "python-jose[cryptography]>=3.3.0",
     "pyotp>=2.9",
     "httpx>=0.27",
+    "redis>=5.0",
 ]
 
 [dependency-groups]
@@ -37,8 +38,9 @@ dev = [
     "ruff>=0.7",
     "mypy>=1.13",
     "types-pyyaml>=6.0",
-    "testcontainers[postgres]>=4.8",
+    "testcontainers[postgres,redis]>=4.8",
     "types-openpyxl>=3.1.5.20260508",
+    "fakeredis>=2.20",
 ]
 
 # --- Tooling configuration ---
@@ -99,6 +101,12 @@ follow_imports = "skip"
 # jose не публикует py.typed; bcrypt типизирован, но pyright/mypy могут
 # не дотягивать стабы — оборачиваем оба в тонкие сервисы с явным cast.
 module = ["jose", "jose.*", "bcrypt"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# fakeredis (dev-dep для T1.2 denylist unit-тестов) не имеет py.typed.
+# testcontainers.redis импорт-уровневые типы не полные.
+module = ["fakeredis", "fakeredis.*", "testcontainers.redis", "testcontainers.redis.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
