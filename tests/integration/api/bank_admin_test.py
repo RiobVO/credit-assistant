@@ -51,7 +51,7 @@ async def _seed_analyst(
         orm.mfa_secret = "JBSWY3DPEHPK3PXP"
         orm.mfa_enrolled_at = datetime.now(tz=UTC)
         orm.mfa_backup_codes_hash = ["$2b$04$dummy.hash.for.test"]
-        orm.mfa_enabled = True
+        # CA-DS16: stored bool удалён, enrolled_at — single source.
     pg_session.add(orm)
     await pg_session.flush()
     return orm
@@ -108,7 +108,7 @@ async def test_reset_mfa_happy_path_clears_fields_and_writes_audit(
     assert target.mfa_secret is None
     assert target.mfa_enrolled_at is None
     assert target.mfa_backup_codes_hash is None
-    assert target.mfa_enabled is False
+    # CA-DS16: enrolled_at IS NULL ⇔ computed mfa_enabled=False.
 
     rows = (
         await pg_session.execute(

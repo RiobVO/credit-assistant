@@ -169,11 +169,12 @@ async def test_me_returns_analyst_with_valid_access_token(
 async def test_me_returns_mfa_enabled_only_when_enrolled(
     api_client: httpx.AsyncClient, pg_session: AsyncSession
 ) -> None:
-    """Phase 5.B + hotfix `d9387c0`: mfa_enabled computed-from-enrolled_at,
-    не от mfa_secret. /enroll/start пишет secret до verify (half-enrolled
-    state) — этот state НЕ должен показывать mfa_enabled=True, иначе
-    следующий login потребует TOTP без сохранённого secret → lockout.
-    Stored bool=True тоже игнорируется (сжигает security theater Phase 5.A).
+    """Phase 5.B + hotfix `d9387c0` + CA-DS16: mfa_enabled computed-from-
+    enrolled_at, не от mfa_secret. /enroll/start пишет secret до verify
+    (half-enrolled state) — этот state НЕ должен показывать
+    mfa_enabled=True, иначе следующий login потребует TOTP без сохранённого
+    secret → lockout. Stored bool удалён в миграции c4f8a1d3e0b2 — enrolled_at
+    теперь единственный source of truth.
     """
     from datetime import UTC, datetime
 
@@ -184,8 +185,7 @@ async def test_me_returns_mfa_enabled_only_when_enrolled(
         full_name="Admin A.",
         role="senior_analyst",
         is_active=True,
-        # Stored bool=True, но enrolled_at отсутствует → API должен вернуть False.
-        mfa_enabled=True,
+        # CA-DS16: stored bool удалён. Без enrolled_at → mfa_enabled=False.
     )
     pg_session.add(admin_orm)
     await pg_session.flush()
@@ -200,7 +200,7 @@ async def test_me_returns_mfa_enabled_only_when_enrolled(
         headers={"Authorization": f"Bearer {login['access_token']}"},
     )
     assert me_resp.status_code == 200
-    # Stored bool=True + нет enrolled_at → False.
+    # Без enrolled_at → False.
     assert me_resp.json()["mfa_enabled"] is False
 
     # Half-enrolled state: secret записан /enroll/start, verify не прошёл.

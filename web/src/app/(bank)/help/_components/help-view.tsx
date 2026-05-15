@@ -14,6 +14,7 @@ import {
   Phone,
   RotateCcw,
   ScrollText,
+  Smartphone,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
@@ -45,7 +46,8 @@ type FaqId =
   | "xltx"
   | "rebuild"
   | "audit"
-  | "support";
+  | "support"
+  | "phone_change";
 
 const FAQ_IDS: FaqId[] = [
   "scoring",
@@ -55,6 +57,9 @@ const FAQ_IDS: FaqId[] = [
   "rebuild",
   "audit",
   "support",
+  // CA-DS14: MS Authenticator iCloud-cache scenario. Размещаю в конце
+  // как edge-case troubleshooting, не каждый аналитик столкнётся.
+  "phone_change",
 ];
 
 const FAQ_ICONS: Record<FaqId, typeof BarChart3> = {
@@ -65,6 +70,7 @@ const FAQ_ICONS: Record<FaqId, typeof BarChart3> = {
   rebuild: RotateCcw,
   audit: ScrollText,
   support: LifeBuoy,
+  phone_change: Smartphone,
 };
 
 export function HelpView() {

@@ -69,7 +69,7 @@ async def reset_mfa(
     orm.mfa_secret = None
     orm.mfa_enrolled_at = None
     orm.mfa_backup_codes_hash = None
-    orm.mfa_enabled = False
+    # CA-DS16: stored bool удалён — enrolled_at NULL = mfa disabled.
 
     await audit_log.record(
         event="mfa_admin_reset",
