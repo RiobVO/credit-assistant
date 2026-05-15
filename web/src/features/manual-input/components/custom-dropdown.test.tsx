@@ -57,7 +57,12 @@ describe("CustomDropdown keyboard nav (CA-DS22)", () => {
     expect(options[1].getAttribute("aria-selected")).toBe("true");
     // Initial highlight = selected (CA-DS22 design — keyboard nav начинает там
     // где пользователь сейчас, не с idx 0). aria-activedescendant отражает highlight.
-    expect(button.getAttribute("aria-activedescendant")).toBe(options[1].id);
+    // setHighlight выполняется через setTimeout(0) (см. CustomDropdown комментарий
+    // про react-hooks/set-state-in-effect) — ждём через waitFor чтобы CI с
+    // быстрым tick'ом не падал на race condition.
+    await waitFor(() => {
+      expect(button.getAttribute("aria-activedescendant")).toBe(options[1].id);
+    });
   });
 
   it("Enter на closed → открывает (без commit)", async () => {
