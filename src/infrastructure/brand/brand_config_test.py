@@ -28,28 +28,16 @@ def test_load_uzbekbank_brand() -> None:
     assert brand.primary == "#CC785C"
 
 
-def test_env_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("BRAND_ID", "uzbekbank")
-    brand = load_brand()
-    assert brand.id == "uzbekbank"
-
-
 def test_missing_brand_raises() -> None:
     with pytest.raises(BrandConfigError, match="brand config not found"):
         load_brand("does-not-exist")
-
-
-def test_default_when_no_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("BRAND_ID", raising=False)
-    brand = load_brand()
-    assert brand.id == "default"
 
 
 # CA-DS6/7/8: support + business_hours optional sections.
 
 
 def test_default_brand_has_support_and_business_hours() -> None:
-    """default.json и uzbekbank.json содержат secret-secret sections."""
+    """default.json и uzbekbank.json содержат support/businessHours sections."""
     brand = load_brand("default")
     assert brand.support is not None
     assert brand.support.phone.startswith("+998")

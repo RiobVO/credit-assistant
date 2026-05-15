@@ -15,7 +15,6 @@ None если отсутствуют. PDF их не использует; тол
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
 from typing import Any
 
@@ -31,7 +30,6 @@ from application.dto.brand_config import (
 # config/brands лежит в корне репо (рядом с config/rules). Резолвим
 # относительно этого модуля: src/infrastructure/brand/ → ../../../config/brands
 _BRANDS_DIR = Path(__file__).resolve().parents[3] / "config" / "brands"
-_DEFAULT_BRAND_ID = "default"
 
 
 class BrandConfigError(ValueError):
@@ -105,13 +103,16 @@ def _parse_default_lang(raw: object) -> str | None:
     return raw
 
 
-def load_brand(brand_id: str | None = None) -> BrandConfig:
-    """Резолвит brand-config по id. None → env ``BRAND_ID`` → ``default``.
+def load_brand(brand_id: str) -> BrandConfig:
+    """Резолвит brand-config по id.
+
+    T1.4 (ADR-0018): ``brand_id`` обязательный — single source of truth — это
+    ``Settings.brand_id``. Env ``BRAND_ID`` читается pydantic-settings'ом,
+    дальше каждый call-site обязан явно пробросить значение из Settings.
 
     Raises ``BrandConfigError`` если файл отсутствует или невалиден.
     """
-    resolved_id = brand_id or os.getenv("BRAND_ID", _DEFAULT_BRAND_ID)
-    path = _BRANDS_DIR / f"{resolved_id}.json"
+    path = _BRANDS_DIR / f"{brand_id}.json"
     if not path.exists():
         raise BrandConfigError(f"brand config not found: {path}")
     try:
