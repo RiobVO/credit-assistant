@@ -174,15 +174,39 @@
   --grid-line-color: rgba(14, 21, 37, 0.045);
 }
 
-/* Dark theme (ADR-0013). Slate/anthracite — banking-grade.
-   Brand-primary остаётся синим/терракотовым: tenant identity = константа (через
-   inline style на <html>, имеет высший приоритет).
-   uzbekbank cream-sidebar остаётся только в light — в dark generic slate.
+/* Bank-tenant overrides (когда <html data-brand="uzbekbank">).
+   Phase 2 Design Sweep: sidebar переходит с dark navy на warm cream — private-bank
+   эстетика (Brunello Cucinelli / Loewe), не Slack-стартап. */
+:root[data-brand="uzbekbank"] {
+  --surface: #FFFFFF;
+  --surface-2: #F8FAFC;
+  --ink-1: #0F172A;
+  --ink-2: #475569;
+  --ink-3: #64748B;
+  --ink-4: #94A3B8;
+  --border: #E2E8F0;
+  --border-strong: #CBD5E1;
+  /* Sidebar — warm cream. nav-bg-hover полупрозрачный white, ложится на cream
+     без перекраски токена. */
+  --nav-bg: #FAF9F5;
+  --nav-bg-2: #FFFFFF;
+  --nav-bg-hover: rgba(255, 255, 255, 0.7);
+  --nav-border: #E8E2D2;
+  --nav-text: #0F172A;
+  --nav-text-2: #475569;
+  --nav-text-3: #64748B;
+  --state-ok-fg: #166534; --state-ok-bg: #DCFCE7;
+  --state-warn-fg: #92400E; --state-warn-bg: #FEF3C7;
+  --state-bad-fg: #991B1B;  --state-bad-bg: #FEE2E2;
+  --state-info-fg: #6E2F1C; --state-info-bg: #F7E8DF;
+  --state-neutral-fg: #334155; --state-neutral-bg: #F1F5F9;
+}
 
-   Specificity нота: `:root[data-theme="dark"]` (0,1,1) равна
-   `:root[data-brand="uzbekbank"]` (0,1,1) — source-order tiebreaker:
-   dark идёт после brand-override, поэтому surface/bg/ink/state/nav
-   переопределяются корректно даже на брендовом теннанте. */
+/* Dark theme (ADR-0013). Slate/anthracite — banking-grade.
+   ПОРЯДОК: dark идёт ПОСЛЕ всех brand-tenant блоков. Specificity
+   `:root[data-theme="dark"]` (0,1,1) равна `:root[data-brand="uzbekbank"]`
+   (0,1,1), source-order — tiebreaker, dark должен идти позже.
+   Если ошибочно поставить dark выше — brand перебивает обратно в light. */
 :root[data-theme="dark"] {
   --background: #0A0D12;
   --foreground: #E8EDF5;
@@ -250,9 +274,7 @@
 
   /* Brand: primary остаётся inline от brand JSON (identity константа).
      Soft/ink/hover/ring приходят inline тоже — пробиваем !important чтобы
-     перевыставить под dark surface. Производные считаются от brand-primary
-     через color-mix — переключаем tenant'ы (default → uzbekbank) и
-     accent-боксы остаются tenant-tinted dark, не светлым кремом. */
+     перевыставить под dark surface через color-mix от --brand-primary. */
   --brand-primary-hover: color-mix(in srgb, var(--brand-primary), white 18%) !important;
   --brand-primary-soft: color-mix(in srgb, var(--brand-primary) 14%, var(--surface)) !important;
   --brand-primary-ink: color-mix(in srgb, var(--brand-primary), white 45%) !important;
@@ -264,8 +286,8 @@
 }
 
 /* System mode — следует за OS prefers-color-scheme. Listener в use-appearance.ts
-   также синхронизирует data-theme live, но эта media-обёртка нужна на момент
-   SSR/первого paint, когда LS говорит "system" но JS ещё не выполнился. */
+   синхронизирует live, но эта media-обёртка нужна для первого paint, когда
+   LS говорит "system" но JS ещё не выполнился. */
 @media (prefers-color-scheme: dark) {
   :root[data-theme="system"] {
     --background: #0A0D12;
@@ -340,34 +362,6 @@
 
     --grid-line-color: rgba(232, 237, 245, 0.05);
   }
-}
-
-/* Bank-tenant overrides (когда <html data-brand="uzbekbank">).
-   Phase 2 Design Sweep: sidebar переходит с dark navy на warm cream — private-bank
-   эстетика (Brunello Cucinelli / Loewe), не Slack-стартап. */
-:root[data-brand="uzbekbank"] {
-  --surface: #FFFFFF;
-  --surface-2: #F8FAFC;
-  --ink-1: #0F172A;
-  --ink-2: #475569;
-  --ink-3: #64748B;
-  --ink-4: #94A3B8;
-  --border: #E2E8F0;
-  --border-strong: #CBD5E1;
-  /* Sidebar — warm cream. nav-bg-hover полупрозрачный white, ложится на cream
-     без перекраски токена. */
-  --nav-bg: #FAF9F5;
-  --nav-bg-2: #FFFFFF;
-  --nav-bg-hover: rgba(255, 255, 255, 0.7);
-  --nav-border: #E8E2D2;
-  --nav-text: #0F172A;
-  --nav-text-2: #475569;
-  --nav-text-3: #64748B;
-  --state-ok-fg: #166534; --state-ok-bg: #DCFCE7;
-  --state-warn-fg: #92400E; --state-warn-bg: #FEF3C7;
-  --state-bad-fg: #991B1B;  --state-bad-bg: #FEE2E2;
-  --state-info-fg: #6E2F1C; --state-info-bg: #F7E8DF;
-  --state-neutral-fg: #334155; --state-neutral-bg: #F1F5F9;
 }
 
 @layer base {
