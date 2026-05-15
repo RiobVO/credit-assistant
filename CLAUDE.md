@@ -7,17 +7,17 @@
 
 ## Current Status
 
-**Phase 10 (PDF document) закрыта 2026-05-15** (`a8f2b66`). Финальная фаза Design Sweep — credit memorandum aesthetic для banking output. Cover: hero decision-block (gauge 200pt + recommendation 28pt + signal breakdown inline) + decision-meta full-width + observations pros/cons split (3 strengths + 3 risks). Section A redesign: identity hero с auto-derived avatar (initials) + 3 stat tiles (Возраст · Регион · ОКВЭД) + clean detail rows. Brand-tenant: `BRAND_ID` env → `config/brands/<id>.json` через `infrastructure/brand/`. ГНК pill убран физически (Phase 9 lesson). F-секция: human-readable `rule.name` из YAML вместо rule_id. Observations builder (`application/services/`) — strengths из позитивных KPI + risks из top-3 red flags severity-sorted. CI `25934169074` → ~1m.
+**Phase 10 (PDF document) закрыта 2026-05-15** (`a8f2b66`, CI `25934169074`). Финальная фаза Design Sweep — credit memorandum aesthetic: hero decision-block, observations pros/cons split, Section A identity hero с avatar + 3 stat tiles, brand-tenant через `BRAND_ID` env → `config/brands/<id>.json`, F-секция рендерит `rule.name` из YAML.
 
-**Direction B (Design Sweep tail) — Batch 1A закрыт 2026-05-16** (`680005e`, CI `25935954333` ~1m). CA-DS17 (OKVED catalog) + CA-DS24 (USD/UZS rate) — config-driven. Pattern `infrastructure/catalog/` (DTO в `application/dto/` + loader в `infrastructure/catalog/` + JSON в `config/<topic>/`) зеркалит `infrastructure/brand/`. Backend single source: PDF читает напрямую через singleton catalog, frontend через React Query (`/api/system/okved`, `/api/system/usd-rate`), i18n keys `okved_XX_YY` (16 × 2) удалены — labels теперь в JSON. Готовность к runtime locale switcher (CA-DS29): `useLocale()` уже выбирает `full_ru`/`full_uz`.
+**Direction B (Design Sweep tail) — 3 batch'а закрыто 2026-05-16:**
+- **Batch 1A** (`680005e`) CA-DS17 + CA-DS24 — config-driven OKVED catalog + USD/UZS rate. Pattern `infrastructure/catalog/` зеркалит `infrastructure/brand/`. PDF/frontend single source через `GET /api/system/{okved,usd-rate}`, i18n keys `okved_XX_YY` удалены.
+- **Batch 1B** (`9b38422`) CA-DS18 Level 1 — deterministic case_id `BR-YYYY-XXXX` из `draft.id` (4 hex). Hydration-safe, без `Math.random`. Banking-grade sequence → CA-DS18b после Phase 4 application entity.
+- **Batch 2** (`d243c0f`) CA-DS20 + CA-DS23 — RTL backfill 32 теста на `InnInput`/`OkvedAutocomplete`/`SourceHint`/`UzsInputShell`. 3 named export'а для testability, семантика не тронута.
+- **Batch 3** (`27e8365`) CA-DS22 + CA-DS19 — full keyboard nav в `CustomDropdown` (ARIA 1.2 combobox, Home/End/PgUp clamp, initial highlight = selected) + pulse cleanup на `/search` (live-strip + result-card). 11 RTL тестов.
 
-**Batch 1B закрыт 2026-05-16** (`9b38422`, CI `25936424479` ~1m). CA-DS18 Level 1 — deterministic case_id из `draft.id`, format `BR-YYYY-XXXX` (mirror PDF `_format_application_id`), XXXX = first 4 hex chars UUID uppercased. До auto-save draft → pill «—», после → `BR-2026-A3F7`. Hydration-safe (без `useSyncExternalStore`/`Math.random`). Banking-grade monotonic sequence через application entity → CA-DS18b после Phase 4 application creation flow.
+Закрыто 7 из 15 Design Sweep tail items: CA-DS17/18/19/20/22/23/24. Frontend stack: 19 test files, 152 vitest tests.
 
-**Batch 2 закрыт 2026-05-16** (`d243c0f`, CI `25936896669` ~1m). CA-DS20 + CA-DS23 — RTL backfill testing-debt: 32 теста на `InnInput` state machine (8), `OkvedAutocomplete` (10), `Step2Financials` source-trail = `SourceHint` + `UzsInputShell` borderbar (14). Минимальные code-changes — три named export'а для testability (InnInput, OkvedAutocomplete, UzsInputShell), семантика не тронута. Frontend стек: 18 test files, 141 vitest tests.
-
-**Batch 3 закрыт 2026-05-16** (`27e8365`, CI `25937533073` ~1m). CA-DS22 — full keyboard nav в `CustomDropdown` (ArrowDown/Up clamp, Home/End, Enter/Space commit, Escape close, role=combobox + aria-activedescendant ARIA 1.2). Initial highlight на open = currently-selected, не 0. CA-DS19 — pulse-ring-ok dot убран на `/search` (live-strip + result-card «найдено» pill) → static. Pulse в `/help`/`/sidebar`/`/topbar` оставлен — там contextual live state, не decoration. CA-DS21 (auto-edited 3-state) **отложен** — требует расширение `SourceTrailContext` хранить parsed values для diff с current value, scope ~1.5-2 ч с rework data flow. 11 RTL-тестов на CustomDropdown. Frontend стек: 19 test files, 152 vitest tests.
-
-**Дизайн-pass завершён:** все 10 фаз DONE. Следующие итерации — backlog TODO (CA-DS6/7/8/14-16/21/25/28/29, CA-003/015/019-020/024b/028/029b/064/DS11).
+**Активная ветка:** `main`.
 
 **Активная ветка:** `main`.
 
