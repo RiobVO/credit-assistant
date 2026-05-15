@@ -10,7 +10,6 @@ import {
   useEffect,
   useMemo,
   useState,
-  useSyncExternalStore,
 } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 
@@ -28,6 +27,7 @@ import { Step3Loan } from "./components/step-3-loan";
 import { formValuesToPayload } from "./form-mapper";
 import { useFormDraft } from "./hooks/use-form-draft";
 import { SourceTrailProvider } from "./hooks/use-source-trail";
+import { formatCaseId } from "./lib/case-id";
 import { consumeStep1Prefill } from "./prefill";
 import {
   defaultFormValues,
@@ -90,15 +90,6 @@ function ManualInputPageInner() {
 
   const [step, setStep] = useState<Step>(1);
 
-  // caseId генерится только на клиенте — Math.random() в SSR не совпадает
-  // с первым клиентским рендером и ловит hydration mismatch.
-  // useSyncExternalStore возвращает null на сервере и стабильный id на клиенте.
-  const caseId = useSyncExternalStore(
-    () => () => {},
-    () => getClientCaseId(),
-    () => null,
-  );
-
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: defaultFormValues(),
@@ -106,6 +97,13 @@ function ManualInputPageInner() {
   });
 
   const draft = useFormDraft({ form, initialDraftId });
+
+  // CA-DS18 Level 1: caseId — deterministic из draft.id (banking format
+  // BR-YYYY-XXXX, mirror PDF). До auto-save draft (draftId === null) → null,
+  // PageHead показывает «—» в pill. Hydration-safe: на SSR draftId всегда
+  // null, первый client render тоже null до useFormDraft создаст draft.
+  // Level 2 (Postgres sequence через application entity) → CA-DS18b.
+  const caseId = useMemo(() => formatCaseId(draft.draftId), [draft.draftId]);
 
   // CA-056 / CA-058: pre-fill при «Пересобрать с дополнениями» с досье.
   // - draft в URL приоритетнее (содержит полный snapshot — Шаг 1, 2, 3).
@@ -288,20 +286,3 @@ function ErrorBanner({ error }: { error: unknown }) {
   );
 }
 
-// Клиентский singleton: caseId один на mount-сессию, переживает rerender'ы,
-// но не shared между tab'ами. Реальный caseId придёт с бэкенда после
-// создания заявки в Phase 4 (Bank Mode); сейчас это чисто визуальный placeholder.
-let cachedClientCaseId: string | null = null;
-
-function getClientCaseId(): string {
-  if (cachedClientCaseId !== null) return cachedClientCaseId;
-  const now = new Date();
-  const year = now.getFullYear();
-  const mm = String(now.getMonth() + 1).padStart(2, "0");
-  const dd = String(now.getDate()).padStart(2, "0");
-  const rand = Math.floor(Math.random() * 100000)
-    .toString()
-    .padStart(5, "0");
-  cachedClientCaseId = `CR-${year}-${mm}${dd}-${rand}`;
-  return cachedClientCaseId;
-}
