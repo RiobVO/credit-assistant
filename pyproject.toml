@@ -29,6 +29,7 @@ dependencies = [
     "httpx>=0.27",
     "redis>=5.0",
     "cryptography>=42",
+    "ldap3>=2.9",
 ]
 
 [dependency-groups]
@@ -108,6 +109,12 @@ ignore_missing_imports = true
 # fakeredis (dev-dep для T1.2 denylist unit-тестов) не имеет py.typed.
 # testcontainers.redis импорт-уровневые типы не полные.
 module = ["fakeredis", "fakeredis.*", "testcontainers.redis", "testcontainers.redis.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# ldap3 (T1.5 / ADR-0019) — pure Python LDAP client. py.typed отсутствует,
+# обёртка LdapClient форсирует cast на наших call-site'ах.
+module = ["ldap3", "ldap3.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
