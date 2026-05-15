@@ -111,7 +111,7 @@ export function MfaDisableModal({ onClose }: { onClose: () => void }) {
               onChange={(e) => setPassword(e.target.value)}
               disabled={submitting}
               required
-              className="h-10 rounded-lg border border-[var(--border)] bg-white px-3 text-[14px] text-[var(--ink-1)] outline-none focus:border-[var(--brand-primary)] focus:shadow-[0_0_0_3px_var(--brand-primary-ring)] disabled:opacity-60"
+              className="h-10 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 text-[14px] text-[var(--ink-1)] outline-none focus:border-[var(--brand-primary)] focus:shadow-[0_0_0_3px_var(--brand-primary-ring)] disabled:opacity-60"
             />
           </label>
 
@@ -130,7 +130,7 @@ export function MfaDisableModal({ onClose }: { onClose: () => void }) {
               }
               disabled={submitting}
               required
-              className="h-10 rounded-lg border border-[var(--border)] bg-white px-3 font-mono text-[14px] tracking-[0.3em] text-[var(--ink-1)] outline-none focus:border-[var(--brand-primary)] focus:shadow-[0_0_0_3px_var(--brand-primary-ring)] disabled:opacity-60"
+              className="h-10 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 font-mono text-[14px] tracking-[0.3em] text-[var(--ink-1)] outline-none focus:border-[var(--brand-primary)] focus:shadow-[0_0_0_3px_var(--brand-primary-ring)] disabled:opacity-60"
             />
           </label>
 

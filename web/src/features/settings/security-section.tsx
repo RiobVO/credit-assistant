@@ -296,7 +296,7 @@ function PasswordField({
         onChange={(e) => onChange(e.target.value)}
         autoComplete={autoComplete}
         required={required}
-        className="h-10 rounded-lg border border-[var(--border)] bg-white px-3 text-[14px] text-[var(--ink-1)] outline-none transition-colors focus:border-[var(--brand-primary)] focus:shadow-[0_0_0_3px_var(--brand-primary-ring)]"
+        className="h-10 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 text-[14px] text-[var(--ink-1)] outline-none transition-colors focus:border-[var(--brand-primary)] focus:shadow-[0_0_0_3px_var(--brand-primary-ring)]"
       />
     </label>
   );

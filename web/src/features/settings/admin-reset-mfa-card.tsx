@@ -75,7 +75,7 @@ export function AdminResetMfaCard() {
             autoComplete="off"
             required
             placeholder={t("admin_reset_mfa_email_placeholder")}
-            className="h-10 rounded-lg border border-[var(--border)] bg-white px-3 text-[14px] text-[var(--ink-1)] outline-none transition-colors focus:border-[var(--brand-primary)] focus:shadow-[0_0_0_3px_var(--brand-primary-ring)]"
+            className="h-10 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 text-[14px] text-[var(--ink-1)] outline-none transition-colors focus:border-[var(--brand-primary)] focus:shadow-[0_0_0_3px_var(--brand-primary-ring)]"
           />
         </label>
 
@@ -166,7 +166,7 @@ function ConfirmModal({
             type="button"
             onClick={onCancel}
             disabled={submitting}
-            className="inline-flex h-10 items-center rounded-md border border-[var(--border)] bg-white px-3.5 text-[13px] font-semibold text-[var(--ink-2)] transition-colors hover:bg-[var(--surface-2)] disabled:cursor-not-allowed disabled:opacity-55"
+            className="inline-flex h-10 items-center rounded-md border border-[var(--border)] bg-[var(--surface)] px-3.5 text-[13px] font-semibold text-[var(--ink-2)] transition-colors hover:bg-[var(--surface-2)] disabled:cursor-not-allowed disabled:opacity-55"
           >
             {t("admin_reset_mfa_cancel")}
           </button>

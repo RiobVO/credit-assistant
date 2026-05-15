@@ -168,7 +168,7 @@ function SecurityStrip({
 
 function SecurityChip({ label }: { label: string }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--state-ok-border)] bg-white/70 px-2.5 py-1 text-[11px] font-medium text-[var(--state-ok-fg)]">
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--state-ok-border)] bg-[var(--state-ok-bg)]/70 px-2.5 py-1 text-[11px] font-medium text-[var(--state-ok-fg)]">
       <Check className="size-2.5" strokeWidth={2.6} />
       {label}
     </span>

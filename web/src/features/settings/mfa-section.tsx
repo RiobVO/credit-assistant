@@ -74,7 +74,7 @@ export function MfaSection() {
             <button
               type="button"
               onClick={() => setModal("disable")}
-              className="inline-flex h-9 flex-shrink-0 items-center gap-1.5 rounded-md border border-[var(--border)] bg-white px-3 text-[12px] font-medium text-[var(--state-bad-fg)] transition-colors hover:bg-[color-mix(in_srgb,var(--state-bad-fg)_8%,white)]"
+              className="inline-flex h-9 flex-shrink-0 items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-[12px] font-medium text-[var(--state-bad-fg)] transition-colors hover:bg-[color-mix(in_srgb,var(--state-bad-fg)_8%,var(--surface))]"
             >
               <ShieldOff className="size-3.5" />
               {t("mfa_disable_cta")}
