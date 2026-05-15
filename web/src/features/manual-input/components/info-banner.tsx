@@ -30,7 +30,7 @@ export function InfoBanner({ variant }: { variant: Variant }) {
         borderColor: "color-mix(in srgb, var(--state-info-fg) 22%, transparent)",
       }}
     >
-      <div className="grid size-8 place-items-center rounded-[9px] bg-white/55 text-[var(--brand-primary-ink)]">
+      <div className="grid size-8 place-items-center rounded-[9px] bg-[var(--surface)]/55 text-[var(--brand-primary-ink)]">
         {ICONS[variant]}
       </div>
       <div className="text-[13px] leading-[1.55]">

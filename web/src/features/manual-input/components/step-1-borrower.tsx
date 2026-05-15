@@ -353,7 +353,7 @@ export function InnInput({
           placeholder="123456789"
           aria-invalid={invalid || undefined}
           className={cn(
-            "h-10 w-full rounded-[9px] border bg-[var(--surface)] pr-[38px] pl-3 font-mono text-[14px] tracking-[0.5px] text-[var(--ink-1)] outline-none transition-colors placeholder:text-[#9BA3B3]",
+            "h-10 w-full rounded-[9px] border bg-[var(--surface)] pr-[38px] pl-3 font-mono text-[14px] tracking-[0.5px] text-[var(--ink-1)] outline-none transition-colors placeholder:text-[var(--ink-4)]",
             "border-[var(--border-strong)] focus:border-[var(--brand-primary)] focus:shadow-[0_0_0_3px_var(--brand-primary-ring)]",
             verified &&
               "border-[var(--state-ok-border)] focus:border-[var(--state-ok-fg)] focus:shadow-[0_0_0_3px_rgba(15,138,95,0.15)]",
@@ -563,7 +563,7 @@ export function OkvedAutocomplete({
           aria-expanded={open}
           aria-controls={listboxId}
           className={cn(
-            "h-10 w-full rounded-[9px] border bg-[var(--surface)] pr-[34px] pl-3 font-mono text-[14px] text-[var(--ink-1)] outline-none transition-colors placeholder:font-sans placeholder:text-[#9BA3B3]",
+            "h-10 w-full rounded-[9px] border bg-[var(--surface)] pr-[34px] pl-3 font-mono text-[14px] text-[var(--ink-1)] outline-none transition-colors placeholder:font-sans placeholder:text-[var(--ink-4)]",
             "border-[var(--border-strong)] focus:border-[var(--brand-primary)] focus:shadow-[0_0_0_3px_var(--brand-primary-ring)]",
             invalid &&
               "border-[var(--state-bad-fg)] focus:border-[var(--state-bad-fg)] focus:shadow-[0_0_0_3px_rgba(180,35,24,0.15)]",
@@ -640,7 +640,7 @@ function DirectorRecentWarning() {
       role="note"
       className="mt-2 grid grid-cols-[28px_1fr] items-start gap-2.5 rounded-r-[9px] border-l-[3px] border-[var(--state-warn-fg)] bg-[var(--state-warn-bg)] px-3 py-2.5"
     >
-      <div className="grid size-[26px] place-items-center rounded-[7px] bg-white/60 text-[var(--state-warn-fg)]">
+      <div className="grid size-[26px] place-items-center rounded-[7px] bg-[var(--surface)]/60 text-[var(--state-warn-fg)]">
         <TriangleAlert className="size-[14px]" />
       </div>
       <div>

@@ -26,6 +26,11 @@ export const metadata: Metadata = {
   description: "Внутренний инструмент банков для подготовки кредитного досье",
 };
 
+// Stringified inline script для blocking-execution в <head>. Намеренно минифицирован
+// и обёрнут в try/catch — LS может быть disabled (private mode), matchMedia
+// может отсутствовать в old browsers. Fallback к default light.
+const NO_FOUC_SCRIPT = `(()=>{try{var d=document.documentElement,k='ca:settings:',t=localStorage.getItem(k+'theme');d.dataset.theme=(t==='dark'||t==='system')?t:'light';d.dataset.density=localStorage.getItem(k+'density')||'compact';d.dataset.fontScale=localStorage.getItem(k+'fontScale')||'m';d.dataset.reducedMotion=localStorage.getItem(k+'reducedMotion')==='true'?'true':'false';}catch(e){}})();`;
+
 export default async function RootLayout({
   children,
 }: Readonly<{
@@ -48,6 +53,16 @@ export default async function RootLayout({
       style={brandStyle}
       data-brand={brand.id}
     >
+      <head>
+        {/* No-FOUC: blocking inline script читает appearance-prefs из LS до
+            hydration и проставляет data-атрибуты, чтобы CSS-переменные применились
+            при первом paint. После hydration useAppearance берёт верх. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: NO_FOUC_SCRIPT,
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col">
         <NextIntlClientProvider locale={locale} messages={messages}>
           <Providers

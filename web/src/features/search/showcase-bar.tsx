@@ -46,7 +46,7 @@ export function ShowcaseBar({
             className={cn(
               "rounded-[7px] px-[14px] py-[7px] font-sans text-[11.5px] font-medium transition-colors",
               active === k
-                ? "bg-white text-[var(--ink-1)]"
+                ? "bg-white text-[#0E1525]"
                 : "bg-transparent text-white/70 hover:text-white",
             )}
           >

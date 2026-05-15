@@ -27,7 +27,7 @@ export function PageHead({
         </p>
       </div>
 
-      <div className="inline-flex items-center gap-[14px] rounded-full border border-[var(--border)] bg-white/70 px-3.5 py-2.5 backdrop-blur-[8px]">
+      <div className="inline-flex items-center gap-[14px] rounded-full border border-[var(--border)] bg-[var(--surface)]/70 px-3.5 py-2.5 backdrop-blur-[8px]">
         <div className="inline-flex items-center gap-2 text-[11.5px] text-[var(--ink-2)]">
           <span className="size-1.5 rounded-full bg-[var(--state-ok-fg)]" />
           <div className="flex flex-col">

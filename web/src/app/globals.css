@@ -169,6 +169,168 @@
   --brand-primary-soft: #EAF0FB;
   --brand-primary-ink: #1947AA;
   --brand-primary-ring: rgba(30, 85, 201, 0.22);
+
+  /* Grid pattern line color — переопределяется в dark theme на light-tinted. */
+  --grid-line-color: rgba(14, 21, 37, 0.045);
+}
+
+/* Dark theme (ADR-0013). Slate/anthracite — banking-grade.
+   Brand-primary остаётся синим: tenant identity = константа.
+   uzbekbank cream-sidebar остаётся только в light — в dark переопределения нет,
+   получает generic slate (acceptable trade-off). */
+[data-theme="dark"] {
+  --background: #0A0D12;
+  --foreground: #E8EDF5;
+  --card: #0F1419;
+  --card-foreground: #E8EDF5;
+  --popover: #0F1419;
+  --popover-foreground: #E8EDF5;
+  --secondary: #161B22;
+  --secondary-foreground: #C4CBD8;
+  --muted: #161B22;
+  --muted-foreground: #8A93A3;
+  --destructive: #F87171;
+  --border: #262D38;
+  --input: #363F4D;
+
+  --surface: #0F1419;
+  --surface-2: #161B22;
+  --surface-3: #1E242D;
+  --bg: #0A0D12;
+
+  --ink-1: #E8EDF5;
+  --ink-2: #C4CBD8;
+  --ink-3: #8A93A3;
+  --ink-4: #5E6675;
+
+  --border-strong: #363F4D;
+
+  /* Sidebar в dark чуть светлее main surface — выделяется без перекраса. */
+  --sidebar: #11161D;
+  --sidebar-foreground: #E8EDF5;
+  --sidebar-accent: #1F2731;
+  --sidebar-accent-foreground: #FFFFFF;
+  --sidebar-border: #262D38;
+  --sidebar-ring: #5E8FE8;
+
+  --nav-bg: #11161D;
+  --nav-bg-2: #161B22;
+  --nav-bg-hover: #1F2731;
+  --nav-border: #262D38;
+  --nav-text: #E8EDF5;
+  --nav-text-2: #A0A9B8;
+  --nav-text-3: #6D7689;
+
+  --state-ok-fg: #4ADE80;  --state-ok-bg: #0F2419;  --state-ok-border: #1F4D33;
+  --state-warn-fg: #FBBF24; --state-warn-bg: #2A1F0A; --state-warn-border: #5C4318;
+  --state-bad-fg: #F87171;  --state-bad-bg: #2A1213;  --state-bad-border: #5C1F22;
+  --state-info-fg: #7BB0F5; --state-info-bg: #0F1A2E;
+  --state-neutral-fg: #A0A9B8; --state-neutral-bg: #161B22;
+  --state-ok-stroke: #2E6E4F;
+
+  --chart-1: #5E8FE8;
+  --chart-2: #4ADE80;
+  --chart-3: #FBBF24;
+  --chart-4: #F87171;
+  --chart-5: #A0A9B8;
+  --chart-red: #F87171;
+  --chart-orange: #FB923C;
+  --chart-yellow: #FBBF24;
+  --chart-green: #4ADE80;
+  --chart-blue: #5E8FE8;
+  --chart-grey: #6D7689;
+  --chart-grid: #1F2731;
+  --chart-track: #2E3744;
+  --chart-track-light: #1E242D;
+
+  /* Brand: primary константа, soft/ring/ink перевыставлены под dark surface. */
+  --brand-primary-hover: #3D6FD8;
+  --brand-primary-soft: #15203A;
+  --brand-primary-ink: #A8C3F0;
+  --brand-primary-ring: rgba(94, 143, 232, 0.35);
+  --accent: var(--brand-primary-soft);
+  --accent-foreground: var(--brand-primary-ink);
+
+  --grid-line-color: rgba(232, 237, 245, 0.05);
+}
+
+/* System mode — следует за OS prefers-color-scheme. Listener в use-appearance.ts
+   также синхронизирует data-theme live, но эта media-обёртка нужна на момент
+   SSR/первого paint, когда LS говорит "system" но JS ещё не выполнился. */
+@media (prefers-color-scheme: dark) {
+  [data-theme="system"] {
+    --background: #0A0D12;
+    --foreground: #E8EDF5;
+    --card: #0F1419;
+    --card-foreground: #E8EDF5;
+    --popover: #0F1419;
+    --popover-foreground: #E8EDF5;
+    --secondary: #161B22;
+    --secondary-foreground: #C4CBD8;
+    --muted: #161B22;
+    --muted-foreground: #8A93A3;
+    --destructive: #F87171;
+    --border: #262D38;
+    --input: #363F4D;
+
+    --surface: #0F1419;
+    --surface-2: #161B22;
+    --surface-3: #1E242D;
+    --bg: #0A0D12;
+
+    --ink-1: #E8EDF5;
+    --ink-2: #C4CBD8;
+    --ink-3: #8A93A3;
+    --ink-4: #5E6675;
+
+    --border-strong: #363F4D;
+
+    --sidebar: #11161D;
+    --sidebar-foreground: #E8EDF5;
+    --sidebar-accent: #1F2731;
+    --sidebar-accent-foreground: #FFFFFF;
+    --sidebar-border: #262D38;
+    --sidebar-ring: #5E8FE8;
+
+    --nav-bg: #11161D;
+    --nav-bg-2: #161B22;
+    --nav-bg-hover: #1F2731;
+    --nav-border: #262D38;
+    --nav-text: #E8EDF5;
+    --nav-text-2: #A0A9B8;
+    --nav-text-3: #6D7689;
+
+    --state-ok-fg: #4ADE80;  --state-ok-bg: #0F2419;  --state-ok-border: #1F4D33;
+    --state-warn-fg: #FBBF24; --state-warn-bg: #2A1F0A; --state-warn-border: #5C4318;
+    --state-bad-fg: #F87171;  --state-bad-bg: #2A1213;  --state-bad-border: #5C1F22;
+    --state-info-fg: #7BB0F5; --state-info-bg: #0F1A2E;
+    --state-neutral-fg: #A0A9B8; --state-neutral-bg: #161B22;
+    --state-ok-stroke: #2E6E4F;
+
+    --chart-1: #5E8FE8;
+    --chart-2: #4ADE80;
+    --chart-3: #FBBF24;
+    --chart-4: #F87171;
+    --chart-5: #A0A9B8;
+    --chart-red: #F87171;
+    --chart-orange: #FB923C;
+    --chart-yellow: #FBBF24;
+    --chart-green: #4ADE80;
+    --chart-blue: #5E8FE8;
+    --chart-grey: #6D7689;
+    --chart-grid: #1F2731;
+    --chart-track: #2E3744;
+    --chart-track-light: #1E242D;
+
+    --brand-primary-hover: #3D6FD8;
+    --brand-primary-soft: #15203A;
+    --brand-primary-ink: #A8C3F0;
+    --brand-primary-ring: rgba(94, 143, 232, 0.35);
+    --accent: var(--brand-primary-soft);
+    --accent-foreground: var(--brand-primary-ink);
+
+    --grid-line-color: rgba(232, 237, 245, 0.05);
+  }
 }
 
 /* Bank-tenant overrides (когда <html data-brand="uzbekbank">).
@@ -246,8 +408,8 @@
     z-index: 0;
     pointer-events: none;
     background-image:
-      linear-gradient(to right, rgba(14, 21, 37, 0.045) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(14, 21, 37, 0.045) 1px, transparent 1px);
+      linear-gradient(to right, var(--grid-line-color) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--grid-line-color) 1px, transparent 1px);
     background-size: 40px 40px;
     background-position: -1px -1px;
     -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 35%, black 35%, transparent 95%);
