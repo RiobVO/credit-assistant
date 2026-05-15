@@ -20,6 +20,7 @@ import { useTranslations } from "next-intl";
 import { type ReactNode, useEffect, useState } from "react";
 
 import { BankPageHead } from "@/app/(bank)/_components/page-head";
+import { useBrand } from "@/lib/brand-context";
 import { cn } from "@/lib/utils";
 
 import { getHotlineStatus, type HotlineStatus } from "@/features/help/business-hours";
@@ -29,20 +30,13 @@ const GridPattern = dynamic(
   { ssr: false },
 );
 
-const HOTLINE_PHONE = "+998 71 200-00-00";
-const HOTLINE_TEL = "tel:+998712000000";
-const SUPPORT_EMAIL = "ops@uzbekbank.uz";
-const SLACK_CHANNEL = "#credit-assistant";
-const DOCS_URL = "https://docs.credit-assistant";
-const DOCS_LABEL = "docs.credit-assistant";
-
-type OperatorStatus = "available" | "on_call" | "break";
-
-const CURRENT_OPERATOR = {
-  name: "Мадина А.",
-  initials: "МА",
-  status: "available" as OperatorStatus,
-};
+// CA-DS6/7/8: контакты + расписание hotline переехали в brand-config
+// (config/brands/<id>.json → useBrand().support / businessHours).
+// Persona block (Мадина А., status: available) удалён — это был mock-UI
+// на decision-screen (см. feedback_mock_ui_on_decision_screens.md):
+// рассказывать про конкретного дежурного оператора, когда такого
+// человека нет, — дезинформация. Open/closed badge остаётся, оно
+// derived из реального расписания.
 
 type FaqId =
   | "scoring"
@@ -138,6 +132,7 @@ function StatusCard() {
 
 function IncidentBand() {
   const t = useTranslations("bank.help");
+  const { support } = useBrand();
   return (
     <div className="mb-6 flex items-center gap-3.5 rounded-xl border border-[var(--state-bad-border)] bg-[var(--state-bad-bg)] p-3.5 pr-4">
       <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-[color:color-mix(in_srgb,var(--state-bad-fg)_10%,transparent)] text-[var(--state-bad-fg)]">
@@ -151,13 +146,15 @@ function IncidentBand() {
           {t("incident_text")}
         </div>
       </div>
-      <a
-        href={HOTLINE_TEL}
-        className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-[var(--state-bad-fg)] px-3 py-1.5 text-[12.5px] font-semibold text-white transition-opacity hover:opacity-90"
-      >
-        <Phone className="size-3.5" />
-        {t("incident_cta")}
-      </a>
+      {support ? (
+        <a
+          href={support.phoneTel}
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-[var(--state-bad-fg)] px-3 py-1.5 text-[12.5px] font-semibold text-white transition-opacity hover:opacity-90"
+        >
+          <Phone className="size-3.5" />
+          {t("incident_cta")}
+        </a>
+      ) : null}
     </div>
   );
 }
@@ -238,6 +235,9 @@ function FaqRow({ id, defaultOpen }: { id: FaqId; defaultOpen?: boolean }) {
 
 function ContactStack() {
   const t = useTranslations("bank.help");
+  const { support } = useBrand();
+  if (!support) return null;
+  const slackUrl = `https://${support.slack.workspace}.slack.com/channels/${support.slack.channel.replace(/^#/, "")}`;
   return (
     <aside className="flex flex-col gap-3.5">
       <div className="px-1 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-[var(--ink-4)]">
@@ -247,7 +247,7 @@ function ContactStack() {
       <HotlinePrimaryCard />
 
       <a
-        href={`https://uzbekbank.slack.com/channels/${SLACK_CHANNEL.slice(1)}`}
+        href={slackUrl}
         target="_blank"
         rel="noopener noreferrer"
         className="group flex items-start gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3.5 transition-all duration-200 hover:-translate-y-px hover:border-[var(--brand-primary)] hover:bg-[var(--brand-primary-soft)] hover:shadow-[0_8px_24px_-12px_var(--brand-primary-ring)]"
@@ -260,7 +260,7 @@ function ContactStack() {
             {t("contact_slack")}
           </div>
           <div className="text-[14px] font-semibold leading-tight text-[var(--ink-1)]">
-            {SLACK_CHANNEL}
+            {support.slack.channel}
           </div>
           <div className="mt-0.5 text-[11.5px] text-[var(--ink-3)]">
             {t("contact_slack_hint")}
@@ -269,7 +269,7 @@ function ContactStack() {
       </a>
 
       <a
-        href={`mailto:${SUPPORT_EMAIL}`}
+        href={`mailto:${support.email}`}
         className="group flex items-start gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3.5 transition-all duration-200 hover:-translate-y-px hover:border-[var(--brand-primary)] hover:bg-[var(--brand-primary-soft)] hover:shadow-[0_8px_24px_-12px_var(--brand-primary-ring)]"
       >
         <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-[var(--surface-3)] text-[var(--ink-2)] transition-all duration-200 group-hover:scale-110 group-hover:bg-[var(--surface)] group-hover:text-[var(--brand-primary)] group-hover:shadow-[0_3px_10px_-4px_var(--brand-primary-ring)]">
@@ -280,7 +280,7 @@ function ContactStack() {
             {t("contact_email")}
           </div>
           <div className="text-[14px] font-semibold leading-tight text-[var(--ink-1)]">
-            {SUPPORT_EMAIL}
+            {support.email}
           </div>
           <div className="mt-0.5 text-[11.5px] text-[var(--ink-3)]">
             {t("contact_email_hint")}
@@ -289,7 +289,7 @@ function ContactStack() {
       </a>
 
       <a
-        href={DOCS_URL}
+        href={support.docs.url}
         target="_blank"
         rel="noopener noreferrer"
         className="group mt-0.5 flex items-center gap-2.5 border-t border-dashed border-[var(--border)] px-1 pt-3.5 text-[var(--ink-2)] transition-colors hover:text-[var(--brand-primary)]"
@@ -298,7 +298,7 @@ function ContactStack() {
           <div className="text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--ink-4)]">
             {t("contact_docs")}
           </div>
-          <div className="text-[13px] font-medium">{DOCS_LABEL}</div>
+          <div className="text-[13px] font-medium">{support.docs.label}</div>
         </div>
         <ArrowRight className="size-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
       </a>
@@ -313,21 +313,24 @@ function ContactStack() {
 
 function HotlinePrimaryCard() {
   const t = useTranslations("bank.help");
+  const { support, businessHours } = useBrand();
   const [status, setStatus] = useState<HotlineStatus | null>(null);
 
   useEffect(() => {
-    const update = () => setStatus(getHotlineStatus(new Date()));
+    const update = () => setStatus(getHotlineStatus(new Date(), businessHours));
     const tId = setTimeout(update, 0);
     const iId = setInterval(update, 60_000);
     return () => {
       clearTimeout(tId);
       clearInterval(iId);
     };
-  }, []);
+  }, [businessHours]);
+
+  if (!support) return null;
 
   return (
     <a
-      href={HOTLINE_TEL}
+      href={support.phoneTel}
       className="group relative block overflow-hidden rounded-2xl border border-[var(--brand-primary-soft)] bg-gradient-to-b from-[var(--brand-primary-soft)] to-[var(--surface)] p-[18px] transition-all hover:-translate-y-px hover:shadow-[0_14px_36px_-16px_var(--brand-primary-ring)]"
     >
       <div className="mb-2 inline-flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-[var(--brand-primary-ink)]">
@@ -335,7 +338,7 @@ function HotlinePrimaryCard() {
         {t("contact_hotline")}
       </div>
       <div className="mb-1.5 font-mono text-[18px] font-semibold tracking-[-0.01em] text-[var(--ink-1)] [font-variant-numeric:tabular-nums]">
-        {HOTLINE_PHONE}
+        {support.phone}
       </div>
       {status ? (
         status.open ? (
@@ -359,46 +362,17 @@ function HotlinePrimaryCard() {
       <div className="mt-1.5 text-[11.5px] leading-snug text-[var(--ink-3)]">
         {t("contact_hotline_hours_note")}
       </div>
-      {status?.open ? <OperatorPresence /> : null}
+      <div className="mt-3.5 flex items-center justify-between gap-3 border-t border-dashed border-[color:color-mix(in_srgb,var(--brand-primary)_25%,transparent)] pt-3 text-[11px] text-[var(--ink-3)]">
+        <span className="text-[10.5px] font-medium uppercase tracking-[0.06em] text-[var(--brand-primary-ink)]">
+          {t("compliance_phone_eyebrow")}
+        </span>
+        <a
+          href={`tel:${support.compliancePhone.replace(/\s+/g, "")}`}
+          className="font-mono text-[12px] font-semibold tracking-[-0.01em] text-[var(--ink-1)] hover:text-[var(--brand-primary)] [font-variant-numeric:tabular-nums]"
+        >
+          {support.compliancePhone}
+        </a>
+      </div>
     </a>
   );
 }
-
-function OperatorPresence() {
-  const t = useTranslations("bank.help");
-  const dotClass = STATUS_DOT_CLASS[CURRENT_OPERATOR.status];
-  return (
-    <div className="mt-3.5 flex items-center gap-2.5 border-t border-dashed border-[color:color-mix(in_srgb,var(--brand-primary)_25%,transparent)] pt-3">
-      <div className="relative">
-        <span className="grid size-8 place-items-center rounded-full bg-gradient-to-br from-[var(--brand-primary-soft)] to-[var(--brand-primary)] text-[10.5px] font-semibold tracking-wide text-white shadow-[0_2px_8px_-3px_var(--brand-primary-ring)]">
-          {CURRENT_OPERATOR.initials}
-        </span>
-        <span
-          aria-hidden
-          className={cn(
-            "absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2 border-[var(--brand-primary-soft)]",
-            dotClass,
-          )}
-        />
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="text-[10.5px] font-medium uppercase tracking-[0.06em] text-[var(--brand-primary-ink)]">
-          {t("operator_eyebrow")}
-        </div>
-        <div className="flex items-baseline gap-1.5 text-[12.5px] leading-tight text-[var(--ink-1)]">
-          <span className="font-semibold">{CURRENT_OPERATOR.name}</span>
-          <span className="text-[var(--ink-4)]">·</span>
-          <span className="text-[11.5px] text-[var(--ink-3)]">
-            {t(`operator_status_${CURRENT_OPERATOR.status}`)}
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-const STATUS_DOT_CLASS: Record<OperatorStatus, string> = {
-  available: "pulse-ring-ok bg-[var(--state-ok-fg)]",
-  on_call: "bg-[var(--state-warn-fg)]",
-  break: "bg-[var(--ink-4)]",
-};

@@ -7,5 +7,26 @@
   "primaryHover": "#1947AA",
   "primarySoft": "#EAF0FB",
   "primaryInk": "#1947AA",
-  "primaryRing": "rgba(30,85,201,0.22)"
+  "primaryRing": "rgba(30,85,201,0.22)",
+  "support": {
+    "phone": "+998 71 200-00-00",
+    "phoneTel": "tel:+998712000000",
+    "email": "support@credit-assistant.uz",
+    "slack": {
+      "channel": "#credit-assistant",
+      "workspace": "credit-assistant"
+    },
+    "docs": {
+      "url": "https://docs.credit-assistant.uz",
+      "label": "docs.credit-assistant.uz"
+    },
+    "compliancePhone": "+998 71 200-00-01"
+  },
+  "businessHours": {
+    "timezone": "Asia/Tashkent",
+    "weekdays": {
+      "start": "09:00",
+      "end": "18:00"
+    }
+  }
 }

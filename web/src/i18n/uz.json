@@ -297,11 +297,7 @@
       "incident_title": "Shoshilinch hodisalar",
       "incident_text": "Agar mijoz ma'lumotlari boshqa analitikka ko'rinib qolsa — darhol compliance-ga qo'ng'iroq qiling.",
       "incident_cta": "Compliance-ga qo'ng'iroq qilish",
-      "operator_eyebrow": "Hozir smenada",
-      "operator_role_senior": "Katta operator",
-      "operator_status_available": "Mavjud",
-      "operator_status_on_call": "Qo'ng'iroqda",
-      "operator_status_break": "Tanaffus"
+      "compliance_phone_eyebrow": "Compliance liniyasi"
     },
     "sidebar": {
       "workspace": "Ish maydoni",
