@@ -110,6 +110,31 @@ def _validate_runtime_config(settings: Settings) -> None:
             "print(Fernet.generate_key().decode())'"
         )
 
+    # T1.5 (ADR-0019): AUTHN_MODE=ldap требует полный набор LDAP-параметров.
+    # Лучше упасть на boot, чем при первом login.
+    if settings.authn_mode == "ldap":
+        missing = [
+            name
+            for name, value in (
+                ("LDAP_URI", settings.ldap_uri),
+                ("LDAP_BASE_DN", settings.ldap_base_dn),
+                ("LDAP_BIND_DN", settings.ldap_bind_dn),
+                ("LDAP_BIND_PASSWORD", settings.ldap_bind_password),
+                ("LDAP_ROLE_ANALYST_GROUP", settings.ldap_role_analyst_group),
+                (
+                    "LDAP_ROLE_SENIOR_ANALYST_GROUP",
+                    settings.ldap_role_senior_analyst_group,
+                ),
+            )
+            if not value
+        ]
+        if missing:
+            raise RuntimeError(
+                f"AUTHN_MODE=ldap требует переменных окружения: "
+                f"{', '.join(missing)}. См. ADR-0019, "
+                f"docs/operations/ldap-setup.md."
+            )
+
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     """Собирает FastAPI с middleware и роутерами. Тесты могут передавать свои настройки."""

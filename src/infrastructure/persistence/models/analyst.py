@@ -27,7 +27,10 @@ class AnalystORM(Base):
 
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
     email: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
-    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    # T1.5 (ADR-0019): NULL для LDAP-provisioned users — пароль владеется
+    # LDAP-server'ом. SeededAuthnAdapter работает только с rows где
+    # password_hash IS NOT NULL.
+    password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     # T1.3 (ADR-0017): full_name шифруется через Fernet TypeDecorator.
     # Length 500 для Fernet token (255 plaintext → ~432 base64).
     full_name: Mapped[str] = mapped_column(EncryptedString(500), nullable=False)
@@ -65,3 +68,10 @@ class AnalystORM(Base):
         DateTime(timezone=True), nullable=True
     )
     mfa_backup_codes_hash: Mapped[Any | None] = mapped_column(JSONB, nullable=True)
+
+    # T1.5 (ADR-0019): источник аутентификации row'а. 'seeded' — local bcrypt
+    # (password_hash NOT NULL); 'ldap' — LDAP-provisioned (password_hash NULL).
+    # CHECK constraint в миграции ограничивает enum.
+    authn_source: Mapped[str] = mapped_column(
+        String(20), nullable=False, server_default="seeded"
+    )

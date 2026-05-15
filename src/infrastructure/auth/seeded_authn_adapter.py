@@ -37,6 +37,11 @@ class SeededAuthnAdapter:
             return None
         if not orm.is_active:
             return None
+        # T1.5 (ADR-0019): LDAP-provisioned users держат password_hash=NULL —
+        # SeededAdapter не верифицирует их. Timing-выравнивание через dummy hash.
+        if orm.password_hash is None:
+            self._hasher.verify(password, _DUMMY_PASSWORD_HASH)
+            return None
         if not self._hasher.verify(password, orm.password_hash):
             return None
         return analyst_from_orm(orm)
