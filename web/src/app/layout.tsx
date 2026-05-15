@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import { NextIntlClientProvider } from "next-intl";
 import { Inter, JetBrains_Mono } from "next/font/google";
+import { cookies } from "next/headers";
 import "./globals.css";
 import { Providers } from "./providers";
 import { BRAND_ID, LOCALE } from "@/lib/config";
 import { resolveBrand } from "@/lib/brand";
 import { getMessages, resolveLocale } from "@/i18n";
+import { LOCALE_COOKIE, readLocaleCookie } from "@/lib/locale-cookie";
 
 const inter = Inter({
   variable: "--font-sans",
@@ -24,14 +26,19 @@ export const metadata: Metadata = {
   description: "Внутренний инструмент банков для подготовки кредитного досье",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   const brand = resolveBrand(BRAND_ID);
   const brandStyle = brand.cssVars as React.CSSProperties;
-  const locale = resolveLocale(LOCALE);
+  // CA-DS29: locale из cookie если установлен, иначе env default. Чтение
+  // sync через next/headers cookies() — RSC рендерится с правильным lang
+  // attribute сразу, без client-side flash.
+  const cookieStore = await cookies();
+  const cookieLocale = readLocaleCookie(cookieStore.get(LOCALE_COOKIE)?.value);
+  const locale = cookieLocale ?? resolveLocale(LOCALE);
   const messages = getMessages(locale);
 
   return (
