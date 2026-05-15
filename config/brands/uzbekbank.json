@@ -7,5 +7,26 @@
   "primaryHover": "#B5624A",
   "primarySoft": "#F7E8DF",
   "primaryInk": "#6E2F1C",
-  "primaryRing": "rgba(204,120,92,0.22)"
+  "primaryRing": "rgba(204,120,92,0.22)",
+  "support": {
+    "phone": "+998 71 200-00-00",
+    "phoneTel": "tel:+998712000000",
+    "email": "ops@uzbekbank.uz",
+    "slack": {
+      "channel": "#credit-assistant",
+      "workspace": "uzbekbank"
+    },
+    "docs": {
+      "url": "https://docs.credit-assistant",
+      "label": "docs.credit-assistant"
+    },
+    "compliancePhone": "+998 71 200-00-77"
+  },
+  "businessHours": {
+    "timezone": "Asia/Tashkent",
+    "weekdays": {
+      "start": "09:00",
+      "end": "18:00"
+    }
+  }
 }

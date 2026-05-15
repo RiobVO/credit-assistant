@@ -49,6 +49,8 @@ export default function RootLayout({
               name: brand.name,
               tagline: brand.tagline,
               logoMark: brand.logoMark,
+              support: brand.support,
+              businessHours: brand.businessHours,
             }}
           >
             {children}
