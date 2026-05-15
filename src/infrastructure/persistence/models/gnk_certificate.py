@@ -13,11 +13,12 @@ from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String, func
-from sqlalchemy.dialects.postgresql import ARRAY, BYTEA
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from infrastructure.persistence.database import Base
+from infrastructure.persistence.types.encrypted_bytea import EncryptedBytea
 
 
 class GnkCertificateORM(Base):
@@ -36,7 +37,9 @@ class GnkCertificateORM(Base):
     )
     cert_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
     source: Mapped[str] = mapped_column(String(20), nullable=False, default="uploaded")
-    file_bytes: Mapped[bytes | None] = mapped_column(BYTEA, nullable=True)
+    # T1.3 (ADR-0017): PDF blob может содержать PII — director_name, реквизиты.
+    # EncryptedBytea — Fernet binary encrypt; impl остаётся BYTEA в Postgres.
+    file_bytes: Mapped[bytes | None] = mapped_column(EncryptedBytea, nullable=True)
     mime_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
     file_size_bytes: Mapped[int | None] = mapped_column(Integer, nullable=True)
     uploaded_at: Mapped[datetime] = mapped_column(

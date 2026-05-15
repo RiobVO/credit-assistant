@@ -9,7 +9,9 @@
 
 **Tier 1 / T1.1 (2026-05-18):** ✅ **closed**. Compromised B исполнен — sequence на `dossiers.case_id`, миграция `b3e9f1a7d4c5` + `CaseIdAllocator` + drop derived helpers. Existing 47 dossiers backfilled `BR-2026-0001..0047`.
 
-**Tier 1 / T1.2 (2026-05-18):** ✅ **closed**. ADR-0016. `RefreshTokenDenylistPort` + `RedisRefreshTokenDenylist` (`SET NX EX` + TTL clamp) + `NullRefreshTokenDenylist` fallback. `/refresh` rotation, `/logout` денилист'ит refresh из BFF cookie. **Active — T1.3 PII encryption at rest (column-level через app-layer, не наивный pgcrypto на JSONB).**
+**Tier 1 / T1.2 (2026-05-18):** ✅ **closed**. ADR-0016. `RefreshTokenDenylistPort` + `RedisRefreshTokenDenylist` (`SET NX EX` + TTL clamp) + `NullRefreshTokenDenylist` fallback. `/refresh` rotation, `/logout` денилист'ит refresh из BFF cookie.
+
+**Tier 1 / T1.3 (2026-05-18):** ✅ **closed**. ADR-0017. `PiiEncryptorPort` + `FernetPiiEncryptor` (`MultiFernet` rotation) + `NullPiiEncryptor` fallback. SQLAlchemy TypeDecorator (`EncryptedString`/`EncryptedJsonb`/`EncryptedBytea`) на 6 PII колонках. `audit_log` emails masked. Alembic `c5d2f3a7e1b4` (length expansions + data encrypt pass, idempotent). Production startup-assertion. Runbook `docs/operations/pii-key-rotation.md`. **Active — T1.4 multi-tenant runtime isolation (`BRAND_ID` env + startup assertion + cross-tenant guard).**
 
 ---
 
@@ -147,24 +149,21 @@ ADR-0016 «Refresh-token rotation». Compromise design:
 - ✅ Tests: 2 unit (Null) + 6 unit (Redis fakeredis: deny/race/is_denied/TTL/clamp) + 2 integration (testcontainers redis: deny+is_denied, NX-winner) + 24 integration на bank_auth_test (4 новых rotation/double-use/chain/cross-account-logout + 3 расширения).
 - ⏳ Redis HA / sentinel — deferred в T3 (operational readiness).
 
-### T1.3 — PII encryption at rest (column-level через app-layer)
-**Не наивный pgcrypto на JSONB** — это сломает queryability и индексирование.
+### T1.3 — PII encryption at rest (column-level через app-layer) ✅ DONE 2026-05-18
 
-Декомпозиция:
-1. **Inventory**: какие колонки реально содержат PII.
-   - `borrowers.inn` (ИНН — PII).
-   - `analysts.full_name` (имя — PII).
-   - `audit_log.payload` (содержит PII в JSON).
-   - `dossiers.snapshot_json.financial_report` (финансы — конфиденциально, не PII в строгом смысле).
-   - `dossiers.snapshot_json.gnk_certificate` (PII).
-2. **Decision per column**:
-   - Plain `text` PII колонки (ИНН, имя) → application-layer encrypt через `cryptography.Fernet` (symmetric AES-128 GCM), хранить как `text` base64.
-   - JSONB колонки с mixed-data → **не encrypt целиком**. Вместо этого: encrypt sensitive sub-fields на уровне serializer (`_financial_report_to_dict` шифрует `taxpayer_name` если есть). Query-able поля остаются plain.
-3. **Master key**: env `PII_ENC_KEY` (32 байта base64) или Vault. Procedure rotation в `docs/operations/pii-key-rotation.md`.
-4. **Migration**: data-migration encrypts existing rows одной транзакцией (small dataset, тысячи строк, не миллионы).
-5. **ADR**: написать ADR-0014 "PII encryption strategy" до начала.
+ADR-0017 «PII encryption at rest». Design:
+- ✅ `PiiEncryptorPort` (Protocol) + `FernetPiiEncryptor` (`MultiFernet` для rotation) + `NullPiiEncryptor` (passthrough при `PII_ENC_KEYS=None`).
+- ✅ SQLAlchemy `TypeDecorator`: `EncryptedString` (sentinel `gAAAAA` prefix), `EncryptedJsonb` (wrap pattern `{_encrypted: true, ciphertext: ...}`), `EncryptedBytea`. Transparent encrypt/decrypt на ORM-уровне — mapper'ы и rules engine не trogал.
+- ✅ 6 PII колонок encrypted: `analysts.full_name` (500), `analysts.mfa_secret` (200, closes CA-DS12), `borrowers.director_name` (500), `borrower_snapshots.payload` (JSONB), `drafts.payload` (JSONB), `gnk_certificates.file_bytes` (BYTEA).
+- ✅ `audit_log` emails masked через shared `infrastructure/auth/email_mask.py` (3 callsites: mfa.py, authenticate_analyst.py, admin.py).
+- ✅ Alembic `c5d2f3a7e1b4`: schema length expansions + data encrypt pass. Idempotent (sentinel skip). Downgrade decrypt'ит обратно через тот же ключ. Без `PII_ENC_KEYS` — schema-only.
+- ✅ Production startup-assertion в `interfaces/api/app.py`: `app_env in ("staging","prod") + not pii_enc_keys → RuntimeError`.
+- ✅ Backward-compat: TypeDecorator читает legacy plain values (без sentinel) as-is, чтобы rollout кода до миграции работал.
+- ✅ Tests: 5 unit (Null) + 8 unit (Fernet rotation/invalid/empty) + 9 unit (TypeDecorator backward-compat) + 5 unit (email_mask) + 6 integration (testcontainers raw SELECT vs ORM SELECT roundtrip).
+- ✅ Runbook `docs/operations/pii-key-rotation.md`: key generation, rotation deploy steps, pre-migration pg_dump policy, recovery from key loss.
+- ⏳ Vault / KMS integration — deferred в T4 compliance phase.
 
-**Acceptance**: `SELECT inn FROM borrowers LIMIT 1` отдаёт base64 ciphertext, через application-слой расшифровывается прозрачно. Key rotation procedure пройдена в dry-run.
+ИНН + name ЮЛ + addresses + red_flags + audit-log non-email keys оставлены plain (публичные / search-critical / list-view perf / уже masked).
 
 ### T1.4 — Multi-tenant isolation (runtime, не build-time)
 **Не build-arg per brand image** — N образов + CI matrix + registry storage избыточно. Build-arg не даёт значимой security gain (image тоже reverse-engineer'ится).

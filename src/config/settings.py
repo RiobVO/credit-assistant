@@ -55,6 +55,13 @@ class Settings(BaseSettings):
     # → fail closed на /refresh и /logout (см. ADR-0016).
     redis_url: str | None = None
 
+    # T1.3 (CA-DS12 / ADR-0017): comma-separated Fernet keys для PII encryption
+    # at rest. Первый ключ — primary (write), остальные — read fallback для
+    # rotation. Каждый ключ = 32-byte url-safe base64. None в dev → NullPiiEncryptor
+    # (passthrough). В staging/prod startup-assert требует хотя бы один ключ.
+    # См. docs/operations/pii-key-rotation.md.
+    pii_enc_keys: str | None = None
+
     # CORS: либо JSON-массив в .env, либо comma-separated — поддерживаем оба
     cors_allowed_origins: list[str] = Field(
         default_factory=lambda: ["http://localhost:3000"],

@@ -17,6 +17,7 @@ from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from infrastructure.persistence.database import Base
+from infrastructure.persistence.types.encrypted_string import EncryptedString
 
 
 class AnalystORM(Base):
@@ -27,7 +28,9 @@ class AnalystORM(Base):
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
     email: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
-    full_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    # T1.3 (ADR-0017): full_name шифруется через Fernet TypeDecorator.
+    # Length 500 для Fernet token (255 plaintext → ~432 base64).
+    full_name: Mapped[str] = mapped_column(EncryptedString(500), nullable=False)
     role: Mapped[str] = mapped_column(String(50), nullable=False, default="analyst")
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
@@ -52,10 +55,12 @@ class AnalystORM(Base):
     # computed = bool(mfa_enrolled_at) — единственный источник truth.
 
     # Phase 5.B — real TOTP 2FA (RFC 6238). См. миграцию 9a4d2e1f8b67.
-    # `mfa_secret`: base32 shared secret, plain в БД (POC; production → vault, TODO[CA-DS12]).
+    # `mfa_secret`: base32 shared secret. **T1.3 (ADR-0017, закрывает CA-DS12)**:
+    # шифруется через Fernet TypeDecorator. Length 200 для Fernet token
+    # (32 byte base32 → ~108 chars Fernet token).
     # `mfa_enrolled_at`: момент успешной первой verify; до enrollment'а NULL.
     # `mfa_backup_codes_hash`: JSON-массив bcrypt-хешей одноразовых recovery-кодов.
-    mfa_secret: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    mfa_secret: Mapped[str | None] = mapped_column(EncryptedString(200), nullable=True)
     mfa_enrolled_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )

@@ -86,6 +86,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
     configure_logging(level=settings.log_level, json_logs=settings.app_env != "local")
 
+    # T1.3 (ADR-0017): PII_ENC_KEYS обязателен в staging/prod — без ключа
+    # encryption-at-rest деградирует в passthrough, что не приемлемо для
+    # bank-grade compliance. Crash-on-boot гарантирует, что misconfigured
+    # production не запустится молча.
+    if settings.app_env in ("staging", "prod") and not settings.pii_enc_keys:
+        raise RuntimeError(
+            "PII_ENC_KEYS обязателен в staging/prod (T1.3 / ADR-0017). "
+            "Generate: python -c 'from cryptography.fernet import Fernet; "
+            "print(Fernet.generate_key().decode())'"
+        )
+
     app = FastAPI(
         title=APP_NAME,
         version=APP_VERSION,

@@ -157,7 +157,8 @@ async def test_login_invalid_password_returns_401_and_writes_failed_audit(
         )
     ).scalars().all()
     assert len(log_rows) == 1
-    assert log_rows[0].payload.get("email") == EMAIL
+    # T1.3 (ADR-0017): email masked в audit_log — partial-identifier остаётся.
+    assert log_rows[0].payload.get("email") == "iv***@bank.uz"
 
 
 async def test_login_unknown_email_returns_401(

@@ -11,6 +11,7 @@ from dataclasses import dataclass
 
 from application.dto.analyst_identity import AnalystIdentity
 from application.ports.authn_port import AuthnPort
+from infrastructure.auth.email_mask import mask_email
 from infrastructure.auth.jwt_service import JwtService
 from infrastructure.persistence.repositories.audit_log_repository import (
     SqlAlchemyAuditLogRepository,
@@ -48,9 +49,12 @@ class AuthenticateAnalyst:
     ) -> AuthenticationResult:
         analyst = await self._authn.authenticate(email, password)
         if analyst is None:
+            # T1.3 (ADR-0017): email маскируется в audit_log — full PII не утекает,
+            # но partial identifier остаётся для compliance debugging.
+            masked = mask_email(email)
             await self._audit.record(
                 event="login_failed",
-                payload={"email": email, "ip": ip} if ip else {"email": email},
+                payload={"email": masked, "ip": ip} if ip else {"email": masked},
             )
             return AuthenticationFailure(reason="invalid_credentials")
 
