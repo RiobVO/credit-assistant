@@ -9,14 +9,15 @@
 
 **Phase 10 (PDF document) закрыта 2026-05-15** (`a8f2b66`, CI `25934169074`). Финальная фаза Design Sweep — credit memorandum aesthetic: hero decision-block, observations pros/cons split, Section A identity hero с avatar + 3 stat tiles, brand-tenant через `BRAND_ID` env → `config/brands/<id>.json`, F-секция рендерит `rule.name` из YAML.
 
-**Direction B (Design Sweep tail) — 4 batch'а закрыто 2026-05-16:**
+**Direction B (Design Sweep tail) — 5 batch'ей закрыто 2026-05-16:**
 - **Batch 1A** (`680005e`) CA-DS17 + CA-DS24 — config-driven OKVED catalog + USD/UZS rate. Pattern `infrastructure/catalog/` зеркалит `infrastructure/brand/`. PDF/frontend single source через `GET /api/system/{okved,usd-rate}`, i18n keys `okved_XX_YY` удалены.
 - **Batch 1B** (`9b38422`) CA-DS18 Level 1 — deterministic case_id `BR-YYYY-XXXX` из `draft.id` (4 hex). Hydration-safe, без `Math.random`. Banking-grade sequence → CA-DS18b после Phase 4 application entity.
 - **Batch 2** (`d243c0f`) CA-DS20 + CA-DS23 — RTL backfill 32 теста на `InnInput`/`OkvedAutocomplete`/`SourceHint`/`UzsInputShell`. 3 named export'а для testability, семантика не тронута.
 - **Batch 3** (`27e8365`) CA-DS22 + CA-DS19 — full keyboard nav в `CustomDropdown` (ARIA 1.2 combobox, Home/End/PgUp clamp, initial highlight = selected) + pulse cleanup на `/search` (live-strip + result-card). 11 RTL тестов.
 - **Batch 4** (`c40e636`) CA-DS21 — `auto-edited` 3-state в source-trail. `SourceTrailContext` расширен parallel `parsedValues: Record<formPath, normalizedDigits>` map. `useFieldSourceState` сравнивает current с parsedValues — совпадает → `auto`, отличается (включая clear-to-empty) → `auto-edited` (info-tone borderbar, нейтральный suffix). `ParsedFilesDropzone.applyToForm` параллельно с `setValue` зовёт `mergeParsedValues`. +13 RTL тестов (SourceHint info-tone, borderbar, integration через HookProbe + parsedValues seeding + form.setValue transition).
+- **Batch 5** (`2a99f24`) Hygiene — `default_usd_uzs_rate()` singleton (`@lru_cache(maxsize=1)`) mirror OKVED. Endpoint `/api/system/usd-rate` через singleton, `load_usd_uzs_rate(path)` остался uncached для path-override unit-тестов. Integration-test получил autouse `cache_clear` fixture. +2 pytest (singleton identity + env-cache lifecycle).
 
-Закрыто 8 из 15 Design Sweep tail items: CA-DS17/18/19/20/21/22/23/24. Frontend stack: 19 test files, 166 vitest tests.
+Закрыто 8 из 15 Design Sweep tail items: CA-DS17/18/19/20/21/22/23/24. Frontend stack: 19 test files, 166 vitest tests. Backend: 834 pytest, 5 skipped (WeasyPrint GTK runtime).
 
 **Активная ветка:** `main`.
 
@@ -32,6 +33,7 @@
 - **CA-024b**: real CBU API integration (`cbu.uz/services/`) для USD/UZS rate. **Legal review обязателен** (mirror CA-DS28 паттерну: уз-юрист 30 мин + robots.txt check). Pre-condition для замены `config/exchange/rates.json` static на live feed.
 - **CA-028**: dynamic unit detection для FORM_2 — сейчас hardcoded ×1000.
 - **CA-DS18b**: banking-grade monotonic case_id через Postgres sequence в `applications` table. **Pre-condition**: Phase 4 application creation flow завершён (сейчас case_id привязан к draft.id, не к application). Format остаётся `BR-YYYY-XXXX` — frontend `formatCaseId` подменится на чтение `application.case_id` с бэка.
+- **CA-DS18c**: year edge case в `formatCaseId` — сейчас берётся `now.getFullYear()` на каждом render, на стыке года (31 дек → 1 янв) caseId одного и того же draft меняется. **Pre-condition**: `useFormDraft` пробрасывает `draft.created_at` через возвращаемый объект (`{ draftId, createdAt }`); `formatCaseId(draftId, createdAt)` использует год создания, не текущий. Замыкается одновременно с CA-DS18b (там тоже нужен `createdAt` от application entity).
 - **CA-029b**: парсер PROFIT_TAX (taxes_paid, 15 листов). Adapter raises UnsupportedFormatError.
 - **CA-064**: ship `error.tsx` в real observability (Sentry / posthog).
 - **CA-DS11**: faktura.uz API integration. Сейчас сервис в `/api/system/health` всегда `not_implemented`.
