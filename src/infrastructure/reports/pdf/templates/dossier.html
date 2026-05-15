@@ -117,15 +117,19 @@
     color: var(--ink-4); margin: 0 0 8pt;
   }
 
-  /* === Cover identity === */
+  /* === Cover identity ===
+     Hero-fonts сжаты после первой реальной генерации: 28→22 (title),
+     42→32 (gauge), 28→22 (recommend). Цель — освободить вертикаль чтобы
+     observations (сильные стороны / зоны риска) помещались на cover, а
+     не уезжали на page 2 через page-break-inside: avoid. */
   .cover-title {
-    font-size: 28pt; font-weight: 700;
-    letter-spacing: -0.6pt; color: var(--ink-1);
-    margin: 0 0 6pt; line-height: 1.15;
+    font-size: 22pt; font-weight: 700;
+    letter-spacing: -0.5pt; color: var(--ink-1);
+    margin: 0 0 5pt; line-height: 1.15;
   }
   .cover-subtitle {
-    font-size: 11pt; color: var(--ink-3);
-    margin: 0 0 16pt; line-height: 1.5;
+    font-size: 10.5pt; color: var(--ink-3);
+    margin: 0 0 12pt; line-height: 1.5;
   }
   .cover-subtitle .mono {
     font-family: "JetBrains Mono", monospace;
@@ -134,45 +138,45 @@
 
   .cover-divider {
     height: 0; border-top: 0.5pt solid var(--border);
-    margin: 8pt 0 24pt;
+    margin: 6pt 0 18pt;
   }
 
   /* === Decision block === */
   .decision-block {
     display: grid;
-    grid-template-columns: 220pt 1fr;
-    gap: 28pt;
+    grid-template-columns: 200pt 1fr;
+    gap: 24pt;
     align-items: start;
-    padding-top: 4pt;
+    padding-top: 2pt;
     page-break-inside: avoid;
   }
   .decision-block .gauge-col { text-align: center; }
-  .decision-block .gauge-col svg { display: block; margin: 0 auto 8pt; }
+  .decision-block .gauge-col svg { display: block; margin: 0 auto 6pt; }
   .decision-block .gauge-score {
-    font: 700 42pt "Inter", sans-serif;
+    font: 700 32pt "Inter", sans-serif;
     color: var(--ink-1);
-    line-height: 1; letter-spacing: -1.2pt;
+    line-height: 1; letter-spacing: -1pt;
   }
   .decision-block .gauge-score small {
-    font-size: 18pt; color: var(--ink-4);
+    font-size: 15pt; color: var(--ink-4);
     font-weight: 500; letter-spacing: 0;
   }
   .decision-block .gauge-label {
-    font-size: 8.5pt; color: var(--ink-4);
-    text-transform: uppercase; letter-spacing: 1.4pt;
-    margin-top: 8pt; font-weight: 600;
+    font-size: 8pt; color: var(--ink-4);
+    text-transform: uppercase; letter-spacing: 1.3pt;
+    margin-top: 6pt; font-weight: 600;
   }
-  .decision-block .verdict-col { padding-top: 4pt; }
+  .decision-block .verdict-col { padding-top: 2pt; }
   .decision-block .recommend {
-    font: 600 28pt "Inter", sans-serif;
-    margin: 0 0 14pt; line-height: 1.1;
-    letter-spacing: -0.6pt;
+    font: 600 22pt "Inter", sans-serif;
+    margin: 0 0 10pt; line-height: 1.1;
+    letter-spacing: -0.5pt;
   }
   .decision-block .recommend.approve { color: var(--state-ok); }
   .decision-block .recommend.review { color: var(--state-warn); }
   .decision-block .recommend.reject { color: var(--state-bad); }
   .decision-block .signal-line {
-    font-size: 11pt; color: var(--ink-2); margin: 0 0 12pt;
+    font-size: 10.5pt; color: var(--ink-2); margin: 0 0 8pt;
   }
   .decision-block .signal-line strong { color: var(--ink-1); }
   .decision-block .signal-line .high { color: var(--state-bad); font-weight: 600; }
@@ -184,23 +188,23 @@
     display: grid;
     grid-template-columns: 160pt 1fr;
     column-gap: 18pt;
-    row-gap: 10pt;
-    margin-top: 22pt;
-    padding-top: 16pt;
+    row-gap: 7pt;
+    margin-top: 16pt;
+    padding-top: 12pt;
     border-top: 0.5pt solid var(--border);
     page-break-inside: avoid;
   }
   .decision-meta .k {
-    font-size: 8.5pt; font-weight: 700;
-    letter-spacing: 1.4pt; text-transform: uppercase;
+    font-size: 8pt; font-weight: 700;
+    letter-spacing: 1.3pt; text-transform: uppercase;
     color: var(--ink-2); align-self: center;
   }
   .decision-meta .v {
-    font-size: 11pt; font-weight: 500;
+    font-size: 10.5pt; font-weight: 500;
     color: var(--ink-1); line-height: 1.4;
   }
   .decision-meta .v .mono {
-    font: 600 11pt "JetBrains Mono", monospace;
+    font: 600 10.5pt "JetBrains Mono", monospace;
     color: var(--ink-1); letter-spacing: 0.3pt;
   }
   .decision-meta .v .dim {
@@ -209,8 +213,8 @@
 
   /* === Observations pros/cons block === */
   .observations {
-    margin-top: 28pt;
-    padding-top: 18pt;
+    margin-top: 20pt;
+    padding-top: 14pt;
     border-top: 0.5pt solid var(--border);
     page-break-inside: avoid;
   }
@@ -229,7 +233,7 @@
   .obs-col h4 {
     font: 700 9pt "Inter", sans-serif;
     text-transform: uppercase; letter-spacing: 1.4pt;
-    margin: 0 0 12pt;
+    margin: 0 0 8pt;
   }
   .obs-col.strength h4 { color: var(--state-ok); }
   .obs-col.risk h4 { color: var(--state-bad); }
@@ -237,7 +241,7 @@
     list-style: none; margin: 0; padding: 0;
     font-size: 10pt; line-height: 1.45;
   }
-  .obs-col li { padding: 0 0 10pt; color: var(--ink-1); }
+  .obs-col li { padding: 0 0 7pt; color: var(--ink-1); }
   .obs-col li:last-child { padding-bottom: 0; }
   .obs-col li .head {
     display: block; font-weight: 500;
@@ -358,7 +362,19 @@
   .stat-tile .stat-num {
     font: 700 22pt "Inter", sans-serif;
     color: var(--ink-1);
-    line-height: 1; letter-spacing: -0.6pt;
+    line-height: 1.1; letter-spacing: -0.6pt;
+    /* Long city/oblast-имена (CA-DS17): word-wrap, не overflow.
+       Минимальная высота tile сохраняется через padding снизу .stat-sub. */
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+  /* Compact-вариант — для длинных текстовых значений (regional names),
+     рендер шаблоном через .stat-num.long. WeasyPrint не умеет CSS
+     container-queries, поэтому переключаем класс с backend-side. */
+  .stat-tile .stat-num.long {
+    font-size: 14pt;
+    letter-spacing: -0.3pt;
+    line-height: 1.2;
   }
   .stat-tile .stat-num.mono {
     font: 700 22pt "JetBrains Mono", monospace;
@@ -375,22 +391,35 @@
   }
   .stat-tile .stat-sub {
     font-size: 9pt; color: var(--ink-3);
-    margin-top: 4pt; line-height: 1.4;
+    margin-top: 4pt; line-height: 1.35;
   }
 
-  .id-details { display: flex; flex-direction: column; }
+  /* id-details — display: table (вместо grid). WeasyPrint 68 имеет частичную
+     поддержку CSS Grid и не выравнивает cells по vertical-center корректно
+     внутри nested .row. Переход на table даёт надёжный vertical-align: middle. */
+  .id-details {
+    display: table;
+    width: 100%;
+    border-collapse: collapse;
+  }
   .id-details .row {
-    display: grid;
-    grid-template-columns: 160pt 1fr;
-    gap: 18pt;
+    display: table-row;
+  }
+  .id-details .row .k,
+  .id-details .row .v {
+    display: table-cell;
+    vertical-align: middle;
     padding: 10pt 0;
     border-bottom: 0.5pt solid var(--border);
   }
-  .id-details .row:last-child { border-bottom: none; }
+  .id-details .row:last-child .k,
+  .id-details .row:last-child .v { border-bottom: none; }
   .id-details .row .k {
+    width: 160pt;
+    padding-right: 18pt;
     font-size: 8.5pt; text-transform: uppercase;
     letter-spacing: 1.1pt; color: var(--ink-4);
-    font-weight: 700; align-self: center;
+    font-weight: 700;
   }
   .id-details .row .v {
     font-size: 10.5pt; color: var(--ink-1);
@@ -513,7 +542,8 @@
   }
   .flag .evidence {
     text-align: right;
-    border-left: 0.5pt solid var(--border);
+    /* 1pt вместо 0.5pt — WeasyPrint pixel-snap часто делает 0.5pt невидимым. */
+    border-left: 1pt solid var(--border);
     padding-left: 14pt;
   }
   .flag .evidence .num {
@@ -530,12 +560,16 @@
   .flag.sev-medium .evidence .num { color: var(--state-warn); }
   .flag.sev-low .evidence .num { color: var(--state-ok); }
 
+  /* sev-pill — увеличены padding и font, чтобы background реально печатался
+     в WeasyPrint (tight padding < 2pt снэпит фон в ноль). Letter-spacing
+     уменьшен до 0.7pt — на 8pt буквах 1pt создавал визуальный «расползание». */
   .sev-pill {
     display: inline-block;
-    padding: 1pt 7pt;
-    border-radius: 2pt;
-    font: 700 7.5pt "Inter", sans-serif;
-    text-transform: uppercase; letter-spacing: 1pt;
+    padding: 2pt 8pt;
+    border-radius: 3pt;
+    font: 700 8pt "Inter", sans-serif;
+    text-transform: uppercase; letter-spacing: 0.7pt;
+    line-height: 1.2;
     margin-right: 8pt; vertical-align: 1pt;
   }
   .sev-pill.high { color: var(--state-bad); background: var(--state-bad-bg); }
@@ -705,7 +739,7 @@
         <div class="stat-sub">с {{ borrower.registration_date | fmt_date_ru_month }}</div>
       </div>
       <div class="stat-tile" style="border-top-color: {{ brand.primary }}">
-        <div class="stat-num">{{ region_city }}</div>
+        <div class="stat-num{% if region_city | length > 10 %} long{% endif %}">{{ region_city }}</div>
         <div class="stat-label">Регион</div>
         <div class="stat-sub">{{ region_district }}</div>
       </div>
