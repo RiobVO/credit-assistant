@@ -175,10 +175,15 @@
 }
 
 /* Dark theme (ADR-0013). Slate/anthracite — banking-grade.
-   Brand-primary остаётся синим: tenant identity = константа.
-   uzbekbank cream-sidebar остаётся только в light — в dark переопределения нет,
-   получает generic slate (acceptable trade-off). */
-[data-theme="dark"] {
+   Brand-primary остаётся синим/терракотовым: tenant identity = константа (через
+   inline style на <html>, имеет высший приоритет).
+   uzbekbank cream-sidebar остаётся только в light — в dark generic slate.
+
+   Specificity нота: `:root[data-theme="dark"]` (0,1,1) равна
+   `:root[data-brand="uzbekbank"]` (0,1,1) — source-order tiebreaker:
+   dark идёт после brand-override, поэтому surface/bg/ink/state/nav
+   переопределяются корректно даже на брендовом теннанте. */
+:root[data-theme="dark"] {
   --background: #0A0D12;
   --foreground: #E8EDF5;
   --card: #0F1419;
@@ -243,11 +248,15 @@
   --chart-track: #2E3744;
   --chart-track-light: #1E242D;
 
-  /* Brand: primary константа, soft/ring/ink перевыставлены под dark surface. */
-  --brand-primary-hover: #3D6FD8;
-  --brand-primary-soft: #15203A;
-  --brand-primary-ink: #A8C3F0;
-  --brand-primary-ring: rgba(94, 143, 232, 0.35);
+  /* Brand: primary остаётся inline от brand JSON (identity константа).
+     Soft/ink/hover/ring приходят inline тоже — пробиваем !important чтобы
+     перевыставить под dark surface. Производные считаются от brand-primary
+     через color-mix — переключаем tenant'ы (default → uzbekbank) и
+     accent-боксы остаются tenant-tinted dark, не светлым кремом. */
+  --brand-primary-hover: color-mix(in srgb, var(--brand-primary), white 18%) !important;
+  --brand-primary-soft: color-mix(in srgb, var(--brand-primary) 14%, var(--surface)) !important;
+  --brand-primary-ink: color-mix(in srgb, var(--brand-primary), white 45%) !important;
+  --brand-primary-ring: color-mix(in srgb, var(--brand-primary) 35%, transparent) !important;
   --accent: var(--brand-primary-soft);
   --accent-foreground: var(--brand-primary-ink);
 
@@ -258,7 +267,7 @@
    также синхронизирует data-theme live, но эта media-обёртка нужна на момент
    SSR/первого paint, когда LS говорит "system" но JS ещё не выполнился. */
 @media (prefers-color-scheme: dark) {
-  [data-theme="system"] {
+  :root[data-theme="system"] {
     --background: #0A0D12;
     --foreground: #E8EDF5;
     --card: #0F1419;
@@ -322,10 +331,10 @@
     --chart-track: #2E3744;
     --chart-track-light: #1E242D;
 
-    --brand-primary-hover: #3D6FD8;
-    --brand-primary-soft: #15203A;
-    --brand-primary-ink: #A8C3F0;
-    --brand-primary-ring: rgba(94, 143, 232, 0.35);
+    --brand-primary-hover: color-mix(in srgb, var(--brand-primary), white 18%) !important;
+    --brand-primary-soft: color-mix(in srgb, var(--brand-primary) 14%, var(--surface)) !important;
+    --brand-primary-ink: color-mix(in srgb, var(--brand-primary), white 45%) !important;
+    --brand-primary-ring: color-mix(in srgb, var(--brand-primary) 35%, transparent) !important;
     --accent: var(--brand-primary-soft);
     --accent-foreground: var(--brand-primary-ink);
 
