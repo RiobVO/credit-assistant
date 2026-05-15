@@ -26,16 +26,21 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from infrastructure.catalog.exchange_rates import load_usd_uzs_rate
+from infrastructure.catalog.okved_catalog import default_catalog as default_okved_catalog
 from infrastructure.persistence.database import get_session
 from infrastructure.persistence.repositories.system_uptime_repository import (
     NOT_IMPLEMENTED_STATUS,
     SqlAlchemySystemUptimeRepository,
 )
 from interfaces.api.shared.system_schema import (
+    OkvedCatalogResponse,
+    OkvedItem,
     ServiceStatus,
     SystemHealthResponse,
     UptimeDayItem,
     UptimeHistoryResponse,
+    UsdRateResponse,
 )
 
 router = APIRouter(prefix="/api/system", tags=["system"])
@@ -138,4 +143,49 @@ async def system_health_history(
     return UptimeHistoryResponse(
         first_seen_day=first_day,
         days=[UptimeDayItem(day=row.day, status=row.status) for row in rows],
+    )
+
+
+@router.get("/usd-rate", response_model=UsdRateResponse)
+async def system_usd_rate() -> UsdRateResponse:
+    """USD/UZS rate для loan-wizard UI-конвертации (CA-DS24).
+
+    Source priority: env ``USD_UZS_RATE`` > ``config/exchange/rates.json``.
+    CBU API integration → CA-DS24b (legal review pre-condition).
+
+    Auth: открыт без get_current_analyst — reference data, никаких PII.
+    Decimal сериализуется строкой — сохраняем точность через JSON.
+    """
+    rate = load_usd_uzs_rate()
+    return UsdRateResponse(
+        rate=str(rate.rate),
+        asof=rate.asof,
+        source=rate.source,
+    )
+
+
+@router.get("/okved", response_model=OkvedCatalogResponse)
+async def system_okved_catalog() -> OkvedCatalogResponse:
+    """OKVED catalog МСБ-сегмента (CA-DS17).
+
+    Источник — ``config/okved/uz_msb.json`` (single source для backend и
+    frontend). Singleton-cache: JSON парсится один раз при первом обращении,
+    при необходимости обновления — restart api контейнера.
+
+    Auth: открыт без get_current_analyst — reference data, никаких PII.
+    Frontend читает на mount manual-input wizard (Шаг 1 OkvedAutocomplete).
+    """
+    catalog = default_okved_catalog()
+    items = sorted(catalog.list(), key=lambda e: e.code)
+    return OkvedCatalogResponse(
+        items=[
+            OkvedItem(
+                code=e.code,
+                short_ru=e.short_ru,
+                full_ru=e.full_ru,
+                short_uz=e.short_uz,
+                full_uz=e.full_uz,
+            )
+            for e in items
+        ]
     )

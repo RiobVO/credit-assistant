@@ -283,6 +283,38 @@ export async function getDossierReadiness(
   );
 }
 
+// CA-DS17: OKVED catalog МСБ-сегмента из backend.
+// Источник — config/okved/uz_msb.json через GET /api/system/okved.
+// Зеркалит ``OkvedCatalogResponse`` из system_schema.py.
+export type OkvedItemDto = {
+  code: string;
+  short_ru: string;
+  full_ru: string;
+  short_uz: string;
+  full_uz: string;
+};
+
+export type OkvedCatalogDto = {
+  items: OkvedItemDto[];
+};
+
+export async function getOkvedCatalog(): Promise<OkvedCatalogDto> {
+  return jsonFetch<OkvedCatalogDto>("/api/system/okved", { method: "GET" });
+}
+
+// CA-DS24: USD/UZS rate для loan-wizard конвертации.
+// Источник — config/exchange/rates.json + env override USD_UZS_RATE.
+// CBU API integration → CA-DS24b. Зеркалит ``UsdRateResponse``.
+export type UsdRateDto = {
+  rate: string; // Decimal через JSON — парсится через parseFloat в UI
+  asof: string; // ISO YYYY-MM-DD
+  source: "manual" | "env" | "cbu";
+};
+
+export async function getUsdRate(): Promise<UsdRateDto> {
+  return jsonFetch<UsdRateDto>("/api/system/usd-rate", { method: "GET" });
+}
+
 export async function uploadSoliqXltx(args: {
   files: File[]; // ровно два файла: декларация + ilova (любой порядок)
   borrowerInn: string;
