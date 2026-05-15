@@ -4,17 +4,15 @@
 // gradient header + counter), source-trail hints под каждым полем, Annual block
 // разбит на 3 flat-группы (Налоги | НДС | Баланс).
 //
-// Source-trail state (2 ветки в MVP):
-//   • auto    — поле есть в useSourceTrail() map → пришло из xltx-парсера.
-//   • manual  — поля нет в map → ввод руками.
+// Source-trail state (CA-DS21 — 3-state):
+//   • auto         — парсер положил значение AND current === parsed.
+//   • auto-edited  — парсер положил, пользователь поправил (current !== parsed).
+//                    Info-tone (синий) borderbar, нейтральный suffix.
+//   • manual       — парсер не трогал, ввод руками.
 //   • manual-required (special) — taxesPaid*: PROFIT_TAX-парсер не реализован
 //     (TODO[CA-029b]), эти поля ВСЕГДА руками. Хинт даёт повышенный визуальный
 //     вес чтобы аналитик понимал «это не пропущенный autofill — это by design».
-//
-// CA-DS24 (TODO): «auto-edited» state (parser подставил → пользователь поправил
-// → amber hint). Требует трекинга «initial autofilled value» отдельно от
-// формы — рост sourceTrailContext до { sources, initialValues }. Сейчас 2-state
-// модель достаточна для smoke; auto-edited не страшно показывать как auto.
+//   • waiting      — поле пустое, парсер не трогал.
 
 import {
   Calculator,
@@ -356,6 +354,7 @@ export function UzsInputShell({
         className={cn(
           "pointer-events-none absolute top-0 bottom-0 left-0 z-[1] w-[3px] rounded-l-[9px]",
           state === "auto" && "bg-[var(--state-ok-fg)]",
+          state === "auto-edited" && "bg-[var(--state-info-fg)]",
           state === "manual-required" &&
             "bg-[var(--state-warn-fg)] opacity-60",
         )}
@@ -381,22 +380,39 @@ export function UzsInputShell({
 
 // ─────────── Source-trail state + hint UI ────────────────────────────────
 
-export type SourceState = "auto" | "manual" | "manual-required" | "waiting";
+export type SourceState =
+  | "auto"
+  | "auto-edited"
+  | "manual"
+  | "manual-required"
+  | "waiting";
 
-function useFieldSourceState(
+export function useFieldSourceState(
   fieldName: string,
   opts: { forceManualRequired?: boolean } = {},
 ): SourceState {
-  const { sourceTrail } = useSourceTrail();
+  const { sourceTrail, parsedValues } = useSourceTrail();
   const { control } = useFormContext<FormValues>();
   // useWatch на конкретный путь, чтобы re-render только при изменении этого
   // поля, а не всей формы. Cast `as never` — react-hook-form требует
   // FieldPath<FormValues>; наши UzsFieldName уже валидные пути.
   const value = useWatch({ control, name: fieldName as never });
-  const has = digitsOnly((value as string) ?? "").length > 0;
+  const current = digitsOnly((value as string) ?? "");
+  const has = current.length > 0;
 
   if (opts.forceManualRequired) return "manual-required";
 
+  // CA-DS21: если парсер положил значение (parsedValues[fieldName]) —
+  // сравниваем с current. Совпало → auto, не совпало → auto-edited.
+  // Случай «парсер положил, потом очищено» (current === "") тоже
+  // auto-edited: пользователь явно убрал autofill.
+  const parsed = parsedValues[fieldName];
+  if (parsed !== undefined) {
+    return current === parsed ? "auto" : "auto-edited";
+  }
+
+  // Парсер не трогал — fallback на sourceTrail (на случай если sourceTrail
+  // получит данные из другого источника не через ParsedFilesDropzone).
   const mapping = SOURCE_KEYS[fieldName];
   if (mapping && sourceTrail[mapping.key]) return "auto";
   if (has) return "manual";
@@ -422,6 +438,18 @@ export function SourceHint({
         {sourceTag ? <SourceTag tone="ok">{sourceTag}</SourceTag> : null}
         <span className="text-[10.5px] text-[var(--ink-4)]">
           · {t("s2_source_auto_hint")}
+        </span>
+      </div>
+    );
+  }
+  if (state === "auto-edited") {
+    return (
+      <div className="inline-flex items-center gap-[5px] text-[11px] leading-[1.3] font-medium text-[var(--state-info-fg)]">
+        <Pencil className="size-[11px] flex-none" />
+        <span>{t("s2_source_auto_edited")}</span>
+        {sourceTag ? <SourceTag tone="info">{sourceTag}</SourceTag> : null}
+        <span className="text-[10.5px] text-[var(--ink-4)]">
+          · {t("s2_source_auto_edited_hint")}
         </span>
       </div>
     );
@@ -464,16 +492,17 @@ function SourceTag({
   tone,
   children,
 }: {
-  tone: "ok" | "muted";
+  tone: "ok" | "muted" | "info";
   children: ReactNode;
 }) {
   return (
     <span
       className={cn(
         "rounded-[3px] px-[5px] py-px font-mono text-[10.5px] font-bold tracking-[0.03em]",
-        tone === "ok"
-          ? "bg-[var(--state-ok-bg)] text-[var(--state-ok-fg)]"
-          : "bg-[var(--surface-2)] text-[var(--ink-3)]",
+        tone === "ok" && "bg-[var(--state-ok-bg)] text-[var(--state-ok-fg)]",
+        tone === "info" &&
+          "bg-[var(--state-info-bg)] text-[var(--state-info-fg)]",
+        tone === "muted" && "bg-[var(--surface-2)] text-[var(--ink-3)]",
       )}
     >
       {children}
