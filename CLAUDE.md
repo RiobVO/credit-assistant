@@ -9,15 +9,14 @@
 
 **Phase 10 (PDF document) закрыта 2026-05-15** (`a8f2b66`, CI `25934169074`). Финальная фаза Design Sweep — credit memorandum aesthetic: hero decision-block, observations pros/cons split, Section A identity hero с avatar + 3 stat tiles, brand-tenant через `BRAND_ID` env → `config/brands/<id>.json`, F-секция рендерит `rule.name` из YAML.
 
-**Direction B (Design Sweep tail) — 3 batch'а закрыто 2026-05-16:**
+**Direction B (Design Sweep tail) — 4 batch'а закрыто 2026-05-16:**
 - **Batch 1A** (`680005e`) CA-DS17 + CA-DS24 — config-driven OKVED catalog + USD/UZS rate. Pattern `infrastructure/catalog/` зеркалит `infrastructure/brand/`. PDF/frontend single source через `GET /api/system/{okved,usd-rate}`, i18n keys `okved_XX_YY` удалены.
 - **Batch 1B** (`9b38422`) CA-DS18 Level 1 — deterministic case_id `BR-YYYY-XXXX` из `draft.id` (4 hex). Hydration-safe, без `Math.random`. Banking-grade sequence → CA-DS18b после Phase 4 application entity.
 - **Batch 2** (`d243c0f`) CA-DS20 + CA-DS23 — RTL backfill 32 теста на `InnInput`/`OkvedAutocomplete`/`SourceHint`/`UzsInputShell`. 3 named export'а для testability, семантика не тронута.
 - **Batch 3** (`27e8365`) CA-DS22 + CA-DS19 — full keyboard nav в `CustomDropdown` (ARIA 1.2 combobox, Home/End/PgUp clamp, initial highlight = selected) + pulse cleanup на `/search` (live-strip + result-card). 11 RTL тестов.
+- **Batch 4** (`c40e636`) CA-DS21 — `auto-edited` 3-state в source-trail. `SourceTrailContext` расширен parallel `parsedValues: Record<formPath, normalizedDigits>` map. `useFieldSourceState` сравнивает current с parsedValues — совпадает → `auto`, отличается (включая clear-to-empty) → `auto-edited` (info-tone borderbar, нейтральный suffix). `ParsedFilesDropzone.applyToForm` параллельно с `setValue` зовёт `mergeParsedValues`. +13 RTL тестов (SourceHint info-tone, borderbar, integration через HookProbe + parsedValues seeding + form.setValue transition).
 
-Закрыто 7 из 15 Design Sweep tail items: CA-DS17/18/19/20/22/23/24. Frontend stack: 19 test files, 152 vitest tests.
-
-**Активная ветка:** `main`.
+Закрыто 8 из 15 Design Sweep tail items: CA-DS17/18/19/20/21/22/23/24. Frontend stack: 19 test files, 166 vitest tests.
 
 **Активная ветка:** `main`.
 
@@ -44,7 +43,6 @@
 - **CA-DS14**: `/help` секция «Что делать при смене телефона» — MS Authenticator iCloud-cache scenario.
 - **CA-DS15**: рассмотреть WebAuthn/Passkeys как alternative 2FA-фактор.
 - **CA-DS16**: убрать legacy stored bool `analysts.mfa_enabled` через миграцию.
-- **CA-DS21**: `auto-edited` 3-state в source-trail (Step 2). Сейчас 2-state. **Pre-condition**: расширить `SourceTrailContext` хранить parsed values (parallel `Record<fieldName, parsedValue>` map) → diff с current value. Scope ~1.5-2 ч с rework `ParsedFilesDropzone` + `SoliqUpload` data flow.
 - **CA-DS25**: real backend sparkline для KPI (EBIT/ROE/Debt-to-EBIT). Нужна monthly-проекция EBIT.
 - **CA-DS28**: real ГНК lookup для CA-003 (hybrid: public lookup `soliq.uz/services/search/` + manual upload справки). **Legal review обязателен** (уз-юрист 30 мин + robots.txt check). Pre-condition для CA-003 закрытия.
 - **CA-DS29**: runtime locale switcher (UI dropdown в topbar + cookie persistence + middleware locale detection + RSC revalidation strategy + PDF `?lang=` query param). Backend уже готов — OKVED catalog отдаёт RU+UZ. Scope: ~15 файлов, ~3 ч с design-review. Brand-strings (имена банков) НЕ локализуются — это tenant-config.
@@ -91,7 +89,7 @@
 - **CA-066** brand-context client-side: server `resolveBrand()` + `<html data-brand>` + `BrandProvider` + `useBrand()` (`web/src/lib/brand-context.tsx`). Tagline в brand-config — **полная** строка.
 - **CA-066** `t.rich` gotcha: для ReactNode-обёртки message **обязан** иметь tag-плейсхолдер `<x></x>`, не value `{x}`. Иначе «Functions are not valid as a React child».
 - **Phase 8 SectionCard / CounterChip / StaticPill** (`web/src/components/section-card.tsx`): shared shell — wizard передаёт `icon`, dossier нет (header grid схлопывается). Visual-only, без i18n bindings. **Не дублировать pattern локально** — 10+ consumer'ов через shared.
-- **Phase 7 source-trail UI** (Step 2): 2-state — `auto` (зелёный borderbar) / `manual` (серый), плюс спец `manual-required` (amber для taxesPaid). Borderbar реализован как `absolute span` (не CSS-border — мешает UZS-suffix).
+- **Phase 7 source-trail UI** (Step 2, расширено CA-DS21): 3-state — `auto` (зелёный borderbar + suffix), `auto-edited` (info-синий borderbar, нейтральный suffix — parser-cap снят правкой), `manual` (серый), плюс спец `manual-required` (amber для taxesPaid). Borderbar реализован как `absolute span` (не CSS-border — мешает UZS-suffix). `useFieldSourceState` читает `parsedValues[fieldName]` из `SourceTrailContext` и сравнивает с current digits; fallback на legacy `sourceTrail[mapping.key]` для не-CA-DS21 источников.
 - **Phase 10 PDF brand-tenant**: `BRAND_ID` env → `config/brands/<id>.json` через `infrastructure/brand/`. `BrandConfig` dataclass в `application/dto/` (clean architecture — pure), loader в `infrastructure/`. Backend mirror фронтового `resolveBrand()`, single source of truth — JSON в `config/brands/`. Шрифты PDF строго bundled 400/500/600/700 (no 800 — fallback в WeasyPrint).
 - **Phase 10 Observations builder** (`application/services/observations_builder.py`): cover bottom half. Strengths derived from positive KPI: revenue growth · ROE≥GOOD · positive net profit · low debt (cap 3). Risks = top-3 red flags by severity (critical → high → medium → low). Rule name lookup через `RuleRegistry.by_id(rule_id).name` из YAML.
 - **Phase 10 Rule.name field**: добавлено в `domain/rules/rule.py`, пробрасывается через `registry_factory` синхронно с `config/rules/v*.yaml`. PDF F-секция рендерит human-readable name; rule_id остаётся в `.src` строке как technical reference для аудитора.
