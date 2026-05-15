@@ -3,7 +3,8 @@
 Имплементация ``application.ports.PdfReportPort.render``. Делает три вещи:
 
 1. ``_build_context`` — превращает ``DossierPdfBundle`` в ``dict``, который
-   ждёт шаблон ``templates/dossier.html`` (KPI слоты, base64-чарт, метки).
+   ждёт шаблон ``templates/dossier.html`` (cover hero, identity stats,
+   observations, KPI слоты, base64-чарт, метки).
 2. Jinja2 рендер HTML.
 3. WeasyPrint ``HTML(string=...).write_pdf()`` → bytes.
 
@@ -21,7 +22,7 @@
 from __future__ import annotations
 
 import base64
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -29,14 +30,18 @@ import jinja2
 
 from application.dto.dossier_pdf_bundle import DossierPdfBundle
 from application.dto.kpi_bundle import KpiUnit, KpiValue
+from domain.entities.borrower import LegalForm
 from infrastructure.reports.pdf import chart_renderer
 from infrastructure.reports.pdf.template_filters import (
     fmt_date_ru,
+    fmt_date_ru_month,
+    fmt_date_ru_short,
     fmt_datetime_ru,
     fmt_inn,
     fmt_pct,
     fmt_pct_share,
     fmt_uzs,
+    fmt_uzs_amount_only,
     severity_bg,
     severity_color,
     severity_label,
@@ -60,12 +65,21 @@ _RECOMMENDATION_LABEL = {
 }
 
 _LEGAL_FORM_LABEL = {
-    "llc": "ООО (Общество с ограниченной ответственностью)",
-    "pe": "ЧП (Частное предприятие)",
-    "ltd": "Ltd",
-    "jsc": "АО (Акционерное общество)",
-    "ie": "ИП (Индивидуальный предприниматель)",
-    "other": "Иная форма",
+    LegalForm.LLC: "Общество с ограниченной ответственностью",
+    LegalForm.PE: "Частное предприятие",
+    LegalForm.LTD: "Ltd",
+    LegalForm.JSC: "Акционерное общество",
+    LegalForm.IE: "Индивидуальный предприниматель",
+    LegalForm.OTHER: "Иная форма",
+}
+
+_LEGAL_FORM_SHORT = {
+    LegalForm.LLC: "ООО",
+    LegalForm.PE: "ЧП",
+    LegalForm.LTD: "Ltd",
+    LegalForm.JSC: "АО",
+    LegalForm.IE: "ИП",
+    LegalForm.OTHER: "—",
 }
 
 _KPI_LABEL = {
@@ -74,6 +88,83 @@ _KPI_LABEL = {
     "ebit": "EBIT (прокси EBITDA)",
     "roe": "ROE",
     "debt_to_ebit": "Долг / EBIT",
+}
+
+# OKVED labels: 16 кодов синхронизированы с frontend ``OKVED_UZ_MSB``
+# (``web/src/features/manual-input/components/step-1-borrower.tsx``).
+# TODO[CA-DS17]: вынести в backend-endpoint или статичный JSON.
+_OKVED_LABELS: dict[str, tuple[str, str]] = {
+    "47.11": (
+        "Розн. торговля прод. товарами",
+        "Розничная торговля преимущественно пищевыми продуктами в "
+        "неспециализированных магазинах",
+    ),
+    "47.19": (
+        "Розн. торговля непрод. товарами",
+        "Прочая розничная торговля в неспециализированных магазинах",
+    ),
+    "10.71": (
+        "Производство хлеба",
+        "Производство хлеба и мучных кондитерских изделий недлительного хранения",
+    ),
+    "13.10": (
+        "Прядение текстильных волокон",
+        "Подготовка и прядение текстильных волокон",
+    ),
+    "14.13": (
+        "Производство верхней одежды",
+        "Производство прочей верхней одежды",
+    ),
+    "41.20": ("Строительство зданий", "Строительство жилых и нежилых зданий"),
+    "43.39": (
+        "Отделочные работы",
+        "Производство прочих отделочных и завершающих работ",
+    ),
+    "45.20": (
+        "Техобслуживание авто",
+        "Техническое обслуживание и ремонт автотранспортных средств",
+    ),
+    "46.31": (
+        "Опт. торговля фруктами/овощами",
+        "Торговля оптовая фруктами и овощами",
+    ),
+    "46.39": (
+        "Опт. торговля пищ. продуктами",
+        "Неспециализированная оптовая торговля пищевыми продуктами, "
+        "напитками и табачными изделиями",
+    ),
+    "49.41": (
+        "Грузовые перевозки",
+        "Деятельность автомобильного грузового транспорта",
+    ),
+    "52.10": (
+        "Складирование и хранение",
+        "Деятельность по складированию и хранению",
+    ),
+    "56.10": (
+        "Рестораны и доставка еды",
+        "Деятельность ресторанов и услуги по доставке продуктов питания",
+    ),
+    "62.01": ("Разработка ПО", "Разработка компьютерного программного обеспечения"),
+    "68.20": (
+        "Аренда недвижимости",
+        "Аренда и управление собственным или арендованным недвижимым имуществом",
+    ),
+    "85.10": ("Образование дошкольное", "Образование дошкольное"),
+    "86.21": ("Общая врачебная практика", "Общая врачебная практика"),
+}
+
+_SIGNAL_BREAKDOWN_LABEL = {
+    "critical": "критических",
+    "high": "высокий",
+    "medium": "средних",
+    "low": "низкий",
+}
+_SIGNAL_PLURAL_LABEL = {
+    "critical": "критических",
+    "high": "высоких",
+    "medium": "средних",
+    "low": "низких",
 }
 
 
@@ -88,9 +179,12 @@ class WeasyPrintPdfRenderer:
             autoescape=jinja2.select_autoescape(["html"]),
         )
         self._env.filters["fmt_uzs"] = fmt_uzs
+        self._env.filters["fmt_uzs_amount_only"] = fmt_uzs_amount_only
         self._env.filters["fmt_pct"] = fmt_pct
         self._env.filters["fmt_pct_share"] = fmt_pct_share
         self._env.filters["fmt_date_ru"] = fmt_date_ru
+        self._env.filters["fmt_date_ru_short"] = fmt_date_ru_short
+        self._env.filters["fmt_date_ru_month"] = fmt_date_ru_month
         self._env.filters["fmt_datetime_ru"] = fmt_datetime_ru
         self._env.filters["fmt_inn"] = fmt_inn
         self._env.filters["severity_label"] = severity_label
@@ -114,6 +208,7 @@ class WeasyPrintPdfRenderer:
         view = view_bundle.view
         snapshot = view.snapshot
         dossier = view.dossier
+        borrower = snapshot.borrower
 
         application_id = _format_application_id(view.dossier_id, view.created_at)
         display_score = max(0, min(100, 100 - dossier.score))
@@ -131,11 +226,16 @@ class WeasyPrintPdfRenderer:
             ),
         ).decode("ascii")
 
+        okved_short, okved_full = _resolve_okved(borrower.okved_main)
+        region_city, region_district = _parse_region(borrower.registered_address)
+        age_years, age_unit = _business_age(borrower.registration_date, snapshot.as_of)
+
         return {
+            "brand": bundle.brand,
             "application_id": application_id,
             "generated_at": self._now(),
-            "status_label": "На рассмотрении",
-            "borrower": snapshot.borrower,
+            "borrower": borrower,
+            "borrower_initials": _derive_initials(borrower.name),
             "snapshot": snapshot,
             "loan_request": snapshot.loan_request,
             "rules_version": dossier.rules_version,
@@ -146,17 +246,25 @@ class WeasyPrintPdfRenderer:
             "recommendation_label": _RECOMMENDATION_LABEL.get(
                 dossier.recommendation, dossier.recommendation,
             ),
-            "red_flags_count_label": _format_red_flags_label(dossier),
+            "signal_breakdown": _build_signal_breakdown(dossier.red_flags),
             "legal_form_label": _LEGAL_FORM_LABEL.get(
-                snapshot.borrower.legal_form.value, snapshot.borrower.legal_form.value,
+                borrower.legal_form, borrower.legal_form.value,
             ),
+            "legal_form_short": _LEGAL_FORM_SHORT.get(borrower.legal_form, "—"),
+            "business_age_years": age_years,
+            "business_age_unit": age_unit,
+            "region_city": region_city,
+            "region_district": region_district,
+            "okved_short_label": okved_short,
+            "okved_full_label": okved_full,
             "annual_reports": list(snapshot.annual_reports),
             "kpi_slots": _build_kpi_slots(view_bundle),
             "chart_revenue_24m_b64": chart_b64,
             "top_buyers": list(bundle.top_buyers),
             "top_suppliers": list(bundle.top_suppliers),
             "tax_summary": bundle.tax_summary,
-            "red_flags": _build_red_flags_view(dossier),
+            "red_flags": _build_red_flags_view(dossier, bundle.rule_names),
+            "observations": bundle.observations,
         }
 
 
@@ -169,16 +277,92 @@ def _format_application_id(dossier_id: object, created_at: datetime) -> str:
     return f"BR-{created_at.year}-{suffix}"
 
 
-def _format_red_flags_label(dossier: Any) -> str:
-    n = len(dossier.red_flags)
-    if n == 0:
-        return "Сигналы не сработали — заёмщик в зелёной зоне."
-    parts: list[str] = []
+def _derive_initials(name: str) -> str:
+    """«ООО Полярная Звезда» → "ПЗ", «ИП Каримов А.» → "КА", «Артел» → "А".
+
+    Игнорируем юр.префиксы (ООО, ЧП, АО, ИП, ОАО, ЗАО) и кавычки. Берём
+    первую букву первых двух значимых слов. Если слово одно — одна буква.
+    """
+    junk = {"ООО", "ЧП", "АО", "ИП", "ОАО", "ЗАО", "Ltd"}
+    tokens = [t.strip("«»\"'.,") for t in name.replace("«", " ").replace("»", " ").split()]
+    significant = [t for t in tokens if t and t not in junk]
+    if not significant:
+        return "—"
+    letters = [t[0].upper() for t in significant[:2]]
+    return "".join(letters)
+
+
+def _business_age(reg_date: date, as_of: date) -> tuple[int, str]:
+    """Возраст компании в годах. Возвращает ``(N, unit)`` где unit = «год»/«года»/«лет».
+
+    Используется на cover stat-tile. Один год — «1 год», 2-4 — «2 года», 5+ —
+    «5 лет», 11-14 — «лет» (русские падежи).
+    """
+    years = as_of.year - reg_date.year
+    if (as_of.month, as_of.day) < (reg_date.month, reg_date.day):
+        years -= 1
+    years = max(years, 0)
+
+    last_two = years % 100
+    last_one = years % 10
+    if 11 <= last_two <= 14:
+        unit = "лет"
+    elif last_one == 1:
+        unit = "год"
+    elif 2 <= last_one <= 4:
+        unit = "года"
+    else:
+        unit = "лет"
+    return years, unit
+
+
+def _parse_region(address: str) -> tuple[str, str]:
+    """«г. Ташкент, Юнусабадский р-н, ул. Амира Темура, д. 108» → ("Ташкент", "Юнусабадский район").
+
+    Naive parsing — для UZ-формата с запятыми. Если структура не угадана,
+    возвращаем (первое слово, "—").
+    """
+    parts = [p.strip() for p in address.split(",") if p.strip()]
+    if not parts:
+        return ("—", "—")
+
+    city_part = parts[0]
+    # Strip "г. " / "г." prefix
+    for prefix in ("г. ", "г.", "город "):
+        if city_part.lower().startswith(prefix.lower()):
+            city_part = city_part[len(prefix):].strip()
+            break
+
+    district_part = "—"
+    if len(parts) >= 2:
+        district_part = parts[1].replace("р-н", "район").strip()
+
+    return (city_part or "—", district_part)
+
+
+def _resolve_okved(code: str) -> tuple[str, str]:
+    """OKVED код → (short_label, full_label). Unknown → (code, «—»)."""
+    if code in _OKVED_LABELS:
+        return _OKVED_LABELS[code]
+    return (code, "—")
+
+
+def _build_signal_breakdown(red_flags: tuple[Any, ...]) -> list[dict[str, object]]:
+    """Returns ordered list of {severity, label, count} for «1 высокий · 2 средних · 1 низкий»."""
+    counts: dict[str, int] = {"critical": 0, "high": 0, "medium": 0, "low": 0}
+    for flag in red_flags:
+        sev = str(flag.severity)
+        if sev in counts:
+            counts[sev] += 1
+
+    out: list[dict[str, object]] = []
     for sev in ("critical", "high", "medium", "low"):
-        count = sum(1 for f in dossier.red_flags if str(f.severity) == sev)
-        if count:
-            parts.append(f"{count} {severity_label(sev).lower()}")
-    return f"{n} сработавших сигнала: " + " · ".join(parts)
+        n = counts[sev]
+        if n == 0:
+            continue
+        word = _SIGNAL_BREAKDOWN_LABEL[sev] if n == 1 else _SIGNAL_PLURAL_LABEL[sev]
+        out.append({"severity": sev, "label": f"{n} {word}", "count": n})
+    return out
 
 
 def _build_kpi_slots(view_bundle: DossierViewBundle) -> list[dict[str, object]]:
@@ -232,16 +416,21 @@ def _kpi_slot(key: str, kpi: KpiValue | None) -> dict[str, object]:
     }
 
 
-def _build_red_flags_view(dossier: Any) -> list[dict[str, object]]:
-    """RedFlag → flat dict для шаблона."""
+def _build_red_flags_view(
+    dossier: Any, rule_names: dict[str, str]
+) -> list[dict[str, object]]:
+    """RedFlag → flat dict для шаблона. ``rule_names`` маппит rule_id → human name."""
     rendered: list[dict[str, object]] = []
     for f in dossier.red_flags:
+        sev_str = str(f.severity)
         rendered.append(
             {
                 "rule_id": f.rule_id,
-                "name": f.rule_id,  # человеческого имени нет в RedFlag — кладём rule_id
+                # Phase 10: human-readable заголовок из YAML вместо rule_id.
+                "name": rule_names.get(f.rule_id, f.rule_id),
                 "description": f.message,
-                "severity": str(f.severity),
+                "severity": sev_str,
+                "severity_label": severity_label(sev_str),
                 "source": f.source,
                 "evidence_value": _format_evidence_value(f.evidence),
                 "evidence_label": _format_evidence_label(f.evidence),

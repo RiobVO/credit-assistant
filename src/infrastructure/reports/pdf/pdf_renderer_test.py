@@ -14,10 +14,12 @@ from uuid import UUID
 
 import pytest
 
+from application.dto.brand_config import BrandConfig
 from application.dto.dossier_pdf_bundle import DossierPdfBundle, TaxSummary
 from application.dto.dossier_record import DossierRecord
 from application.dto.dossier_view_record import DossierViewRecord
 from application.dto.kpi_bundle import KpiBundle, KpiUnit, KpiValue, MonthlyRevenuePoint
+from application.services.observations_builder import Observations
 from application.use_cases.load_dossier_for_view import DossierViewBundle
 from domain.entities.borrower import Borrower, LegalForm
 from domain.entities.borrower_snapshot import BorrowerSnapshot
@@ -97,6 +99,19 @@ def _make_bundle() -> DossierPdfBundle:
             account_freezes_count_12m=0,
             has_freezes_12m=False,
         ),
+        brand=BrandConfig(
+            id="default",
+            name="Credit Assistant",
+            tagline="Accountant Mode",
+            logo_mark="CA",
+            primary="#1E55C9",
+            primary_hover="#1947AA",
+            primary_soft="#EAF0FB",
+            primary_ink="#1947AA",
+            primary_ring="rgba(30,85,201,0.22)",
+        ),
+        observations=Observations(strengths=(), risks=()),
+        rule_names={},
     )
 
 
@@ -131,6 +146,9 @@ def test_render_handles_empty_red_flags_and_empty_chart() -> None:
         top_buyers=bundle.top_buyers,
         top_suppliers=bundle.top_suppliers,
         tax_summary=bundle.tax_summary,
+        brand=bundle.brand,
+        observations=bundle.observations,
+        rule_names=bundle.rule_names,
     )
 
     pdf = renderer.render(bundle)
