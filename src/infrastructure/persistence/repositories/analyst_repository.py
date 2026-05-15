@@ -31,15 +31,15 @@ class SqlAlchemyAnalystRepository:
         full_name: str,
         role: str = "analyst",
         is_active: bool = True,
-        mfa_enabled: bool = False,
     ) -> UUID:
+        # CA-DS16: mfa_enabled больше не передаётся — single source через
+        # mfa_enrolled_at, который ставится только endpoint /enroll/verify.
         orm = AnalystORM(
             email=email,
             password_hash=password_hash,
             full_name=full_name,
             role=role,
             is_active=is_active,
-            mfa_enabled=mfa_enabled,
         )
         self._session.add(orm)
         await self._session.flush()
