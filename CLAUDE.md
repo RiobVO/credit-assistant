@@ -11,6 +11,8 @@
 
 **Direction B (Design Sweep tail) — Batch 1A закрыт 2026-05-16** (`680005e`, CI `25935954333` ~1m). CA-DS17 (OKVED catalog) + CA-DS24 (USD/UZS rate) — config-driven. Pattern `infrastructure/catalog/` (DTO в `application/dto/` + loader в `infrastructure/catalog/` + JSON в `config/<topic>/`) зеркалит `infrastructure/brand/`. Backend single source: PDF читает напрямую через singleton catalog, frontend через React Query (`/api/system/okved`, `/api/system/usd-rate`), i18n keys `okved_XX_YY` (16 × 2) удалены — labels теперь в JSON. Готовность к runtime locale switcher (CA-DS29): `useLocale()` уже выбирает `full_ru`/`full_uz`.
 
+**Batch 1B закрыт 2026-05-16** (`9b38422`, CI `25936424479` ~1m). CA-DS18 Level 1 — deterministic case_id из `draft.id`, format `BR-YYYY-XXXX` (mirror PDF `_format_application_id`), XXXX = first 4 hex chars UUID uppercased. До auto-save draft → pill «—», после → `BR-2026-A3F7`. Hydration-safe (без `useSyncExternalStore`/`Math.random`). Banking-grade monotonic sequence через application entity → CA-DS18b после Phase 4 application creation flow.
+
 **Дизайн-pass завершён:** все 10 фаз DONE. Следующие итерации — backlog TODO (CA-DS6/7/8/14-23/25/28/29, CA-003/015/019-020/024b/028/029b/064/DS11).
 
 **Активная ветка:** `main`.
@@ -26,6 +28,7 @@
 - **CA-020**: LDAP/OAuth AuthnAdapter для production-банка. `AuthnPort` готов.
 - **CA-024b**: real CBU API integration (`cbu.uz/services/`) для USD/UZS rate. **Legal review обязателен** (mirror CA-DS28 паттерну: уз-юрист 30 мин + robots.txt check). Pre-condition для замены `config/exchange/rates.json` static на live feed.
 - **CA-028**: dynamic unit detection для FORM_2 — сейчас hardcoded ×1000.
+- **CA-DS18b**: banking-grade monotonic case_id через Postgres sequence в `applications` table. **Pre-condition**: Phase 4 application creation flow завершён (сейчас case_id привязан к draft.id, не к application). Format остаётся `BR-YYYY-XXXX` — frontend `formatCaseId` подменится на чтение `application.case_id` с бэка.
 - **CA-029b**: парсер PROFIT_TAX (taxes_paid, 15 листов). Adapter raises UnsupportedFormatError.
 - **CA-064**: ship `error.tsx` в real observability (Sentry / posthog).
 - **CA-DS11**: faktura.uz API integration. Сейчас сервис в `/api/system/health` всегда `not_implemented`.
@@ -37,7 +40,6 @@
 - **CA-DS14**: `/help` секция «Что делать при смене телефона» — MS Authenticator iCloud-cache scenario.
 - **CA-DS15**: рассмотреть WebAuthn/Passkeys как alternative 2FA-фактор.
 - **CA-DS16**: убрать legacy stored bool `analysts.mfa_enabled` через миграцию.
-- **CA-DS18**: реальный `case_id` с бэкенда. Сейчас clientside `Math.random()` placeholder. Level 1 (deterministic from `draft.id`) — Batch 1B; Level 2 (Postgres sequence) → CA-DS18b после Phase 4 application entity.
 - **CA-DS19**: motion cleanup pass по /search и /history (pulse-* на trust-pill + LiveStrip).
 - **CA-DS20**: RTL-тесты на InnInput state machine + OkvedAutocomplete.
 - **CA-DS21**: `auto-edited` 3-state в source-trail (Step 2). Сейчас 2-state.
