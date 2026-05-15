@@ -23,6 +23,7 @@ from application.dto.dossier_record import DossierRecord
 from application.use_cases.build_borrower_snapshot import build_borrower_snapshot
 from application.use_cases.load_dossier_for_view import LoadDossierForView
 from application.use_cases.load_dossier_readiness import LoadDossierReadiness
+from config.settings import get_settings
 from domain.rules.rule import RuleRegistry
 from domain.services.scoring_service import ScoringService
 from infrastructure.persistence.repositories.audit_log_repository import (
@@ -103,7 +104,7 @@ async def manual_input_dossier(
     )
 
     if analyst is not None:
-        await SqlAlchemyAuditLogRepository(session).record(
+        await SqlAlchemyAuditLogRepository(session, brand_id=get_settings().brand_id).record(
             event="generate_dossier",
             analyst_id=analyst.id,
             target_type="dossier",
@@ -134,7 +135,7 @@ async def get_dossier(
         raise HTTPException(status_code=404, detail="Досье не найдено")
 
     if analyst is not None:
-        await SqlAlchemyAuditLogRepository(session).record(
+        await SqlAlchemyAuditLogRepository(session, brand_id=get_settings().brand_id).record(
             event="view_dossier",
             analyst_id=analyst.id,
             target_type="dossier",

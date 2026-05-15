@@ -92,3 +92,52 @@ async def test_list_by_analyst_respects_limit(pg_session: AsyncSession) -> None:
 
     rows = await audit.list_by_analyst(analyst_id, limit=2)
     assert len(rows) == 2
+
+
+# T1.4 (ADR-0018) — brand_id forensics.
+
+
+async def test_brand_id_defaults_to_default(pg_session: AsyncSession) -> None:
+    """Без явного brand_id repo пишет server_default 'default'."""
+    audit = SqlAlchemyAuditLogRepository(pg_session)
+    analyst_id = await _make_analyst(pg_session, email="brand-default@bank.uz")
+
+    await audit.record(event="login", analyst_id=analyst_id)
+
+    rows = await audit.list_by_analyst(analyst_id)
+    assert rows[0].brand_id == "default"
+
+
+async def test_brand_id_persists_when_passed_to_constructor(
+    pg_session: AsyncSession,
+) -> None:
+    """T1.4: brand_id, переданный в конструктор repo, попадает в каждую запись."""
+    audit = SqlAlchemyAuditLogRepository(pg_session, brand_id="uzbekbank")
+    analyst_id = await _make_analyst(pg_session, email="brand-uzbek@bank.uz")
+
+    await audit.record(event="login", analyst_id=analyst_id)
+    await audit.record(event="logout", analyst_id=analyst_id)
+
+    rows = await audit.list_by_analyst(analyst_id)
+    assert len(rows) == 2
+    assert all(row.brand_id == "uzbekbank" for row in rows)
+
+
+async def test_brand_id_isolated_between_repo_instances(
+    pg_session: AsyncSession,
+) -> None:
+    """Forensics: два repo с разными brand_id пишут разные метки в одной БД.
+
+    Это smoke-проверка для cross-contamination detection: если оператор
+    miswired DATABASE_URL, audit-log покажет mismatch brand-метки.
+    """
+    audit_default = SqlAlchemyAuditLogRepository(pg_session, brand_id="default")
+    audit_uzbek = SqlAlchemyAuditLogRepository(pg_session, brand_id="uzbekbank")
+    analyst_id = await _make_analyst(pg_session, email="brand-cross@bank.uz")
+
+    await audit_default.record(event="login", analyst_id=analyst_id)
+    await audit_uzbek.record(event="login", analyst_id=analyst_id)
+
+    rows = await audit_default.list_by_analyst(analyst_id)
+    brand_ids = {row.brand_id for row in rows}
+    assert brand_ids == {"default", "uzbekbank"}

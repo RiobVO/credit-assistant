@@ -87,7 +87,8 @@ async def get_analyst_repo(session: SessionDep) -> SqlAlchemyAnalystRepository:
 
 
 async def get_audit_log_repo(session: SessionDep) -> SqlAlchemyAuditLogRepository:
-    return SqlAlchemyAuditLogRepository(session)
+    # T1.4 (ADR-0018): brand_id берётся из Settings, single source of truth.
+    return SqlAlchemyAuditLogRepository(session, brand_id=get_settings().brand_id)
 
 
 AnalystRepoDep = Annotated[SqlAlchemyAnalystRepository, Depends(get_analyst_repo)]

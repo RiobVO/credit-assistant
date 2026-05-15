@@ -36,6 +36,13 @@ class AuditLogORM(Base):
     target_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), nullable=True)
     payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
 
+    # T1.4 (ADR-0018): brand-tenant метка для forensics. NOT NULL DEFAULT
+    # 'default' — backfill для existing rows + страховка на случай миграции
+    # без указания brand_id в insert.
+    brand_id: Mapped[str] = mapped_column(
+        String(50), nullable=False, server_default="default"
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -43,4 +50,5 @@ class AuditLogORM(Base):
     __table_args__ = (
         Index("ix_audit_log_analyst_id_created_at", "analyst_id", "created_at"),
         Index("ix_audit_log_event_created_at", "event", "created_at"),
+        Index("ix_audit_log_brand_id_created_at", "brand_id", "created_at"),
     )
