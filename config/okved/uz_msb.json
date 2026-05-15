@@ -1,0 +1,125 @@
+{
+  "version": 1,
+  "description": "OKVED catalog МСБ-сегмента УзР. Single source для backend (PDF) и frontend (autocomplete). См. CA-DS17.",
+  "items": [
+    {
+      "code": "47.11",
+      "short_ru": "Розн. торговля прод. товарами",
+      "full_ru": "Розничная торговля преимущественно пищевыми продуктами в неспециализированных магазинах",
+      "short_uz": "Oziq-ovqat chakana savdosi",
+      "full_uz": "Asosan oziq-ovqat mahsulotlari bilan chakana savdo"
+    },
+    {
+      "code": "47.19",
+      "short_ru": "Розн. торговля непрод. товарами",
+      "full_ru": "Прочая розничная торговля в неспециализированных магазинах",
+      "short_uz": "Boshqa chakana savdo",
+      "full_uz": "Ixtisoslashmagan do'konlarda boshqa chakana savdo"
+    },
+    {
+      "code": "10.71",
+      "short_ru": "Производство хлеба",
+      "full_ru": "Производство хлеба и мучных кондитерских изделий недлительного хранения",
+      "short_uz": "Non ishlab chiqarish",
+      "full_uz": "Non va un qandolat mahsulotlari ishlab chiqarish"
+    },
+    {
+      "code": "13.10",
+      "short_ru": "Прядение текстильных волокон",
+      "full_ru": "Подготовка и прядение текстильных волокон",
+      "short_uz": "Tola yigirish",
+      "full_uz": "To'qimachilik tolalarini yigirish"
+    },
+    {
+      "code": "14.13",
+      "short_ru": "Производство верхней одежды",
+      "full_ru": "Производство прочей верхней одежды",
+      "short_uz": "Ust kiyim ishlab chiqarish",
+      "full_uz": "Ust kiyim ishlab chiqarish"
+    },
+    {
+      "code": "41.20",
+      "short_ru": "Строительство зданий",
+      "full_ru": "Строительство жилых и нежилых зданий",
+      "short_uz": "Bino qurilishi",
+      "full_uz": "Turar joy va noturar binolar qurilishi"
+    },
+    {
+      "code": "43.39",
+      "short_ru": "Отделочные работы",
+      "full_ru": "Производство прочих отделочных и завершающих работ",
+      "short_uz": "Pardozlash ishlari",
+      "full_uz": "Boshqa pardozlash va yakunlash ishlari"
+    },
+    {
+      "code": "45.20",
+      "short_ru": "Техобслуживание авто",
+      "full_ru": "Техническое обслуживание и ремонт автотранспортных средств",
+      "short_uz": "Avto texxizmat",
+      "full_uz": "Avtotransport texnik xizmati va ta'mirlash"
+    },
+    {
+      "code": "46.31",
+      "short_ru": "Опт. торговля фруктами/овощами",
+      "full_ru": "Торговля оптовая фруктами и овощами",
+      "short_uz": "Meva-sabzavot ulgurji",
+      "full_uz": "Meva va sabzavotlar ulgurji savdosi"
+    },
+    {
+      "code": "46.39",
+      "short_ru": "Опт. торговля пищ. продуктами",
+      "full_ru": "Неспециализированная оптовая торговля пищевыми продуктами, напитками и табачными изделиями",
+      "short_uz": "Oziq-ovqat ulgurji savdosi",
+      "full_uz": "Oziq-ovqat mahsulotlari, ichimliklar va tamaki mahsulotlarining ixtisoslashmagan ulgurji savdosi"
+    },
+    {
+      "code": "49.41",
+      "short_ru": "Грузовые перевозки",
+      "full_ru": "Деятельность автомобильного грузового транспорта",
+      "short_uz": "Yuk tashish",
+      "full_uz": "Avtomobil transportida yuk tashish"
+    },
+    {
+      "code": "52.10",
+      "short_ru": "Складирование и хранение",
+      "full_ru": "Деятельность по складированию и хранению",
+      "short_uz": "Saqlash va omborlash",
+      "full_uz": "Saqlash faoliyati"
+    },
+    {
+      "code": "56.10",
+      "short_ru": "Рестораны и доставка еды",
+      "full_ru": "Деятельность ресторанов и услуги по доставке продуктов питания",
+      "short_uz": "Restoran va ovqat yetkazish",
+      "full_uz": "Restoranlar va ovqat yetkazib berish xizmatlari"
+    },
+    {
+      "code": "62.01",
+      "short_ru": "Разработка ПО",
+      "full_ru": "Разработка компьютерного программного обеспечения",
+      "short_uz": "Dasturiy ta'minot ishlab chiqish",
+      "full_uz": "Kompyuter dasturiy ta'minotini ishlab chiqish"
+    },
+    {
+      "code": "68.20",
+      "short_ru": "Аренда недвижимости",
+      "full_ru": "Аренда и управление собственным или арендованным недвижимым имуществом",
+      "short_uz": "Ko'chmas mulk ijarasi",
+      "full_uz": "Ko'chmas mulkni ijaraga berish va boshqarish"
+    },
+    {
+      "code": "85.10",
+      "short_ru": "Образование дошкольное",
+      "full_ru": "Образование дошкольное",
+      "short_uz": "Maktabgacha ta'lim",
+      "full_uz": "Maktabgacha ta'lim"
+    },
+    {
+      "code": "86.21",
+      "short_ru": "Общая врачебная практика",
+      "full_ru": "Общая врачебная практика",
+      "short_uz": "Umumiy shifokorlik",
+      "full_uz": "Umumiy shifokorlik amaliyoti"
+    }
+  ]
+}

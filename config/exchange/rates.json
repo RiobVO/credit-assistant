@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "description": "Курсы валют для UI-конвертации (CA-DS24). Обновляется вручную; production может перезаписать через env USD_UZS_RATE без redeploy. CBU API integration → CA-DS24b (legal review).",
+  "usd_uzs": "12575",
+  "asof": "2026-05-15",
+  "source": "manual"
+}

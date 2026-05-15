@@ -31,6 +31,7 @@ import jinja2
 from application.dto.dossier_pdf_bundle import DossierPdfBundle
 from application.dto.kpi_bundle import KpiUnit, KpiValue
 from domain.entities.borrower import LegalForm
+from infrastructure.catalog.okved_catalog import default_catalog as default_okved_catalog
 from infrastructure.reports.pdf import chart_renderer
 from infrastructure.reports.pdf.template_filters import (
     fmt_date_ru,
@@ -90,69 +91,10 @@ _KPI_LABEL = {
     "debt_to_ebit": "Долг / EBIT",
 }
 
-# OKVED labels: 16 кодов синхронизированы с frontend ``OKVED_UZ_MSB``
-# (``web/src/features/manual-input/components/step-1-borrower.tsx``).
-# TODO[CA-DS17]: вынести в backend-endpoint или статичный JSON.
-_OKVED_LABELS: dict[str, tuple[str, str]] = {
-    "47.11": (
-        "Розн. торговля прод. товарами",
-        "Розничная торговля преимущественно пищевыми продуктами в "
-        "неспециализированных магазинах",
-    ),
-    "47.19": (
-        "Розн. торговля непрод. товарами",
-        "Прочая розничная торговля в неспециализированных магазинах",
-    ),
-    "10.71": (
-        "Производство хлеба",
-        "Производство хлеба и мучных кондитерских изделий недлительного хранения",
-    ),
-    "13.10": (
-        "Прядение текстильных волокон",
-        "Подготовка и прядение текстильных волокон",
-    ),
-    "14.13": (
-        "Производство верхней одежды",
-        "Производство прочей верхней одежды",
-    ),
-    "41.20": ("Строительство зданий", "Строительство жилых и нежилых зданий"),
-    "43.39": (
-        "Отделочные работы",
-        "Производство прочих отделочных и завершающих работ",
-    ),
-    "45.20": (
-        "Техобслуживание авто",
-        "Техническое обслуживание и ремонт автотранспортных средств",
-    ),
-    "46.31": (
-        "Опт. торговля фруктами/овощами",
-        "Торговля оптовая фруктами и овощами",
-    ),
-    "46.39": (
-        "Опт. торговля пищ. продуктами",
-        "Неспециализированная оптовая торговля пищевыми продуктами, "
-        "напитками и табачными изделиями",
-    ),
-    "49.41": (
-        "Грузовые перевозки",
-        "Деятельность автомобильного грузового транспорта",
-    ),
-    "52.10": (
-        "Складирование и хранение",
-        "Деятельность по складированию и хранению",
-    ),
-    "56.10": (
-        "Рестораны и доставка еды",
-        "Деятельность ресторанов и услуги по доставке продуктов питания",
-    ),
-    "62.01": ("Разработка ПО", "Разработка компьютерного программного обеспечения"),
-    "68.20": (
-        "Аренда недвижимости",
-        "Аренда и управление собственным или арендованным недвижимым имуществом",
-    ),
-    "85.10": ("Образование дошкольное", "Образование дошкольное"),
-    "86.21": ("Общая врачебная практика", "Общая врачебная практика"),
-}
+# OKVED labels (CA-DS17): источник — ``config/okved/uz_msb.json`` через
+# ``infrastructure.catalog.okved_catalog``. Синхронен с frontend OkvedAutocomplete
+# (читает тот же JSON через ``GET /api/system/okved``). PDF использует RU
+# (Phase 10 brand-tenant lock — banking output РУ-only).
 
 _SIGNAL_BREAKDOWN_LABEL = {
     "critical": "критических",
@@ -341,10 +283,15 @@ def _parse_region(address: str) -> tuple[str, str]:
 
 
 def _resolve_okved(code: str) -> tuple[str, str]:
-    """OKVED код → (short_label, full_label). Unknown → (code, «—»)."""
-    if code in _OKVED_LABELS:
-        return _OKVED_LABELS[code]
-    return (code, "—")
+    """OKVED код → (short_label, full_label). Unknown → (code, «—»).
+
+    Источник — singleton-catalog (``default_okved_catalog``), JSON парсится
+    один раз при первом обращении. RU только — banking PDF РУ-локализован.
+    """
+    entry = default_okved_catalog().get(code)
+    if entry is None:
+        return (code, "—")
+    return (entry.short_ru, entry.full_ru)
 
 
 def _build_signal_breakdown(red_flags: tuple[Any, ...]) -> list[dict[str, object]]:
