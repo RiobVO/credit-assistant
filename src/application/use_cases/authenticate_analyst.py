@@ -47,23 +47,29 @@ class AuthenticateAnalyst:
     async def execute(
         self, email: str, password: str, *, ip: str | None = None
     ) -> AuthenticationResult:
-        analyst = await self._authn.authenticate(email, password)
-        if analyst is None:
+        result = await self._authn.authenticate(email, password)
+        if result is None:
             # T1.3 (ADR-0017): email маскируется в audit_log — full PII не утекает,
             # но partial identifier остаётся для compliance debugging.
             masked = mask_email(email)
-            await self._audit.record(
-                event="login_failed",
-                payload={"email": masked, "ip": ip} if ip else {"email": masked},
-            )
+            failed_payload: dict[str, object] = {"email": masked}
+            if ip:
+                failed_payload["ip"] = ip
+            await self._audit.record(event="login_failed", payload=failed_payload)
             return AuthenticationFailure(reason="invalid_credentials")
 
+        analyst = result.identity
         access = self._jwt.issue_access(analyst.id)
         refresh = self._jwt.issue_refresh(analyst.id)
+        # T1.5 (ADR-0019): authn_source в payload — compliance видит источник
+        # верификации (seeded/ldap/break_glass) для каждого login event.
+        login_payload: dict[str, object] = {"authn_source": result.source}
+        if ip:
+            login_payload["ip"] = ip
         await self._audit.record(
             event="login",
             analyst_id=analyst.id,
-            payload={"ip": ip} if ip else {},
+            payload=login_payload,
         )
         return AuthenticationSuccess(
             analyst=analyst,

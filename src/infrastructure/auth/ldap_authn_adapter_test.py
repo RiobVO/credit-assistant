@@ -121,12 +121,13 @@ async def test_successful_bind_returns_identity_with_senior_role() -> None:
     repo = _FakeAnalystUpsertRepo()
     adapter = LdapAuthnAdapter(client, settings, repo)
 
-    identity = await adapter.authenticate("ivanov@bank.uz", "real-pass")
+    result = await adapter.authenticate("ivanov@bank.uz", "real-pass")
 
-    assert identity is not None
-    assert identity.email == "ivanov@bank.uz"
-    assert identity.full_name == "Иванов И.И."
-    assert identity.role == "senior_analyst"
+    assert result is not None
+    assert result.source == "ldap"
+    assert result.identity.email == "ivanov@bank.uz"
+    assert result.identity.full_name == "Иванов И.И."
+    assert result.identity.role == "senior_analyst"
     assert repo.calls == [("ivanov@bank.uz", "Иванов И.И.", "senior_analyst")]
 
 
@@ -141,10 +142,11 @@ async def test_successful_bind_returns_identity_with_analyst_role() -> None:
     repo = _FakeAnalystUpsertRepo()
     adapter = LdapAuthnAdapter(client, settings, repo)
 
-    identity = await adapter.authenticate("petrov@bank.uz", "real-pass")
+    result = await adapter.authenticate("petrov@bank.uz", "real-pass")
 
-    assert identity is not None
-    assert identity.role == "analyst"
+    assert result is not None
+    assert result.identity.role == "analyst"
+    assert result.source == "ldap"
 
 
 async def test_user_not_found_returns_none() -> None:
@@ -153,9 +155,9 @@ async def test_user_not_found_returns_none() -> None:
     repo = _FakeAnalystUpsertRepo()
     adapter = LdapAuthnAdapter(client, _settings(), repo)
 
-    identity = await adapter.authenticate("ghost@bank.uz", "any")
+    result = await adapter.authenticate("ghost@bank.uz", "any")
 
-    assert identity is None
+    assert result is None
     assert repo.calls == []
 
 
@@ -170,9 +172,9 @@ async def test_wrong_password_returns_none() -> None:
     repo = _FakeAnalystUpsertRepo()
     adapter = LdapAuthnAdapter(client, _settings(), repo)
 
-    identity = await adapter.authenticate("ivanov@bank.uz", "wrong-pass")
+    result = await adapter.authenticate("ivanov@bank.uz", "wrong-pass")
 
-    assert identity is None
+    assert result is None
     assert repo.calls == []
 
 
@@ -186,9 +188,9 @@ async def test_user_not_in_required_group_returns_none() -> None:
     repo = _FakeAnalystUpsertRepo()
     adapter = LdapAuthnAdapter(client, _settings(), repo)
 
-    identity = await adapter.authenticate("noaccess@bank.uz", "pass")
+    result = await adapter.authenticate("noaccess@bank.uz", "pass")
 
-    assert identity is None
+    assert result is None
     assert repo.calls == []
 
 
@@ -209,6 +211,6 @@ async def test_empty_member_of_returns_none() -> None:
     repo = _FakeAnalystUpsertRepo()
     adapter = LdapAuthnAdapter(client, _settings(), repo)
 
-    identity = await adapter.authenticate("solo@bank.uz", "pass")
+    result = await adapter.authenticate("solo@bank.uz", "pass")
 
-    assert identity is None
+    assert result is None

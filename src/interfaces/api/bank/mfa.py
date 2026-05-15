@@ -187,8 +187,8 @@ async def disable(
     """Отключение требует **пароль + TOTP-код** одновременно — повышает уверенность
     что disable инициирует именно владелец, а не злоумышленник с украденным
     cookie/токеном."""
-    identity = await authn.authenticate(analyst.email, payload.password)
-    if identity is None:
+    auth_result = await authn.authenticate(analyst.email, payload.password)
+    if auth_result is None:
         raise HTTPException(status_code=401, detail="invalid_credentials")
 
     orm = await analyst_repo.get_orm(analyst.id)

@@ -13,7 +13,9 @@
 
 **Tier 1 / T1.3 (2026-05-18):** ✅ **closed**. ADR-0017. `PiiEncryptorPort` + `FernetPiiEncryptor` (`MultiFernet` rotation) + `NullPiiEncryptor` fallback. SQLAlchemy TypeDecorator (`EncryptedString`/`EncryptedJsonb`/`EncryptedBytea`) на 6 PII колонках. `audit_log` emails masked. Alembic `c5d2f3a7e1b4` (length expansions + data encrypt pass, idempotent). Production startup-assertion. Runbook `docs/operations/pii-key-rotation.md`.
 
-**Tier 1 / T1.4 (2026-05-18):** ✅ **closed**. ADR-0018. Approach A pure — single-tenant per deployment (separate compose-project per bank), scope сужен после PROJECT_BRIEF Sec 11 review. `Settings.brand_id` + `_validate_runtime_config` helper в `app.py` (BRAND_ID resolves + PII_ENC_KEYS prod-mandatory, обобщает T1.3 inline check). `load_brand(brand_id)` mandatory arg — env-fallback внутри loader убран. `audit_log.brand_id` колонка (Alembic `e7f9a3c2b8d1`, NOT NULL DEFAULT 'default' + index `(brand_id, created_at)`) для forensics. Repository конструктор принимает brand_id, 5 callsites пробрасывают `settings.brand_id`. Playbook `docs/operations/multi-tenant-deploy.md`. **Active — T1.5 LDAP/OAuth AuthnAdapter (CA-020).**
+**Tier 1 / T1.4 (2026-05-18):** ✅ **closed**. ADR-0018. Approach A pure — single-tenant per deployment (separate compose-project per bank), scope сужен после PROJECT_BRIEF Sec 11 review. `Settings.brand_id` + `_validate_runtime_config` helper в `app.py` (BRAND_ID resolves + PII_ENC_KEYS prod-mandatory, обобщает T1.3 inline check). `load_brand(brand_id)` mandatory arg — env-fallback внутри loader убран. `audit_log.brand_id` колонка (Alembic `e7f9a3c2b8d1`, NOT NULL DEFAULT 'default' + index `(brand_id, created_at)`) для forensics. Repository конструктор принимает brand_id, 5 callsites пробрасывают `settings.brand_id`. Playbook `docs/operations/multi-tenant-deploy.md`.
+
+**Tier 1 / T1.5 (2026-05-18):** ✅ **closed**. ADR-0019. LDAP-only, scope сужен — OAuth defer'ится в T1.5b backlog. `AUTHN_MODE=seeded|ldap` env switch (default `seeded`). LDAP integration через `ldap3` (pure Python, no system deps). `LdapAuthnAdapter` (service-bind → search → user-bind verify, role resolution через memberOf, lazy upsert) + `Ldap3Client` wrapper + `BreakGlassAuthnAdapter` (email whitelist → seeded fallback, source override на `break_glass`). `AuthnPort.authenticate` теперь возвращает `AuthnResult(identity, source)` — audit-log payload содержит `authn_source` для compliance trail. Alembic `f4a2d6c9e3b8`: `analysts.password_hash` NULLABLE + `authn_source VARCHAR(20) NOT NULL DEFAULT 'seeded'` + CHECK constraint. `_validate_runtime_config` ловит missing LDAP_* env при `AUTHN_MODE=ldap`. Playbook `docs/operations/ldap-setup.md` (generic AD defaults + ops runbook). **Tier 1 complete — переход к Tier 2 (Data quality).**
 
 ---
 
@@ -180,11 +182,21 @@ Approach A pure (single-tenant per deployment) — scope сужен после P
 
 **Heads-up:** brand_id в data-tables (`borrowers/dossiers/snapshots/drafts/analysts`) НЕ добавлен — out of scope для Approach A. Если future shared-DB требование появится — отдельный таск с миграцией + middleware. См. ADR-0018 «Out of scope» section.
 
-### T1.5 — LDAP/OAuth AuthnAdapter (CA-020)
-- `LdapAuthnAdapter` поверх существующего `AuthnPort`.
-- Group → role mapping из LDAP attributes.
-- Local fallback для break-glass admin (env `ADMIN_BREAK_GLASS_EMAIL`).
-- Конфигурация per-deployment через env (LDAP URI, base DN, bind credentials).
+### T1.5 — LDAP AuthnAdapter (CA-020 LDAP-part) ✅ DONE 2026-05-18
+
+LDAP-only scope (OAuth defer'ится в T1.5b). 3 атомарных коммита:
+
+- `dec6332` **T1.5.1**: Settings (`AUTHN_MODE`, `LDAP_*`, `ADMIN_BREAK_GLASS_EMAILS`) + `LdapAuthnAdapter` + `Ldap3Client` (ldap3 pure Python, async via `to_thread`) + `BreakGlassAuthnAdapter` (email whitelist → seeded). 14 unit tests (mock-based). ADR-0019.
+- `9c43245` **T1.5.2**: Alembic `f4a2d6c9e3b8` — `analysts.password_hash` NULLABLE + `authn_source` column + CHECK constraint. `analyst_repo.upsert_from_ldap()` для lazy provisioning. DI factory switch в `get_authn_adapter`. `_validate_runtime_config` extended на LDAP-config validation. `change-password` endpoint блокируется для LDAP-users (`password_hash IS NULL`). 3 новых integration test'а.
+- `<this commit>` **T1.5.3**: `AuthnPort.authenticate` теперь возвращает `AuthnResult(identity, source)`. `authn_source` в audit-log login payload для compliance trail (`seeded`/`ldap`/`break_glass`). Playbook `docs/operations/ldap-setup.md`. Status sync.
+
+**Acceptance:**
+- `AUTHN_MODE=seeded` (default) — никаких изменений в поведении, существующие dev/staging deployments работают.
+- `AUTHN_MODE=ldap` без `LDAP_*` env → RuntimeError на boot.
+- `AUTHN_MODE=ldap` с полным env: non-whitelist email → LDAP bind+search → lazy upsert; whitelist email → seeded bcrypt; audit-log пишет правильный source.
+- 1034 pytest passed, ruff/mypy strict clean.
+
+**Heads-up:** mock-only unit tests — openldap testcontainer defer'ится в **T1.5c** backlog. Production smoke на bank-инсталляции делается с реальным AD. Также: live-browser smoke (login flow через UI в ldap-mode) не выполнен в Windows-сессии без LDAP-сервера. См. ldap-setup.md migration checklist.
 
 ---
 
@@ -230,4 +242,6 @@ Approach A pure (single-tenant per deployment) — scope сужен после P
 
 - **CA-015b** — VAT-парсер для следующих xltx-форматов сверх T0.1 пакета. Оценить после T0.1.
 - **CA-DS11b** — faktura.uz расширенный scope (queries, history). Оценить после T2.4.
+- **T1.5b** — OAuth2/OIDC AuthnAdapter. Pre-condition: запрос от пилот-банка на Okta/Azure AD интеграцию. Реализация поверх существующего `AuthnPort` (как `LdapAuthnAdapter`), library `authlib`. ADR-0019b.
+- **T1.5c** — openldap testcontainer для full integration tests `LdapAuthnAdapter`. Текущее покрытие — mock-only (`MagicMock(spec=LdapClient)`). Hardening pass с реальным `osixia/openldap` контейнером.
 - **CA-DS30** — anonymize gap для real xltx fixtures. Сейчас 1/28 `*_anon.xltx` на месте. Bulk anonymization через openpyxl script: per-format (VAT_DECLARATION / VAT_REGISTRY_ILOVA / FORM_2 / FORM_1 / PROFIT_TAX) replace правил для ИНН (на dummy ИНН) / имён (синтетика) / сумм (random preserving order-of-magnitude + signature-cells для parser format-detection). Скрипт `scripts/anonymize_xltx.py` + 28 anonymized output → git. **Post-T1 priority** (после T1.1-T1.5 prod-killers).

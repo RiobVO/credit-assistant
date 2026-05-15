@@ -15,12 +15,19 @@ T1.5 / ADR-0019. В ``authn_mode=ldap`` deployment'е используется �
 
 from __future__ import annotations
 
-from application.dto.analyst_identity import AnalystIdentity
-from application.ports.authn_port import AuthnPort
+from dataclasses import replace
+
+from application.ports.authn_port import AuthnPort, AuthnResult
 
 
 class BreakGlassAuthnAdapter:
-    """Two-branch: email в whitelist → seeded, иначе → ldap."""
+    """Two-branch: email в whitelist → seeded (источник 'break_glass'),
+    иначе → ldap (источник 'ldap').
+
+    Override на seeded-branch важен для audit-log: чистый seeded login
+    (AUTHN_MODE=seeded deployment) пишется 'seeded'; break-glass под
+    LDAP-deployment'ом пишется 'break_glass' — compliance trail.
+    """
 
     def __init__(
         self,
@@ -38,9 +45,14 @@ class BreakGlassAuthnAdapter:
 
     async def authenticate(
         self, email: str, password: str
-    ) -> AnalystIdentity | None:
+    ) -> AuthnResult | None:
         if email.lower() in self._break_glass:
-            return await self._seeded.authenticate(email, password)
+            result = await self._seeded.authenticate(email, password)
+            if result is None:
+                return None
+            # Override source: семантически это уже не «обычный seeded»,
+            # а emergency-access. Audit подсветит отдельно.
+            return replace(result, source="break_glass")
         return await self._ldap.authenticate(email, password)
 
 
