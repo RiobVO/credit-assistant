@@ -261,25 +261,38 @@ def _business_age(reg_date: date, as_of: date) -> tuple[int, str]:
 def _parse_region(address: str) -> tuple[str, str]:
     """«г. Ташкент, Юнусабадский р-н, ул. Амира Темура, д. 108» → ("Ташкент", "Юнусабадский район").
 
-    Naive parsing — для UZ-формата с запятыми. Если структура не угадана,
-    возвращаем (первое слово, "—").
+    Naive parsing для UZ-формата. Поддерживает два кейса:
+      * Адрес с запятыми → берём первый сегмент как city, второй как district.
+      * Адрес без запятых (фриформ из manual-input) → первый токен как city,
+        остальное как district. Это лучше, чем сваливать всю строку в stat-num
+        (22pt) и ломать визуальный rhythm 3-tile-grid (см. CA-DS17 lessons).
+    Если структура не угадана, возвращаем ("—", "—").
     """
-    parts = [p.strip() for p in address.split(",") if p.strip()]
-    if not parts:
+    if not address or not address.strip():
         return ("—", "—")
 
-    city_part = parts[0]
-    # Strip "г. " / "г." prefix
+    parts = [p.strip() for p in address.split(",") if p.strip()]
+    if len(parts) >= 2:
+        city_part = parts[0]
+        district_part = parts[1].replace("р-н", "район").strip()
+    else:
+        # Single-segment fallback: split by whitespace, не по запятым.
+        tokens = [t for t in address.split() if t.strip()]
+        if not tokens:
+            return ("—", "—")
+        city_part = tokens[0]
+        district_part = " ".join(tokens[1:]).replace("р-н", "район").strip() or "—"
+
+    # Strip "г. " / "г." / "город " prefix из city (city = «Ташкент», не «г. Ташкент»).
     for prefix in ("г. ", "г.", "город "):
         if city_part.lower().startswith(prefix.lower()):
             city_part = city_part[len(prefix):].strip()
             break
+    # Очистка noise-символов которые приходят из плохо нормализованного manual-input
+    # (фикстуры показывали «Ташкент^» как литералку из формы Шага 1).
+    city_part = city_part.rstrip("^.,;:")
 
-    district_part = "—"
-    if len(parts) >= 2:
-        district_part = parts[1].replace("р-н", "район").strip()
-
-    return (city_part or "—", district_part)
+    return (city_part or "—", district_part or "—")
 
 
 def _resolve_okved(code: str) -> tuple[str, str]:
@@ -386,15 +399,117 @@ def _build_red_flags_view(
     return rendered
 
 
-def _format_evidence_value(evidence: dict[str, Any]) -> str:
-    """Берёт первое значение из evidence-словаря и приводит к строке."""
+# --- Evidence display contract --------------------------------------------
+#
+# Каждое правило кладёт в ``evidence`` все surfaces для аудитного трейла:
+# vat_declared, sum_seller_esf_vat, diff_pct, period и т.д. PDF F-секция должна
+# показать **одно** число справа от title — самое informative для аналитика.
+#
+# Старый ``next(iter(...))`` тупо брал первый ключ — это давало в PDF Python
+# repr list-литералов («['2026-03-01', '2026-03-31']» вместо «23%»). Новая
+# логика: whitelist primary-ключей по приоритету + типизированный форматтер.
+
+# Приоритет ключей — первый match выигрывает. delta-метрики (diff/yoy/margin)
+# и счётчики идут перед абсолютными величинами и list-полями (period/quarters).
+_PRIMARY_EVIDENCE_KEYS: tuple[str, ...] = (
+    "diff_pct",
+    "yoy_pct",
+    "vat_growth_pct",
+    "margin",
+    "max_supplier_share",
+    "max_buyer_share",
+    "ratio",
+    "days_since_change",
+    "shell_count",
+    "cycle_count",
+    "annual_reports_count",
+    "equity",
+    "loan",
+)
+
+_PCT_EVIDENCE_KEYS: frozenset[str] = frozenset({
+    "diff_pct", "yoy_pct", "vat_growth_pct", "margin",
+    "max_supplier_share", "max_buyer_share", "revenue_growth_pct",
+})
+
+_UZS_EVIDENCE_KEYS: frozenset[str] = frozenset({
+    "equity", "loan", "revenue", "net_profit",
+    "vat_declared", "sum_seller_esf_vat",
+})
+
+_EVIDENCE_LABEL_RU: dict[str, str] = {
+    "diff_pct": "Разрыв",
+    "yoy_pct": "YoY",
+    "vat_growth_pct": "Рост НДС",
+    "margin": "Маржа",
+    "max_supplier_share": "Доля топ-1",
+    "max_buyer_share": "Доля топ-1",
+    "ratio": "К выручке",
+    "days_since_change": "Дней назад",
+    "shell_count": "Контрагентов",
+    "cycle_count": "Циклов",
+    "annual_reports_count": "Годовых отчётов",
+    "equity": "Капитал",
+    "loan": "Сумма заявки",
+}
+
+
+def _pick_primary_evidence(evidence: dict[str, Any]) -> tuple[str, Any] | None:
+    """Возвращает (key, value) для primary-evidence или ``None``."""
     if not evidence:
+        return None
+    for k in _PRIMARY_EVIDENCE_KEYS:
+        if k in evidence:
+            return (k, evidence[k])
+    # Fallback: первый scalar (не list/tuple/dict — не отрисуем красиво).
+    for k, v in evidence.items():
+        if not isinstance(v, (list, tuple, dict)):
+            return (k, v)
+    return None
+
+
+def _format_evidence_value(evidence: dict[str, Any]) -> str:
+    """Форматирует primary-значение для F-секции (правый блок флага)."""
+    from decimal import Decimal, InvalidOperation
+
+    picked = _pick_primary_evidence(evidence)
+    if picked is None:
         return ""
-    return str(next(iter(evidence.values())))
+    key, value = picked
+
+    # «infinity» из loan_to_revenue (deviser = 0).
+    if key == "ratio" and str(value).lower() in ("infinity", "inf"):
+        return "∞"
+
+    if key in _PCT_EVIDENCE_KEYS:
+        try:
+            d = Decimal(str(value))
+            return f"{d * 100:.0f}%"
+        except (InvalidOperation, TypeError, ValueError):
+            pass
+
+    if key in _UZS_EVIDENCE_KEYS:
+        try:
+            return fmt_uzs(Decimal(str(value)), billions=True)
+        except (InvalidOperation, TypeError, ValueError):
+            pass
+
+    if key == "ratio":
+        try:
+            d = Decimal(str(value))
+            return f"{d:.2f}".replace(".", ",")
+        except (InvalidOperation, TypeError, ValueError):
+            pass
+
+    return str(value)
 
 
 def _format_evidence_label(evidence: dict[str, Any]) -> str:
-    """Метка под evidence-числом — ключ первого поля в evidence-словаре."""
-    if not evidence:
+    """RU-метка под evidence-числом."""
+    picked = _pick_primary_evidence(evidence)
+    if picked is None:
         return ""
-    return next(iter(evidence.keys()))
+    key, _ = picked
+    if key in _EVIDENCE_LABEL_RU:
+        return _EVIDENCE_LABEL_RU[key]
+    return key.replace("_", " ").capitalize()
