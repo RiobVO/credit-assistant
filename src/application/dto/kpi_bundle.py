@@ -5,9 +5,9 @@ Read-only DTO, заполняется ``application.services.kpi_calculator``. �
 недостаточно для расчёта, возвращаем ``None``, а UI показывает empty card.
 
 CA-037: вместо ``ebitda`` экспортируем ``ebit`` — EBIT прокси для EBITDA до
-тех пор пока depreciation/amortization не доступен (нужен FORM_5 cashflow
-или PROFIT_TAX с D&A разбивкой, TODO[CA-029b]). Имя поля честное: семантически
-это **EBIT** = PBT + interest_expense. Когда D&A появится — добавим отдельные
+тех пор пока depreciation/amortization не доступен (требует FORM_5 cashflow
+parser, не покрыт PROFIT_TAX scope). Имя поля честное: семантически это
+**EBIT** = PBT + interest_expense. Когда D&A появится — добавим отдельные
 поля ``ebitda`` / ``debt_to_ebitda`` рядом, не переименовывая существующие.
 
 ``debt_to_ebit`` ratio = total_debt / EBIT_LTM. Семантика 4 кейсов:

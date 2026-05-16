@@ -6,8 +6,9 @@ VAT_DECLARATION, ESF CSV, etc.), классифицирует каждый, па
 manual-input wizard и помечает заполненные поля как read-only с подписью «из <источник>».
 
 Best-effort семантика (CA-014): для нераспознанных или битых файлов — warning
-в ``parse_warnings``; остальные файлы обрабатываются. Парсеры FORM_1/PROFIT_TAX
-не реализованы (TODO[CA-029]) — их распознавание тоже падает в warning.
+в ``parse_warnings``; остальные файлы обрабатываются. Все 5 xltx-форматов
+(VAT_DECLARATION, VAT_REGISTRY_ILOVA, FORM_2, FORM_1, PROFIT_TAX) подключены
+через специализированные парсеры.
 
 CA-027 scope (option b): только годовые суммы. Квартальная разбивка через
 дельты YTD-периодов — отдельный TODO. Из Q4-FORM_2 файла парсер получает annual
@@ -30,8 +31,9 @@ class ParsedFinancials:
     ``vat_declared_by_year`` — НДС начисленный за период (vat_charged_total из
     VAT_DECLARATION). Если файл — Q4 deklaratsiya, period_year полагается на header.
 
-    ``taxes_paid_by_year`` — пока None, парсер PROFIT_TAX не реализован
-    (TODO[CA-029b]). Сохранён в DTO чтобы frontend не менял контракт.
+    ``taxes_paid_by_year`` — заполняется из PROFIT_TAX list01 L39 (код 080
+    «Сумма налога на прибыль – всего», gross computed). Только Q4 (CA-027
+    option b); quarterly skip с warning.
 
     ``assets_total`` / ``liabilities_total`` — Итого по активу/пассиву на
     конец отчётного периода (column E xltx — «На конец отчётного периода»).
