@@ -5,8 +5,9 @@
 забалансовые ценности, list04 расшифровка просроченной задолженности) для
 скоринга не используются.
 
-Все суммы в файле — в **тыс. сум** (B23 list01 «Единица измерения, тыс. сум.»).
-Парсер умножает на 1000 и возвращает Money в UZS.
+Multiplier для money-cells динамический из B23 list01 «Единица измерения»
+(T2.1 CA-028): «тыс. сум.» → ×1000 (99% случаев), «млн. сум.» → ×1_000_000,
+«сум.» → ×1 (полные). Unknown / empty → fallback ×1000 + warning.
 
 Best-effort семантика (CA-014): cell-level проблема → warning + None. Raise
 только на структурные: не тот формат (UnsupportedFormatError) или отсутствие
@@ -61,13 +62,10 @@ from infrastructure.adapters.soliq_xltx.format_detector import (
 from infrastructure.adapters.soliq_xltx.header_parser import (
     SoliqXltxHeader,
     parse_header,
+    parse_unit_multiplier,
 )
 
 _logger = logging.getLogger(__name__)
-
-# Все money-cells form1 — в тыс. сум; домен оперирует UZS, поэтому ×1000.
-# TODO[CA-028]: динамическая детекция ЕИ из B23 list01 (сейчас hardcoded).
-_THOUSANDS_MULTIPLIER = Decimal(1000)
 
 # Допуск balance-equation: 0.5% (5‰). Реальные балансы дают округления на
 # уровне единиц тыс. сум — 1‰ ложно фейлил бы. 5‰ покрывает rounding + ловит
@@ -144,34 +142,38 @@ def parse_form1(wb: Workbook) -> Form1BalanceSheetData:
     if "list02" not in wb.sheetnames:
         raise UnsupportedFormatError(wb.sheetnames, "list02 missing in FORM_1")
 
+    # T2.1 CA-028: multiplier динамический из B23 (раньше hardcoded ×1000).
+    multiplier, unit_warning = parse_unit_multiplier(wb, fmt)
     list02 = wb["list02"]
     warnings: list[str] = []
+    if unit_warning is not None:
+        warnings.append(unit_warning)
 
-    fixed_end = _money_kx(list02, "E10", warnings)
-    fixed_start = _money_kx(list02, "D10", warnings)
-    non_current_end = _money_kx(list02, "E25", warnings)
-    non_current_start = _money_kx(list02, "D25", warnings)
-    inventory_end = _money_kx(list02, "E27", warnings)
-    inventory_start = _money_kx(list02, "D27", warnings)
-    receivables_end = _money_kx(list02, "E34", warnings)
-    receivables_start = _money_kx(list02, "D34", warnings)
-    cash_end = _money_kx(list02, "E46", warnings)
-    cash_start = _money_kx(list02, "D46", warnings)
-    current_end = _money_kx(list02, "E53", warnings)
-    current_start = _money_kx(list02, "D53", warnings)
-    total_assets_end = _money_kx(list02, "E54", warnings)
-    total_assets_start = _money_kx(list02, "D54", warnings)
-    equity_end = _money_kx(list02, "E64", warnings)
-    equity_start = _money_kx(list02, "D64", warnings)
-    lt_liab_end = _money_kx(list02, "E66", warnings)
-    lt_liab_start = _money_kx(list02, "D66", warnings)
-    st_liab_end = _money_kx(list02, "E78", warnings)
-    st_liab_start = _money_kx(list02, "D78", warnings)
-    total_liab_end = _money_kx(list02, "E97", warnings)
-    total_liab_start = _money_kx(list02, "D97", warnings)
+    fixed_end = _money_kx(list02, "E10", warnings, multiplier)
+    fixed_start = _money_kx(list02, "D10", warnings, multiplier)
+    non_current_end = _money_kx(list02, "E25", warnings, multiplier)
+    non_current_start = _money_kx(list02, "D25", warnings, multiplier)
+    inventory_end = _money_kx(list02, "E27", warnings, multiplier)
+    inventory_start = _money_kx(list02, "D27", warnings, multiplier)
+    receivables_end = _money_kx(list02, "E34", warnings, multiplier)
+    receivables_start = _money_kx(list02, "D34", warnings, multiplier)
+    cash_end = _money_kx(list02, "E46", warnings, multiplier)
+    cash_start = _money_kx(list02, "D46", warnings, multiplier)
+    current_end = _money_kx(list02, "E53", warnings, multiplier)
+    current_start = _money_kx(list02, "D53", warnings, multiplier)
+    total_assets_end = _money_kx(list02, "E54", warnings, multiplier)
+    total_assets_start = _money_kx(list02, "D54", warnings, multiplier)
+    equity_end = _money_kx(list02, "E64", warnings, multiplier)
+    equity_start = _money_kx(list02, "D64", warnings, multiplier)
+    lt_liab_end = _money_kx(list02, "E66", warnings, multiplier)
+    lt_liab_start = _money_kx(list02, "D66", warnings, multiplier)
+    st_liab_end = _money_kx(list02, "E78", warnings, multiplier)
+    st_liab_start = _money_kx(list02, "D78", warnings, multiplier)
+    total_liab_end = _money_kx(list02, "E97", warnings, multiplier)
+    total_liab_start = _money_kx(list02, "D97", warnings, multiplier)
 
-    debt_end = _aggregate_debt(list02, "period_end", warnings)
-    debt_start = _aggregate_debt(list02, "period_start", warnings)
+    debt_end = _aggregate_debt(list02, "period_end", warnings, multiplier)
+    debt_start = _aggregate_debt(list02, "period_start", warnings, multiplier)
 
     _check_balance_equation(
         "period_end", total_assets_end, equity_end, total_liab_end, warnings
@@ -211,7 +213,7 @@ def parse_form1(wb: Workbook) -> Form1BalanceSheetData:
 
 
 def _aggregate_debt(
-    ws: Worksheet, column: str, warnings: list[str]
+    ws: Worksheet, column: str, warnings: list[str], multiplier: Decimal
 ) -> Money | None:
     """Сумма 5 долговых строк (570+580+730+740+750) в одном периоде.
 
@@ -219,6 +221,8 @@ def _aggregate_debt(
     → None (нет данных по долгу). Тихий 'x'/missing не считается «есть данные»
     — он трактуется как 0 в составе агрегата, но сам по себе не активирует
     агрегат.
+
+    ``multiplier`` (T2.1) — приходит из ``parse_unit_multiplier`` динамически.
     """
     column_index = 1 if column == "period_end" else 2  # 1-based: E=1st, D=2nd
     values: list[Decimal] = []
@@ -236,7 +240,7 @@ def _aggregate_debt(
     if not has_value:
         return None
     total = sum(values, Decimal(0))
-    return Money(total * _THOUSANDS_MULTIPLIER, Currency.UZS)
+    return Money(total * multiplier, Currency.UZS)
 
 
 def _check_balance_equation(
@@ -275,12 +279,18 @@ def _check_balance_equation(
         )
 
 
-def _money_kx(ws: Worksheet, coord: str, warnings: list[str]) -> Money | None:
-    """Прочитать сумму в тыс. сум → Money UZS (× 1000). Best-effort."""
+def _money_kx(
+    ws: Worksheet, coord: str, warnings: list[str], multiplier: Decimal
+) -> Money | None:
+    """Прочитать сумму → Money UZS (× multiplier). Best-effort.
+
+    ``multiplier`` (T2.1) — приходит из ``parse_unit_multiplier`` динамически
+    (1 / 1_000 / 1_000_000) вместо hardcoded ×1000.
+    """
     decimal_val = _to_decimal(ws[coord].value, ws.title, coord, warnings)
     if decimal_val is None:
         return None
-    return Money(decimal_val * _THOUSANDS_MULTIPLIER, Currency.UZS)
+    return Money(decimal_val * multiplier, Currency.UZS)
 
 
 def _is_missing(raw: Any) -> bool:
