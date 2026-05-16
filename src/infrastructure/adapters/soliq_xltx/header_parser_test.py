@@ -5,13 +5,17 @@
 структурных ошибок (отсутствие list01, неподдерживаемый формат)."""
 
 from datetime import date
+from decimal import Decimal
 
 import pytest
 
 from domain.value_objects.inn import INN
 from infrastructure.adapters.soliq_xltx.errors import UnsupportedFormatError
 from infrastructure.adapters.soliq_xltx.format_detector import SoliqXltxFormat
-from infrastructure.adapters.soliq_xltx.header_parser import parse_header
+from infrastructure.adapters.soliq_xltx.header_parser import (
+    parse_header,
+    parse_unit_multiplier,
+)
 from tests.fixtures.soliq_xltx._factories import (
     build_form1_balance_sheet_wb,
     build_form2_income_statement_wb,
@@ -172,3 +176,99 @@ class TestUnsupported:
         wb = build_vat_declaration_wb()
         with pytest.raises(UnsupportedFormatError):
             parse_header(wb, SoliqXltxFormat.UNKNOWN)
+
+
+class TestUnitMultiplier:
+    """T2.1 CA-028: parse_unit_multiplier — динамическая детекция «тыс. сум.» /
+    «млн сум.» / «сум.» (полные) из B23 (FORM_1) / B24 (FORM_2).
+
+    Возвращает (Decimal multiplier, str | None warning). Unknown text / empty
+    cell — warning + fallback ×1000 (банк-friendly: не теряем файл).
+
+    PROFIT_TAX / VAT_DECLARATION / VAT_REGISTRY_ILOVA — UnsupportedFormatError
+    (структурная защита: их парсеры используют ×1, helper не нужен)."""
+
+    def test_form2_default_thousand(self) -> None:
+        """Default «Единица измерения, тыс. сум.» → ×1000, без warning."""
+        wb = build_form2_income_statement_wb()
+        multiplier, warning = parse_unit_multiplier(
+            wb, SoliqXltxFormat.FORM_2_INCOME_STATEMENT
+        )
+        assert multiplier == Decimal(1000)
+        assert warning is None
+
+    def test_form2_million(self) -> None:
+        """«млн сум.» → ×1_000_000."""
+        wb = build_form2_income_statement_wb(unit_text="Единица измерения, млн. сум.")
+        multiplier, warning = parse_unit_multiplier(
+            wb, SoliqXltxFormat.FORM_2_INCOME_STATEMENT
+        )
+        assert multiplier == Decimal(1_000_000)
+        assert warning is None
+
+    def test_form2_full_sums(self) -> None:
+        """«сум.» (без тыс./млн) → ×1 (полные сум)."""
+        wb = build_form2_income_statement_wb(unit_text="Единица измерения, сум.")
+        multiplier, warning = parse_unit_multiplier(
+            wb, SoliqXltxFormat.FORM_2_INCOME_STATEMENT
+        )
+        assert multiplier == Decimal(1)
+        assert warning is None
+
+    def test_form2_unknown_text_fallback_with_warning(self) -> None:
+        """Не распознан → fallback ×1000 + warning (банк-friendly)."""
+        wb = build_form2_income_statement_wb(unit_text="мусор без распознавания")
+        multiplier, warning = parse_unit_multiplier(
+            wb, SoliqXltxFormat.FORM_2_INCOME_STATEMENT
+        )
+        assert multiplier == Decimal(1000)
+        assert warning is not None
+        assert "B24" in warning
+
+    def test_form2_empty_cell_fallback_with_warning(self) -> None:
+        """B24 пустой → fallback ×1000 + warning."""
+        wb = build_form2_income_statement_wb(unit_text=None)
+        multiplier, warning = parse_unit_multiplier(
+            wb, SoliqXltxFormat.FORM_2_INCOME_STATEMENT
+        )
+        assert multiplier == Decimal(1000)
+        assert warning is not None
+        assert "B24" in warning
+
+    def test_form1_default_thousand_from_b23(self) -> None:
+        """FORM_1 B23 (отличается от FORM_2 B24) → ×1000."""
+        wb = build_form1_balance_sheet_wb()
+        multiplier, warning = parse_unit_multiplier(
+            wb, SoliqXltxFormat.FORM_1_BALANCE_SHEET
+        )
+        assert multiplier == Decimal(1000)
+        assert warning is None
+
+    def test_form1_million_from_b23(self) -> None:
+        """FORM_1 «млн сум.» в B23 → ×1_000_000."""
+        wb = build_form1_balance_sheet_wb(unit_text="Единица измерения, млн. сум.")
+        multiplier, warning = parse_unit_multiplier(
+            wb, SoliqXltxFormat.FORM_1_BALANCE_SHEET
+        )
+        assert multiplier == Decimal(1_000_000)
+        assert warning is None
+
+    def test_case_insensitive_matching(self) -> None:
+        """Регистр не важен — Soliq может использовать «ТЫС.» / «Млн»."""
+        wb = build_form2_income_statement_wb(unit_text="ЕДИНИЦА ИЗМЕРЕНИЯ, ТЫС. СУМ.")
+        multiplier, _ = parse_unit_multiplier(
+            wb, SoliqXltxFormat.FORM_2_INCOME_STATEMENT
+        )
+        assert multiplier == Decimal(1000)
+
+    def test_profit_tax_unsupported(self) -> None:
+        """PROFIT_TAX → UnsupportedFormatError (его парсер ×1, helper не для него)."""
+        wb = build_profit_tax_wb()
+        with pytest.raises(UnsupportedFormatError):
+            parse_unit_multiplier(wb, SoliqXltxFormat.PROFIT_TAX)
+
+    def test_vat_declaration_unsupported(self) -> None:
+        """VAT_DECLARATION → UnsupportedFormatError (×1 уже)."""
+        wb = build_vat_declaration_wb()
+        with pytest.raises(UnsupportedFormatError):
+            parse_unit_multiplier(wb, SoliqXltxFormat.VAT_DECLARATION)

@@ -15,6 +15,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from datetime import date, datetime
+from decimal import Decimal
 from typing import Literal
 
 from openpyxl.workbook.workbook import Workbook
@@ -166,6 +167,73 @@ def _parse_profit_tax_header(ws: Worksheet) -> SoliqXltxHeader:
         submitted_at=None,
         parse_warnings=warnings,
     )
+
+
+# T2.1 CA-028: динамическая детекция multiplier из «Единица измерения»-cell.
+# Координаты per-format: FORM_2 → B24, FORM_1 → B23 (Soliq разные шаблоны).
+# Fallback ×1000 для unknown/empty — банк-friendly (не теряем файл, сигналим
+# warning'ом). Default «тыс. сум.» в 13/13 реальных fixtures.
+_UNIT_CELL_BY_FORMAT: dict[SoliqXltxFormat, str] = {
+    SoliqXltxFormat.FORM_2_INCOME_STATEMENT: "B24",
+    SoliqXltxFormat.FORM_1_BALANCE_SHEET: "B23",
+}
+_DEFAULT_MULTIPLIER = Decimal(1000)
+
+
+def parse_unit_multiplier(
+    wb: Workbook, fmt: SoliqXltxFormat
+) -> tuple[Decimal, str | None]:
+    """Прочитать «Единица измерения» cell → multiplier для денежных полей.
+
+    Поддержанные форматы: FORM_2 (B24), FORM_1 (B23). Остальные →
+    ``UnsupportedFormatError`` (их парсеры используют ×1).
+
+    Возвращает ``(multiplier, warning_or_None)``:
+    * «… млн … сум.»  → ``Decimal(1_000_000), None``
+    * «… тыс. сум.»   → ``Decimal(1_000), None``
+    * «… сум.» (без тыс/млн) → ``Decimal(1), None``
+    * unknown text / empty cell → ``Decimal(1_000), <warning>`` (banker-friendly
+      fallback: не падаем, аналитик увидит сигнал).
+
+    Matching case-insensitive по substring; защита от вариаций «ТЫС.» / «Млн».
+    """
+    coord = _UNIT_CELL_BY_FORMAT.get(fmt)
+    if coord is None:
+        raise UnsupportedFormatError(
+            wb.sheetnames,
+            f"parse_unit_multiplier не определён для {fmt}",
+        )
+    if "list01" not in wb.sheetnames:
+        raise UnsupportedFormatError(wb.sheetnames, "no list01")
+
+    ws = wb["list01"]
+    raw = ws[coord].value
+    if raw is None or not str(raw).strip():
+        warning = (
+            f"list01!{coord}: единица измерения не указана — "
+            f"использован fallback ×{int(_DEFAULT_MULTIPLIER)} (тыс. сум.)"
+        )
+        _logger.warning("xltx.unit_multiplier_fallback coord=%s reason=empty", coord)
+        return _DEFAULT_MULTIPLIER, warning
+
+    text = str(raw).lower()
+    if "млн" in text:
+        return Decimal(1_000_000), None
+    if "тыс" in text:
+        return Decimal(1_000), None
+    if "сум" in text or "soʻm" in text or "so'm" in text:
+        return Decimal(1), None
+
+    warning = (
+        f"list01!{coord}: единица измерения «{str(raw).strip()}» не распознана — "
+        f"использован fallback ×{int(_DEFAULT_MULTIPLIER)} (тыс. сум.)"
+    )
+    _logger.warning(
+        "xltx.unit_multiplier_fallback coord=%s reason=unknown text=%r",
+        coord,
+        raw,
+    )
+    return _DEFAULT_MULTIPLIER, warning
 
 
 def _warn(warnings: list[str], sheet: str, coord: str, reason: str) -> None:
