@@ -176,6 +176,80 @@ def test_adapter_dispatch_returns_form2_data() -> None:
     assert result.revenue_current_period is not None
 
 
+class TestDynamicUnitMultiplier:
+    """T2.1 CA-028: multiplier динамически из B24 (раньше hardcoded ×1000).
+
+    Default «тыс. сум.» → ×1000 (backward compat, 13/13 real fixtures).
+    «млн. сум.» → ×1_000_000. «сум.» (без тыс/млн) → ×1. Unknown / empty
+    → fallback ×1000 + warning.
+    """
+
+    def test_million_multiplier_scales_revenue(self) -> None:
+        """B24 «млн. сум.» — F6=5973 → ×1_000_000 → 5_973_000_000 UZS."""
+        wb = build_form2_income_statement_wb(
+            unit_text="Единица измерения, млн. сум.",
+            revenue_current=5973.0,
+            revenue_prior=6559.0,
+        )
+
+        result = parse_form2(wb)
+
+        assert result.revenue_current_period == _uzs(Decimal("5973000000"))
+        assert result.revenue_prior_year_period == _uzs(Decimal("6559000000"))
+        assert result.parse_warnings == []
+
+    def test_full_sums_multiplier_no_scale(self) -> None:
+        """B24 «сум.» — F6=5973686000 → ×1 → 5_973_686_000 UZS (без масштабирования)."""
+        wb = build_form2_income_statement_wb(
+            unit_text="Единица измерения, сум.",
+            revenue_current=5973686000.0,
+        )
+
+        result = parse_form2(wb)
+
+        assert result.revenue_current_period == _uzs(Decimal("5973686000"))
+        assert result.parse_warnings == []
+
+    def test_unknown_unit_falls_back_to_thousands_with_warning(self) -> None:
+        """B24 «мусор» → fallback ×1000 + warning (банк-friendly, не теряем файл)."""
+        wb = build_form2_income_statement_wb(
+            unit_text="мусор без распознавания",
+            revenue_current=5973686.0,
+        )
+
+        result = parse_form2(wb)
+
+        # Fallback ×1000 применился — revenue масштабируется как раньше
+        assert result.revenue_current_period == _uzs(Decimal("5973686000"))
+        # Warning о non-recognised unit
+        assert any("B24" in w and "не распознана" in w for w in result.parse_warnings)
+
+    def test_empty_unit_cell_falls_back_with_warning(self) -> None:
+        """B24 пустой → fallback ×1000 + warning."""
+        wb = build_form2_income_statement_wb(
+            unit_text=None,
+            revenue_current=5973686.0,
+        )
+
+        result = parse_form2(wb)
+
+        assert result.revenue_current_period == _uzs(Decimal("5973686000"))
+        assert any("B24" in w and "не указана" in w for w in result.parse_warnings)
+
+    def test_signed_pair_also_scales_with_unit(self) -> None:
+        """signed_money (net_profit) тоже масштабируется через dynamic multiplier."""
+        wb = build_form2_income_statement_wb(
+            unit_text="Единица измерения, млн. сум.",
+            net_profit_current=(50.0, 0.0),  # 50 млн
+            net_profit_prior=(0.0, 30.0),  # −30 млн
+        )
+
+        result = parse_form2(wb)
+
+        assert result.net_profit_current == _uzs(Decimal("50000000"))
+        assert result.net_profit_prior_year == _uzs(Decimal("-30000000"))
+
+
 @pytest.mark.skipif(not _REAL_FIXTURE.exists(), reason="real FORM_2 fixture not present")
 def test_real_fixture_smoke() -> None:
     """Реальный xltx папы (Q4 2025) — парсится без исключений, ключевые поля есть.

@@ -4,8 +4,9 @@
 прибыль и чистую прибыль за отчётный YTD-период (column F/G) и за тот же
 календарный период прошлого года (column D/E).
 
-Все суммы в файле — в **тыс. сум.** (B24 list01 «Единица измерения»). Парсер
-умножает на 1000 и возвращает Money в UZS.
+Multiplier для money-cells динамический из B24 list01 «Единица измерения»
+(T2.1 CA-028): «тыс. сум.» → ×1000 (99% случаев), «млн. сум.» → ×1_000_000,
+«сум.» → ×1 (полные). Unknown / empty → fallback ×1000 + warning.
 
 Best-effort семантика (CA-014 hardening): cell-level проблема → warning + None.
 Raise только на структурные: не тот формат (UnsupportedFormatError) или
@@ -47,13 +48,10 @@ from infrastructure.adapters.soliq_xltx.format_detector import (
 from infrastructure.adapters.soliq_xltx.header_parser import (
     SoliqXltxHeader,
     parse_header,
+    parse_unit_multiplier,
 )
 
 _logger = logging.getLogger(__name__)
-
-# Все money-cells в form2 — в тыс. сум; домен оперирует UZS, поэтому ×1000.
-# TODO[CA-028]: динамическая детекция ЕИ из B24 list01 (сейчас hardcoded).
-_THOUSANDS_MULTIPLIER = Decimal(1000)
 
 
 @dataclass(slots=True)
@@ -108,37 +106,48 @@ def parse_form2(wb: Workbook) -> Form2IncomeStatementData:
     if "list02" not in wb.sheetnames:
         raise UnsupportedFormatError(wb.sheetnames, "list02 missing in FORM_2")
 
+    # T2.1 CA-028: multiplier динамический из B24 (раньше hardcoded ×1000).
+    # Unknown / empty → fallback ×1000 + warning из helper'а (банк-friendly).
+    multiplier, unit_warning = parse_unit_multiplier(wb, fmt)
     list02 = wb["list02"]
     warnings: list[str] = []
+    if unit_warning is not None:
+        warnings.append(unit_warning)
 
     return Form2IncomeStatementData(
         header=header,
-        revenue_current_period=_money_kx(list02, "F6", warnings),
-        revenue_prior_year_period=_money_kx(list02, "D6", warnings),
-        cost_of_sales_current=_money_kx(list02, "G7", warnings),
-        cost_of_sales_prior_year=_money_kx(list02, "E7", warnings),
-        gross_profit_current=_money_kx(list02, "F8", warnings),
-        gross_profit_prior_year=_money_kx(list02, "D8", warnings),
-        operating_profit_current=_signed_money(list02, "F15", "G15", warnings),
-        operating_profit_prior_year=_signed_money(list02, "D15", "E15", warnings),
-        interest_expense_current=_money_kx(list02, "G23", warnings),
-        interest_expense_prior_year=_money_kx(list02, "E23", warnings),
-        profit_before_tax_current=_signed_money(list02, "F29", "G29", warnings),
-        profit_before_tax_prior_year=_signed_money(list02, "D29", "E29", warnings),
-        profit_tax_current=_money_kx(list02, "G30", warnings),
-        profit_tax_prior_year=_money_kx(list02, "E30", warnings),
-        net_profit_current=_signed_money(list02, "F32", "G32", warnings),
-        net_profit_prior_year=_signed_money(list02, "D32", "E32", warnings),
+        revenue_current_period=_money_kx(list02, "F6", warnings, multiplier),
+        revenue_prior_year_period=_money_kx(list02, "D6", warnings, multiplier),
+        cost_of_sales_current=_money_kx(list02, "G7", warnings, multiplier),
+        cost_of_sales_prior_year=_money_kx(list02, "E7", warnings, multiplier),
+        gross_profit_current=_money_kx(list02, "F8", warnings, multiplier),
+        gross_profit_prior_year=_money_kx(list02, "D8", warnings, multiplier),
+        operating_profit_current=_signed_money(list02, "F15", "G15", warnings, multiplier),
+        operating_profit_prior_year=_signed_money(list02, "D15", "E15", warnings, multiplier),
+        interest_expense_current=_money_kx(list02, "G23", warnings, multiplier),
+        interest_expense_prior_year=_money_kx(list02, "E23", warnings, multiplier),
+        profit_before_tax_current=_signed_money(list02, "F29", "G29", warnings, multiplier),
+        profit_before_tax_prior_year=_signed_money(list02, "D29", "E29", warnings, multiplier),
+        profit_tax_current=_money_kx(list02, "G30", warnings, multiplier),
+        profit_tax_prior_year=_money_kx(list02, "E30", warnings, multiplier),
+        net_profit_current=_signed_money(list02, "F32", "G32", warnings, multiplier),
+        net_profit_prior_year=_signed_money(list02, "D32", "E32", warnings, multiplier),
         parse_warnings=[*header.parse_warnings, *warnings],
     )
 
 
-def _money_kx(ws: Worksheet, coord: str, warnings: list[str]) -> Money | None:
-    """Прочитать сумму в тыс. сум → Money UZS (× 1000). Best-effort."""
+def _money_kx(
+    ws: Worksheet, coord: str, warnings: list[str], multiplier: Decimal
+) -> Money | None:
+    """Прочитать сумму в B23/B24-указанной единице → Money UZS (× multiplier).
+
+    Best-effort. Multiplier приходит из ``parse_unit_multiplier`` —
+    динамический (1 / 1_000 / 1_000_000) вместо hardcoded.
+    """
     decimal_val = _to_decimal(ws[coord].value, ws.title, coord, warnings)
     if decimal_val is None:
         return None
-    return Money(decimal_val * _THOUSANDS_MULTIPLIER, Currency.UZS)
+    return Money(decimal_val * multiplier, Currency.UZS)
 
 
 def _signed_money(
@@ -146,11 +155,12 @@ def _signed_money(
     income_coord: str,
     expense_coord: str,
     warnings: list[str],
+    multiplier: Decimal,
 ) -> Money | None:
     """Декодировать signed profit из пары (income, expense) колонок.
 
-    ``income - expense`` × 1000. 'x'/None → 0 для своей колонки. Если **обе**
-    ячейки missing — возвращаем None (нет данных), не Money(0).
+    ``income - expense`` × multiplier. 'x'/None → 0 для своей колонки. Если
+    **обе** ячейки missing — возвращаем None (нет данных), не Money(0).
     """
     income_raw = ws[income_coord].value
     expense_raw = ws[expense_coord].value
@@ -170,7 +180,7 @@ def _signed_money(
         if expense_missing
         else (_to_decimal(expense_raw, ws.title, expense_coord, warnings) or Decimal(0))
     )
-    return Money((income - expense) * _THOUSANDS_MULTIPLIER, Currency.UZS)
+    return Money((income - expense) * multiplier, Currency.UZS)
 
 
 def _is_missing(raw: Any) -> bool:
