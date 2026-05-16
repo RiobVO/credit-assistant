@@ -7,6 +7,8 @@
 
 ## Current Status
 
+**T2.3 (PROFIT_TAX parser, CA-029b) complete 2026-05-18** (commits `76be44d` + `e99bc2b` + `4221eea` + `d281ef6` + this). 5 атомарных TDD-коммитов. `ProfitTaxData` DTO (минимум — header + `taxable_profit` (L31, код 030 signed) + `profit_tax_total` (L39, код 080 gross computed)). `parse_profit_tax(wb)` читает сводку list01 rows 28-46 (column K код, L значение), multiplier ×1 (полные сум, в отличие от FORM_2 ×1000) — cross-check L29 ≈ FORM_2 F6 × 1000 подтверждён на ZAMIN (305002665). `SoliqXltxAdapter._dispatch` диспетчит PROFIT_TAX, `ParseManualInputFilesUseCase._merge_profit_tax` пишет в `taxes_paid_by_year[year]` через `_set_once` (single-source, FORM_2 G30 в use-case не мерджится). Quarterly (Q1/Q2/Q3) — silent skip с warning, mirror FORM_2 CA-027 option b (защита от Q1 layout drift, L36 в Q1-фикстуре содержит мусор=233801 вместо ставки 15). Closes 4 xfail в `tests/parsers/real_xltx_test.py` — все 28 real fixtures pass. Tests: 8 unit parser + 6 unit use-case. 316/316 pytest (application + adapters + parsers), ruff + mypy strict clean. **Heads-up CA-DS25 correction:** roadmap утверждал «T2.3 замыкает CA-DS25 (KPI sparkline)» — corrected: sparkline требует monthly_turnover≥12 (VAT_DECL chain / ESF), не annual PROFIT_TAX. CA-DS25 frozen с обновлённым pre-condition. **Active — T2.1 dynamic units FORM_2 (CA-028).**
+
 **T1.5 (LDAP AuthnAdapter, LDAP-only) complete 2026-05-18** (commits `dec6332` + `9c43245` + this). ADR-0019. `AUTHN_MODE=seeded|ldap` env switch (default `seeded`). `LdapAuthnAdapter` (ldap3 pure Python, service-bind → search → user-bind verify, memberOf → role mapping, async via `asyncio.to_thread`) + `BreakGlassAuthnAdapter` (email whitelist → seeded fallback, source override на `break_glass`). `AuthnPort.authenticate` теперь возвращает `AuthnResult(identity, source)` — audit-log login payload содержит `authn_source` для compliance trail. Alembic `f4a2d6c9e3b8`: `analysts.password_hash` NULLABLE + `authn_source` column + CHECK constraint. `analyst_repo.upsert_from_ldap()` для lazy provisioning. `_validate_runtime_config` extended. `change-password` endpoint блокируется для LDAP-users. Playbook `docs/operations/ldap-setup.md`. 17 unit + 3 integration tests новых. OAuth → T1.5b backlog, openldap testcontainer → T1.5c backlog. **Tier 1 complete — переход к T2 (Data quality).**
 
 **T1.4 (Multi-tenant runtime isolation, Approach A pure) complete 2026-05-18** (commits `44c42a6` + `80e8cfc` + this). ADR-0018. PROJECT_BRIEF Sec 11 review сузил scope — single-tenant per deployment без brand_id в data-tables. `Settings.brand_id` + `_validate_runtime_config(settings)` helper в `app.py` (обобщает BRAND_ID resolve + PII_ENC_KEYS prod check). `load_brand(brand_id)` mandatory arg, env-fallback убран. `audit_log.brand_id` колонка (Alembic `e7f9a3c2b8d1`, VARCHAR(50) NOT NULL DEFAULT 'default' + index) для forensics. Repository конструктор принимает brand_id, 5 callsites через `settings.brand_id`. Playbook `docs/operations/multi-tenant-deploy.md` — separate compose-project per bank (offset ports, dedicated volumes, per-brand `.env`). 6 unit + 3 integration tests новых. **Active — T1.5 LDAP/OAuth (CA-020).**
@@ -130,7 +132,7 @@ Heads-up: **live-browser smoke** через `/`, `/search`, `/history`, `/dossie
 
 ### Tier 1–4 (после T0)
 - **T1** Prod-killers: case_id sequence (CA-DS18b/c), refresh-token rotation + Redis (CA-019), PII encryption at rest (column-level через app-layer, **не наивный pgcrypto на JSONB** — см. ADR-0014 to write), multi-tenant runtime isolation (BRAND_ID env + startup assertion), LDAP/OAuth (CA-020).
-- **T2** Data quality: dynamic units FORM_2 (CA-028), VAT real formats (CA-015), PROFIT_TAX (CA-029b → закрывает CA-DS25), faktura.uz (CA-DS11).
+- **T2** Data quality: dynamic units FORM_2 (CA-028) **active**, ~~PROFIT_TAX (CA-029b)~~ ✅ done 2026-05-18, ~~VAT real formats (CA-015)~~ ✅ done T0.5, faktura.uz (CA-DS11).
 - **T3** Operational readiness: observability (CA-064), structured logging + correlation_id, Prometheus/Grafana, pg_dump backup, audit-log export, Ansible/systemd deploy.
 - **T4** Compliance pack (параллельно с T1–T3): pentest от лицензированной узб-лаборатории, аттестат УзСтандарта на ПДн, резидентство в IT-юрисдикции РУз, Admin Guide + Security Architecture + DRP/BCP (RU + UZ).
 
@@ -138,7 +140,7 @@ Heads-up: **live-browser smoke** через `/`, `/search`, `/history`, `/dossie
 - UI polish: новые цвета, шрифты, тени, анимации.
 - Расширения dark theme, 4-я тема, accent variants.
 - Новые design tokens, brand-tenant новые секции.
-- CA-DS25 (KPI sparkline) до T2.3, новые OKVED-каталог расширения сверх baseline.
+- CA-DS25 (KPI sparkline) до monthly_turnover-источника (VAT_DECL monthly chain или ESF), новые OKVED-каталог расширения сверх baseline.
 - i18n keys refactor, новые ADR по визуальному дизайну.
 - Coverage сверх baseline ради числа — кроме тестов на новый Pre-Demo код.
 - Refactor без бизнес-причины из roadmap.
