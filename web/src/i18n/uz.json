@@ -192,7 +192,7 @@
       "service_status_ok": "Ishlamoqda",
       "service_status_degraded": "Kechikish bilan",
       "service_status_down": "Mavjud emas",
-      "service_status_not_implemented": "Ishlab chiqilmoqda",
+      "service_status_not_implemented": "Ixtiyoriy",
       "about_title": "Tizim haqida",
       "about_hint": "Credit Assistant oʻrnatilgan versiyasi haqida maʻlumot.",
       "field_mode": "Ish rejimi",

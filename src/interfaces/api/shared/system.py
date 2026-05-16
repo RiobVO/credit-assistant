@@ -4,8 +4,11 @@ Health endpoint:
 * Реальный ping Postgres (SELECT 1) → определяет статус «Поиск», «База клиентов»,
   «Импорт отчётности из Soliq» (все они зависят от БД).
 * Lazy-import WeasyPrint → определяет статус «Генерация PDF-досье».
-* faktura.uz интеграция ещё не реализована → статус ``not_implemented`` всегда
-  (TODO[CA-DS11]); UI рендерит как «В разработке».
+* faktura.uz JSON-выгрузка ЭСФ — опциональная функция, требует OAuth-токен,
+  выдаваемый банком-клиентом для конкретного ЮЛ (T2.4 / ADR-0020).
+  Статус остаётся ``not_implemented`` (без активной интеграции), но tip
+  объясняет: основной ESF path — Excel-выгрузка my3.soliq.uz (Приложение №4),
+  парсер VAT_REGISTRY_ILOVA уже работает на real-data.
 * UPSERT today's row в ``system_uptime_day`` для UI uptime-calendar.
 
 History endpoint: возвращает рядом за последние ``days`` дней (default 30).
@@ -108,8 +111,9 @@ async def system_health(session: SessionDep) -> SystemHealthResponse:
             key="faktura_uz",
             status=NOT_IMPLEMENTED_STATUS,
             tip=(
-                "Подгрузка ЭСФ из faktura.uz пока в разработке. "
-                "Можно вручную попросить выгрузку у клиента и подгрузить через Шаг 2 мастера."
+                "Опциональная функция — требует OAuth-токен ЮЛ, выдаваемый "
+                "банком-клиентом. Основной поддержанный путь — Excel-выгрузка "
+                "ЭСФ из my3.soliq.uz (Приложение №4), парсится автоматически."
             ),
         ),
     ]

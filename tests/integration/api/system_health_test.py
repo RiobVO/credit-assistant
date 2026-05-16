@@ -58,6 +58,26 @@ async def test_system_health_returns_services_without_auth(
     }
 
 
+async def test_faktura_uz_status_and_honest_tip(
+    api_client: httpx.AsyncClient,
+) -> None:
+    """T2.4 / ADR-0020: faktura_uz — опциональная функция, не «в разработке».
+
+    Status остаётся ``not_implemented`` (без активного integration), но tip
+    объясняет что Excel-выгрузка my3.soliq.uz — основной поддержанный путь.
+    """
+    resp = await api_client.get("/api/system/health")
+    body = resp.json()
+
+    faktura = next(svc for svc in body["services"] if svc["key"] == "faktura_uz")
+    assert faktura["status"] == "not_implemented"
+    assert faktura["tip"] is not None
+    # Tip явно упоминает OAuth-токен (объяснение почему опциональная)
+    assert "OAuth" in faktura["tip"] or "токен" in faktura["tip"]
+    # И направляет на альтернативный путь — Soliq Excel (VAT_REGISTRY_ILOVA)
+    assert "my3.soliq.uz" in faktura["tip"]
+
+
 async def test_system_health_upserts_today_row(
     api_client: httpx.AsyncClient, pg_session: AsyncSession
 ) -> None:
