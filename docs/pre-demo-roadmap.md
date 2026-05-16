@@ -7,7 +7,7 @@
 
 **Tier 0 status (2026-05-18):** ✅ **closed**. T0.1 / T0.2 / T0.3 / T0.4 / T0.5 done. T0.4 follow-up (B1+B2+B3+B4 + CA-DS29-apostrophe) тоже closed.
 
-**Tier 2 status (2026-05-18):** active. **T2.3 PROFIT_TAX parser** + **T2.1 dynamic units (FORM_2+FORM_1)** — ✅ closed. Active — **T2.4 faktura.uz integration** (CA-DS11).
+**Tier 2 status (2026-05-18):** ✅ **closed**. T2.1 / T2.2 / T2.3 / T2.4 done. Переход к **Tier 3 (Operational readiness)**.
 
 **Tier 1 / T1.1 (2026-05-18):** ✅ **closed**. Compromised B исполнен — sequence на `dossiers.case_id`, миграция `b3e9f1a7d4c5` + `CaseIdAllocator` + drop derived helpers. Existing 47 dossiers backfilled `BR-2026-0001..0047`.
 
@@ -18,6 +18,8 @@
 **Tier 1 / T1.4 (2026-05-18):** ✅ **closed**. ADR-0018. Approach A pure — single-tenant per deployment (separate compose-project per bank), scope сужен после PROJECT_BRIEF Sec 11 review. `Settings.brand_id` + `_validate_runtime_config` helper в `app.py` (BRAND_ID resolves + PII_ENC_KEYS prod-mandatory, обобщает T1.3 inline check). `load_brand(brand_id)` mandatory arg — env-fallback внутри loader убран. `audit_log.brand_id` колонка (Alembic `e7f9a3c2b8d1`, NOT NULL DEFAULT 'default' + index `(brand_id, created_at)`) для forensics. Repository конструктор принимает brand_id, 5 callsites пробрасывают `settings.brand_id`. Playbook `docs/operations/multi-tenant-deploy.md`.
 
 **Tier 1 / T1.5 (2026-05-18):** ✅ **closed**. ADR-0019. LDAP-only, scope сужен — OAuth defer'ится в T1.5b backlog. `AUTHN_MODE=seeded|ldap` env switch (default `seeded`). LDAP integration через `ldap3` (pure Python, no system deps). `LdapAuthnAdapter` (service-bind → search → user-bind verify, role resolution через memberOf, lazy upsert) + `Ldap3Client` wrapper + `BreakGlassAuthnAdapter` (email whitelist → seeded fallback, source override на `break_glass`). `AuthnPort.authenticate` теперь возвращает `AuthnResult(identity, source)` — audit-log payload содержит `authn_source` для compliance trail. Alembic `f4a2d6c9e3b8`: `analysts.password_hash` NULLABLE + `authn_source VARCHAR(20) NOT NULL DEFAULT 'seeded'` + CHECK constraint. `_validate_runtime_config` ловит missing LDAP_* env при `AUTHN_MODE=ldap`. Playbook `docs/operations/ldap-setup.md` (generic AD defaults + ops runbook). **Tier 1 complete — переход к Tier 2 (Data quality).**
+
+**Tier 2 / T2.4 (2026-05-18):** ✅ **closed** as honest stub. ADR-0020 «Defer faktura.uz real integration until bank-provided token». Real client integration ждёт пилот-банка с OAuth-токеном — без него mock-only client с придуманным форматом JSON даёт fake-green confidence. Текущий ESF path — Excel-выгрузка my3.soliq.uz (VAT_REGISTRY_ILOVA), работает на real-data. Backend tip /api/system/health и frontend badge «В разработке» → «Опционально» (RU) / «Ixtiyoriy» (UZ). Status enum `not_implemented` оставлен в API contract — переименование invasive без user-facing payoff. Closes CA-DS11 (messaging gap). Real-client integration → T2.4b backlog.
 
 **Tier 2 / T2.1 (2026-05-18):** ✅ **closed**. Dynamic unit detection FORM_2 + FORM_1 (scope расширен по сравнению с roadmap первоначальным — FORM_1 имел тот же hardcoded `_THOUSANDS_MULTIPLIER` gap). 4 атомарных коммитов: T2.1.1 `parse_unit_multiplier(wb, fmt) -> (Decimal, str | None)` helper в `header_parser.py` (case-insensitive substring matching: «млн» → ×1_000_000, «тыс» → ×1_000, «сум»/«soʻm» → ×1, unknown/empty → fallback ×1_000 + warning); T2.1.2 form2_parser wiring (16 money-cells × 2 helpers); T2.1.3 form1_parser wiring (22 балансовых cells + _aggregate_debt 5 компонент); T2.1.4 docs sync. Backward compat: 13/13 real fixtures = «тыс. сум.» → ×1000, поведение не меняется. Real-fixture smoke на «млн / полные сум» branches — backlog (T2.1b, нет fixture от папы). Tests: 10 unit helper + 5 FORM_2 + 5 FORM_1. 336/336 pytest pass (28 real fixtures), ruff + mypy strict clean. Closes CA-028.
 
@@ -211,7 +213,7 @@ LDAP-only scope (OAuth defer'ится в T1.5b). 3 атомарных комми
 - ~~**T2.1** — Dynamic unit detection FORM_2 + FORM_1 (CA-028)~~ → ✅ **DONE 2026-05-18**. 4 атомарных коммитов (helper → FORM_2 wiring → FORM_1 wiring → docs sync). Helper `parse_unit_multiplier` в `header_parser.py`. Scope расширен на FORM_1 (тот же gap). **Heads-up T2.1b backlog:** real-fixture smoke на «млн / полные сум» branches — нет fixture от папы (13/13 = тыс.).
 - ~~**T2.2** — VAT parser на реальных 10006_45/10006_47 (CA-015)~~ → **поглощено T0.5 done 2026-05-17 (commit f5d7495)**.
 - ~~**T2.3** — PROFIT_TAX parser (CA-029b)~~ → ✅ **DONE 2026-05-18**. 5 атомарных коммитов (parser → dispatch → use-case wiring → cleanup → status sync). Закрывает 5 xfail в `tests/parsers/real_xltx_test.py`, полный 5/5 format coverage парсера. **CA-DS25 sparkline claim снят** — требует monthly_turnover источник (VAT_DECL chain / ESF), не PROFIT_TAX.
-- **T2.4** — faktura.uz integration (CA-DS11). Сейчас в `/api/system/health` всегда `not_implemented`. **Active.**
+- ~~**T2.4** — faktura.uz integration (CA-DS11)~~ → ✅ **DONE 2026-05-18 as honest stub** (ADR-0020). Реальный client → T2.4b backlog (pre-condition: пилот-банк даёт OAuth-токен).
 
 ---
 
@@ -247,7 +249,8 @@ LDAP-only scope (OAuth defer'ится в T1.5b). 3 атомарных комми
 ## Backlog (вне Roadmap, могут не понадобиться)
 
 - **CA-015b** — VAT-парсер для следующих xltx-форматов сверх T0.1 пакета. Оценить после T0.1.
-- **CA-DS11b** — faktura.uz расширенный scope (queries, history). Оценить после T2.4.
+- **T2.4b** — faktura.uz real client integration (ADR-0020 implementation reference). Pre-condition: пилот-банк предоставил OAuth-токен для тестового ЮЛ. Scope: `infrastructure/external/faktura_client.py` + `esf_repository.py` + `esf_service.py` + endpoint, fallback chain env → DB → live → cached → static, переиспользует ADR-0014 pattern (4-5 коммитов как T0.2 / T0.3). При активации tip /api/system/health и frontend badge `not_implemented` → `ok` для faktura_uz.
+- **CA-DS11b** — faktura.uz расширенный scope (queries, history). Оценить после T2.4b real client.
 - **T1.5b** — OAuth2/OIDC AuthnAdapter. Pre-condition: запрос от пилот-банка на Okta/Azure AD интеграцию. Реализация поверх существующего `AuthnPort` (как `LdapAuthnAdapter`), library `authlib`. ADR-0019b.
 - **T1.5c** — openldap testcontainer для full integration tests `LdapAuthnAdapter`. Текущее покрытие — mock-only (`MagicMock(spec=LdapClient)`). Hardening pass с реальным `osixia/openldap` контейнером.
 - **T2.1b** — real-fixture smoke на FORM_2 / FORM_1 с «млн. сум.» либо «сум.» (полные) единицами измерения. Текущее покрытие — synthetic factory only (10 unit-кейсов TestUnitMultiplier). 13/13 real fixtures от папы = «тыс. сум.» (no signal of variance). При появлении нестандартного xltx — добавить в `tests/fixtures/soliq_xltx/` + ассерты multiplier branches в `real_xltx_test.py`. Pre-condition: получить такой файл (например от крупной фирмы с «млн. сум.» или мелкой с полными «сум.»).
