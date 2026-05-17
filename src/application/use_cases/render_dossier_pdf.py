@@ -6,7 +6,10 @@
 3) Phase 10: собирает ``Observations`` (executive summary cover) через
    ``observations_builder`` поверх snapshot+kpis+red_flags+RuleRegistry.
 4) Резолвит ``BrandConfig`` через injected loader (env BRAND_ID → JSON).
-5) Передаёт готовый ``DossierPdfBundle`` в ``PdfReportPort.render``.
+5) T0.4 / ADR-0015: резолвит ``PdfMessages`` через injected
+   ``pdf_messages_loader(lang)`` и пробрасывает rule_names в выбранной локали
+   (``rule.name`` для ru, ``rule.name_uz`` для uz).
+6) Передаёт готовый ``DossierPdfBundle`` в ``PdfReportPort.render``.
 
 WeasyPrint и matplotlib — sync, поэтому ``port.render`` крутим в ``to_thread``,
 чтобы FastAPI event loop не залипал на десятках мс рендера.
@@ -16,10 +19,12 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable
+from typing import Literal
 from uuid import UUID
 
 from application.dto.brand_config import BrandConfig
 from application.dto.dossier_pdf_bundle import DossierPdfBundle
+from application.dto.pdf_messages import PdfMessages
 from application.ports.pdf_report_port import PdfReportPort
 from application.services.observations_builder import build_observations
 from application.services.pdf_data_aggregator import (
@@ -28,7 +33,10 @@ from application.services.pdf_data_aggregator import (
     compute_top_suppliers,
 )
 from application.use_cases.load_dossier_for_view import LoadDossierForView
-from domain.rules.rule import RuleRegistry
+from domain.rules.rule import Rule, RuleRegistry
+
+Lang = Literal["ru", "uz"]
+DEFAULT_LANG: Lang = "ru"
 
 
 class RenderDossierPdf:
@@ -38,18 +46,25 @@ class RenderDossierPdf:
         renderer: PdfReportPort,
         rule_registry: RuleRegistry,
         brand_loader: Callable[[], BrandConfig],
+        pdf_messages_loader: Callable[[Lang], PdfMessages],
     ) -> None:
         self._loader = loader
         self._renderer = renderer
         self._registry = rule_registry
         self._brand_loader = brand_loader
+        self._messages_loader = pdf_messages_loader
 
-    async def execute(self, dossier_id: UUID) -> bytes | None:
+    async def execute(self, dossier_id: UUID, lang: Lang = DEFAULT_LANG) -> bytes | None:
         view_bundle = await self._loader.execute(dossier_id)
         if view_bundle is None:
             return None
 
         snapshot = view_bundle.view.snapshot
+        messages = self._messages_loader(lang)
+        # observations_builder получает messages в commit 6 (rewrite f-strings
+        # → format). Сейчас он остаётся на RU-hardcode; в UZ ветке F-секция
+        # подхватит rule.name_uz через ``rule_names`` ниже, но cover-observations
+        # будут RU до commit 6.
         observations = build_observations(
             snapshot=snapshot,
             kpis=view_bundle.kpis,
@@ -63,6 +78,20 @@ class RenderDossierPdf:
             tax_summary=compute_tax_summary(snapshot),
             brand=self._brand_loader(),
             observations=observations,
-            rule_names={r.id: r.name for r in self._registry.rules},
+            rule_names={r.id: _rule_name_for_lang(r, lang) for r in self._registry.rules},
+            lang=lang,
+            messages=messages,
         )
         return await asyncio.to_thread(self._renderer.render, bundle)
+
+
+def _rule_name_for_lang(rule: Rule, lang: Lang) -> str:
+    """RU → ``rule.name``; UZ → ``rule.name_uz`` с fallback на ``rule.name``.
+
+    ``name_uz`` валидируется на load_registry как required (min_length=1),
+    fallback нужен только для inline test-fixtures, конструирующих Rule
+    напрямую без UZ-перевода (см. CA-DS17 / T0.4 commit 2).
+    """
+    if lang == "uz" and rule.name_uz:
+        return rule.name_uz
+    return rule.name
