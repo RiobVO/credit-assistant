@@ -767,7 +767,16 @@
       "legal_ltd": "MChJ",
       "legal_jsc": "AJ",
       "legal_ie": "YaTT",
-      "legal_other": "Boshqa shakl"
+      "legal_other": "Boshqa shakl",
+      "row_gnk_cert_id": "STK ma'lumotnomasi",
+      "gnk_status_active": "Faol QQS to'lovchi",
+      "gnk_status_suspended": "QQS ro'yxati to'xtatilgan",
+      "gnk_status_revoked": "QQS ro'yxatidan chiqarilgan",
+      "gnk_status_unknown": "QQS holati aniqlanmagan",
+      "gnk_source_uploaded": "analitik tomonidan yuklangan",
+      "gnk_source_gnk_live": "STK live",
+      "gnk_source_gnk_cached": "STK kesh",
+      "gnk_source_fallback": "fallback"
     },
     "kpi": {
       "label_readiness": "Ma'lumotlar tayyorligi",
