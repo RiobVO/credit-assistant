@@ -1,9 +1,11 @@
 # Pre-Demo Roadmap
 
-> Owner: Riobvo · Updated: 2026-05-17 · Status: active
+> Owner: Riobvo · Updated: 2026-05-18 · Status: active
 > Источник истины по приоритизации до bank demo. CLAUDE.md содержит только compact-summary.
 
 **Critical rule:** работаю ТОЛЬКО над активным Tier. Всё что не в Tier 0–4 — Frozen.
+
+**Tier 0 status (2026-05-18):** T0.2 / T0.3 / T0.4 / T0.5 done. Active остаток — T0.1 fixtures (3 фирмы × 22 файла на месте, формальный набор 4 фирмы × 20 файлов добивается оставшейся выгрузкой). Tier 1 unblocked.
 
 ---
 
@@ -11,8 +13,8 @@
 
 Подвешено — закроется при старте соответствующего Tier. Если забываешь — этот блок ловит первым при чтении roadmap.
 
-- ~~**T0.4 / pre-impl check**~~ ✅ **resolved 2026-05-17**: `dossier_mapper.py:15-28` сериализует только `rule_id` + `rule_version`, `rule.name` в JSONB не уходит. T0.4 unblocked. Backlog: per-version registry loader для historical-name immutability (использовать существующий `rule_version`) — не сейчас.
-- **T0.4 / pick-on-start** — стиль локализации Jinja2 strings: `gettext` vs in-template dict vs branchless `{{ rule.name_ru if lang == 'ru' else rule.name_uz }}`. Не блокер, но при старте T0.4 зафиксировать ОДИН подход — иначе 3 стиля в одном feature.
+- ~~**T0.4 / pre-impl check**~~ ✅ **resolved 2026-05-17**: `dossier_mapper.py:15-28` сериализует только `rule_id` + `rule_version`, `rule.name` в JSONB не уходит. Backlog: per-version registry loader для historical-name immutability (использовать существующий `rule_version`) — не сейчас.
+- ~~**T0.4 / pick-on-start**~~ ✅ **resolved 2026-05-18**: ADR-0015 зафиксировал гибрид (b) template-level JSON dict + (c) branchless для `rule.name`. T0.4 закрыт.
 
 ---
 
@@ -85,18 +87,24 @@ Acceptance: 19 real-xltx pass (form1/form2 ×3 фирмы, vat_decl ×4, vat_ilo
 
 Live-browser smoke не выполнен в этой сессии (требует Docker + manual walkthrough). Lesson `feedback_nested_anchor_rtl_blind`: перед мержем в prod-ветке пройти full upload → display flow.
 
-### T0.4 — UZ-локализация PDF (CA-DS29-pdf)
-Декомпозиция (не однострочник):
+### T0.4 — UZ-локализация PDF (CA-DS29-pdf) ✅ DONE 2026-05-18
 
-1. **Templates**: перевести все Jinja2 templates на UZ (заголовки секций A–F, KPI tile labels, severity-labels, observations headers).
-2. **Domain schema**: `Rule.name_uz: str` поле в `domain/rules/rule.py`.
-3. **YAML migration**: `config/rules/v*.yaml` — добавить `name_uz` для каждого rule (~30 правил, manual translation).
-4. **Registry factory**: `domain/rules/registry_factory.py` пробрасывает `name_uz` через `RuleRegistry`.
-5. **Snapshot mapper** ✅ **verified 2026-05-17**: `dossier_mapper.py:15-28` сериализует только `rule_id` + `rule_version`. `rule.name` / `name_uz` в JSONB не уходят — round-trip существующих snapshots не ломается. Backlog (не T0.4): per-version registry loader для historical-name immutability — `rule_version` уже сериализуется, можно подгружать old YAML.
-6. **Endpoint**: `dossier_pdf.py` принимает `lang: Locale` query, `RenderDossierPdf.execute(dossier_id, lang)` передаёт в Jinja2 context.
-7. **Localization style** ⚠ **pick-on-start (open)**: один из трёх — Python-side `gettext` / template-level dict / branchless `{{ rule.name_ru if lang == 'ru' else rule.name_uz }}`. Зафиксировать ОДИН до первого PR — иначе 3 стиля разъедутся по templates.
+8 коммитов от `ce2c47a` (ADR-0015) до `a7de8a3` (endpoint `?lang=`):
 
-**Acceptance**: `GET /api/dossier/{id}/pdf?lang=uz` рендерит полностью узбекское досье без RU-fallback в content (brand-strings типа имени банка остаются как в config).
+1. `ce2c47a` — **ADR-0015**: гибридный подход (b)+(c) — template-level JSON dict для chrome + branchless conditional для `rule.name`. Альтернативы gettext / pure branchless отвергнуты.
+2. `0a3a1d6` — **Domain + schema**: `Rule.name_uz` поле, `RuleSpecYaml.name_uz` required (`min_length=1`), registry_factory пробрасывает, placeholder-миграция YAML.
+3. `54c9574` — **YAML финальные переводы**: 19 правил UZ через Soliq-стандартную терминологию (QQS, EHF, soʻm). ОКВЭД остался кириллицей, INN латиницей — banking convention.
+4. `95187c4` — **i18n infra**: `config/pdf-i18n/{ru,uz}.json` (~111 ключей с dotted-namespaces + month arrays), `PdfMessages` DTO, loader с `lru_cache(maxsize=2)`, 12 unit-тестов (happy ru/uz, subkey symmetry, format placeholders, negative paths, cache identity).
+5. `7b74129` — **Use-case wiring**: `RenderDossierPdf.execute(dossier_id, lang)`, `DossierPdfBundle.lang/.messages`, DI injection `pdf_messages_loader`, per-lang `rule_names` через `_rule_name_for_lang`.
+6. `2f7f753` — **observations_builder rewrite**: f-strings → `messages.X.format(pct=..., years=..., chain=..., year=..., prior_year=..., ratio=...)`. +4 UZ-теста на head/num/ctx локализацию.
+7. `4707956` — **Templates + Python labels**: `dossier.html` все RU-literals → `{{ t.X }}`, page footer CSS counter sandwich, `template_filters.py` closure-factories, `chart_renderer.py` принимает messages, `pdf_renderer.py` контекст с `t = messages`, removed module-level RU mappings (recommendation/legal_form/kpi_label/signal_breakdown/evidence_label).
+8. `a7de8a3` — **Endpoint `?lang=`**: `Query(default=None, "ru"|"uz")`, fallback chain `query → brand.default_lang → "ru"`, `BrandConfig.default_lang` optional поле, audit-log `payload={"lang": ...}`.
+
+**Hygiene fix внутри commit 7**: methodology «17 правил» → `{rules_count}` placeholder, резолвится из `dossier.rules_evaluated` (sync с фактическими 19 в YAML).
+
+**Acceptance**: `GET /api/dossier/{id}/pdf?lang=uz` рендерит полностью узбекское досье без RU-fallback в content. Tested на 793/793 local pytest + ruff + mypy strict + CI зелёный. Live-browser/WeasyPrint smoke (нужен Docker `api`) пока не выполнен в Windows-сессии — heads-up для production-merge.
+
+**Backlog (не T0.4)**: per-version registry loader для historical-name immutability (`rule_version` уже сериализуется, можно подгружать old YAML); `uzbekbank.json` получит `"defaultLang": "uz"` после UZ-demo validation.
 
 ---
 
