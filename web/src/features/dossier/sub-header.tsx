@@ -1,7 +1,7 @@
 "use client";
 
 import { Download, RefreshCw } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 
 import { rememberStep1Prefill } from "@/features/manual-input/prefill";
@@ -38,7 +38,12 @@ export function SubHeader({
   const t = useTranslations("dossier.sub_header");
   const tBorrower = useTranslations("dossier.borrower_card");
   const router = useRouter();
-  const pdfHref = `/api/dossier/${dossierId}/pdf`;
+  // T0.4 / ADR-0015: current UI locale → ?lang= в PDF URL, чтобы download
+  // совпадал с тем, что аналитик видит на экране. BFF также читает cookie
+  // как fallback, но клиентский query даёт single source of truth (без
+  // расхождения между optimistic UI swap и cookie-write timing).
+  const locale = useLocale();
+  const pdfHref = `/api/dossier/${dossierId}/pdf?lang=${locale}`;
 
   const handleRebuild = () => {
     rememberStep1Prefill({

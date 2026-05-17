@@ -2,14 +2,20 @@
 // На bank install обязателен Bearer (backend требует auth); на accountant —
 // header просто не добавляется, endpoint открыт. Same-origin URL позволяет
 // открывать ссылку в новой вкладке без CORS/credentials проблем.
+//
+// T0.4 / ADR-0015: query-param ?lang= пробрасывается со стороны клиента
+// (`/dossier/[id]` page кладёт current locale из cookie в URL); если client
+// его не задал — BFF дополнительно читает cookie `ca_locale` и форвардит
+// дальше. Backend fallback chain: explicit query → brand.default_lang → "ru".
 
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 import { ACCESS_COOKIE, API_URL } from "@/lib/config";
+import { LOCALE_COOKIE, readLocaleCookie } from "@/lib/locale-cookie";
 
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
@@ -19,7 +25,16 @@ export async function GET(
   const headers: Record<string, string> = {};
   if (access) headers.Authorization = `Bearer ${access}`;
 
-  const upstream = await fetch(`${API_URL}/api/dossier/${id}/pdf`, {
+  // Resolve lang: client query > ca_locale cookie > backend brand default.
+  const reqUrl = new URL(req.url);
+  const clientLang = reqUrl.searchParams.get("lang");
+  const cookieLang = readLocaleCookie(store.get(LOCALE_COOKIE)?.value);
+  const lang = clientLang ?? cookieLang;
+
+  const upstreamUrl = new URL(`${API_URL}/api/dossier/${id}/pdf`);
+  if (lang) upstreamUrl.searchParams.set("lang", lang);
+
+  const upstream = await fetch(upstreamUrl.toString(), {
     headers,
     cache: "no-store",
   });
