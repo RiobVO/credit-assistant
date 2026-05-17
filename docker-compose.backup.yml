@@ -1,0 +1,49 @@
+# T3.4 — Backup sidecar override.
+#
+# Подъём:
+#   docker compose -f docker-compose.yml -f docker-compose.backup.yml up -d
+#
+# Сервис db-backup поднимается отдельным контейнером постгрес-альпайн (тот же
+# image что и postgres → одинаковый pg_dump major-version), ставит dcron и age
+# при первом старте, прописывает crontab "0 2 * * *" → запускает
+# /scripts/backup_postgres.sh каждые сутки в 02:00 UTC.
+#
+# Host bind ./backups → /var/backups/credit-assistant в контейнере. Host видит
+# свежие dumps в .gitignored директории.
+#
+# Production: системный systemd-timer вместо sidecar (см. db-backup.md
+# Section 5). Tarball deploy (T3.6) включит обе опции.
+
+services:
+  db-backup:
+    image: postgres:16-alpine
+    container_name: credit-db-backup
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGUSER: credit
+      PGPASSWORD: credit
+      PGDATABASE: credit_assistant
+      BACKUP_DIR: /var/backups/credit-assistant
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-7}
+      # Опционально: путь к age public key. Если задан — backup шифруется.
+      # Default не задан → plain *.dump (dev mode).
+      BACKUP_AGE_RECIPIENT: ${BACKUP_AGE_RECIPIENT:-}
+    volumes:
+      - ./scripts:/scripts:ro
+      - ./backups:/var/backups/credit-assistant
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        set -e
+        apk add --no-cache dcron age >/dev/null
+        chmod +x /scripts/backup_postgres.sh /scripts/restore_drill.sh
+        echo "0 2 * * * PGHOST=$$PGHOST PGPORT=$$PGPORT PGUSER=$$PGUSER PGPASSWORD=$$PGPASSWORD PGDATABASE=$$PGDATABASE BACKUP_DIR=$$BACKUP_DIR BACKUP_RETENTION_DAYS=$$BACKUP_RETENTION_DAYS BACKUP_AGE_RECIPIENT=$$BACKUP_AGE_RECIPIENT /scripts/backup_postgres.sh >> /var/log/backup.log 2>&1" > /etc/crontabs/root
+        echo "credit-db-backup ready: daily pg_dump at 02:00 UTC → $$BACKUP_DIR"
+        # Foreground cron-loop.
+        exec crond -f -l 8
