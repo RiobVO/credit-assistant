@@ -78,3 +78,9 @@ photos/
 photo_*.jpg
 photo_*.png
 backup-pre-t13.sql
+
+# T3.4: Postgres backups (encrypted/plain dumps + age private keys)
+backups/
+*.dump
+*.dump.age
+backup-age-identity.txt
