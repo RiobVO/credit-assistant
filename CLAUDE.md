@@ -48,10 +48,11 @@ Heads-up: **live-browser smoke** через `/`, `/search`, `/history`, `/dossie
 > **Critical rule:** работаю ТОЛЬКО над активным Tier. Всё что не в Tier 0–4 — Frozen.
 
 ### Active Tier 0 — Deal-breakers
-- **T0.1** Real soliq fixtures via personal ETSP (3–4 фирмы × 5 типов = 15–20 xltx, gitignore + анонимизированные в git).
+- **T0.1** Real soliq fixtures via personal ETSP (3–4 фирмы × 5 типов = 15–20 xltx, gitignore + анонимизированные в git). Инфра готова (`6ee7a12`), 3 фирмы (22 файла) на месте, см. `tests/parsers/real_xltx_test.py`.
 - **T0.2** CBU API real integration (CA-024b) — live USD/UZS rate + caching + legal review параллельно.
 - **T0.3** ГНК Phase A: manual upload справок (CA-003 Phase A). Public lookup отложен до legal-clearance.
 - **T0.4** UZ-локализация PDF (CA-DS29-pdf) — templates + `Rule.name_uz` + YAML migration + endpoint `?lang=`.
+- ~~**T0.5** VAT parser fix для real 10006_41/45/47 (промоут из CA-015)~~ → **DONE 2026-05-17 (commit `f5d7495`)**: NKM rows, trailing-empty stop, v1/v2 header dispatch. 19 real-xltx pass + 4 profit_tax xfail.
 
 ### Tier 1–4 (после T0)
 - **T1** Prod-killers: case_id sequence (CA-DS18b/c), refresh-token rotation + Redis (CA-019), PII encryption at rest (column-level через app-layer, **не наивный pgcrypto на JSONB** — см. ADR-0014 to write), multi-tenant runtime isolation (BRAND_ID env + startup assertion), LDAP/OAuth (CA-020).
