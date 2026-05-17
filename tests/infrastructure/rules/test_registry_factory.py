@@ -44,7 +44,8 @@ class TestLoadRegistryMismatch:
             "    name_uz: x\n"
             "    category: financial\n"
             "    severity: low\n"
-            "    source: nope\n",
+            "    source: nope\n"
+            "    source_uz: nope_uz\n",
             encoding="utf-8",
         )
         with pytest.raises(RuleConfigError, match="not implemented in code"):
@@ -60,7 +61,8 @@ class TestLoadRegistryMismatch:
             "    name_uz: x\n"
             "    category: structural\n"
             "    severity: medium\n"
-            "    source: src\n",
+            "    source: src\n"
+            "    source_uz: src_uz\n",
             encoding="utf-8",
         )
         with pytest.raises(RuleConfigError, match="not declared in YAML"):
@@ -75,7 +77,8 @@ class TestLoadRegistryMismatch:
             "    name_uz: x\n"
             "    category: structural\n"
             "    severity: urgent\n"  # invalid
-            "    source: src\n",
+            "    source: src\n"
+            "    source_uz: src_uz\n",
             encoding="utf-8",
         )
         with pytest.raises(ValueError):
@@ -90,7 +93,8 @@ class TestLoadRegistryMismatch:
             "    name: x\n"
             "    category: structural\n"
             "    severity: medium\n"
-            "    source: src\n",
+            "    source: src\n"
+            "    source_uz: src_uz\n",
             encoding="utf-8",
         )
         with pytest.raises(ValueError, match="name_uz"):
