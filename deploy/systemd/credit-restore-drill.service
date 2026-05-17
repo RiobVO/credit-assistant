@@ -1,0 +1,17 @@
+# T3.4 + T3.6 — weekly restore drill через systemd timer.
+
+[Unit]
+Description=Credit Assistant — Postgres restore drill verification
+Requires=credit-assistant.service
+After=credit-assistant.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/credit-assistant
+EnvironmentFile=/opt/credit-assistant/.env
+ExecStart=/usr/bin/docker compose \
+    -f /opt/credit-assistant/docker-compose.yml \
+    -f /opt/credit-assistant/docker-compose.backup.yml \
+    exec -T db-backup /scripts/restore_drill.sh
+StandardOutput=journal
+StandardError=journal
