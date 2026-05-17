@@ -20,6 +20,7 @@ def single_supplier_concentration(snapshot: BorrowerSnapshot) -> FiringEvidence 
         return None
     return FiringEvidence(
         message=f"Один поставщик = {max_share:.0%} закупок",
+        message_uz=f"Bitta yetkazib beruvchi = xaridlarning {max_share:.0%}",
         evidence={
             "max_supplier_inn": max_inn,
             "max_supplier_share": str(max_share),

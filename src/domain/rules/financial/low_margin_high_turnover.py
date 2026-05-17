@@ -33,9 +33,14 @@ def low_margin_high_turnover(snapshot: BorrowerSnapshot) -> FiringEvidence | Non
     # evidence message читается плохо. Млрд для сравнения с порогом
     # 5 млрд сум, под которым правило не срабатывает.
     revenue_bln = (revenue / Decimal("1000000000")).quantize(Decimal("0.1"))
-    revenue_str = f"{revenue_bln} млрд сум".replace(".", ",")
+    revenue_decimal_str = str(revenue_bln).replace(".", ",")
+    revenue_str_ru = f"{revenue_decimal_str} млрд сум"
+    # T0.4 follow-up B2: UZ-параллель того же formatted-чанка
+    # (RU-числа + UZ-суффикс, согласовано с formatBigUzs/formatRevenueShort).
+    revenue_str_uz = f"{revenue_decimal_str} mlrd soʻm"
     return FiringEvidence(
-        message=f"Маржа {margin:.1%} при годовой выручке {revenue_str}",
+        message=f"Маржа {margin:.1%} при годовой выручке {revenue_str_ru}",
+        message_uz=f"Yillik tushum {revenue_str_uz}, marja esa {margin:.1%}",
         evidence={
             "revenue": str(revenue),
             "net_profit": str(latest.net_profit.amount),

@@ -20,6 +20,8 @@ def _red_flag_to_dict(rf: RedFlag) -> dict[str, Any]:
         # без ключа читаются через fallback ниже.
         "source_uz": rf.source_uz,
         "message": rf.message,
+        # T0.4 follow-up B2: UZ-перевод message в snapshot. Тот же fallback.
+        "message_uz": rf.message_uz,
         "evidence": dict(rf.evidence),
         "detected_at": rf.detected_at.isoformat(),
     }
@@ -36,6 +38,10 @@ def _red_flag_from_dict(d: dict[str, Any]) -> RedFlag:
         # языках — semantic loss минимальный, regulatory risk отсутствует.
         source_uz=d.get("source_uz", d["source"]),
         message=d["message"],
+        # B2 backward-compat: старые JSONB без message_uz → fallback на RU
+        # message. Re-render досье на UZ покажет RU-описание сработавшего
+        # правила — acceptable (text content человеко-читаем на обоих языках).
+        message_uz=d.get("message_uz", d["message"]),
         evidence=dict(d.get("evidence") or {}),
         detected_at=date.fromisoformat(d["detected_at"]),
     )

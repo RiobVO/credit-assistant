@@ -37,6 +37,7 @@ def vat_growth_no_revenue(snapshot: BorrowerSnapshot) -> FiringEvidence | None:
 
     return FiringEvidence(
         message=f"НДС вырос {vat_growth:.0%} при росте выручки {revenue_growth:.0%}",
+        message_uz=f"QQS {vat_growth:.0%} oʻsdi, tushum esa {revenue_growth:.0%} ga oʻsgan",
         evidence={
             "vat_growth_pct": str(vat_growth),
             "revenue_growth_pct": str(revenue_growth),

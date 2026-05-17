@@ -25,6 +25,7 @@ def bank_account_frozen_12m(snapshot: BorrowerSnapshot) -> FiringEvidence | None
 
     return FiringEvidence(
         message=f"Счёт приостановлен {len(freezes)} раз за последние 12 мес",
+        message_uz=f"Soʻnggi 12 oyda hisob raqami {len(freezes)} marta toʻxtatilgan",
         evidence={
             "freeze_count": len(freezes),
             "dates": [ev.date.isoformat() for ev in freezes],

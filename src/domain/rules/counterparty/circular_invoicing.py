@@ -42,6 +42,7 @@ def circular_invoicing(snapshot: BorrowerSnapshot) -> FiringEvidence | None:
 
     return FiringEvidence(
         message=f"Подозрение на циклические ЭСФ с {len(cycles)} контрагентами",
+        message_uz=f"{len(cycles)} ta kontragent bilan tsiklik EHF shubhasi",
         evidence={
             "cycle_count": len(cycles),
             "counterparty_inns": sorted(cycles),
