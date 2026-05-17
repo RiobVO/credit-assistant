@@ -38,6 +38,37 @@ class TestVatDeclarationHeader:
         assert h.submitted_at == date(2026, 4, 20)
         assert h.parse_warnings == []
 
+
+class TestVatDeclarationHeaderV1:
+    """T0.5 Bug C: legacy 10006_41 layout — координаты сдвинуты влево на 2-4 колонки."""
+
+    def test_v1_header_parsed_from_legacy_coords(self) -> None:
+        # Строим v1 layout вручную — sentinel в D8, координаты по v1 mapping:
+        # INN=C3, name=F9, year=K5, period_kind=I5, date=F17.
+        from openpyxl import Workbook
+
+        wb = Workbook()
+        ws = wb.active
+        assert ws is not None
+        ws.title = "list01"
+        ws["B3"] = "ИНН"
+        ws["C3"] = 305002665
+        ws["I5"] = "месяц"
+        ws["K5"] = 2025
+        ws["D8"] = "СВЕДЕНИЯ о плательщике налога на добавленную стоимость"
+        ws["F9"] = '"ZAMIN NOZ NEMATLARI" MAS\'ULIYATI CHEKLANGAN JAMIYAT'
+        ws["F17"] = "20.01.2026"
+        # max_column не должен превысить v1 threshold (14): самый правый — K (col 11).
+        assert ws.max_column < 14
+
+        h = parse_header(wb, SoliqXltxFormat.VAT_DECLARATION_V1)
+        assert h.borrower_inn == INN("305002665")
+        assert h.organization_name == '"ZAMIN NOZ NEMATLARI" MAS\'ULIYATI CHEKLANGAN JAMIYAT'
+        assert h.period_year == 2025
+        assert h.period_kind == "month"
+        assert h.submitted_at == date(2026, 1, 20)
+        assert h.parse_warnings == []
+
     def test_inn_as_string_with_whitespace(self) -> None:
         wb = build_vat_declaration_wb(inn="  306399449  ")
         h = parse_header(wb, SoliqXltxFormat.VAT_DECLARATION)
