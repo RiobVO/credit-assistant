@@ -12,7 +12,12 @@ from __future__ import annotations
 from decimal import Decimal
 
 from application.dto.kpi_bundle import KpiLevelTone, KpiUnit, KpiValue
+from infrastructure.i18n.pdf_messages import load_pdf_messages
 from infrastructure.reports.pdf.pdf_renderer import _kpi_slot
+from infrastructure.reports.pdf.template_filters import make_fmt_uzs
+
+_RU = load_pdf_messages("ru")
+_FMT_UZS = make_fmt_uzs(_RU)
 
 
 def test_kpi_slot_includes_level_tone_warn() -> None:
@@ -24,7 +29,7 @@ def test_kpi_slot_includes_level_tone_warn() -> None:
         sparkline=(),
         level_tone=KpiLevelTone.WARN,
     )
-    slot = _kpi_slot("roe", kpi)
+    slot = _kpi_slot("roe", kpi, _RU, _FMT_UZS)
     assert slot["level_tone"] == "warn"
 
 
@@ -36,7 +41,7 @@ def test_kpi_slot_includes_level_tone_good() -> None:
         sparkline=(),
         level_tone=KpiLevelTone.GOOD,
     )
-    slot = _kpi_slot("debt_to_ebit", kpi)
+    slot = _kpi_slot("debt_to_ebit", kpi, _RU, _FMT_UZS)
     assert slot["level_tone"] == "good"
 
 
@@ -48,7 +53,7 @@ def test_kpi_slot_includes_level_tone_bad() -> None:
         sparkline=(),
         level_tone=KpiLevelTone.BAD,
     )
-    slot = _kpi_slot("debt_to_ebit", kpi)
+    slot = _kpi_slot("debt_to_ebit", kpi, _RU, _FMT_UZS)
     assert slot["level_tone"] == "bad"
 
 
@@ -61,12 +66,12 @@ def test_kpi_slot_no_level_tone_for_revenue_ltm() -> None:
         yoy_pct=Decimal("18.2"),
         sparkline=(),
     )
-    slot = _kpi_slot("revenue_ltm", kpi)
+    slot = _kpi_slot("revenue_ltm", kpi, _RU, _FMT_UZS)
     assert slot["level_tone"] is None
 
 
 def test_kpi_slot_none_kpi_returns_level_tone_none() -> None:
     """Empty KPI (degraded mode) — level_tone None, чтобы шаблон не упал
     при `{% if slot.level_tone %}`."""
-    slot = _kpi_slot("ebit", None)
+    slot = _kpi_slot("ebit", None, _RU, _FMT_UZS)
     assert slot["level_tone"] is None
