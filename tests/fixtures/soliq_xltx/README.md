@@ -23,11 +23,10 @@
      tests/fixtures/soliq_xltx/vat_decl_q4_2025_anon.xltx
    ```
 
-3. Прогнать integration:
+3. Прогнать тест (Docker не нужен — тест лежит в `tests/parsers/`, не `tests/integration/`):
 
    ```bash
-   docker compose exec -T api bash -c \
-     "cd /app && PYTHONPATH=/app/src uv run python -m pytest tests/integration/real_xltx_test.py -v"
+   uv run python -m pytest tests/parsers/real_xltx_test.py -v
    ```
 
    Ожидание:
@@ -51,3 +50,10 @@
 - Структура листов (`list01..list15`) — определяет тип файла.
 
 Если после прогона `parse_warnings != []` на anon-файле, но на оригинале их не было — anonymizer что-то сломал. Уменьшить `_AMOUNT_THRESHOLD` или сузить `_COMPANY_PATTERN` в `scripts/anonymize_xltx.py`.
+
+## ⚠ Trade-off: rule-engine на anon-данных
+
+`/10` сохраняет **пропорции** (debt/equity, ROE, margins, growth rates) — KPI работают.
+Абсолютные пороги — **нет**. Правила вида «revenue < 100M UZS critical» сработают иначе на anon.
+
+Acceptance T0.1 (`parse_warnings == []`) этим не затронут — парсер на абсолютные суммы не смотрит. Но при добавлении rule-engine тестов: absolute-threshold правила тестируй на synthetic fixtures из `tests/fixtures/synthetic_borrowers.py`, не на `*_anon.xltx`.
