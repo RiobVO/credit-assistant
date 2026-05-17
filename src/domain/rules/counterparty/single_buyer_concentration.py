@@ -20,6 +20,7 @@ def single_buyer_concentration(snapshot: BorrowerSnapshot) -> FiringEvidence | N
         return None
     return FiringEvidence(
         message=f"Один покупатель = {max_share:.0%} выручки",
+        message_uz=f"Bitta xaridor = tushumning {max_share:.0%}",
         evidence={
             "max_buyer_inn": max_inn,
             "max_buyer_share": str(max_share),

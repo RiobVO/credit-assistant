@@ -84,6 +84,10 @@ function SignalRow({ flag }: { flag: RedFlagDto }) {
   // случай тестовых mock'ов без поля.
   const sourceText =
     locale === "uz" && flag.source_uz ? flag.source_uz : flag.source;
+  // T0.4 follow-up B2: locale-aware message. Та же безопасная конструкция
+  // (mock'и в RTL могут не задать message_uz — для них fallback на RU).
+  const messageText =
+    locale === "uz" && flag.message_uz ? flag.message_uz : flag.message;
 
   return (
     <li className="px-[22px]">
@@ -100,7 +104,7 @@ function SignalRow({ flag }: { flag: RedFlagDto }) {
         <div className="min-w-0 flex-1">
           <div className="text-[13.5px] font-medium text-[var(--ink-1)]">{label}</div>
           <div className="mt-0.5 truncate text-[11.5px] text-[var(--ink-3)]">
-            {flag.message}
+            {messageText}
           </div>
         </div>
         {value ? (
@@ -126,7 +130,7 @@ function SignalRow({ flag }: { flag: RedFlagDto }) {
             <dd>{severityLabel}</dd>
 
             <dt className="text-[var(--ink-3)]">{t("field_message")}</dt>
-            <dd>{flag.message}</dd>
+            <dd>{messageText}</dd>
 
             {evidenceEntries.length > 0 && (
               <>

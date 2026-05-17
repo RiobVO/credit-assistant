@@ -27,6 +27,7 @@ def loan_to_revenue_ratio(snapshot: BorrowerSnapshot) -> FiringEvidence | None:
         # Заём при нулевой выручке — фиксируем ratio=∞ через большое число
         return FiringEvidence(
             message=f"Запрашиваем {loan} при нулевой выручке за период",
+            message_uz=f"Davr boʻyicha nol tushumda {loan} soʻralmoqda",
             evidence={"ratio": "infinity", "loan": str(loan), "annual_revenue": "0"},
         )
 
@@ -35,5 +36,6 @@ def loan_to_revenue_ratio(snapshot: BorrowerSnapshot) -> FiringEvidence | None:
         return None
     return FiringEvidence(
         message=f"Сумма заёма {ratio:.0%} от годовой выручки",
+        message_uz=f"Qarz summasi yillik tushumning {ratio:.0%}",
         evidence={"ratio": ratio, "loan": str(loan), "annual_revenue": str(revenue)},
     )

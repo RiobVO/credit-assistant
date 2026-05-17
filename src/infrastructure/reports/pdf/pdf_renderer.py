@@ -393,12 +393,14 @@ def _build_red_flags_view(
         # T0.4 follow-up B1: source локализуется. Для old snapshot'ов без
         # source_uz mapper подставил RU fallback (см. dossier_mapper).
         source_label = f.source_uz if is_uz and f.source_uz else f.source
+        # T0.4 follow-up B2: message локализуется тем же шаблоном fallback'а.
+        description_label = f.message_uz if is_uz and f.message_uz else f.message
         rendered.append(
             {
                 "rule_id": f.rule_id,
                 # Phase 10: human-readable заголовок из YAML вместо rule_id.
                 "name": rule_names.get(f.rule_id, f.rule_id),
-                "description": f.message,
+                "description": description_label,
                 "severity": sev_str,
                 "severity_label": severity_label(sev_str),
                 "source": source_label,

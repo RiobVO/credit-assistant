@@ -1,7 +1,7 @@
-"""Unit-тесты `_build_red_flags_view` (T0.4 follow-up B1).
+"""Unit-тесты `_build_red_flags_view` (T0.4 follow-up B1+B2).
 
-Проверяем что locale-aware source picker подставляет ``source_uz`` для
-UZ-bundle и RU ``source`` для RU-bundle. Pure-Python, без WeasyPrint —
+Проверяем что locale-aware picker подставляет ``source_uz`` + ``message_uz``
+для UZ-bundle и RU-варианты для RU-bundle. Pure-Python, без WeasyPrint —
 безопасно запускается на Windows.
 """
 
@@ -26,7 +26,8 @@ def _flag() -> RedFlag:
         severity=FlagSeverity.CRITICAL,
         source="НК РУз ст. 256; Soliq внутренние методики",
         source_uz="НК РУз ст. 256; Soliq ichki uslublari",
-        message="QQS deklaratsiyasi va EHF oʻrtasidagi farq 80%",
+        message="Декларация НДС vs ЭСФ расходится на 80%",
+        message_uz="QQS deklaratsiyasi va EHF 80% ga farqlanadi",
         evidence={},
         detected_at=date(2026, 5, 8),
     )
@@ -36,27 +37,32 @@ def _dossier_with(flag: RedFlag) -> SimpleNamespace:
     return SimpleNamespace(red_flags=(flag,))
 
 
-def test_red_flags_view_uses_ru_source_for_ru_messages() -> None:
+def test_red_flags_view_uses_ru_source_and_message_for_ru_locale() -> None:
     view = _build_red_flags_view(_dossier_with(_flag()), {"VAT_ESF_MISMATCH": "X"}, _RU)
     assert view[0]["source"] == "НК РУз ст. 256; Soliq внутренние методики"
+    assert view[0]["description"] == "Декларация НДС vs ЭСФ расходится на 80%"
 
 
-def test_red_flags_view_uses_uz_source_for_uz_messages() -> None:
+def test_red_flags_view_uses_uz_source_and_message_for_uz_locale() -> None:
     view = _build_red_flags_view(_dossier_with(_flag()), {"VAT_ESF_MISMATCH": "X"}, _UZ)
     assert view[0]["source"] == "НК РУз ст. 256; Soliq ichki uslublari"
+    assert view[0]["description"] == "QQS deklaratsiyasi va EHF 80% ga farqlanadi"
 
 
-def test_red_flags_view_falls_back_to_ru_when_source_uz_empty() -> None:
-    """Backward-compat для test-fixtures и legacy data, где source_uz == ""."""
+def test_red_flags_view_falls_back_to_ru_when_uz_fields_empty() -> None:
+    """Backward-compat для test-fixtures и legacy data, где source_uz /
+    message_uz == "" — re-render на UZ показывает RU-cite + RU description."""
     flag = RedFlag(
         rule_id="REVENUE_DROP_MOM_30",
         rule_version="v1",
         severity=FlagSeverity.HIGH,
         source="ЦБ РУз положение №27-п",
-        source_uz="",  # пустой — например, после старого snapshot или test-mock
+        source_uz="",
         message="Падение выручки 42%",
+        message_uz="",
         evidence={},
         detected_at=date(2026, 5, 8),
     )
     view = _build_red_flags_view(_dossier_with(flag), {"REVENUE_DROP_MOM_30": "X"}, _UZ)
     assert view[0]["source"] == "ЦБ РУз положение №27-п"
+    assert view[0]["description"] == "Падение выручки 42%"
