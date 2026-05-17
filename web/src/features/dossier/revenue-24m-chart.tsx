@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import {
   Bar,
@@ -17,7 +17,7 @@ import {
 import { SectionCard } from "@/components/section-card";
 import type { DossierViewDto } from "@/lib/api";
 
-import { formatBigUzs, formatMonthShort } from "./format";
+import { formatBigUzs, formatMonthShort, type UzsLocale } from "./format";
 
 const PERIODS = [
   { value: 24, key: "period_24" as const },
@@ -35,6 +35,7 @@ export function Revenue24mChart({
   hasAnnualRevenue: boolean;
 }) {
   const t = useTranslations("dossier.revenue_chart");
+  const locale = useLocale() as UzsLocale;
   const [period, setPeriod] = useState<Period>(24);
 
   // Backend отдаёт Decimal как str — парсим один раз. Recharts работает
@@ -118,7 +119,7 @@ export function Revenue24mChart({
                 const num = typeof value === "number" ? value : Number(value);
                 const label =
                   name === "revenue" ? t("tooltip_revenue") : t("tooltip_trend");
-                return [formatBigUzs(num), label];
+                return [formatBigUzs(num, locale), label];
               }}
             />
             <Bar dataKey="revenue" barSize={Math.min(22, 600 / slice.length)}>

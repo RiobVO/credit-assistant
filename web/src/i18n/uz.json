@@ -386,7 +386,7 @@
       "mini_signals_value": "{fired} / {total}",
       "spark_label": "Tushum · 12 oy",
       "spark_observations": "{count} / 12 kuzatish",
-      "spark_value_format": "{month} · {value} mln so'm",
+      "spark_value_format": "{month} · {value} mln soʻm",
       "month_short_1": "Yan",
       "month_short_2": "Fev",
       "month_short_3": "Mar",
