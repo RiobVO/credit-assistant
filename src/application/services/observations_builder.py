@@ -4,6 +4,10 @@ Phase 10 cover bottom half = executive summary rationale. Compliance officer
 открывает PDF → сразу видит **почему** rule engine выдал именно эту
 рекомендацию.
 
+T0.4 / ADR-0015: head/num/ctx локализуются через ``PdfMessages``.
+Format-placeholders (``{pct}``, ``{years}``, ...) резолвятся в этом
+модуле — единственная точка для observations-related строк.
+
 Структура:
 * Strengths — derived из позитивных KPI / финансовых трендов (revenue growth,
   ROE>15, multi-year profit, low debt). До 3 пунктов, отсортированных
@@ -21,6 +25,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 
 from application.dto.kpi_bundle import KpiBundle, KpiLevelTone
+from application.dto.pdf_messages import PdfMessages
 from domain.entities.borrower_snapshot import BorrowerSnapshot
 from domain.entities.red_flag import RedFlag
 from domain.rules.rule import RuleRegistry, UnknownRuleError
@@ -48,10 +53,11 @@ def build_observations(
     kpis: KpiBundle,
     red_flags: tuple[RedFlag, ...],
     registry: RuleRegistry,
+    messages: PdfMessages,
 ) -> Observations:
     """Собирает strengths (по KPI/financials) и risks (top red flags)."""
     return Observations(
-        strengths=_build_strengths(snapshot, kpis),
+        strengths=_build_strengths(snapshot, kpis, messages),
         risks=_build_risks(red_flags, registry),
     )
 
@@ -60,7 +66,7 @@ def build_observations(
 
 
 def _build_strengths(
-    snapshot: BorrowerSnapshot, kpis: KpiBundle
+    snapshot: BorrowerSnapshot, kpis: KpiBundle, messages: PdfMessages
 ) -> tuple[Observation, ...]:
     """Кандидаты: revenue growth · strong ROE · positive profit · low debt.
 
@@ -69,19 +75,19 @@ def _build_strengths(
     """
     candidates: list[Observation] = []
 
-    revenue_obs = _revenue_growth_observation(snapshot, kpis)
+    revenue_obs = _revenue_growth_observation(snapshot, kpis, messages)
     if revenue_obs:
         candidates.append(revenue_obs)
 
-    roe_obs = _roe_observation(kpis)
+    roe_obs = _roe_observation(kpis, messages)
     if roe_obs:
         candidates.append(roe_obs)
 
-    profit_obs = _net_profit_observation(snapshot)
+    profit_obs = _net_profit_observation(snapshot, messages)
     if profit_obs:
         candidates.append(profit_obs)
 
-    debt_obs = _debt_observation(kpis)
+    debt_obs = _debt_observation(kpis, messages)
     if debt_obs:
         candidates.append(debt_obs)
 
@@ -89,38 +95,41 @@ def _build_strengths(
 
 
 def _revenue_growth_observation(
-    snapshot: BorrowerSnapshot, kpis: KpiBundle
+    snapshot: BorrowerSnapshot, kpis: KpiBundle, messages: PdfMessages
 ) -> Observation | None:
     if kpis.revenue_ltm is None or kpis.revenue_ltm.yoy_pct is None:
         return None
     yoy = kpis.revenue_ltm.yoy_pct
     if yoy <= 0:
         return None
+    pct_str = _format_pct(yoy)
     annuals = sorted(snapshot.annual_reports, key=lambda r: r.period.start)
     if len(annuals) >= 2:
         chain = " → ".join(_format_billion(r.revenue.amount) for r in annuals[-3:])
-        ctx = f"{len(annuals)} года подряд: {chain} млрд сум"
+        ctx = messages.obs_revenue_growth_ctx_chain.format(years=len(annuals), chain=chain)
     else:
-        ctx = "положительная динамика выручки LTM"
+        ctx = messages.obs_revenue_growth_ctx_ltm_only
     return Observation(
-        head=f"Рост выручки +{_format_pct(yoy)} YoY",
-        num=f"+{_format_pct(yoy)}",
+        head=messages.obs_revenue_growth_head.format(pct=pct_str),
+        num=f"+{pct_str}",
         ctx=ctx,
     )
 
 
-def _roe_observation(kpis: KpiBundle) -> Observation | None:
+def _roe_observation(kpis: KpiBundle, messages: PdfMessages) -> Observation | None:
     if kpis.roe is None or kpis.roe.level_tone != KpiLevelTone.GOOD:
         return None
     roe_value = _format_pct(kpis.roe.value)
     return Observation(
-        head=f"ROE {roe_value} выше отраслевого медианного",
+        head=messages.obs_roe_head.format(value=roe_value),
         num=roe_value,
-        ctx="бенчмарк опт. торговли пищ. продуктами ≈ 12%",
+        ctx=messages.obs_roe_ctx,
     )
 
 
-def _net_profit_observation(snapshot: BorrowerSnapshot) -> Observation | None:
+def _net_profit_observation(
+    snapshot: BorrowerSnapshot, messages: PdfMessages
+) -> Observation | None:
     annuals = sorted(snapshot.annual_reports, key=lambda r: r.period.start)
     if len(annuals) < 2:
         return None
@@ -136,31 +145,35 @@ def _net_profit_observation(snapshot: BorrowerSnapshot) -> Observation | None:
             * Decimal(100)
         )
         if growth > 0:
-            growth_ctx = f"+{_format_pct(growth)} к {prior.period.start.year} году"
-    num = f"{_format_billion(latest.net_profit.amount)} млрд"
+            growth_ctx = messages.obs_profit_ctx_growth.format(
+                pct=_format_pct(growth),
+                prior_year=prior.period.start.year,
+            )
+    num = _format_billion(latest.net_profit.amount)
+    year = latest.period.start.year
     return Observation(
-        head=f"Чистая прибыль {num} сум в {latest.period.start.year}",
+        head=messages.obs_profit_head.format(num=num, year=year),
         num=num,
-        ctx=growth_ctx or f"положительный результат в {latest.period.start.year}",
+        ctx=growth_ctx or messages.obs_profit_ctx_positive.format(year=year),
     )
 
 
-def _debt_observation(kpis: KpiBundle) -> Observation | None:
+def _debt_observation(kpis: KpiBundle, messages: PdfMessages) -> Observation | None:
     if kpis.debt_to_ebit is None:
         return None
     if kpis.debt_to_ebit.value == Decimal(0):
         return Observation(
-            head="Нет долговой нагрузки",
+            head=messages.obs_no_debt_head,
             num="0",
-            ctx="суммарный долг равен нулю — кредитное плечо отсутствует",
+            ctx=messages.obs_no_debt_ctx,
         )
     if kpis.debt_to_ebit.level_tone != KpiLevelTone.GOOD:
         return None
     ratio = _format_ratio(kpis.debt_to_ebit.value)
     return Observation(
-        head=f"Долг / EBIT {ratio} — низкая нагрузка",
+        head=messages.obs_debt_ratio_head.format(ratio=ratio),
         num=ratio,
-        ctx="порог GOOD: <2× по внутренним методикам банков-партнёров",
+        ctx=messages.obs_debt_ratio_ctx,
     )
 
 
@@ -173,8 +186,13 @@ def _build_risks(
     """Топ-N red flags по severity (critical → high → medium → low).
 
     Имя правила берётся из ``registry.by_id(rule_id).name`` — human-readable
-    из YAML. Числовое evidence (доля поставщика, % просрочки, и т.д.) идёт
-    в ``num`` и подсвечивается цветом в шаблоне.
+    из YAML. ``RenderDossierPdf`` подменяет на ``name_uz`` через rule_names
+    маппинг, но cover-observations всегда читают ``rule.name`` (RU canonical).
+    UZ-локаль cover-risks использует ``rule_names[rule_id]`` через template,
+    не через builder — упрощает зависимости.
+
+    Числовое evidence (доля поставщика, % просрочки, и т.д.) идёт в ``num``
+    и подсвечивается цветом в шаблоне.
     """
     if not red_flags:
         return ()
