@@ -74,15 +74,21 @@ Heads-up: **live-browser smoke** через `/`, `/search`, `/history`, `/dossie
   - B4 (scope расширен в pre-impl review): `formatBigUzs(amount, locale)` + `formatRevenueShort(decimalStr, locale)` required-param — UZ-суффиксы «mlrd / mln / ming soʻm» (U+02BB). Callers (kpi-row, revenue-24m-chart, result-card) читают `useLocale()`. Convention: **RU-числа + UZ-суффикс** (banking UZ habit, консистентно с pdf-i18n/uz.json). `uz.json spark_value_format` ASCII `'` → U+02BB ʻ.
   - Тесты: 3 pytest (pdf_renderer_okved_resolver_test, новый pure-Python без WeasyPrint) + 10 vitest (format.test.ts dossier, новый) + 4 vitest (format.test.ts search, extend).
   - **Heads-up CA-DS29-apostrophe**: grep по `web/src/i18n/uz.json` нашёл **340 occurrences** ASCII apostrophe в latin-узб словах (`bo'lmadi`, `noto'g'ri`, `ma'lumot`, …). Systemic orthographic regression на весь UZ-каталог. Требует отдельного коммита-fix (bulk sed `'` → `ʻ` с проверкой каждой строки на false-positive в RU/EN тексте). **Не входит в B4 scope.**
+- `6db0061` — **B1** одним атомарным коммитом (~16 файлов):
+  - `RuleSpecYaml.source_uz` required в YAML schema; `Rule.source_uz` + `RedFlag.source_uz` (soft default="" для test-fixtures); `registry_factory` пробрасывает.
+  - **Snapshot persistence backward-compat**: `_red_flag_from_dict` fallback `d.get("source_uz", d["source"])` для старых JSONB-snapshot'ов без UZ-ключа — re-render досье на UZ покажет RU-cite (acceptable trade-off).
+  - PDF renderer: `_build_red_flags_view` switch по `messages.locale`.
+  - API: `RedFlagOutput.source_uz` + mapper fallback. Frontend: `RedFlagDto.source_uz`, SignalRow через `useLocale()` + safe fallback на пустую строку.
+  - Tabular review закрыл compliance-конвенцию: 5/19 identical (ЦБ РУз, Базель III, Group-IB, supply-chain risk practice, AML compliance), 14/19 переведены (КОʻБ kreditlash standart amaliyoti, banklarning ichki uslublari, aylanmani sunʼiy oshirish итд).
+  - Тесты: yaml_schema_test (новый), dossier_mapper_test extend (round-trip + fallback), pdf_renderer_red_flags_view_test (новый), risk-signals.test.tsx (новый, 3 кейса). **Lesson `feedback_vitest_dom_leak_cleanup`**: vitest jsdom singleton — `fireEvent.click()` без явного `afterEach(cleanup)` ломает другие тест-файлы (custom-dropdown.test failed pre-fix). testing-library auto-cleanup не покрывает все случаи в полной vitest run.
 
 **Открытый backlog (Active — Tier 1 на паузе):**
-- **B1 source_uz** — `Rule.source` хардкод RU/EN mix. ADR-0015 покрыл `name_uz`, но `source` поле в YAML — single field. Требуется `RuleSpecYaml.source_uz: str = Field(min_length=1)` + 19 source-cite на ревью. **Compliance-конвенция**: regulatory doc names («ЦБ РУз положение №27-п», «Базель III IRB», «Group-IB Uzbekistan fraud report 2024-2025») **не переводятся** — только descriptive phrases. Большая часть source_uz будет identical to source.
 - **B2 RedFlag.message** — 16 файлов в `src/domain/rules/**/*.py` имеют `message=f"..."` хардкод на RU. Tabular review + переход на `messages.X.format(...)` поверх `PdfMessages` (аналогично observations_builder rewrite в T0.4 commit 6). Backend domain rules + новые ключи в `config/pdf-i18n/{ru,uz}.json` + новые ключи в `web/src/i18n/{ru,uz}.json` (UI читает message из API). Frontend `flag.description` уже бы получал локализованный — gap derives from backend.
 - **CA-DS29-apostrophe** (новый, после B3+B4) — 340 ASCII apostrophes по uz.json, bulk fix отдельным коммитом без ревью.
 
 **Workflow agreed 2026-05-18:**
 - ~~B3 + B4 → один коммит сейчас~~ ✅ закрыто `23fb311`.
-- B1 source_uz → tabular review (короткий: большинство rows = identical-copy citation).
+- ~~B1 source_uz → tabular review~~ ✅ закрыто `6db0061` (scope ~16 файлов вместо ожидаемых 3-4 — гешefte был в snapshot persistence + API + frontend wiring).
 - B2 RedFlag.message → tabular review (16 messages, как 19 rules в T0.4 commit 3).
 - CA-DS29-apostrophe → bulk fix без ревью.
 
