@@ -7,7 +7,11 @@
 
 ## Current Status
 
-**T0.4 (UZ-локализация PDF) + follow-up complete 2026-05-18.** Все 4 gaps live-browser walkthrough'а закрыты (B1+B2 source/message_uz сквозь стек, B3 OKVED PDF picker, B4 UZS-форматтеры) + CA-DS29-apostrophe (355 ASCII apostrophes → U+02BB ʻ в uz.json). Tier 0 целиком closed. **Active — T1.1 case_id monotonic sequence** (compromised B-вариант: sequence на `dossiers` table, не на Phase 4 application entity). См. секцию «T0.4 follow-up» (история) + roadmap T1.1 (active scope).
+**T1.1 (case_id monotonic sequence) complete 2026-05-18.** Banking-grade BR-YYYY-NNNN на `dossiers.case_id` колонке (compromised B без Phase 4 application entity). Existing 47 dossiers backfilled `BR-2026-0001..0047` по `created_at` ASC. Allocator: `pg_advisory_xact_lock(year)` + `ALTER SEQUENCE RESTART` на year boundary + `nextval`. Закрывает CA-DS18b/c. Драйверы изменений: `_application_id`/`_format_application_id` derived helpers удалены, frontend `formatCaseId` + test удалены. E2E smoke (BR-2026-0048 на новый dossier) ✓.
+
+**T0.4 (UZ-локализация PDF) + follow-up complete 2026-05-18.** Все 4 gaps live-browser walkthrough'а закрыты (B1+B2 source/message_uz сквозь стек, B3 OKVED PDF picker, B4 UZS-форматтеры) + CA-DS29-apostrophe (355 ASCII apostrophes → U+02BB ʻ в uz.json). Tier 0 целиком closed.
+
+**Active — T1.2 refresh-token rotation + Redis denylist (CA-019).** См. roadmap.
 
 **Phase 10 (PDF document) закрыта 2026-05-15** (`a8f2b66`, CI `25934169074`). Финальная фаза Design Sweep — credit memorandum aesthetic: hero decision-block, observations pros/cons split, Section A identity hero с avatar + 3 stat tiles, brand-tenant через `BRAND_ID` env → `config/brands/<id>.json`, F-секция рендерит `rule.name` из YAML.
 
@@ -47,7 +51,7 @@ Heads-up: **live-browser smoke** через `/`, `/search`, `/history`, `/dossie
 - Backend `APP_MODE=bank`, `BRAND_ID=default` (default brand без `defaultLang` — fallback на «ru»; `uzbekbank.json` пока тоже без `defaultLang`, добавится после UZ-демо validation).
 - Frontend Next dev (Turbopack) `npm run dev` в web/ — порт 3000.
 - Seeded analyst для smoke: **email `t04@bank.uz`** / **password `T04Smoke!`**, без MFA.
-- Существующих dossier'ов в БД: 5. Главный smoke-target — **BR-2026-0081** («кадр дон нон», ИНН 201308534, 4 red flags, score 50, recommendation REVIEW).
+- Существующих dossier'ов в БД: 48 (47 backfilled `BR-2026-0001..0047` + 1 smoke `BR-2026-0048`). Главный smoke-target после T1.1 — найти «кадр дон нон» (ИНН 201308534) по новому case_id; legacy BR-2026-0081 теперь не существует, у того dossier'а новый sequential id.
 - Папка `smoke-pdfs/` (в .gitignore) — три PDF сравнения ru/uz/nolang.
 
 **Hotfix внутри сессии 2026-05-18:**
@@ -96,6 +100,8 @@ Heads-up: **live-browser smoke** через `/`, `/search`, `/history`, `/dossie
 - ~~CA-DS29-apostrophe bulk~~ ✅ `607d6ac` (355 ASCII `'` → U+02BB ʻ, 0 EN-contractions, JSON valid).
 
 **Tier 0 follow-up complete.** Стек полностью UZ-локализован сквозь все слои (PDF, dossier UI, search UI, source/message rules, uz.json orthography). Tier 0 базовый scope тоже complete: T0.1 4-я фирма (ИНН 305738460, +5 файлов) на месте, formal acceptance 4×5=20 (по факту 28 включая q4 / monthly variations).
+
+**T1.1 complete 2026-05-18.** Compromised B исполнен: `dossier_case_seq` Postgres sequence + `dossiers.case_id VARCHAR(20) UNIQUE NOT NULL` колонка + `CaseIdAllocator` с `pg_advisory_xact_lock(year)` + year-boundary RESTART. Backfill через `ROW_NUMBER() OVER (PARTITION BY year ORDER BY created_at, id)`. Drop'нули `_application_id` (dossier_mapper) + `_format_application_id` (pdf_renderer) — оба читают `view.case_id` напрямую. Frontend `formatCaseId` helper + test удалены; manual-input-view рендерит «—» pre-submit. Tests: 7 unit allocator + 4 integration (testcontainers) + 8 update'ов на новую `save(record, snapshot_id, case_id, ...)` сигнатуру. Lessons: (1) pre-impl grep на `DossierViewRecord(...)` callers поймал бы +4 не-в-плане файла раньше — план underestimate'нул scope ~10 → реально ~22 файла. (2) TDD-цикл поймал bug в allocator: `max_year=None` (пустая БД) не должен trigger'ить ALTER SEQUENCE RESTART — только реальный year shift. Без integration-теста с двумя последовательными allocate выпустил бы 0001/0001/0001.
 
 **Lessons:**
 - Перед мержем claim «X everywhere» обязательно `grep -rn` на hardcoded strings того класса, который локализуется. Я провалил это 3 раза (T0.4 base, LocaleSwitcher в BankTopbar, locale_full в Settings) — паттерн `feedback_nested_anchor_rtl_blind` extends: RTL/jsdom не ловит «забыл прокинуть» в shared-зоне consumers.

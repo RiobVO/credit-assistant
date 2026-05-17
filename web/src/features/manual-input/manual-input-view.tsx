@@ -27,7 +27,6 @@ import { Step3Loan } from "./components/step-3-loan";
 import { formValuesToPayload } from "./form-mapper";
 import { useFormDraft } from "./hooks/use-form-draft";
 import { SourceTrailProvider } from "./hooks/use-source-trail";
-import { formatCaseId } from "./lib/case-id";
 import { consumeStep1Prefill } from "./prefill";
 import {
   defaultFormValues,
@@ -98,12 +97,8 @@ function ManualInputPageInner() {
 
   const draft = useFormDraft({ form, initialDraftId });
 
-  // CA-DS18 Level 1: caseId — deterministic из draft.id (banking format
-  // BR-YYYY-XXXX, mirror PDF). До auto-save draft (draftId === null) → null,
-  // PageHead показывает «—» в pill. Hydration-safe: на SSR draftId всегда
-  // null, первый client render тоже null до useFormDraft создаст draft.
-  // Level 2 (Postgres sequence через application entity) → CA-DS18b.
-  const caseId = useMemo(() => formatCaseId(draft.draftId), [draft.draftId]);
+  // T1.1: case_id выдаёт backend allocator на successful dossier create.
+  // Pre-submit pill показывает «—» — placeholder до allocation.
 
   // CA-056 / CA-058: pre-fill при «Пересобрать с дополнениями» с досье.
   // - draft в URL приоритетнее (содержит полный snapshot — Шаг 1, 2, 3).
@@ -210,7 +205,7 @@ function ManualInputPageInner() {
       <SourceTrailProvider>
       <Topbar crumbs={breadcrumbs} draft={draftIndicator} />
       <div className="w-full max-w-[1180px] px-8 pt-7 pb-[120px]">
-        <PageHead caseId={caseId} step={step} />
+        <PageHead caseId={null} step={step} />
 
         {draft.isLoading ? (
           <div className="rounded-[12px] border border-[var(--border)] bg-[var(--surface)] px-5 py-4 text-[13px] text-[var(--ink-3)]">

@@ -18,11 +18,16 @@ class DossierRepositoryPort(DossierViewRepositoryPort, Protocol):
         self,
         record: DossierRecord,
         snapshot_id: UUID,
+        case_id: str,
         *,
         source_mode: str = "accountant",
         created_by_analyst_id: UUID | None = None,
     ) -> UUID:
         """Создаёт запись досье, привязанную к snapshot. Возвращает dossier id.
+
+        ``case_id`` — банковский id ``BR-YYYY-NNNN`` (T1.1), выданный
+        ``CaseIdAllocator``'ом вызывающим use-case'ом перед save. Не
+        дефолтится — забыл аллокатор → compile-time ошибка.
 
         ``source_mode`` определяет режим, в котором создано досье ('bank' |
         'accountant'). ``created_by_analyst_id`` обязателен в bank-mode и

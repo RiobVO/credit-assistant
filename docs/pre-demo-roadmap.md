@@ -5,7 +5,9 @@
 
 **Critical rule:** работаю ТОЛЬКО над активным Tier. Всё что не в Tier 0–4 — Frozen.
 
-**Tier 0 status (2026-05-18):** ✅ **closed**. T0.1 / T0.2 / T0.3 / T0.4 / T0.5 done. T0.4 follow-up (B1+B2+B3+B4 + CA-DS29-apostrophe) тоже closed. **Active — T1.1 case_id sequence** (compromised B на dossiers, не Phase 4 application).
+**Tier 0 status (2026-05-18):** ✅ **closed**. T0.1 / T0.2 / T0.3 / T0.4 / T0.5 done. T0.4 follow-up (B1+B2+B3+B4 + CA-DS29-apostrophe) тоже closed.
+
+**Tier 1 / T1.1 (2026-05-18):** ✅ **closed**. Compromised B исполнен — sequence на `dossiers.case_id`, миграция `b3e9f1a7d4c5` + `CaseIdAllocator` + drop derived helpers. Existing 47 dossiers backfilled `BR-2026-0001..0047`. **Active — T1.2 refresh-token rotation + Redis denylist (CA-019).**
 
 ---
 
@@ -114,20 +116,22 @@ Live-browser smoke не выполнен в этой сессии (требуе�
 
 ## Tier 1 — Prod-killers (после T0)
 
-### T1.1 — case_id monotonic sequence (CA-DS18b/c) — **ACTIVE**
-**Compromised B** (resolved 2026-05-18, см. Open decisions): sequence на `dossiers` table, не на Phase 4 application entity. Full Phase 4 = 5-10 дней refactor; compromise даёт banking-grade monotonic ID до demo, post-demo миграция на applications через FK без потерь.
+### T1.1 — case_id monotonic sequence (CA-DS18b/c) ✅ DONE 2026-05-18
 
-- Alembic migration: CREATE SEQUENCE `dossier_case_seq` START WITH 1 + ALTER TABLE dossiers ADD COLUMN case_id VARCHAR(20) UNIQUE + INDEX. **Backfill**: for each existing dossier по `created_at` ASC per year — `BR-{YYYY}-{rownum:04d}`. После backfill: SET NOT NULL + setval по MAX(current_year).
-- Формат `BR-{YYYY}-{seq:04d}`. **Year rollover application-level** (resolved): use-case проверяет current_year vs MAX(year of existing case_id), если новый → `ALTER SEQUENCE ... RESTART WITH 1`. Trigger в БД отвергнут — application-level гибче для on-prem, явный код, читаемые логи.
-- **Race safety** (resolved): `pg_advisory_xact_lock(year_hash)` на year-boundary reset. Avoids `LOCK TABLE dossiers` overhead.
-- **Wizard preview** (resolved): (c) — pre-submit placeholder «case_id будет назначен», реальный SEQ выдаётся при successful dossier creation. **Drop legacy `formatCaseId` frontend helper** + его test.
-- Frontend `manual-input-view.tsx` снимает `formatCaseId(draft.draftId)` pill, заменяет на тонкий placeholder. Sub-header `application.id` уже читается из API (post-create) — не меняется.
+Compromised B: sequence на `dossiers.case_id` (не Phase 4 application entity).
 
-**Scope (~10 файлов):** migration + ORM Dossier + `case_id_allocator` service (year-rollover + advisory lock + nextval) + dossier creation use-case + DossierRecord DTO + persistence + interfaces mappers + PDF renderer (drop `_format_application_id`, читать из dossier.case_id) + API DTO `ApplicationOutput.id = dossier.case_id` + frontend wizard placeholder + frontend helper deprecate + tests (allocator + migration round-trip + e2e).
+- ✅ Alembic migration `b3e9f1a7d4c5`: `CREATE SEQUENCE dossier_case_seq` + `ADD COLUMN case_id VARCHAR(20) UNIQUE NOT NULL` + backfill `ROW_NUMBER() OVER (PARTITION BY EXTRACT(YEAR FROM created_at) ORDER BY created_at, id)` + setval на MAX+1 для current year. 47 existing dossiers backfilled `BR-2026-0001..0047`.
+- ✅ `CaseIdAllocatorPort` + `SqlAlchemyCaseIdAllocator`: `pg_advisory_xact_lock(year)` → проверка `MAX(SUBSTRING(case_id FROM 4 FOR 4)::int)` → year shift trigger'ит `ALTER SEQUENCE dossier_case_seq RESTART WITH 1` → `nextval`. Lesson из TDD: на пустую БД (max=NULL) **не reset'им** — sequence уже sync'ed миграцией.
+- ✅ `DossierViewRecord +case_id`, `dossier_repo.save(record, snapshot_id, case_id, ...)` обязательный позиционный.
+- ✅ Drop derived helpers: `_application_id` в `dossier_mapper.py` + `_format_application_id` в `pdf_renderer.py`. Оба читают `view.case_id`.
+- ✅ Frontend: удалены `web/src/features/manual-input/lib/case-id.ts` + test, `manual-input-view.tsx` рендерит `caseId={null}` (PageHead показывает «—»).
+- ✅ Tests: 7 unit (allocator) + 4 integration testcontainers (allocator) + 8 update'ов на новую save() сигнатуру (snapshot_dossier / dossier_view / dossier_source_mode / bank_search / bank_stats / bank_history / dossier_get / dossier_test / draft_test) + 4 update'а DossierViewRecord constructor (load_dossier_for_view_test / load_dossier_readiness_test / render_dossier_pdf_test / pdf_renderer_test).
+- ✅ E2E smoke: `POST /api/manual-input` → `case_id=BR-2026-0048` (после 47 backfilled).
+- ✅ Closes CA-DS18b (banking sequence) + CA-DS18c (year edge).
 
-**Acceptance:** новый dossier на 2026 получает `BR-2026-NNNN` с monotonic NNNN. Создание dossier на 2027 reset'ит sequence. Existing dossiers получают backfilled case_id ASC по created_at в их году. Frontend wizard не показывает derived UUID-based ID. Sub-header досье показывает SEQ-based ID.
+**Scope reality:** ~22 файла (план оценивал ~10 — underestimate). Lesson: pre-impl grep `DossierViewRecord(...)` callers поймал бы +4 callsite раньше.
 
-**Замыкает одновременно CA-DS18c** (year edge case).
+**Pre-existing issue замечен (вне T1.1 scope):** `tests/infrastructure/rules/test_registry_factory.py::test_yaml_with_unknown_rule_raises` падает на T0.4 B1 regression (`source_uz` required в `RuleSpecYaml`, inline YAML в тесте не обновлён). Подтверждено `git stash` → fail. Отдельный hotfix.
 
 ### T1.2 — Refresh-token rotation + Redis denylist (CA-019)
 - Redis сервис в `docker-compose.yml`.

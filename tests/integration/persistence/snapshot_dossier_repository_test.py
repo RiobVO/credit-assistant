@@ -99,7 +99,7 @@ async def test_dossier_save_and_get_roundtrips_red_flags_jsonb(
         rules_version="v1",
         rules_evaluated=17,
     )
-    dossier_id = await dossier_repo.save(record, snapshot_id)
+    dossier_id = await dossier_repo.save(record, snapshot_id, "BR-2026-A001")
 
     fetched = await dossier_repo.get_by_id(dossier_id)
     assert fetched is not None

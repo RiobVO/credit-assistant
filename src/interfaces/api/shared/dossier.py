@@ -13,6 +13,7 @@ handler'а. Внутри handler оптонал используется для 
 ``source_mode``/``created_by_analyst_id`` на новых досье.
 """
 
+from datetime import UTC, datetime
 from typing import Annotated
 from uuid import UUID
 
@@ -88,10 +89,15 @@ async def manual_input_dossier(
         rules_version=RULES_VERSION,
         rules_evaluated=len(registry.rules),
     )
+    # T1.1: case_id выдаёт CaseIdAllocator под текущий год; advisory lock
+    # + sequence гарантируют monotonic в одной транзакции с save dossier.
+    case_id = await storage.case_id_allocator.allocate(datetime.now(UTC))
+
     source_mode = "bank" if analyst is not None else "accountant"
     dossier_id = await storage.dossier.save(
         record,
         snapshot_id,
+        case_id,
         source_mode=source_mode,
         created_by_analyst_id=analyst.id if analyst is not None else None,
     )
