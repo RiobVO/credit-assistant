@@ -77,11 +77,17 @@ Acceptance: 19 real-xltx pass (form1/form2 ×3 фирмы, vat_decl ×4, vat_ilo
 - ⏳ Legal review CBU public data — параллельно (запросы юриста, не блокер).
 - ⏳ Daily background fetch / 90-day retention автоудаление — отложено в T3 (operational readiness).
 
-### T0.3 — ГНК Phase A: manual upload (CA-003 Phase A)
-- Аналитик грузит PDF/JPG справки + ручной ввод полей (имя, ИНН, статус, ОКВЭДы).
-- Domain: `BorrowerSnapshot.gnk_certificate: GnkCertificate | None` с `source: "uploaded"`, `uploaded_at`, `uploaded_by_analyst_id`.
-- Phase B (public lookup) — после legal-clearance (CA-DS28), не сейчас.
-- **Acceptance**: end-to-end — аналитик загружает справку → данные попадают в snapshot → отображаются в досье + PDF.
+### T0.3 — ГНК Phase A: manual upload (CA-003 Phase A) ✅ BACKEND DONE 2026-05-18 (commit 53ac8fe)
+- ✅ Domain: `GnkCertificate` value object + `BorrowerSnapshot.gnk_certificate: GnkCertificate | None`.
+- ✅ Alembic migration `a1f3c5e8b9d2` — `gnk_certificates(id UUID PK, borrower_inn, file_bytes BYTEA, mime_type, full_name, status, okveds[], cert_id, source, uploaded_at, uploaded_by_analyst_id FK)` + idx (borrower_inn, uploaded_at DESC).
+- ✅ Repository + Service (upload manual + `fetch_for_borrower()` заглушка для Phase B).
+- ✅ API endpoints (bank-only, auth required): POST `/api/borrowers/{inn}/gnk-certificate` (multipart) + GET latest + GET `/api/gnk-certificates/{id}/file`.
+- ✅ snapshot_mapper round-trip (только metadata в JSONB, file_bytes остаётся в table через file_id UUID).
+- ✅ Tests: unit service + 4 round-trip snapshot + integration repository (testcontainers) + integration endpoint (multipart upload + auth + validation).
+- ✅ Pattern переиспользует ADR-0014: source enum, repository, audit-friendly raw, per-request DI factory. Phase A specific: нет HTTP client, retry, fallback chain.
+- ⏳ **T0.3.1**: frontend wizard upload UI + display в борrower step-1 (~0.5 дня, отдельный коммит).
+- ⏳ **T0.3.2**: display в досье + PDF (~0.5 дня).
+- ⏳ Phase B (CA-DS28 public lookup) — после legal-clearance.
 
 ### T0.4 — UZ-локализация PDF (CA-DS29-pdf)
 Декомпозиция (не однострочник):
