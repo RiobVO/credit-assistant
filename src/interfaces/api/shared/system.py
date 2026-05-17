@@ -26,13 +26,14 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from infrastructure.catalog.exchange_rates import default_usd_uzs_rate
+from application.services.usd_rate_service import UsdRateService
 from infrastructure.catalog.okved_catalog import default_catalog as default_okved_catalog
 from infrastructure.persistence.database import get_session
 from infrastructure.persistence.repositories.system_uptime_repository import (
     NOT_IMPLEMENTED_STATUS,
     SqlAlchemySystemUptimeRepository,
 )
+from interfaces.api.shared.dependencies import get_usd_rate_service
 from interfaces.api.shared.system_schema import (
     OkvedCatalogResponse,
     OkvedItem,
@@ -146,21 +147,21 @@ async def system_health_history(
     )
 
 
+UsdRateServiceDep = Annotated[UsdRateService, Depends(get_usd_rate_service)]
+
+
 @router.get("/usd-rate", response_model=UsdRateResponse)
-async def system_usd_rate() -> UsdRateResponse:
-    """USD/UZS rate для loan-wizard UI-конвертации (CA-DS24).
+async def system_usd_rate(service: UsdRateServiceDep) -> UsdRateResponse:
+    """USD/UZS rate для loan-wizard UI-конвертации (CA-DS24 + T0.2).
 
-    Source priority: env ``USD_UZS_RATE`` > ``config/exchange/rates.json``.
-    CBU API integration → CA-DS24b (legal review pre-condition).
-
-    Singleton-cache (mirror OKVED endpoint): JSON парсится один раз;
-    env-override фиксируется при первом вызове. Для re-evaluation —
-    restart api контейнера.
+    Fallback chain (T0.2 → CBU API integration):
+    env USD_UZS_RATE → DB today → CBU live (save) → DB latest → JSON bootstrap.
+    Source enum: env | cbu_live | db_cached | manual | fallback.
 
     Auth: открыт без get_current_analyst — reference data, никаких PII.
     Decimal сериализуется строкой — сохраняем точность через JSON.
     """
-    rate = default_usd_uzs_rate()
+    rate = await service.get_current_rate()
     return UsdRateResponse(
         rate=str(rate.rate),
         asof=rate.asof,
