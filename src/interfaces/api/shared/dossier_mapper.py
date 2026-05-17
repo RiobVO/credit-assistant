@@ -201,6 +201,7 @@ def red_flag_to_output(flag: RedFlag) -> RedFlagOutput:
         rule_version=flag.rule_version,
         severity=flag.severity.value,
         source=flag.source,
+        source_uz=flag.source_uz or flag.source,
         message=flag.message,
         evidence=_jsonable_dict(flag.evidence),
         detected_at=flag.detected_at,

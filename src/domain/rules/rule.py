@@ -30,6 +30,9 @@ class Rule:
     # Domain dataclass держит soft default="" для test-fixtures, которые
     # конструируют Rule инлайн без UZ-перевода.
     name_uz: str = ""
+    # UZ-перевод source (T0.4 follow-up B1). Та же fail-fast стратегия на
+    # YAML-уровне + soft default="" для тестовых fixtures.
+    source_uz: str = ""
 
 
 class RuleRegistry:
@@ -64,6 +67,7 @@ class RuleRegistry:
                     rule_version=rule.version,
                     severity=rule.severity,
                     source=rule.source,
+                    source_uz=rule.source_uz,
                     message=evidence.message,
                     evidence=evidence.evidence,
                     detected_at=snapshot.as_of,
