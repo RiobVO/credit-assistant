@@ -219,12 +219,15 @@ LDAP-only scope (OAuth defer'ится в T1.5b). 3 атомарных комми
 
 ## Tier 3 — Operational readiness (после T2)
 
-- **T3.1** — Observability: Sentry или GlitchTip on-prem (CA-064). Backend + frontend `error.tsx` hook.
-- **T3.2** — Structured logging с `correlation_id` сквозь все слои (request → use-case → adapter). `logging.Filter` injection через FastAPI middleware.
-- **T3.3** — Prometheus `/metrics` + Grafana dashboard pack (latency p50/p99, error rate, PDF gen time, parser warnings rate).
-- **T3.4** — Postgres backup: `pg_dump` daily + retention 30d + restore drill, документ в `docs/operations/db-backup.md`.
-- **T3.5** — Audit log export: `GET /api/admin/audit-log/export?from=...&to=...` → CSV.
-- **T3.6** — On-prem deploy: Ansible playbook или Docker compose + systemd unit + README «0 → running» за <30 минут.
+**Tier 3 / T3.2 (2026-05-18):** ✅ **closed**. Structured logging + correlation_id. Foundation для T3.1/T3.3/T3.5. 4 атомарных коммита: T3.2.1 stdlib bridge (`structlog.stdlib.ProcessorFormatter` + `setLogRecordFactory` global hook + idempotent `_CONFIGURED` guard) · T3.2.2 `RequestIDMiddleware` (X-Request-ID echo/auto-gen 32-hex + bind/unbind contextvars) · T3.2.3 wire в `create_app` outer (LIFO) + instrumental log в health endpoint · T3.2.4 `audit_log.request_id VARCHAR(32) NULL` колонка + index (Alembic `a7c1e4d8b3f5`) + repo читает из contextvars best-effort. Forensics: `SELECT * FROM audit_log WHERE request_id = 'xxx'` дотягивает полный сюжет инцидента. Decisions (defaults): header `X-Request-ID` (Heroku/AWS), `uuid4().hex`, echo always, audit_log.request_id включён в scope (natural fit). Tests: 4 unit (logging) + 5 unit (middleware) + 4 integration in-src + 2 integration testcontainers. План — `docs/superpowers/plans/2026-05-18-t32-correlation-id.md`.
+
+**Приоритизация остальных Tier 3 items (2026-05-18):**
+
+- **T3.4** — Postgres backup: `pg_dump --format=custom --compress=9` daily + retention 30d + restore drill. Dev = local volume + retention 7d. Playbook `docs/operations/db-backup.md` описывает все 3 prod-опции (A local volume / B NFS mount / C MinIO S3-compat) — выбор банка при onboarding. **Deal-breaker** для bank-IT first question. Encrypted-at-rest БД: pg_dump отдаёт ciphertext в encrypted столбцах (PII_ENC_KEYS не нужен для backup, нужен для restore+read).
+- **T3.6** — On-prem deploy: bundled tarball (`docker save credit-api:vX | gzip` + `db-init.sql.gz` + `.env.example` + `install.sh`). **Deal-breaker zero-internet install** — узб mid-tier банки internal registry mirror не имеют. ADR-0021 фиксирует choice tarball vs registry-mirror.
+- **T3.1** — Observability: Sentry SaaS НЕЛЬЗЯ (PROJECT_BRIEF Sec 8 — data leaves периметр банка). GlitchTip on-prem (self-host OSS Sentry-compat) либо plain structured logs + SIEM. ADR-0022. Backend + frontend `error.tsx` hook. Зависит от T3.2 (correlation_id для tags).
+- **T3.3** — Prometheus `/metrics` (через `prometheus-fastapi-instrumentator`) + custom metrics (parser warnings counter, PDF gen histogram, rules-fired-by-severity counter) + Grafana dashboard JSON + alert-rules. ADR-0023. Low demo-gating для mid-tier банков.
+- **T3.5** — Audit log export: `GET /api/admin/audit-log/export?from=...&to=...` → StreamingResponse CSV. Cheapest, без ADR.
 
 ---
 
