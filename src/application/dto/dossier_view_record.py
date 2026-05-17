@@ -2,8 +2,8 @@
 
 Собирает в одну запись три источника, которые нужны экрану досье:
 
-* ``dossier_id`` + ``created_at`` — из таблицы ``dossiers`` (id результата
-  прогона, дата записи);
+* ``dossier_id`` + ``created_at`` + ``case_id`` — из таблицы ``dossiers``
+  (id результата прогона, дата записи, банковский ID `BR-YYYY-NNNN`);
 * ``dossier`` (``DossierRecord``) — score, recommendation, red flags;
 * ``snapshot`` (``BorrowerSnapshot``) — все исходные данные, на которых
   считались правила; ``snapshot.borrower`` уже содержит реквизиты заёмщика,
@@ -11,6 +11,9 @@
 
 Read-only DTO: никто его не пишет, заполняется репо за один SELECT с двумя
 JOIN (см. ``SqlAlchemyDossierRepository.get_view_by_id``).
+
+T1.1: ``case_id`` — `BR-YYYY-NNNN`, аллоцированный ``CaseIdAllocator``'ом
+при сохранении dossier. Не derived из ``dossier_id``, читается из колонки.
 """
 
 from __future__ import annotations
@@ -29,3 +32,4 @@ class DossierViewRecord:
     dossier: DossierRecord
     snapshot: BorrowerSnapshot
     created_at: datetime
+    case_id: str

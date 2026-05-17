@@ -145,11 +145,14 @@ async def test_search_returns_latest_bank_dossier(
     )
     dossier_repo = SqlAlchemyDossierRepository(pg_session)
     # Старое accountant-досье — должно быть проигнорировано.
-    await dossier_repo.save(_record(score=10), snapshot_id, source_mode="accountant")
+    await dossier_repo.save(
+        _record(score=10), snapshot_id, "BR-2026-C001", source_mode="accountant",
+    )
     # Старое bank-mode досье.
     await dossier_repo.save(
         _record(score=20),
         snapshot_id,
+        "BR-2026-C002",
         source_mode="bank",
         created_by_analyst_id=analyst.id,
     )
@@ -157,6 +160,7 @@ async def test_search_returns_latest_bank_dossier(
     latest_id = await dossier_repo.save(
         _record(score=30),
         snapshot_id,
+        "BR-2026-C003",
         source_mode="bank",
         created_by_analyst_id=analyst.id,
     )
@@ -190,6 +194,7 @@ async def test_search_returns_card_data_when_dossier_exists(
     await SqlAlchemyDossierRepository(pg_session).save(
         _record(score=15),  # recommendation="review" в _record
         snapshot_id,
+        "BR-2026-C004",
         source_mode="bank",
         created_by_analyst_id=analyst.id,
     )

@@ -10,6 +10,7 @@ Override get_session на pg_session — endpoint commit'ит в savepoint, по
 
 from __future__ import annotations
 
+import re
 from collections.abc import AsyncIterator
 from typing import Any
 from uuid import UUID
@@ -109,9 +110,10 @@ async def test_get_dossier_returns_full_view(
     assert borr["legal_form"] == "llc"
     assert borr["registration_date"] == "2019-03-15"
 
-    # Application: id вида BR-YYYY-XXXX, status пока всегда in_review.
+    # Application: id вида BR-YYYY-NNNN (T1.1: monotonic sequence),
+    # status пока всегда in_review.
     app = body["application"]
-    assert app["id"].startswith("BR-")
+    assert re.fullmatch(r"BR-\d{4}-\d{4}", app["id"]), f"unexpected case_id: {app['id']}"
     assert app["status"] == "in_review"
 
     # KPI: revenue_ltm посчитан (12 мес × 1B = 12B); вторичные None.

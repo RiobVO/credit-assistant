@@ -39,6 +39,12 @@ class DossierORM(Base):
     rules_version: Mapped[str] = mapped_column(String(20), nullable=False)
     rules_evaluated: Mapped[int] = mapped_column(Integer, nullable=False)
 
+    # T1.1: banking-grade monotonic case_id `BR-YYYY-NNNN`. Аллоцируется
+    # `CaseIdAllocator`'ом per-year через Postgres SEQUENCE + advisory lock.
+    # UNIQUE через миграцию (`uq_dossiers_case_id`), не на колонке —
+    # alembic source of truth.
+    case_id: Mapped[str] = mapped_column(String(20), nullable=False, unique=True)
+
     # Phase 4: разделение по режиму создания + аудит-trail на аналитика.
     # source_mode='accountant' для всех записей до Phase 4 (backfill в миграции).
     # created_by_analyst_id null для accountant-mode и legacy записей.

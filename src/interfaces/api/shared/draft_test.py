@@ -61,12 +61,23 @@ class _NoopRepo:
     async def get_view_by_id(self, *_: Any, **__: Any) -> None:
         return None
 
+    # T1.1: CaseIdAllocatorPort.allocate — draft endpoint его не дёргает,
+    # но DossierStorage поле required.
+    async def allocate(self, *_: Any, **__: Any) -> str:
+        return "BR-2026-T000"
+
 
 @pytest.fixture
 def client() -> Iterator[TestClient]:
     draft_repo = _StatefulDraftRepo()
     noop = _NoopRepo()
-    storage = DossierStorage(borrower=noop, snapshot=noop, dossier=noop, draft=draft_repo)
+    storage = DossierStorage(
+        borrower=noop,
+        snapshot=noop,
+        dossier=noop,
+        draft=draft_repo,
+        case_id_allocator=noop,
+    )
     app = create_app()
     app.dependency_overrides[get_dossier_storage] = lambda: storage
     with TestClient(app) as c:

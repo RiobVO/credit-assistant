@@ -45,7 +45,7 @@ async def test_save_defaults_to_accountant_mode(pg_session: AsyncSession) -> Non
 
     borrower_id = await borrower_repo.upsert(snapshot.borrower)
     snapshot_id = await snapshot_repo.save(snapshot, borrower_id)
-    dossier_id = await dossier_repo.save(_record(), snapshot_id)
+    dossier_id = await dossier_repo.save(_record(), snapshot_id, "BR-2026-B001")
 
     orm = await pg_session.get(DossierORM, dossier_id)
     assert orm is not None
@@ -69,6 +69,7 @@ async def test_save_bank_mode_with_analyst(pg_session: AsyncSession) -> None:
     dossier_id = await dossier_repo.save(
         _record(),
         snapshot_id,
+        "BR-2026-B002",
         source_mode="bank",
         created_by_analyst_id=analyst_id,
     )
@@ -88,9 +89,9 @@ async def test_query_by_source_mode_index_works(pg_session: AsyncSession) -> Non
 
     borrower_id = await borrower_repo.upsert(snapshot.borrower)
     snapshot_id = await snapshot_repo.save(snapshot, borrower_id)
-    await dossier_repo.save(_record(), snapshot_id, source_mode="accountant")
-    await dossier_repo.save(_record(), snapshot_id, source_mode="bank")
-    await dossier_repo.save(_record(), snapshot_id, source_mode="bank")
+    await dossier_repo.save(_record(), snapshot_id, "BR-2026-B003", source_mode="accountant")
+    await dossier_repo.save(_record(), snapshot_id, "BR-2026-B004", source_mode="bank")
+    await dossier_repo.save(_record(), snapshot_id, "BR-2026-B005", source_mode="bank")
 
     bank_count = (
         await pg_session.execute(
