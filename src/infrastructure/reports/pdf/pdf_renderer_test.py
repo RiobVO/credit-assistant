@@ -24,6 +24,7 @@ from application.use_cases.load_dossier_for_view import DossierViewBundle
 from domain.entities.borrower import Borrower, LegalForm
 from domain.entities.borrower_snapshot import BorrowerSnapshot
 from domain.value_objects.inn import INN
+from infrastructure.i18n.pdf_messages import load_pdf_messages
 
 pytestmark = [
     pytest.mark.integration,
@@ -112,6 +113,8 @@ def _make_bundle() -> DossierPdfBundle:
         ),
         observations=Observations(strengths=(), risks=()),
         rule_names={},
+        lang="ru",
+        messages=load_pdf_messages("ru"),
     )
 
 
@@ -149,6 +152,8 @@ def test_render_handles_empty_red_flags_and_empty_chart() -> None:
         brand=bundle.brand,
         observations=bundle.observations,
         rule_names=bundle.rule_names,
+        lang=bundle.lang,
+        messages=bundle.messages,
     )
 
     pdf = renderer.render(bundle)
