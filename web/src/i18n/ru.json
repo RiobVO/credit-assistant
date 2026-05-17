@@ -767,7 +767,16 @@
       "legal_ltd": "ООО",
       "legal_jsc": "АО",
       "legal_ie": "ИП",
-      "legal_other": "Иная форма"
+      "legal_other": "Иная форма",
+      "row_gnk_cert_id": "Справка ГНК",
+      "gnk_status_active": "Активный плательщик НДС",
+      "gnk_status_suspended": "Регистрация НДС приостановлена",
+      "gnk_status_revoked": "Снят с учёта НДС",
+      "gnk_status_unknown": "Статус НДС не определён",
+      "gnk_source_uploaded": "загружено аналитиком",
+      "gnk_source_gnk_live": "live из ГНК",
+      "gnk_source_gnk_cached": "кэш ГНК",
+      "gnk_source_fallback": "fallback"
     },
     "kpi": {
       "label_readiness": "Готовность данных",

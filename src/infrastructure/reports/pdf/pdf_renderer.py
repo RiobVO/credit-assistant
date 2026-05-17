@@ -180,6 +180,9 @@ class WeasyPrintPdfRenderer:
             "borrower_initials": _derive_initials(borrower.name),
             "snapshot": snapshot,
             "loan_request": snapshot.loan_request,
+            # T0.3.2: ГНК-справка из snapshot. None если не загружена — template
+            # рендерит row только когда есть, без placeholder'а.
+            "gnk_certificate": snapshot.gnk_certificate,
             "rules_version": dossier.rules_version,
             "rules_evaluated": dossier.rules_evaluated,
             "display_score": display_score,

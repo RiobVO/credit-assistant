@@ -32,6 +32,7 @@ from domain.entities.vat_period_report import VatPeriodReport
 from domain.services.scoring_service import RiskScore
 from domain.value_objects.balance_snapshot import BalanceSnapshot
 from domain.value_objects.date_range import DateRange
+from domain.value_objects.gnk_certificate import GnkCertificate
 from domain.value_objects.inn import INN
 from domain.value_objects.loan_request import LoanRequest
 from domain.value_objects.money import Currency, Money
@@ -43,6 +44,7 @@ from interfaces.api.shared.dossier_schema import (
     DossierResponse,
     DossierViewResponse,
     FinancialReportInput,
+    GnkCertificateOutput,
     InvoiceInput,
     KpiBundleOutput,
     KpiUnitCode,
@@ -368,4 +370,19 @@ def build_dossier_view_response(bundle: DossierViewBundle) -> DossierViewRespons
         monthly_revenue_24m=[
             _monthly_point_to_output(p) for p in bundle.monthly_revenue_24m
         ],
+        gnk_certificate=_gnk_certificate_to_output(snapshot.gnk_certificate),
+    )
+
+
+def _gnk_certificate_to_output(cert: GnkCertificate | None) -> GnkCertificateOutput | None:
+    if cert is None:
+        return None
+    return GnkCertificateOutput(
+        file_id=cert.file_id,
+        full_name=cert.full_name,
+        status=cert.status,
+        okveds=list(cert.okveds),
+        source=cert.source,
+        cert_id=cert.cert_id,
+        uploaded_at=cert.uploaded_at.isoformat() if cert.uploaded_at else None,
     )
