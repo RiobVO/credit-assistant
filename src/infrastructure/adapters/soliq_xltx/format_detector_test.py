@@ -20,6 +20,25 @@ def test_detect_vat_declaration() -> None:
     assert detect_format(wb) == SoliqXltxFormat.VAT_DECLARATION
 
 
+def test_detect_vat_declaration_v1_by_narrow_list01() -> None:
+    """V1 (10006_41) detection via list01.max_column < 14 (legacy шаблон, 13 колонок).
+
+    Строим minimal workbook вручную — factory build_vat_declaration_wb создаёт
+    v2 layout (max_column=16), а openpyxl `cell.value = None` не уменьшает
+    max_column. Самый правый cell тут L3 (col 12 — "лист 01" маркер v1).
+    """
+    wb = Workbook()
+    ws = wb.active
+    assert ws is not None
+    ws.title = "list01"
+    # Только sentinel-фраза для VAT detection + один narrow-range cell.
+    ws["D8"] = "СВЕДЕНИЯ о плательщике налога на добавленную стоимость"
+    ws["L3"] = "лист 01"  # column 12 — типичная позиция в v1
+    assert ws.max_column < 14
+
+    assert detect_format(wb) == SoliqXltxFormat.VAT_DECLARATION_V1
+
+
 def test_detect_vat_registry_ilova() -> None:
     wb = build_vat_registry_wb()
     assert detect_format(wb) == SoliqXltxFormat.VAT_REGISTRY_ILOVA

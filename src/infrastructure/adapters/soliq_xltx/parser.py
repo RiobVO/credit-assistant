@@ -85,7 +85,7 @@ class SoliqXltxAdapter:
     @staticmethod
     def _dispatch(wb: Workbook) -> ParsedSoliqXltx:
         fmt = detect_format(wb)
-        if fmt is SoliqXltxFormat.VAT_DECLARATION:
+        if fmt is SoliqXltxFormat.VAT_DECLARATION or fmt is SoliqXltxFormat.VAT_DECLARATION_V1:
             return parse_vat_declaration(wb)
         if fmt is SoliqXltxFormat.VAT_REGISTRY_ILOVA:
             return parse_vat_registry(wb)
