@@ -1,21 +1,34 @@
 // Хелперы форматирования для KPI-карточек и осей графиков.
 // UZS — большие числа, поэтому показываем «млрд / млн» с одним знаком после запятой.
+// Banking UZ convention (T0.4 B4): RU-numbers (`ru-RU` toLocaleString) везде,
+// меняем только суффикс на UZ для locale === "uz" — UZ-аналитик привык к
+// RU-числовому формату, а PDF единым стилем (см. config/pdf-i18n/uz.json).
+
+export type UzsLocale = "ru" | "uz";
 
 const NBSP = " ";
 
-export function formatBigUzs(amount: number): string {
+const SUFFIX = {
+  ru: { billion: "млрд", million: "млн", thousand: "тыс", currency: "сум" },
+  // U+02BB MODIFIER LETTER TURNED COMMA — стандартный апостроф латинского
+  // узбекского (oʻ, gʻ, ʼ), консистентно с config/pdf-i18n/uz.json («soʻm»).
+  uz: { billion: "mlrd", million: "mln", thousand: "ming", currency: "soʻm" },
+} as const;
+
+export function formatBigUzs(amount: number, locale: UzsLocale): string {
   if (!Number.isFinite(amount)) return "—";
+  const s = SUFFIX[locale];
   const abs = Math.abs(amount);
   if (abs >= 1_000_000_000) {
-    return `${formatRu(amount / 1_000_000_000, 1)}${NBSP}млрд${NBSP}сум`;
+    return `${formatRu(amount / 1_000_000_000, 1)}${NBSP}${s.billion}${NBSP}${s.currency}`;
   }
   if (abs >= 1_000_000) {
-    return `${formatRu(amount / 1_000_000, 1)}${NBSP}млн${NBSP}сум`;
+    return `${formatRu(amount / 1_000_000, 1)}${NBSP}${s.million}${NBSP}${s.currency}`;
   }
   if (abs >= 1_000) {
-    return `${formatRu(amount / 1_000, 1)}${NBSP}тыс${NBSP}сум`;
+    return `${formatRu(amount / 1_000, 1)}${NBSP}${s.thousand}${NBSP}${s.currency}`;
   }
-  return `${formatRu(amount, 0)}${NBSP}сум`;
+  return `${formatRu(amount, 0)}${NBSP}${s.currency}`;
 }
 
 export function formatPct(value: number, fractionDigits: number = 1): string {

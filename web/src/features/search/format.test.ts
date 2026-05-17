@@ -9,22 +9,32 @@ import {
   splitBusinessAge,
 } from "./format";
 
-describe("formatRevenueShort", () => {
+describe("formatRevenueShort (ru)", () => {
   it("млрд: ≥1B → «4,12 млрд сум»", () => {
-    expect(formatRevenueShort("4120000000")).toBe("4,12 млрд сум");
+    expect(formatRevenueShort("4120000000", "ru")).toBe("4,12 млрд сум");
   });
 
   it("млн: 1M..1B → «560 млн сум»", () => {
-    expect(formatRevenueShort("560000000")).toBe("560 млн сум");
+    expect(formatRevenueShort("560000000", "ru")).toBe("560 млн сум");
   });
 
   it("null / пустая строка → null", () => {
-    expect(formatRevenueShort(null)).toBeNull();
-    expect(formatRevenueShort("")).toBeNull();
+    expect(formatRevenueShort(null, "ru")).toBeNull();
+    expect(formatRevenueShort("", "ru")).toBeNull();
   });
 
   it("zero → null (нечего показывать)", () => {
-    expect(formatRevenueShort("0")).toBeNull();
+    expect(formatRevenueShort("0", "ru")).toBeNull();
+  });
+});
+
+describe("formatRevenueShort (uz)", () => {
+  it("mlrd: ≥1B → «4,12 mlrd soʻm» с U+02BB", () => {
+    expect(formatRevenueShort("4120000000", "uz")).toBe(`4,12 mlrd soʻm`);
+  });
+
+  it("mln: 1M..1B → «560 mln soʻm»", () => {
+    expect(formatRevenueShort("560000000", "uz")).toBe(`560 mln soʻm`);
   });
 });
 
