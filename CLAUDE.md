@@ -42,25 +42,31 @@ Heads-up: **live-browser smoke** через `/`, `/search`, `/history`, `/dossie
 
 ---
 
-## Открытые TODO
+## Pre-Demo Roadmap
 
-### Backend / data
-- **CA-003**: реальный лукап ГНК для ИНН (см. CA-DS28 для hybrid roadmap).
-- **CA-015**: уточнить `vat_declaration_parser.py` под живые xltx 10006_45/10006_47.
-- **CA-019**: refresh-token rotation + denylist (Redis) — в v1 stateless 7д.
-- **CA-020**: LDAP/OAuth AuthnAdapter для production-банка. `AuthnPort` готов.
-- **CA-024b**: real CBU API integration (`cbu.uz/services/`) для USD/UZS rate. **Legal review обязателен** (mirror CA-DS28 паттерну: уз-юрист 30 мин + robots.txt check). Pre-condition для замены `config/exchange/rates.json` static на live feed.
-- **CA-028**: dynamic unit detection для FORM_2 — сейчас hardcoded ×1000.
-- **CA-DS18b**: banking-grade monotonic case_id через Postgres sequence в `applications` table. **Pre-condition**: Phase 4 application creation flow завершён (сейчас case_id привязан к draft.id, не к application). Format остаётся `BR-YYYY-XXXX` — frontend `formatCaseId` подменится на чтение `application.case_id` с бэка.
-- **CA-DS18c**: year edge case в `formatCaseId` — сейчас берётся `now.getFullYear()` на каждом render, на стыке года (31 дек → 1 янв) caseId одного и того же draft меняется. **Pre-condition**: `useFormDraft` пробрасывает `draft.created_at` через возвращаемый объект (`{ draftId, createdAt }`); `formatCaseId(draftId, createdAt)` использует год создания, не текущий. Замыкается одновременно с CA-DS18b (там тоже нужен `createdAt` от application entity).
-- **CA-029b**: парсер PROFIT_TAX (taxes_paid, 15 листов). Adapter raises UnsupportedFormatError.
-- **CA-064**: ship `error.tsx` в real observability (Sentry / posthog).
-- **CA-DS11**: faktura.uz API integration. Сейчас сервис в `/api/system/health` всегда `not_implemented`.
+> **Полный документ:** `docs/pre-demo-roadmap.md` (Tier-декомпозиция, acceptance, заблокированные, backlog).
+> **Critical rule:** работаю ТОЛЬКО над активным Tier. Всё что не в Tier 0–4 — Frozen.
 
-### Design Sweep tail (заблокированные pre-conditions)
-- **CA-DS25**: real backend sparkline для KPI (EBIT/ROE/Debt-to-EBIT). Нужна monthly-проекция EBIT — **blocked CA-029b** (FORM_5 cashflow parser).
-- **CA-DS28**: real ГНК lookup для CA-003 (hybrid: public lookup `soliq.uz/services/search/` + manual upload справки). **Legal review обязателен** (уз-юрист 30 мин + robots.txt check). Pre-condition для CA-003 закрытия.
-- **CA-DS29-pdf**: PDF `?lang=` query param для UZ-локализованного дossier. **Pre-condition**: WeasyPrint templates переведены на UZ (сейчас RU-hardcoded — заголовки секций, F-секция rule names через YAML, F-секция severity-labels, KPI tile labels). `dossier_pdf.py` endpoint принимает `lang: Locale` query, прокидывает в `RenderDossierPdf.execute(dossier_id, lang)`, renderer передаёт в Jinja2 context. Scope ~2-3 ч после перевода templates.
+### Active Tier 0 — Deal-breakers
+- **T0.1** Real soliq fixtures via personal ETSP (3–4 фирмы × 5 типов = 15–20 xltx, gitignore + анонимизированные в git).
+- **T0.2** CBU API real integration (CA-024b) — live USD/UZS rate + caching + legal review параллельно.
+- **T0.3** ГНК Phase A: manual upload справок (CA-003 Phase A). Public lookup отложен до legal-clearance.
+- **T0.4** UZ-локализация PDF (CA-DS29-pdf) — templates + `Rule.name_uz` + YAML migration + endpoint `?lang=`.
+
+### Tier 1–4 (после T0)
+- **T1** Prod-killers: case_id sequence (CA-DS18b/c), refresh-token rotation + Redis (CA-019), PII encryption at rest (column-level через app-layer, **не наивный pgcrypto на JSONB** — см. ADR-0014 to write), multi-tenant runtime isolation (BRAND_ID env + startup assertion), LDAP/OAuth (CA-020).
+- **T2** Data quality: dynamic units FORM_2 (CA-028), VAT real formats (CA-015), PROFIT_TAX (CA-029b → закрывает CA-DS25), faktura.uz (CA-DS11).
+- **T3** Operational readiness: observability (CA-064), structured logging + correlation_id, Prometheus/Grafana, pg_dump backup, audit-log export, Ansible/systemd deploy.
+- **T4** Compliance pack (параллельно с T1–T3): pentest от лицензированной узб-лаборатории, аттестат УзСтандарта на ПДн, резидентство в IT-юрисдикции РУз, Admin Guide + Security Architecture + DRP/BCP (RU + UZ).
+
+### Frozen scope (не трогать до post-demo)
+- UI polish: новые цвета, шрифты, тени, анимации.
+- Расширения dark theme, 4-я тема, accent variants.
+- Новые design tokens, brand-tenant новые секции.
+- CA-DS25 (KPI sparkline) до T2.3, новые OKVED-каталог расширения сверх baseline.
+- i18n keys refactor, новые ADR по визуальному дизайну.
+- Coverage сверх baseline ради числа — кроме тестов на новый Pre-Demo код.
+- Refactor без бизнес-причины из roadmap.
 
 ---
 
