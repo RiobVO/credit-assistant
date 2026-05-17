@@ -203,6 +203,7 @@
       "field_locale": "Язык интерфейса",
       "env_on_premise": "On-premise · сеть банка",
       "locale_ru_full": "русский (ru-RU)",
+      "locale_uz_full": "узбекский (uz-UZ)",
       "support_label": "Поддержка",
       "support_email": "ops@uzbekbank.uz",
       "copyright_short": "© 2026 Uzbekbank",
