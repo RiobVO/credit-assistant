@@ -11,6 +11,11 @@ const nextConfig: NextConfig = {
   devIndicators: {
     position: "bottom-left",
   },
+  // T3.6.1: production-build для Docker. ``standalone`` собирает self-contained
+  // ``.next/standalone/server.js`` + минимальное node_modules tree → image
+  // получается на ~150 MB меньше чем full ``npm ci`` runtime, плюс не требует
+  // npm в production контейнере.
+  output: "standalone",
 };
 
 export default withNextIntl(nextConfig);
