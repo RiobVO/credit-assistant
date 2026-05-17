@@ -386,9 +386,13 @@ def _build_red_flags_view(
     (уже per-lang, резолвится в RenderDossierPdf).
     """
     severity_label = make_severity_label(messages)
+    is_uz = messages.locale == "uz"
     rendered: list[dict[str, object]] = []
     for f in dossier.red_flags:
         sev_str = str(f.severity)
+        # T0.4 follow-up B1: source локализуется. Для old snapshot'ов без
+        # source_uz mapper подставил RU fallback (см. dossier_mapper).
+        source_label = f.source_uz if is_uz and f.source_uz else f.source
         rendered.append(
             {
                 "rule_id": f.rule_id,
@@ -397,7 +401,7 @@ def _build_red_flags_view(
                 "description": f.message,
                 "severity": sev_str,
                 "severity_label": severity_label(sev_str),
-                "source": f.source,
+                "source": source_label,
                 "evidence_value": _format_evidence_value(f.evidence, messages),
                 "evidence_label": _format_evidence_label(f.evidence, messages),
             },

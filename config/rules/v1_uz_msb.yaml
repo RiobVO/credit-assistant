@@ -15,6 +15,7 @@ rules:
     category: structural
     severity: medium
     source: "Group-IB Uzbekistan fraud report 2024-2025; внутренние методики банков"
+    source_uz: "Group-IB Uzbekistan fraud report 2024-2025; banklarning ichki uslublari"
     formula: "(as_of - director_appointed_at).days <= 180"
     rationale: "Свежий директор перед заявкой — паттерн фронт-фигуры"
 
@@ -24,6 +25,7 @@ rules:
     category: structural
     severity: medium
     source: "Внутренние методики UZ-банков; Group-IB fraud patterns"
+    source_uz: "Oʻzbekiston banklarining ichki uslublari; Group-IB fraud patterns"
     formula: "(as_of - okved_main_changed_at).days <= 365"
     rationale: "Смена деятельности перед кредитом — может скрывать фрод-схему"
 
@@ -33,6 +35,7 @@ rules:
     category: structural
     severity: high
     source: "Внутренние методики UZ-банков; стандартная практика МСБ-кредитования"
+    source_uz: "Oʻzbekiston banklarining ichki uslublari; KOʻB kreditlash standart amaliyoti"
     formula: "loan_request_amount / latest_annual_revenue > 0.50"
     rationale: "Перекредитованность — ведущий предиктор дефолта"
 
@@ -43,6 +46,7 @@ rules:
     category: financial
     severity: high
     source: "ЦБ РУз положение №27-п, п.4.5; Базель III IRB approach"
+    source_uz: "ЦБ РУз положение №27-п, п.4.5; Базель III IRB approach"
     formula: "mom_pct < -0.30 for 2 consecutive months"
     rationale: "Резкое падение выручки — сильный предиктор дефолта на 6 мес"
 
@@ -52,6 +56,7 @@ rules:
     category: financial
     severity: high
     source: "ЦБ РУз положение №27-п; Базель III IRB approach"
+    source_uz: "ЦБ РУз положение №27-п; Базель III IRB approach"
     formula: "(curr_revenue - prev_revenue) / prev_revenue < -0.50"
     rationale: "Стратегическое сжатие бизнеса"
 
@@ -61,6 +66,7 @@ rules:
     category: financial
     severity: high
     source: "ЦБ РУз положение №27-п; стандартная практика МСБ-кредитования"
+    source_uz: "ЦБ РУз положение №27-п; KOʻB kreditlash standart amaliyoti"
     formula: "all(net_profit <= 0 for last 3 quarters)"
     rationale: "Системная убыточность — высокий риск default"
 
@@ -70,6 +76,7 @@ rules:
     category: financial
     severity: critical
     source: "Базель III IRB (capital adequacy); внутренние методики банков-партнёров"
+    source_uz: "Базель III IRB (capital adequacy); hamkor banklarning ichki uslublari"
     formula: "latest_annual.equity <= 0"
     rationale: "Negative equity / technical insolvency — один из сильнейших предикторов default'а: обязательства превышают активы"
 
@@ -79,6 +86,7 @@ rules:
     category: financial
     severity: medium
     source: "НК РУз; внутренние методики Soliq + банковская практика"
+    source_uz: "НК РУз; Soliq ichki uslublari + bank amaliyoti"
     formula: "vat_growth > 0.20 and revenue_growth <= 0"
     rationale: "Может означать фиктивный документооборот"
 
@@ -88,6 +96,7 @@ rules:
     category: financial
     severity: critical
     source: "НК РУз ст. 256; Soliq внутренние методики"
+    source_uz: "НК РУз ст. 256; Soliq ichki uslublari"
     formula: "abs(vat_declared - sum_seller_esf_vat) / vat_declared > 0.15"
     rationale: "Прямое расхождение — признак фиктивной отчётности"
 
@@ -97,6 +106,7 @@ rules:
     category: financial
     severity: medium
     source: "Внутренние методики UZ-банков; стандартная МСБ-практика"
+    source_uz: "Oʻzbekiston banklarining ichki uslublari; KOʻB standart amaliyoti"
     formula: "annual_revenue > 5_000_000_000 and margin < 0.05"
     rationale: "Большой оборот без прибыли — подозрительная схема"
 
@@ -107,6 +117,7 @@ rules:
     category: payment_discipline
     severity: medium
     source: "НК РУз; внутренние методики Soliq + банковская практика"
+    source_uz: "НК РУз; Soliq ichki uslublari + bank amaliyoti"
     formula: "any(payment.delay_days > 30 for payment in tax_events)"
     rationale: "Системные задержки — слабая платёжная дисциплина"
 
@@ -116,6 +127,7 @@ rules:
     category: payment_discipline
     severity: high
     source: "НК РУз; внутренние практики Soliq; банковский compliance"
+    source_uz: "НК РУз; Soliq ichki amaliyoti; bank compliance"
     formula: "any(ev.type == ACCOUNT_FREEZE for ev in events_last_12m)"
     rationale: "Прямое ограничение со стороны налоговой"
 
@@ -125,6 +137,7 @@ rules:
     category: payment_discipline
     severity: medium
     source: "НК РУз; банковская методика оценки платёжной дисциплины"
+    source_uz: "НК РУз; toʻlov intizomini baholash bank uslubi"
     formula: "any(ev.type == PENALTY and ev.year == current_year)"
     rationale: "Свежая пеня — текущая проблема с дисциплиной"
 
@@ -135,6 +148,7 @@ rules:
     category: counterparty
     severity: medium
     source: "Базель III concentration risk; внутренние методики Kapitalbank"
+    source_uz: "Базель III concentration risk; Kapitalbank ichki uslublari"
     formula: "max_buyer_revenue_share > 0.70"
     rationale: "Высокий риск потери всего бизнеса при уходе клиента"
 
@@ -144,6 +158,7 @@ rules:
     category: counterparty
     severity: medium
     source: "Базель III concentration risk; supply-chain risk practice"
+    source_uz: "Базель III concentration risk; supply-chain risk practice"
     formula: "max_supplier_purchase_share > 0.60"
     rationale: "Зависимость от единственного поставщика"
 
@@ -153,6 +168,7 @@ rules:
     category: counterparty
     severity: high
     source: "Group-IB Uzbekistan fraud report 2024-2025"
+    source_uz: "Group-IB Uzbekistan fraud report 2024-2025"
     formula: "sum(share for new_counterparties) > 0.30"
     rationale: "Типичная схема накрутки оборотов перед получением кредита"
 
@@ -162,6 +178,7 @@ rules:
     category: counterparty
     severity: high
     source: "Group-IB Uzbekistan fraud report 2024-2025; AML compliance"
+    source_uz: "Group-IB Uzbekistan fraud report 2024-2025; AML compliance"
     formula: "any(months_since_registration(cp) < 6)"
     rationale: "Классическая схема фиктивной отчётности"
 
@@ -171,6 +188,7 @@ rules:
     category: counterparty
     severity: high
     source: "Group-IB UZ fraud report 2024-2025; AML — накачивание оборота"
+    source_uz: "Group-IB UZ fraud report 2024-2025; AML — aylanmani sunʼiy oshirish"
     formula: "exists 2-cycle: A→B and B→A within 90 days (упрощ.)"
     rationale: "Симулированный документооборот для увеличения видимого оборота"
 
@@ -181,5 +199,6 @@ rules:
     category: meta
     severity: high
     source: "Внутренняя политика: defensive default при пустом снапшоте"
+    source_uz: "Ichki siyosat: boʻsh snapshotda defensive default"
     formula: "no positive revenue point in annual / quarterly / monthly"
     rationale: "Без данных о выручке нельзя адекватно оценить риск; ScoringService применяет policy: score floor=50, recommendation=REVIEW (override)"

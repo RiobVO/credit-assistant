@@ -98,6 +98,7 @@ def load_registry(yaml_path: Path) -> RuleRegistry:
             fn=CODE_RULES[spec.id],
             name=spec.name,
             name_uz=spec.name_uz,
+            source_uz=spec.source_uz,
         )
         for spec in config.rules
     ]

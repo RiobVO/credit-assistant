@@ -16,6 +16,9 @@ def _red_flag_to_dict(rf: RedFlag) -> dict[str, Any]:
         "rule_version": rf.rule_version,
         "severity": rf.severity.value,
         "source": rf.source,
+        # T0.4 follow-up B1: UZ-перевод source в snapshot. Existing snapshot'ы
+        # без ключа читаются через fallback ниже.
+        "source_uz": rf.source_uz,
         "message": rf.message,
         "evidence": dict(rf.evidence),
         "detected_at": rf.detected_at.isoformat(),
@@ -28,6 +31,10 @@ def _red_flag_from_dict(d: dict[str, Any]) -> RedFlag:
         rule_version=d["rule_version"],
         severity=FlagSeverity(d["severity"]),
         source=d["source"],
+        # Backward-compat для старых snapshot'ов без source_uz: подставляем RU.
+        # Compliance audit-reader читает regulatory cite одинаково OK на обоих
+        # языках — semantic loss минимальный, regulatory risk отсутствует.
+        source_uz=d.get("source_uz", d["source"]),
         message=d["message"],
         evidence=dict(d.get("evidence") or {}),
         detected_at=date.fromisoformat(d["detected_at"]),
