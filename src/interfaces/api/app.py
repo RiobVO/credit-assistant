@@ -35,6 +35,7 @@ from interfaces.api.shared.data_readiness import router as data_readiness_router
 from interfaces.api.shared.dossier import router as dossier_router
 from interfaces.api.shared.dossier_pdf import router as dossier_pdf_router
 from interfaces.api.shared.draft import router as draft_router
+from interfaces.api.shared.gnk_certificate import router as gnk_certificate_router
 from interfaces.api.shared.health import router as health_router
 from interfaces.api.shared.manual_input_parse import router as manual_input_parse_router
 from interfaces.api.shared.soliq_upload import router as soliq_upload_router
@@ -127,6 +128,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.include_router(soliq_upload_router, dependencies=auth_required)
         app.include_router(manual_input_parse_router, dependencies=auth_required)
         app.include_router(data_readiness_router, dependencies=auth_required)
+        # T0.3: ГНК-справки — manual upload только в bank mode (compliance audit
+        # workflow). Accountant install их не использует — router не подключаем.
+        app.include_router(gnk_certificate_router, dependencies=auth_required)
     else:
         # Accountant Mode: bank-роуты не подключаются. Shared — без auth,
         # OptionalAnalyst в handler'ах возвращает None → audit пропускается.
