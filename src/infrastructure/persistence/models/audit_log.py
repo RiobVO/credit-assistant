@@ -43,6 +43,13 @@ class AuditLogORM(Base):
         String(50), nullable=False, server_default="default"
     )
 
+    # T3.2 (correlation_id): X-Request-ID, под которым приехал запрос.
+    # NULL для записей вне HTTP-цикла (CLI, jobs, фоновые задачи без
+    # middleware). 32 hex chars = uuid4().hex.
+    request_id: Mapped[str | None] = mapped_column(
+        String(32), nullable=True
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -51,4 +58,5 @@ class AuditLogORM(Base):
         Index("ix_audit_log_analyst_id_created_at", "analyst_id", "created_at"),
         Index("ix_audit_log_event_created_at", "event", "created_at"),
         Index("ix_audit_log_brand_id_created_at", "brand_id", "created_at"),
+        Index("ix_audit_log_request_id", "request_id"),
     )
