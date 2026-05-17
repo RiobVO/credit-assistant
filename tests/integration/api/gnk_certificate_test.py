@@ -38,11 +38,13 @@ async def _seed_analyst(session: AsyncSession) -> AnalystORM:
 
 
 async def _login(client: httpx.AsyncClient) -> str:
+    # Backend prefix = /api/bank/auth (bank_auth_router); cookie-обёртку делает
+    # Next BFF, на ASGI-уровне токен лежит в JSON body LoginResponse.
     resp = await client.post(
-        "/api/auth/login", json={"email": EMAIL, "password": PASSWORD}
+        "/api/bank/auth/login", json={"email": EMAIL, "password": PASSWORD}
     )
     assert resp.status_code == 200, resp.text
-    return resp.cookies.get("ca_access") or ""
+    return str(resp.json()["access_token"])
 
 
 @pytest_asyncio.fixture
@@ -64,7 +66,10 @@ async def authed_client(pg_session: AsyncSession) -> AsyncIterator[httpx.AsyncCl
             transport=transport, base_url="http://test"
         ) as client:
             token = await _login(client)
-            client.cookies.set("ca_access", token)
+            # get_current_analyst читает Authorization: Bearer <token>
+            # (bank/dependencies.py:98), не cookie — cookie транспортный
+            # формат живёт только на Next BFF слое.
+            client.headers["Authorization"] = f"Bearer {token}"
             yield client
     finally:
         app.dependency_overrides.clear()
