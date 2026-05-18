@@ -1,14 +1,11 @@
 """Facade-адаптер: открыть .xltx, классифицировать формат, диспетч на парсер.
 
-Поддержанные парсеры:
-- ``parse_vat_declaration`` для Расчёта НДС (8 листов)
+Поддержанные парсеры (5 форматов my3.soliq.uz):
+- ``parse_vat_declaration`` для Расчёта НДС (8 листов, v1+v2)
 - ``parse_vat_registry`` для ilova-приложения №4 (10 листов)
 - ``parse_form2`` для Формы №2 «Отчёт о финансовых результатах» (3 листа)
 - ``parse_form1`` для Формы №1 «Бухгалтерский баланс» (4 листа)
-
-Profit Tax распознаётся ``detect_format`` и читает шапку через
-``parse_header``, но специализированного парсера для него ещё нет
-(TODO[CA-029] — отдельным заходом после FORM_1).
+- ``parse_profit_tax`` для Расчёта налога на прибыль (15-16 листов)
 """
 
 from __future__ import annotations
@@ -33,6 +30,10 @@ from infrastructure.adapters.soliq_xltx.format_detector import (
     SoliqXltxFormat,
     detect_format,
 )
+from infrastructure.adapters.soliq_xltx.profit_tax_parser import (
+    ProfitTaxData,
+    parse_profit_tax,
+)
 from infrastructure.adapters.soliq_xltx.vat_declaration_parser import (
     VatDeclarationData,
     parse_vat_declaration,
@@ -47,6 +48,7 @@ ParsedSoliqXltx = (
     | VatRegistryData
     | Form2IncomeStatementData
     | Form1BalanceSheetData
+    | ProfitTaxData
 )
 
 
@@ -93,9 +95,11 @@ class SoliqXltxAdapter:
             return parse_form2(wb)
         if fmt is SoliqXltxFormat.FORM_1_BALANCE_SHEET:
             return parse_form1(wb)
+        if fmt is SoliqXltxFormat.PROFIT_TAX:
+            return parse_profit_tax(wb)
         raise UnsupportedFormatError(
             wb.sheetnames,
             f"format {fmt} not implemented yet "
             "(supports: VAT_DECLARATION, VAT_REGISTRY_ILOVA, "
-            "FORM_2_INCOME_STATEMENT, FORM_1_BALANCE_SHEET)",
+            "FORM_2_INCOME_STATEMENT, FORM_1_BALANCE_SHEET, PROFIT_TAX)",
         )
