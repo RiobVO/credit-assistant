@@ -17,8 +17,16 @@ from infrastructure.persistence.models.audit_log import AuditLogORM
 
 
 class SqlAlchemyAuditLogRepository:
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(self, session: AsyncSession, brand_id: str = "default") -> None:
+        """T1.4 (ADR-0018): ``brand_id`` привязывается к repo-инстансу.
+
+        Все `.record(...)` calls этой инстанции пишут одинаковый brand_id —
+        тот, что текущая инсталляция держит в ``Settings.brand_id``. Default
+        ``"default"`` оставлен для тестов и Phase 4 legacy callsite'ов,
+        которые ещё не пробрасывают settings.
+        """
         self._session = session
+        self._brand_id = brand_id
 
     async def record(
         self,
@@ -35,6 +43,7 @@ class SqlAlchemyAuditLogRepository:
             target_type=target_type,
             target_id=target_id,
             payload=payload or {},
+            brand_id=self._brand_id,
         )
         self._session.add(orm)
         await self._session.flush()

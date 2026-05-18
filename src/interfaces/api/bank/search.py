@@ -23,6 +23,7 @@ from application.use_cases.load_dossier_for_view import (
     DossierViewBundle,
     LoadDossierForView,
 )
+from config.settings import get_settings
 from domain.value_objects.inn import INN, InvalidInnError
 from infrastructure.persistence.database import get_session
 from infrastructure.persistence.repositories.audit_log_repository import (
@@ -115,7 +116,7 @@ async def search_borrower(
         raise HTTPException(status_code=422, detail=f"invalid_inn: {exc}") from exc
 
     dossier_repo = SqlAlchemyDossierRepository(session)
-    audit_log = SqlAlchemyAuditLogRepository(session)
+    audit_log = SqlAlchemyAuditLogRepository(session, brand_id=get_settings().brand_id)
 
     hit = await dossier_repo.find_search_hit_by_inn(validated.value)
 
