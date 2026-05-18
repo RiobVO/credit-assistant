@@ -6,12 +6,11 @@
 
 Best-effort семантика (CA-014):
 * нераспознанный формат → warning, файл скипается;
-* поддерживаемый формат с парсером (VAT_DECLARATION, FORM_2, FORM_1) — данные
-  мерджатся, cell-level warnings от парсера агрегируются;
-* поддерживаемый формат без парсера (PROFIT_TAX) → warning «парсер не
-  реализован», файл скипается (TODO[CA-029b]);
-* file-level exception (битый xltx, openpyxl raise) → warning + skip, остальные
-  файлы продолжают обработку.
+* поддерживаемый формат (VAT_DECLARATION, VAT_REGISTRY_ILOVA, FORM_2, FORM_1,
+  PROFIT_TAX) — данные мерджатся, cell-level warnings от парсера агрегируются;
+* UnsupportedFormatError (теоретически — если в будущем появится новый формат
+  без парсера) → warning + skip, остальные файлы продолжают обработку;
+* file-level exception (битый xltx, openpyxl raise) → warning + skip.
 
 Frontend гидрирует форму Step 2 и помечает поля read-only по ``source_trail``.
 
@@ -107,10 +106,11 @@ class ParseManualInputFilesUseCase:
             try:
                 parsed = self.adapter.parse(f.content)
             except UnsupportedFormatError as exc:
-                # Adapter поднимает это для FORM_1 / PROFIT_TAX (CA-029)
+                # Reachable теоретически если detect_format вернёт новый формат
+                # без соответствующего парсера (все 5 поддержаны: VAT_DECLARATION,
+                # VAT_REGISTRY_ILOVA, FORM_2, FORM_1, PROFIT_TAX).
                 warnings.append(
-                    f"{f.name}: формат {fmt.value} распознан, но парсер не реализован "
-                    f"(см. TODO[CA-029])"
+                    f"{f.name}: формат {fmt.value} распознан, но парсер не реализован"
                 )
                 _logger.info("parse_files.unsupported name=%s fmt=%s reason=%s", f.name, fmt, exc)
                 continue
