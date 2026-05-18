@@ -7,7 +7,7 @@
 
 **Tier 0 status (2026-05-18):** ✅ **closed**. T0.1 / T0.2 / T0.3 / T0.4 / T0.5 done. T0.4 follow-up (B1+B2+B3+B4 + CA-DS29-apostrophe) тоже closed.
 
-**Tier 2 status (2026-05-18):** active. **T2.3 PROFIT_TAX parser** — ✅ closed. Active — **T2.1 dynamic units FORM_2** (CA-028).
+**Tier 2 status (2026-05-18):** active. **T2.3 PROFIT_TAX parser** + **T2.1 dynamic units (FORM_2+FORM_1)** — ✅ closed. Active — **T2.4 faktura.uz integration** (CA-DS11).
 
 **Tier 1 / T1.1 (2026-05-18):** ✅ **closed**. Compromised B исполнен — sequence на `dossiers.case_id`, миграция `b3e9f1a7d4c5` + `CaseIdAllocator` + drop derived helpers. Existing 47 dossiers backfilled `BR-2026-0001..0047`.
 
@@ -18,6 +18,8 @@
 **Tier 1 / T1.4 (2026-05-18):** ✅ **closed**. ADR-0018. Approach A pure — single-tenant per deployment (separate compose-project per bank), scope сужен после PROJECT_BRIEF Sec 11 review. `Settings.brand_id` + `_validate_runtime_config` helper в `app.py` (BRAND_ID resolves + PII_ENC_KEYS prod-mandatory, обобщает T1.3 inline check). `load_brand(brand_id)` mandatory arg — env-fallback внутри loader убран. `audit_log.brand_id` колонка (Alembic `e7f9a3c2b8d1`, NOT NULL DEFAULT 'default' + index `(brand_id, created_at)`) для forensics. Repository конструктор принимает brand_id, 5 callsites пробрасывают `settings.brand_id`. Playbook `docs/operations/multi-tenant-deploy.md`.
 
 **Tier 1 / T1.5 (2026-05-18):** ✅ **closed**. ADR-0019. LDAP-only, scope сужен — OAuth defer'ится в T1.5b backlog. `AUTHN_MODE=seeded|ldap` env switch (default `seeded`). LDAP integration через `ldap3` (pure Python, no system deps). `LdapAuthnAdapter` (service-bind → search → user-bind verify, role resolution через memberOf, lazy upsert) + `Ldap3Client` wrapper + `BreakGlassAuthnAdapter` (email whitelist → seeded fallback, source override на `break_glass`). `AuthnPort.authenticate` теперь возвращает `AuthnResult(identity, source)` — audit-log payload содержит `authn_source` для compliance trail. Alembic `f4a2d6c9e3b8`: `analysts.password_hash` NULLABLE + `authn_source VARCHAR(20) NOT NULL DEFAULT 'seeded'` + CHECK constraint. `_validate_runtime_config` ловит missing LDAP_* env при `AUTHN_MODE=ldap`. Playbook `docs/operations/ldap-setup.md` (generic AD defaults + ops runbook). **Tier 1 complete — переход к Tier 2 (Data quality).**
+
+**Tier 2 / T2.1 (2026-05-18):** ✅ **closed**. Dynamic unit detection FORM_2 + FORM_1 (scope расширен по сравнению с roadmap первоначальным — FORM_1 имел тот же hardcoded `_THOUSANDS_MULTIPLIER` gap). 4 атомарных коммитов: T2.1.1 `parse_unit_multiplier(wb, fmt) -> (Decimal, str | None)` helper в `header_parser.py` (case-insensitive substring matching: «млн» → ×1_000_000, «тыс» → ×1_000, «сум»/«soʻm» → ×1, unknown/empty → fallback ×1_000 + warning); T2.1.2 form2_parser wiring (16 money-cells × 2 helpers); T2.1.3 form1_parser wiring (22 балансовых cells + _aggregate_debt 5 компонент); T2.1.4 docs sync. Backward compat: 13/13 real fixtures = «тыс. сум.» → ×1000, поведение не меняется. Real-fixture smoke на «млн / полные сум» branches — backlog (T2.1b, нет fixture от папы). Tests: 10 unit helper + 5 FORM_2 + 5 FORM_1. 336/336 pytest pass (28 real fixtures), ruff + mypy strict clean. Closes CA-028.
 
 **Tier 2 / T2.3 (2026-05-18):** ✅ **closed**. PROFIT_TAX parser (5-й и последний xltx-формат my3.soliq.uz) подключён end-to-end в 5 атомарных коммитах (T2.3.1-5). `ProfitTaxData` DTO (минимум: header + taxable_profit + profit_tax_total), `parse_profit_tax(wb)` читает list01 L31 (код 030 Налогооблагаемая прибыль, signed) + L39 (код 080 Сумма налога — gross computed). Multiplier ×1 (полные сум, не тыс. как FORM_2) — cross-check L29 ≈ FORM_2 F6 × 1000. `SoliqXltxAdapter._dispatch` диспетчит PROFIT_TAX, `ParseManualInputFilesUseCase._merge_profit_tax` пишет в `taxes_paid_by_year[year]` через `_set_once`. Quarterly (Q1/Q2/Q3) — silent skip с warning (mirror FORM_2 CA-027 option b, защита от Q1 layout drift в L36). Tests: 8 unit parser + 6 unit use-case + 5 PROFIT_TAX fixtures pass в `real_xltx_test.py` (раньше xfail). 316/316 pytest (application + adapters + parsers), ruff + mypy strict clean. Closes CA-029b. **Heads-up CA-DS25 correction:** roadmap утверждал что T2.3 «замыкает CA-DS25 (KPI sparkline)» — это **ошибка**: sparkline требует monthly_turnover≥12 источник (VAT_DECL chain или ESF), не annual PROFIT_TAX. CA-DS25 остаётся frozen с обновлённым pre-condition.
 
@@ -206,10 +208,10 @@ LDAP-only scope (OAuth defer'ится в T1.5b). 3 атомарных комми
 
 ## Tier 2 — Data quality
 
-- **T2.1** — Dynamic unit detection FORM_2 (CA-028). Header parsing «в тысячах/миллионах сум», сейчас hardcoded ×1000. **Active.**
+- ~~**T2.1** — Dynamic unit detection FORM_2 + FORM_1 (CA-028)~~ → ✅ **DONE 2026-05-18**. 4 атомарных коммитов (helper → FORM_2 wiring → FORM_1 wiring → docs sync). Helper `parse_unit_multiplier` в `header_parser.py`. Scope расширен на FORM_1 (тот же gap). **Heads-up T2.1b backlog:** real-fixture smoke на «млн / полные сум» branches — нет fixture от папы (13/13 = тыс.).
 - ~~**T2.2** — VAT parser на реальных 10006_45/10006_47 (CA-015)~~ → **поглощено T0.5 done 2026-05-17 (commit f5d7495)**.
 - ~~**T2.3** — PROFIT_TAX parser (CA-029b)~~ → ✅ **DONE 2026-05-18**. 5 атомарных коммитов (parser → dispatch → use-case wiring → cleanup → status sync). Закрывает 5 xfail в `tests/parsers/real_xltx_test.py`, полный 5/5 format coverage парсера. **CA-DS25 sparkline claim снят** — требует monthly_turnover источник (VAT_DECL chain / ESF), не PROFIT_TAX.
-- **T2.4** — faktura.uz integration (CA-DS11). Сейчас в `/api/system/health` всегда `not_implemented`.
+- **T2.4** — faktura.uz integration (CA-DS11). Сейчас в `/api/system/health` всегда `not_implemented`. **Active.**
 
 ---
 
@@ -248,4 +250,5 @@ LDAP-only scope (OAuth defer'ится в T1.5b). 3 атомарных комми
 - **CA-DS11b** — faktura.uz расширенный scope (queries, history). Оценить после T2.4.
 - **T1.5b** — OAuth2/OIDC AuthnAdapter. Pre-condition: запрос от пилот-банка на Okta/Azure AD интеграцию. Реализация поверх существующего `AuthnPort` (как `LdapAuthnAdapter`), library `authlib`. ADR-0019b.
 - **T1.5c** — openldap testcontainer для full integration tests `LdapAuthnAdapter`. Текущее покрытие — mock-only (`MagicMock(spec=LdapClient)`). Hardening pass с реальным `osixia/openldap` контейнером.
+- **T2.1b** — real-fixture smoke на FORM_2 / FORM_1 с «млн. сум.» либо «сум.» (полные) единицами измерения. Текущее покрытие — synthetic factory only (10 unit-кейсов TestUnitMultiplier). 13/13 real fixtures от папы = «тыс. сум.» (no signal of variance). При появлении нестандартного xltx — добавить в `tests/fixtures/soliq_xltx/` + ассерты multiplier branches в `real_xltx_test.py`. Pre-condition: получить такой файл (например от крупной фирмы с «млн. сум.» или мелкой с полными «сум.»).
 - **CA-DS30** — anonymize gap для real xltx fixtures. Сейчас 1/28 `*_anon.xltx` на месте. Bulk anonymization через openpyxl script: per-format (VAT_DECLARATION / VAT_REGISTRY_ILOVA / FORM_2 / FORM_1 / PROFIT_TAX) replace правил для ИНН (на dummy ИНН) / имён (синтетика) / сумм (random preserving order-of-magnitude + signature-cells для parser format-detection). Скрипт `scripts/anonymize_xltx.py` + 28 anonymized output → git. **Post-T1 priority** (после T1.1-T1.5 prod-killers).
