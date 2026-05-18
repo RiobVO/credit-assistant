@@ -7,13 +7,15 @@
 
 ## Current Status
 
+**T1.2 (refresh-token rotation + Redis denylist) complete 2026-05-18.** ADR-0016. `RefreshTokenDenylistPort` + Redis adapter (`SET NX EX`, TTL clamp до 1s) + `NullRefreshTokenDenylist` fallback при `REDIS_URL=None`. `/refresh` rotation: decode → `is_denied` → `is_active` → `deny` NX → выдаём новые access+refresh. `/logout` денилист'ит активный refresh из optional `LogoutRequest` body (best-effort, cross-account guard по `claims.analyst_id == analyst.id`). BFF refresh route обновляет **обе** cookies (access + ca_refresh); logout прокидывает refresh upstream. Fail closed при Redis недоступности с заданным `REDIS_URL`. Closes CA-019. Tests: 8 unit (`null` 2 + `redis` 6 fakeredis) + 2 integration (testcontainers redis) + 7 интеграционных (4 новых на rotation/double-use/cross-account + расширение 3 существующих).
+
 **T1.1 (case_id monotonic sequence) complete 2026-05-18** (commit `4c77d7c`, hotfix `65827f1`, CI ✓ run 26006304031). Banking-grade BR-YYYY-NNNN на `dossiers.case_id` колонке (compromised B без Phase 4 application entity). Existing 47 dossiers backfilled `BR-2026-0001..0047` по `created_at` ASC. Allocator: `pg_advisory_xact_lock(year)` + `ALTER SEQUENCE RESTART` на year boundary + `nextval`. Закрывает CA-DS18b/c. Драйверы изменений: `_application_id`/`_format_application_id` derived helpers удалены, frontend `formatCaseId` + test удалены. E2E smoke (BR-2026-0048 на новый dossier) ✓.
 
 **Hotfix 65827f1 (T0.4 B1 регрессия в тестах):** `test_registry_factory.py` inline YAML не получил `source_uz` placeholder после T0.4 B1 commit `6db0061` — CI был красным 5 коммитов подряд начиная с T0.4. Pydantic ValidationError раздавался раньше проверяемой ветки (unknown rule / missing rule / invalid severity / missing name_uz). Поправил 4 inline YAML с `source_uz: src_uz`. Lesson: **pre-push checklist пункт 4** («CI коммита перед твоим зелёный? `gh run list --branch main -L 3`») игнорирование стоит сессии — следующий push наследует красный baseline.
 
 **T0.4 (UZ-локализация PDF) + follow-up complete 2026-05-18.** Все 4 gaps live-browser walkthrough'а закрыты (B1+B2 source/message_uz сквозь стек, B3 OKVED PDF picker, B4 UZS-форматтеры) + CA-DS29-apostrophe (355 ASCII apostrophes → U+02BB ʻ в uz.json). Tier 0 целиком closed.
 
-**Active — T1.2 refresh-token rotation + Redis denylist (CA-019).** См. roadmap.
+**Active — T1.3 PII encryption at rest (column-level через app-layer).** См. roadmap.
 
 **Phase 10 (PDF document) закрыта 2026-05-15** (`a8f2b66`, CI `25934169074`). Финальная фаза Design Sweep — credit memorandum aesthetic: hero decision-block, observations pros/cons split, Section A identity hero с avatar + 3 stat tiles, brand-tenant через `BRAND_ID` env → `config/brands/<id>.json`, F-секция рендерит `rule.name` из YAML.
 
@@ -153,6 +155,7 @@ Heads-up: **live-browser smoke** через `/`, `/search`, `/history`, `/dossie
 - **Phase 4 — Bank Mode** (ADR-0009): `APP_MODE` env управляет инсталляцией. Bank: shared endpoints закрыты `Depends(get_current_analyst)`. Audit `login/login_failed/logout/search_borrower/view_dossier/generate_dossier/download_pdf` пишется в `audit_log`. `dossiers.source_mode` + nullable FK `created_by_analyst_id`.
 - **JWT** (Phase 4.B): native `bcrypt`, HS256, access 15м + refresh 7д без ротации в v1. `JWT_SECRET` через env, мин. 32 байта в проде.
 - **Frontend BFF cookies**: httpOnly + sameSite=lax + secure-в-проде. Tokens в `ca_access` (path=`/`) и `ca_refresh` (path=`/api/auth`). Client JS никогда не видит JWT.
+- **T1.2 refresh rotation** (ADR-0016): каждый `/refresh` денилист'ит входящий jti в Redis (`SET NX EX`), выдаёт новую пару. `/logout` денилист'ит refresh из BFF cookie (optional `LogoutRequest.refresh_token`, cross-account guard). `REDIS_URL=None` → `NullRefreshTokenDenylist` no-op (stateless 7-day fallback для dev). `REDIS_URL` задан, Redis недоступен → fail closed на `/refresh` (compromised tokens не проскочат). BFF refresh route обновляет **обе** cookies из upstream response.
 - **Seed analyst**: `docker compose exec api bash -c "cd /app/src && uv run --no-sync python -m interfaces.cli.seed_analysts --email ... --password ... --full-name ..."`.
 
 ### Rules / KPI conventions (изменяешь — обновляй sync)

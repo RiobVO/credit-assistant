@@ -22,9 +22,12 @@ from fastapi import Depends, Header, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from application.dto.analyst_identity import AnalystIdentity
+from application.ports.refresh_token_denylist_port import RefreshTokenDenylistPort
 from config.settings import get_settings
 from infrastructure.auth.jwt_service import InvalidTokenError, JwtService
+from infrastructure.auth.null_refresh_token_denylist import NullRefreshTokenDenylist
 from infrastructure.auth.password_hasher import PasswordHasher
+from infrastructure.auth.redis_refresh_token_denylist import RedisRefreshTokenDenylist
 from infrastructure.auth.seeded_authn_adapter import SeededAuthnAdapter
 from infrastructure.persistence.database import get_session
 from infrastructure.persistence.repositories.analyst_repository import (
@@ -51,9 +54,32 @@ def get_jwt_service() -> JwtService:
     )
 
 
+@lru_cache(maxsize=1)
+def get_refresh_token_denylist() -> RefreshTokenDenylistPort:
+    """T1.2 (CA-019): refresh-token denylist для rotation на /refresh и /logout.
+
+    REDIS_URL=None → NullDenylist (stateless 7-day fallback для dev без compose).
+    REDIS_URL задан → Redis adapter поверх singleton-client. При недоступности
+    Redis caller (auth.py /refresh) ловит ConnectionError и отдаёт 503 — fail
+    closed, чтобы compromised tokens не проскочили.
+
+    См. ADR-0016 «Refresh-token rotation».
+    """
+    settings = get_settings()
+    if not settings.redis_url:
+        return NullRefreshTokenDenylist()
+    from redis.asyncio import Redis
+
+    client = Redis.from_url(settings.redis_url, decode_responses=True)
+    return RedisRefreshTokenDenylist(client)
+
+
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 HasherDep = Annotated[PasswordHasher, Depends(get_password_hasher)]
 JwtServiceDep = Annotated[JwtService, Depends(get_jwt_service)]
+RefreshDenylistDep = Annotated[
+    RefreshTokenDenylistPort, Depends(get_refresh_token_denylist)
+]
 
 
 async def get_analyst_repo(session: SessionDep) -> SqlAlchemyAnalystRepository:

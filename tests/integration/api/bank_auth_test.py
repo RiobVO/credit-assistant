@@ -14,16 +14,43 @@ import pytest_asyncio
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from application.ports.refresh_token_denylist_port import RefreshTokenDenylistPort
 from config.settings import Settings
 from infrastructure.auth.password_hasher import PasswordHasher
 from infrastructure.persistence.database import get_session
 from infrastructure.persistence.models.analyst import AnalystORM
 from infrastructure.persistence.models.audit_log import AuditLogORM
 from interfaces.api.app import create_app
-from interfaces.api.bank.dependencies import get_jwt_service, get_password_hasher
+from interfaces.api.bank.dependencies import (
+    get_jwt_service,
+    get_password_hasher,
+    get_refresh_token_denylist,
+)
 from interfaces.api.shared.dependencies import get_rule_registry, get_scoring_service
 
 pytestmark = pytest.mark.integration
+
+
+class _InMemoryRefreshDenylist:
+    """T1.2 test double: воспроизводит контракт RefreshTokenDenylistPort
+    in-memory. Гарантирует rotation-семантику в bank_auth_test без поднятия
+    Redis-контейнера на каждый прогон.
+    """
+
+    def __init__(self) -> None:
+        self._set: set[str] = set()
+
+    async def deny(self, jti: str, *, expires_at: object) -> bool:
+        # expires_at не используется в in-memory fake — Redis adapter clamp'ает
+        # TTL, in-memory просто хранит jti до конца теста (rollback).
+        _ = expires_at
+        if jti in self._set:
+            return False
+        self._set.add(jti)
+        return True
+
+    async def is_denied(self, jti: str) -> bool:
+        return jti in self._set
 
 EMAIL = "ivanov@bank.uz"
 PASSWORD = "S3cret!"
@@ -56,6 +83,7 @@ async def api_client(pg_session: AsyncSession) -> AsyncIterator[httpx.AsyncClien
     get_jwt_service.cache_clear()
     # Hasher с cost=4 для unit-уровня скорости тестов.
     get_password_hasher.cache_clear()
+    get_refresh_token_denylist.cache_clear()
 
     async def _override_get_session() -> AsyncIterator[AsyncSession]:
         yield pg_session
@@ -63,12 +91,22 @@ async def api_client(pg_session: AsyncSession) -> AsyncIterator[httpx.AsyncClien
     def _fast_hasher() -> PasswordHasher:
         return PasswordHasher(rounds=4)
 
+    # T1.2: in-memory denylist shared между запросами одного теста — даёт
+    # rotation-семантику без Redis. Доступен в тесте через
+    # ``client.denylist`` для assertions.
+    denylist: RefreshTokenDenylistPort = _InMemoryRefreshDenylist()
+
+    def _override_denylist() -> RefreshTokenDenylistPort:
+        return denylist
+
     app = create_app(Settings(app_mode="bank"))
     app.dependency_overrides[get_session] = _override_get_session
     app.dependency_overrides[get_password_hasher] = _fast_hasher
+    app.dependency_overrides[get_refresh_token_denylist] = _override_denylist
     transport = httpx.ASGITransport(app=app)
     try:
         async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            client.denylist = denylist  # type: ignore[attr-defined]
             yield client
     finally:
         app.dependency_overrides.clear()
@@ -235,9 +273,10 @@ async def test_me_returns_401_with_garbage_token(api_client: httpx.AsyncClient) 
     assert resp.status_code == 401
 
 
-async def test_refresh_returns_new_access_token(
+async def test_refresh_returns_new_access_and_refresh_pair(
     api_client: httpx.AsyncClient, pg_session: AsyncSession
 ) -> None:
+    """T1.2: rotation — refresh возвращает обе токена, не только access."""
     await _seed_analyst(pg_session)
     login = (
         await api_client.post(
@@ -252,7 +291,85 @@ async def test_refresh_returns_new_access_token(
     assert resp.status_code == 200
     body = resp.json()
     assert body["access_token"]
+    assert body["refresh_token"]
+    assert body["refresh_token"] != refresh
     assert body["token_type"] == "bearer"
+
+
+async def test_refresh_rotation_invalidates_old_refresh(
+    api_client: httpx.AsyncClient, pg_session: AsyncSession
+) -> None:
+    """T1.2: после rotation повторный POST со старым refresh → 401 token_reused.
+
+    Закрывает stolen-cookie hole: украденный 7-дневный refresh инвалидируется
+    при первой же легитимной rotation owner'а.
+    """
+    await _seed_analyst(pg_session)
+    login = (
+        await api_client.post(
+            "/api/bank/auth/login", json={"email": EMAIL, "password": PASSWORD}
+        )
+    ).json()
+    refresh = login["refresh_token"]
+
+    first = await api_client.post(
+        "/api/bank/auth/refresh", json={"refresh_token": refresh}
+    )
+    assert first.status_code == 200
+
+    retry = await api_client.post(
+        "/api/bank/auth/refresh", json={"refresh_token": refresh}
+    )
+    assert retry.status_code == 401
+    assert retry.json()["detail"] == "token_reused"
+
+
+async def test_refresh_double_use_rejected(
+    api_client: httpx.AsyncClient, pg_session: AsyncSession
+) -> None:
+    """NX-race semantics: после успешного rotation тот же refresh уже в denylist.
+    Эквивалентно параллельному запросу с одним и тем же токеном."""
+    await _seed_analyst(pg_session)
+    login = (
+        await api_client.post(
+            "/api/bank/auth/login", json={"email": EMAIL, "password": PASSWORD}
+        )
+    ).json()
+    refresh = login["refresh_token"]
+
+    first = await api_client.post(
+        "/api/bank/auth/refresh", json={"refresh_token": refresh}
+    )
+    assert first.status_code == 200
+    second = await api_client.post(
+        "/api/bank/auth/refresh", json={"refresh_token": refresh}
+    )
+    assert second.status_code == 401
+    assert second.json()["detail"] == "token_reused"
+
+
+async def test_refresh_new_token_still_works(
+    api_client: httpx.AsyncClient, pg_session: AsyncSession
+) -> None:
+    """Цепочка rotation: каждый новый refresh действительно валиден."""
+    await _seed_analyst(pg_session)
+    login = (
+        await api_client.post(
+            "/api/bank/auth/login", json={"email": EMAIL, "password": PASSWORD}
+        )
+    ).json()
+    r1 = login["refresh_token"]
+
+    body1 = (
+        await api_client.post("/api/bank/auth/refresh", json={"refresh_token": r1})
+    ).json()
+    r2 = body1["refresh_token"]
+
+    second = await api_client.post(
+        "/api/bank/auth/refresh", json={"refresh_token": r2}
+    )
+    assert second.status_code == 200
+    assert second.json()["refresh_token"] != r2
 
 
 async def test_refresh_rejects_access_token(
@@ -325,6 +442,105 @@ async def test_logout_writes_audit_and_returns_204(
 async def test_logout_requires_auth(api_client: httpx.AsyncClient) -> None:
     resp = await api_client.post("/api/bank/auth/logout")
     assert resp.status_code == 401
+
+
+async def test_logout_denylists_refresh_token(
+    api_client: httpx.AsyncClient, pg_session: AsyncSession
+) -> None:
+    """T1.2 (CA-019): logout с refresh_token в body инвалидирует его в denylist —
+    последующий /refresh с этим же refresh → 401 token_reused."""
+    await _seed_analyst(pg_session)
+    login = (
+        await api_client.post(
+            "/api/bank/auth/login", json={"email": EMAIL, "password": PASSWORD}
+        )
+    ).json()
+    access = login["access_token"]
+    refresh = login["refresh_token"]
+
+    resp = await api_client.post(
+        "/api/bank/auth/logout",
+        headers={"Authorization": f"Bearer {access}"},
+        json={"refresh_token": refresh},
+    )
+    assert resp.status_code == 204
+
+    retry = await api_client.post(
+        "/api/bank/auth/refresh", json={"refresh_token": refresh}
+    )
+    assert retry.status_code == 401
+    assert retry.json()["detail"] == "token_reused"
+
+
+async def test_logout_without_refresh_token_still_succeeds(
+    api_client: httpx.AsyncClient, pg_session: AsyncSession
+) -> None:
+    """Backward-compat: старые клиенты без refresh_token в body — logout
+    audit-only, без denylist. Refresh истечёт натурально через TTL."""
+    await _seed_analyst(pg_session)
+    login = (
+        await api_client.post(
+            "/api/bank/auth/login", json={"email": EMAIL, "password": PASSWORD}
+        )
+    ).json()
+    access = login["access_token"]
+
+    resp = await api_client.post(
+        "/api/bank/auth/logout",
+        headers={"Authorization": f"Bearer {access}"},
+    )
+    assert resp.status_code == 204
+
+
+async def test_logout_ignores_cross_account_refresh(
+    api_client: httpx.AsyncClient, pg_session: AsyncSession
+) -> None:
+    """Защита от cross-account abuse: logout не должен denylist'ить чужой
+    refresh, даже если злоумышленник передал валидный токен другого user'а.
+
+    Access-токен уже подтвердил identity первого user'а — denylist только
+    того refresh'а, чей analyst_id совпадает.
+    """
+    hasher = PasswordHasher(rounds=4)
+    other = AnalystORM(
+        email="other@bank.uz",
+        password_hash=hasher.hash(PASSWORD),
+        full_name="Other O.",
+        role="analyst",
+        is_active=True,
+    )
+    pg_session.add(other)
+    await pg_session.flush()
+    await _seed_analyst(pg_session)
+
+    other_login = (
+        await api_client.post(
+            "/api/bank/auth/login",
+            json={"email": "other@bank.uz", "password": PASSWORD},
+        )
+    ).json()
+    other_refresh = other_login["refresh_token"]
+
+    self_login = (
+        await api_client.post(
+            "/api/bank/auth/login", json={"email": EMAIL, "password": PASSWORD}
+        )
+    ).json()
+    self_access = self_login["access_token"]
+
+    # Logout «нашего» аналитика, но в body — чужой refresh.
+    resp = await api_client.post(
+        "/api/bank/auth/logout",
+        headers={"Authorization": f"Bearer {self_access}"},
+        json={"refresh_token": other_refresh},
+    )
+    assert resp.status_code == 204
+
+    # Чужой refresh всё ещё валиден.
+    retry = await api_client.post(
+        "/api/bank/auth/refresh", json={"refresh_token": other_refresh}
+    )
+    assert retry.status_code == 200
 
 
 # ── change-password (CA-068) ────────────────────────────────────────────────
