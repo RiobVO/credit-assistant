@@ -7,7 +7,7 @@
 
 ## Current Status
 
-**T1.3 (PII encryption at rest) complete 2026-05-18.** ADR-0017. `PiiEncryptorPort` + `FernetPiiEncryptor` (`MultiFernet` rotation) + `NullPiiEncryptor` fallback. SQLAlchemy TypeDecorator: `EncryptedString` / `EncryptedJsonb` (wrap `{_encrypted: true, ciphertext: ...}`) / `EncryptedBytea`. 6 PII columns: `analysts.{full_name, mfa_secret}`, `borrowers.director_name`, `borrower_snapshots.payload`, `drafts.payload`, `gnk_certificates.file_bytes`. `audit_log` emails masked через shared `infrastructure/auth/email_mask.py` (3 callsites). Alembic `c5d2f3a7e1b4`: VARCHAR length expansions (mfa 200, full_name/director 500) + data encrypt pass + idempotent (sentinel `gAAAAA` / `_encrypted:true` skip). `PII_ENC_KEYS` env. Production startup-assertion (staging/prod без ключа → crash). Closes CA-DS12. Tests: 5 unit (Null) + 8 unit (Fernet rotation/invalid) + 9 unit (TypeDecorator backward-compat) + 5 unit (email_mask) + 6 integration (testcontainers raw SELECT vs ORM SELECT). Migration verified roundtrip: downgrade decrypt → upgrade re-encrypt → idempotent re-run.
+**T1.3 (PII encryption at rest) complete 2026-05-18** (commit `e153be3`, CI ✓ run 26029032045). ADR-0017. `PiiEncryptorPort` + `FernetPiiEncryptor` (`MultiFernet` rotation) + `NullPiiEncryptor` fallback. SQLAlchemy TypeDecorator: `EncryptedString` / `EncryptedJsonb` (wrap `{_encrypted: true, ciphertext: ...}`) / `EncryptedBytea`. 6 PII columns: `analysts.{full_name, mfa_secret}`, `borrowers.director_name`, `borrower_snapshots.payload`, `drafts.payload`, `gnk_certificates.file_bytes`. `audit_log` emails masked через shared `infrastructure/auth/email_mask.py` (3 callsites: mfa, authenticate_analyst, admin). Alembic `c5d2f3a7e1b4`: VARCHAR length expansions (mfa 200, full_name/director 500) + data encrypt pass + idempotent (sentinel `gAAAAA` / `_encrypted:true` skip). `PII_ENC_KEYS` env. Production startup-assertion (staging/prod без ключа → crash). Closes CA-DS12. Tests: 5 unit (Null) + 8 unit (Fernet rotation/invalid) + 9 unit (TypeDecorator backward-compat) + 5 unit (email_mask) + 6 integration (testcontainers raw SELECT vs ORM SELECT). Migration verified roundtrip: downgrade decrypt → upgrade re-encrypt → idempotent re-run. **Backup `backup-pre-t13.sql` лежит на хосте (gitignored) — restore-точка если в БД что-то пойдёт не так.**
 
 **T1.2 (refresh-token rotation + Redis denylist) complete 2026-05-18.** ADR-0016. `RefreshTokenDenylistPort` + Redis adapter (`SET NX EX`, TTL clamp до 1s) + `NullRefreshTokenDenylist` fallback при `REDIS_URL=None`. `/refresh` rotation: decode → `is_denied` → `is_active` → `deny` NX → выдаём новые access+refresh. `/logout` денилист'ит активный refresh из optional `LogoutRequest` body (best-effort, cross-account guard по `claims.analyst_id == analyst.id`). BFF refresh route обновляет **обе** cookies (access + ca_refresh); logout прокидывает refresh upstream. Fail closed при Redis недоступности с заданным `REDIS_URL`. Closes CA-019. Tests: 8 unit (`null` 2 + `redis` 6 fakeredis) + 2 integration (testcontainers redis) + 7 интеграционных (4 новых на rotation/double-use/cross-account + расширение 3 существующих).
 
@@ -52,13 +52,14 @@ Heads-up: **live-browser smoke** через `/`, `/search`, `/history`, `/dossie
 
 **Активная ветка:** `main`.
 
-**Stack state на 2026-05-18:**
+**Stack state на 2026-05-18 (после T1.3):**
 - Docker compose поднят: `credit-api` (8000), `credit-postgres` (5433), `credit-redis` (6379). Все healthy.
-- Backend `APP_MODE=bank`, `BRAND_ID=default` (default brand без `defaultLang` — fallback на «ru»; `uzbekbank.json` пока тоже без `defaultLang`, добавится после UZ-демо validation).
+- Backend `APP_MODE=bank`, `BRAND_ID=default`, **`PII_ENC_KEYS` задан тестовым Fernet-ключом** (хранится в `/tmp/pii_key.txt` на dev-машине, prefix `iEuuP5WADM_sxwy7pgjU...`). БД сейчас зашифрована этим ключом. Без него — restore из `backup-pre-t13.sql` (pre-T1.3 plaintext snapshot, gitignored).
 - Frontend Next dev (Turbopack) `npm run dev` в web/ — порт 3000.
-- Seeded analyst для smoke: **email `t04@bank.uz`** / **password `T04Smoke!`**, без MFA.
-- Существующих dossier'ов в БД: 48 (47 backfilled `BR-2026-0001..0047` + 1 smoke `BR-2026-0048`). Главный smoke-target после T1.1 — найти «кадр дон нон» (ИНН 201308534) по новому case_id; legacy BR-2026-0081 теперь не существует, у того dossier'а новый sequential id.
+- Seeded analyst для smoke: **email `t04@bank.uz`** / **password `T04Smoke!`**, без MFA. `full_name` хранится зашифрованным; API возвращает decrypted транспарентно.
+- Существующих dossier'ов в БД: 48 (47 backfilled `BR-2026-0001..0047` + 1 smoke `BR-2026-0048`). Snapshot.payload + drafts.payload теперь зашифрованы JSONB wrap pattern.
 - Папка `smoke-pdfs/` (в .gitignore) — три PDF сравнения ru/uz/nolang.
+- Папка `backup-pre-t13.sql` (в .gitignore) — restore-точка pre-encryption snapshot, при потере PII_ENC_KEYS используется для recovery.
 
 **Hotfix внутри сессии 2026-05-18:**
 - `5eccce6` — T0.3 integration test auth contract (URL prefix `/api/auth/login` → `/api/bank/auth/login` + Authorization header instead of cookie). CI с T0.3 closure был красный 5 коммитов подряд.
@@ -260,6 +261,7 @@ Heads-up: **live-browser smoke** через `/`, `/search`, `/history`, `/dossie
 ## Operations playbooks
 
 - **2FA smoke (4 пути, ~10 мин)** — `docs/operations/2fa-smoke.md`.
+- **PII key rotation + recovery** — `docs/operations/pii-key-rotation.md` (T1.3 / ADR-0017).
 
 ---
 
