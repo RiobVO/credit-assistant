@@ -1,0 +1,17 @@
+node_modules
+.next
+.git
+.gitignore
+.env
+.env.local
+.env.*.local
+.vscode
+.idea
+README.md
+*.log
+coverage
+test-results
+.eslintcache
+__snapshots__
+.turbo
+out
