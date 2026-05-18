@@ -24,6 +24,7 @@ from config.logging import configure_logging
 from config.settings import Settings, get_settings
 from infrastructure.brand.brand_config import BrandConfigError, load_brand
 from infrastructure.jobs.uptime_collector import uptime_collector_loop
+from infrastructure.observability.metrics import setup_prometheus
 from infrastructure.observability.sentry import init_sentry
 from infrastructure.persistence.database import get_session_factory
 from interfaces.api.bank.admin import router as bank_admin_router
@@ -173,6 +174,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # * корреляция работала для **всех** записей stdlib/structlog внутри
     #   handler-цепочки.
     app.add_middleware(RequestIDMiddleware)
+
+    # T3.3 (ADR-0023): /metrics endpoint + auto-instrumentation HTTP.
+    # Default off (metrics_enabled=False) — никаких метрик и endpoint'а
+    # в dev. Включается через .env в staging/prod.
+    if settings.metrics_enabled:
+        setup_prometheus(app)
 
     app.include_router(health_router)
     # system_router — без auth, доступен в обоих режимах. Используется UI
