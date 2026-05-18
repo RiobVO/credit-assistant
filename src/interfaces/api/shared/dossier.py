@@ -78,6 +78,15 @@ async def manual_input_dossier(
     flags = registry.run_all(snapshot)
     score = scoring.score(flags)
 
+    # T3.3: counter сработавших red-flag rules per scoring run, labelled
+    # severity. Spike critical/h ≈ anomaly signal (fraud wave либо
+    # rules engine регрессия). Lazy import — application-слой избегает
+    # hard-coupling с observability.
+    from infrastructure.observability.metrics import red_flags_fired_total
+
+    for flag in flags:
+        red_flags_fired_total.labels(severity=flag.severity.value).inc()
+
     # Persist цепочкой: borrower → snapshot → dossier. Транзакция управляется
     # `get_session` зависимостью (commit на штатном выходе, rollback при exc).
     borrower_id = await storage.borrower.upsert(borrower)

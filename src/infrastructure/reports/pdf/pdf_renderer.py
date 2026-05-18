@@ -89,6 +89,11 @@ class WeasyPrintPdfRenderer:
         # недоступны на dev-хосте. Сам модуль импортируется без них.
         from weasyprint import HTML
 
+        # T3.3: histogram WeasyPrint render time для Grafana dashboard.
+        # Lazy import — domain/template-rendering layer не должен иметь
+        # hard-dependency на observability infra.
+        from infrastructure.observability.metrics import pdf_render_duration
+
         # T0.4: locale-зависимые filters пересобираются per-render через
         # closure'ы. Filter-registry env'а перезаписывается — env shared,
         # cost микросекунды.
@@ -96,7 +101,8 @@ class WeasyPrintPdfRenderer:
 
         context = self._build_context(bundle)
         html = self._env.get_template(TEMPLATE_NAME).render(**context)
-        pdf_bytes: bytes = HTML(string=html, base_url=_BASE_URL).write_pdf()
+        with pdf_render_duration.time():
+            pdf_bytes: bytes = HTML(string=html, base_url=_BASE_URL).write_pdf()
         return pdf_bytes
 
     def _register_locale_filters(self, messages: PdfMessages) -> None:
