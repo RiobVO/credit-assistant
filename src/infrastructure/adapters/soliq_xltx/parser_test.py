@@ -8,6 +8,7 @@ import pytest
 from infrastructure.adapters.soliq_xltx.errors import UnsupportedFormatError
 from infrastructure.adapters.soliq_xltx.format_detector import SoliqXltxFormat
 from infrastructure.adapters.soliq_xltx.parser import SoliqXltxAdapter
+from infrastructure.adapters.soliq_xltx.profit_tax_parser import ProfitTaxData
 from infrastructure.adapters.soliq_xltx.vat_declaration_parser import VatDeclarationData
 from infrastructure.adapters.soliq_xltx.vat_registry_parser import VatRegistryData
 from tests.fixtures.soliq_xltx._factories import (
@@ -69,12 +70,22 @@ def test_accepts_binary_io_source(adapter: SoliqXltxAdapter) -> None:
     assert isinstance(data, VatDeclarationData)
 
 
-def test_unsupported_format_raises(adapter: SoliqXltxAdapter) -> None:
-    # PROFIT_TAX по-прежнему без специализированного парсера (FORM_2 закрыт
-    # CA-026, FORM_1 — CA-029). Проверяем что adapter поднимает
-    # UnsupportedFormatError для PROFIT_TAX.
-    with pytest.raises(UnsupportedFormatError, match="not implemented"):
-        adapter.parse(_to_bytes(build_profit_tax_wb()))
+def test_dispatch_to_profit_tax_parser(adapter: SoliqXltxAdapter) -> None:
+    """T2.3: PROFIT_TAX больше не unsupported — диспетчится в parse_profit_tax."""
+    data = adapter.parse(_to_bytes(build_profit_tax_wb()))
+    assert isinstance(data, ProfitTaxData)
+    assert data.header.borrower_inn is not None
+    # Default factory ИНН = 306399449
+    assert data.header.borrower_inn.value == "306399449"
+
+
+def test_unknown_format_raises_unsupported(adapter: SoliqXltxAdapter) -> None:
+    """Workbook без sentinel-сигнатур → UnsupportedFormatError."""
+    wb = build_profit_tax_wb()
+    # Снимем sentinel — формат станет UNKNOWN
+    wb["list01"]["B2"] = None
+    with pytest.raises(UnsupportedFormatError):
+        adapter.parse(_to_bytes(wb))
 
 
 def test_detect_returns_format_without_parsing(adapter: SoliqXltxAdapter) -> None:
@@ -89,3 +100,6 @@ def test_detect_returns_format_without_parsing(adapter: SoliqXltxAdapter) -> Non
 
     fmt = adapter.detect(_to_bytes(build_form1_balance_sheet_wb()))
     assert fmt == SoliqXltxFormat.FORM_1_BALANCE_SHEET
+
+    fmt = adapter.detect(_to_bytes(build_profit_tax_wb()))
+    assert fmt == SoliqXltxFormat.PROFIT_TAX
