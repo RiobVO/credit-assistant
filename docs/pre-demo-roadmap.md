@@ -7,7 +7,9 @@
 
 **Tier 0 status (2026-05-18):** ✅ **closed**. T0.1 / T0.2 / T0.3 / T0.4 / T0.5 done. T0.4 follow-up (B1+B2+B3+B4 + CA-DS29-apostrophe) тоже closed.
 
-**Tier 1 / T1.1 (2026-05-18):** ✅ **closed**. Compromised B исполнен — sequence на `dossiers.case_id`, миграция `b3e9f1a7d4c5` + `CaseIdAllocator` + drop derived helpers. Existing 47 dossiers backfilled `BR-2026-0001..0047`. **Active — T1.2 refresh-token rotation + Redis denylist (CA-019).**
+**Tier 1 / T1.1 (2026-05-18):** ✅ **closed**. Compromised B исполнен — sequence на `dossiers.case_id`, миграция `b3e9f1a7d4c5` + `CaseIdAllocator` + drop derived helpers. Existing 47 dossiers backfilled `BR-2026-0001..0047`.
+
+**Tier 1 / T1.2 (2026-05-18):** ✅ **closed**. ADR-0016. `RefreshTokenDenylistPort` + `RedisRefreshTokenDenylist` (`SET NX EX` + TTL clamp) + `NullRefreshTokenDenylist` fallback. `/refresh` rotation, `/logout` денилист'ит refresh из BFF cookie. **Active — T1.3 PII encryption at rest (column-level через app-layer, не наивный pgcrypto на JSONB).**
 
 ---
 
@@ -133,11 +135,17 @@ Compromised B: sequence на `dossiers.case_id` (не Phase 4 application entity
 
 **Pre-existing issue замечен (вне T1.1 scope):** `tests/infrastructure/rules/test_registry_factory.py::test_yaml_with_unknown_rule_raises` падает на T0.4 B1 regression (`source_uz` required в `RuleSpecYaml`, inline YAML в тесте не обновлён). Подтверждено `git stash` → fail. Отдельный hotfix.
 
-### T1.2 — Refresh-token rotation + Redis denylist (CA-019)
-- Redis сервис в `docker-compose.yml`.
-- Rotate refresh-token на каждый `/api/auth/refresh`.
-- Denylist старых tokens до их expiry (TTL = refresh-token lifetime).
-- Совместимость: existing stateless 7д режим остаётся как fallback при отсутствии Redis в dev.
+### T1.2 — Refresh-token rotation + Redis denylist (CA-019) ✅ DONE 2026-05-18
+
+ADR-0016 «Refresh-token rotation». Compromise design:
+- ✅ `RefreshTokenDenylistPort` (Protocol) + `RedisRefreshTokenDenylist` (atomic `SET NX EX`, TTL clamp до 1s) + `NullRefreshTokenDenylist` (no-op, активируется при `REDIS_URL=None`).
+- ✅ `/api/bank/auth/refresh`: decode → `is_denied(jti)` → `is_active` → `deny(jti)` NX → выдаёт новые access + refresh. NX=False → 401 `token_reused`.
+- ✅ `/api/bank/auth/logout`: optional `LogoutRequest.refresh_token` body. Backend decode + cross-account guard (`claims.analyst_id == analyst.id`) + denylist. Best-effort: невалидный/чужой токен silently skip.
+- ✅ Frontend BFF: refresh route обновляет **обе** cookies из upstream response; logout прокидывает `refresh_token` из cookie в backend body.
+- ✅ Settings: `redis_url: str | None = None`. Compose `REDIS_URL=${REDIS_URL:-redis://redis:6379/0}` + `depends_on: redis healthy`.
+- ✅ Fallback policy: `REDIS_URL=None` → NullDenylist (stateless 7д режим сохраняется для dev). `REDIS_URL` задан, Redis недоступен → fail closed (ConnectionError всплывает → 500), compromised tokens не проскочат.
+- ✅ Tests: 2 unit (Null) + 6 unit (Redis fakeredis: deny/race/is_denied/TTL/clamp) + 2 integration (testcontainers redis: deny+is_denied, NX-winner) + 24 integration на bank_auth_test (4 новых rotation/double-use/chain/cross-account-logout + 3 расширения).
+- ⏳ Redis HA / sentinel — deferred в T3 (operational readiness).
 
 ### T1.3 — PII encryption at rest (column-level через app-layer)
 **Не наивный pgcrypto на JSONB** — это сломает queryability и индексирование.

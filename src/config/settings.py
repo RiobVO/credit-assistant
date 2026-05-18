@@ -50,6 +50,11 @@ class Settings(BaseSettings):
     jwt_access_ttl_minutes: int = 15
     jwt_refresh_ttl_days: int = 7
 
+    # T1.2 (CA-019): Redis для refresh-token denylist. None → NullDenylist
+    # (stateless 7-day fallback для dev без compose). Задан, но Redis недоступен
+    # → fail closed на /refresh и /logout (см. ADR-0016).
+    redis_url: str | None = None
+
     # CORS: либо JSON-массив в .env, либо comma-separated — поддерживаем оба
     cors_allowed_origins: list[str] = Field(
         default_factory=lambda: ["http://localhost:3000"],
