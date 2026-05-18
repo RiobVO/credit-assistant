@@ -28,6 +28,7 @@ from datetime import UTC, datetime
 
 from fastapi import APIRouter, HTTPException, status
 
+from infrastructure.auth.email_mask import mask_email
 from infrastructure.auth.jwt_service import InvalidTokenError
 from infrastructure.auth.totp_service import (
     consume_backup_code,
@@ -54,14 +55,6 @@ from interfaces.api.bank.mfa_schema import (
 )
 
 router = APIRouter(prefix="/api/bank/auth/mfa", tags=["bank-auth-mfa"])
-
-
-def _mask_email(email: str) -> str:
-    """Audit-friendly маскинг email — local-part усечён до 2 символов."""
-    if "@" not in email:
-        return "***"
-    local, domain = email.split("@", 1)
-    return f"{local[:2]}***@{domain}"
 
 
 @router.post("/enroll/start", response_model=EnrollStartResponse)
@@ -157,7 +150,7 @@ async def challenge(
     if not code_ok:
         await audit_log.record(
             event="mfa_challenge_failed",
-            payload={"email": _mask_email(orm.email)},
+            payload={"email": mask_email(orm.email)},
         )
         raise HTTPException(status_code=401, detail="invalid_code")
 

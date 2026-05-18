@@ -12,11 +12,11 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from sqlalchemy import DateTime, ForeignKey, Index, func
-from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from infrastructure.persistence.database import Base
+from infrastructure.persistence.types.encrypted_jsonb import EncryptedJsonb
 
 
 class BorrowerSnapshotORM(Base):
@@ -34,7 +34,9 @@ class BorrowerSnapshotORM(Base):
 
     # Полный сериализованный BorrowerSnapshot (без вложенного Borrower —
     # тот достаётся join-ом по borrower_id).
-    payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    # T1.3 (ADR-0017): шифруется через EncryptedJsonb — wrap pattern
+    # {"_encrypted": true, "ciphertext": "..."}. Тип колонки остаётся JSONB.
+    payload: Mapped[dict[str, Any]] = mapped_column(EncryptedJsonb, nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

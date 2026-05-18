@@ -23,6 +23,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 
 from application.dto.analyst_identity import AnalystIdentity
+from infrastructure.auth.email_mask import mask_email
 from interfaces.api.bank.admin_schema import AdminResetMfaRequest
 from interfaces.api.bank.dependencies import (
     AnalystRepoDep,
@@ -74,6 +75,10 @@ async def reset_mfa(
     await audit_log.record(
         event="mfa_admin_reset",
         analyst_id=senior.id,
-        payload={"target_email": orm.email, "target_analyst_id": str(orm.id)},
+        payload={
+            # T1.3 (ADR-0017): mask PII в audit payload.
+            "target_email": mask_email(orm.email),
+            "target_analyst_id": str(orm.id),
+        },
     )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
