@@ -226,6 +226,8 @@ def build_form2_income_statement_wb(
     # row 32 (270 Чистая прибыль): (D, E) prior, (F, G) current. Signed via pair.
     net_profit_prior: tuple[Any, Any] = (0.0, 136022.0),
     net_profit_current: tuple[Any, Any] = (43697.0, 0.0),
+    # T2.1 CA-028: ЕИ-cell B24. ``None`` → cell remains пустым (тест unknown).
+    unit_text: str | None = "Единица измерения, тыс. сум.",
 ) -> WorkbookT:
     """Форма №2 (Отчёт о финрезультатах). 3 листа.
 
@@ -234,6 +236,9 @@ def build_form2_income_statement_wb(
 
     Используй ``Any``-параметры с ``'x'`` или ``None``, чтобы прогнать парсер
     через best-effort cell-skipping ветки (CA-014).
+
+    ``unit_text`` (T2.1 CA-028) — содержимое B24 «Единица измерения». Парсер
+    динамически определяет multiplier; default «тыс. сум.» → ×1000.
     """
     wb = Workbook()
     ws1 = wb.active
@@ -249,7 +254,8 @@ def build_form2_income_statement_wb(
     ws1["C8"] = organization_name
     ws1["H18"] = "ИНН"
     ws1["I18"] = inn
-    ws1["B24"] = "Единица измерения, тыс. сум."
+    if unit_text is not None:
+        ws1["B24"] = unit_text
 
     ws2 = wb.create_sheet("list02")
     # row 6 (010 Чистая выручка): E/G всегда 'x' (только income column)
@@ -349,6 +355,8 @@ def build_form1_balance_sheet_wb(
     period_year: int = 2025,
     period_quarter: int = 4,
     list02_cells: dict[str, Any] | None = None,
+    # T2.1 CA-028: ЕИ-cell B23 (отличается от FORM_2 B24).
+    unit_text: str | None = "Единица измерения, тыс. сум.",
 ) -> WorkbookT:
     """Форма №1 (Бухбаланс). 4 листа.
 
@@ -370,7 +378,8 @@ def build_form1_balance_sheet_wb(
     ws1["F4"] = "квартал"
     ws1["B7"] = "Предприяия, организация"
     ws1["C7"] = organization_name
-    ws1["B23"] = "Единица измерения, тыс. сум."
+    if unit_text is not None:
+        ws1["B23"] = unit_text
     ws1["H17"] = "ИНН"
     ws1["I17"] = inn
 
