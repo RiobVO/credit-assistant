@@ -106,6 +106,11 @@ class Settings(BaseSettings):
     sentry_environment: str = "local"
     sentry_release: str | None = None
 
+    # T3.3 (ADR-0023): Prometheus /metrics endpoint. ``False`` → endpoint
+    # не подключается и instrumentator не запускается (zero overhead в dev).
+    # Включается в staging/prod где есть Prometheus scraper.
+    metrics_enabled: bool = False
+
     # CORS: либо JSON-массив в .env, либо comma-separated — поддерживаем оба
     cors_allowed_origins: list[str] = Field(
         default_factory=lambda: ["http://localhost:3000"],
