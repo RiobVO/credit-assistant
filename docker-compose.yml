@@ -60,6 +60,10 @@ services:
       # T1.2 (CA-019): refresh-token denylist. Override на пустую строку → NullDenylist
       # (stateless 7-day fallback).
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      # T1.3 (CA-DS12 / ADR-0017): PII encryption keys. Пустая строка → NullPiiEncryptor
+      # passthrough (только dev). В prod startup-assertion требует значение.
+      # Generate: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+      PII_ENC_KEYS: ${PII_ENC_KEYS:-}
       APP_ENV: dev
       LOG_LEVEL: INFO
       # Phase 4: режим инсталляции (bank | accountant). Один режим на инсталляцию.

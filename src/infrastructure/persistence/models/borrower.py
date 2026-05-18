@@ -15,6 +15,7 @@ from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from infrastructure.persistence.database import Base
+from infrastructure.persistence.types.encrypted_string import EncryptedString
 
 
 class BorrowerORM(Base):
@@ -27,7 +28,9 @@ class BorrowerORM(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     legal_form: Mapped[str] = mapped_column(String(20), nullable=False)
     registration_date: Mapped[date] = mapped_column(nullable=False)
-    director_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    # T1.3 (ADR-0017): director_name — PII физлица, шифруется через Fernet.
+    # Length 500 для Fernet token (255 plaintext → ~432 base64 chars).
+    director_name: Mapped[str] = mapped_column(EncryptedString(500), nullable=False)
     director_appointed_at: Mapped[date] = mapped_column(nullable=False)
     okved_main: Mapped[str] = mapped_column(String(50), nullable=False)
     registered_address: Mapped[str] = mapped_column(String(500), nullable=False)

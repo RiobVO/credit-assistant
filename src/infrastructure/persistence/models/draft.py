@@ -15,11 +15,11 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from sqlalchemy import DateTime, Index, func
-from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from infrastructure.persistence.database import Base
+from infrastructure.persistence.types.encrypted_jsonb import EncryptedJsonb
 
 
 class DraftORM(Base):
@@ -28,7 +28,9 @@ class DraftORM(Base):
     __tablename__ = "drafts"
 
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
-    payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    # T1.3 (ADR-0017): manual-input payload содержит PII (director_name,
+    # счета контрагентов). EncryptedJsonb wrap pattern. TTL 30d.
+    payload: Mapped[dict[str, Any]] = mapped_column(EncryptedJsonb, nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

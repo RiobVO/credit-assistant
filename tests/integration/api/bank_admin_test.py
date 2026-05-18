@@ -120,7 +120,8 @@ async def test_reset_mfa_happy_path_clears_fields_and_writes_audit(
     ).scalars().all()
     assert len(rows) == 1
     payload = rows[0].payload
-    assert payload["target_email"] == TARGET_EMAIL
+    # T1.3 (ADR-0017): target_email masked в audit.
+    assert payload["target_email"] == "iv***@bank.uz"
     assert payload["target_analyst_id"] == str(target.id)
 
 
