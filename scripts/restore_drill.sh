@@ -52,7 +52,10 @@ if [[ ! -d "$BACKUP_DIR" ]]; then
   exit 23
 fi
 
-latest="$(find "$BACKUP_DIR" -maxdepth 1 -type f \( -name '*.dump' -o -name '*.dump.age' \) -printf '%T@ %p\n' 2>/dev/null | sort -rn | awk 'NR==1 {print $2}')"
+latest="$( {
+  ls -t "$BACKUP_DIR"/*.dump 2>/dev/null || true
+  ls -t "$BACKUP_DIR"/*.dump.age 2>/dev/null || true
+} | head -n 1 )"
 if [[ -z "$latest" ]]; then
   log error "No backup files in $BACKUP_DIR"
   exit 23
