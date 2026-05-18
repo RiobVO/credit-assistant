@@ -1,0 +1,39 @@
+# T3.6 — systemd unit для Credit Assistant compose stack.
+#
+# Установка: см. deploy/install.sh либо вручную:
+#   sudo cp deploy/systemd/credit-assistant.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now credit-assistant
+#
+# Логи: journalctl -u credit-assistant -f.
+
+[Unit]
+Description=Credit Assistant — MSB borrower analysis (FastAPI + Next.js + Caddy)
+Documentation=https://github.com/RiobVO/credit-assistant
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/credit-assistant
+EnvironmentFile=/opt/credit-assistant/.env
+# Compose orchestration: prod-override прячет host-port'ы кроме 80/443
+# (Caddy экспонит).
+ExecStart=/usr/bin/docker compose \
+    -f /opt/credit-assistant/docker-compose.yml \
+    -f /opt/credit-assistant/docker-compose.prod.yml \
+    -f /opt/credit-assistant/docker-compose.backup.yml \
+    up -d --remove-orphans
+ExecStop=/usr/bin/docker compose \
+    -f /opt/credit-assistant/docker-compose.yml \
+    -f /opt/credit-assistant/docker-compose.prod.yml \
+    -f /opt/credit-assistant/docker-compose.backup.yml \
+    down
+Restart=on-failure
+RestartSec=10s
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target
