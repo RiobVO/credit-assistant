@@ -48,6 +48,7 @@ from infrastructure.adapters.soliq_xltx.form1_parser import Form1BalanceSheetDat
 from infrastructure.adapters.soliq_xltx.form2_parser import Form2IncomeStatementData
 from infrastructure.adapters.soliq_xltx.format_detector import SoliqXltxFormat
 from infrastructure.adapters.soliq_xltx.parser import SoliqXltxAdapter
+from infrastructure.adapters.soliq_xltx.profit_tax_parser import ProfitTaxData
 from infrastructure.adapters.soliq_xltx.vat_declaration_parser import VatDeclarationData
 
 _logger = logging.getLogger(__name__)
@@ -81,6 +82,9 @@ class ParseManualInputFilesUseCase:
         interest_expense_by_year: dict[int, Decimal] = {}
         source_trail: dict[str, str] = {}
         warnings: list[str] = []
+        # T2.3: taxes_paid_by_year заполняется только из PROFIT_TAX (L39).
+        # Инициализируем явно — раньше это был hardcoded `{}` в return.
+        taxes_paid_by_year: dict[int, Decimal] = {}
         # FORM_1 dispatch — latest-period wins (см. модульный docstring).
         # Откладываем merge до конца цикла: храним кандидат + (year, quarter).
         form1_winner: _Form1Candidate | None = None
@@ -141,6 +145,10 @@ class ParseManualInputFilesUseCase:
                 form1_winner = _consider_form1(
                     parsed, f.name, form1_winner, warnings,
                 )
+            elif isinstance(parsed, ProfitTaxData):
+                _merge_profit_tax(
+                    parsed, f.name, taxes_paid_by_year, source_trail, warnings,
+                )
             else:
                 # VAT_REGISTRY_ILOVA — не несёт financials, тихо скипаем.
                 continue
@@ -153,7 +161,7 @@ class ParseManualInputFilesUseCase:
             revenue_by_year=revenue_by_year,
             net_profit_by_year=net_profit_by_year,
             vat_declared_by_year=vat_declared_by_year,
-            taxes_paid_by_year={},
+            taxes_paid_by_year=taxes_paid_by_year,
             profit_before_tax_by_year=profit_before_tax_by_year,
             interest_expense_by_year=interest_expense_by_year,
             assets_total=form1_unpack.assets_end,
@@ -278,6 +286,50 @@ def _merge_vat_declaration(
     _set_once(
         vat_declared_by_year, year, parsed.vat_charged_total,
         source_trail, "vat_declared", label, warnings,
+    )
+    for w in parsed.parse_warnings:
+        warnings.append(f"{filename}: {w}")
+
+
+def _merge_profit_tax(
+    parsed: ProfitTaxData,
+    filename: str,
+    taxes_paid_by_year: dict[int, Decimal],
+    source_trail: dict[str, str],
+    warnings: list[str],
+) -> None:
+    """T2.3: PROFIT_TAX Q4 → taxes_paid_by_year[year] из L39 (gross computed).
+
+    Семантика (mirror FORM_2 CA-027 option b):
+    * year отсутствует в header → warning + return.
+    * Quarterly (period_index != 4 и не None) → warning «промежуточный YTD,
+      не годовой total — пропуск», `taxes_paid_by_year` не трогается.
+    * profit_tax_total пуст → warning «нет суммы налога в L39».
+    * Single source per year — `_set_once` (FORM_2 G30 в use-case не мерджится,
+      PROFIT_TAX единственный writer). Конфликт → first wins + warning.
+    """
+    header = parsed.header
+    year = header.period_year
+    quarter = header.period_index
+    if year is None:
+        warnings.append(f"{filename}: PROFIT_TAX без указания года в header")
+        return
+    if quarter is not None and quarter != 4:
+        warnings.append(
+            f"{filename}: PROFIT_TAX за Q{quarter} {year} даёт промежуточный YTD, "
+            f"не годовой total — пропуск (полный год = Q4-файл)"
+        )
+        return
+    if parsed.profit_tax_total is None:
+        warnings.append(
+            f"{filename}: PROFIT_TAX за {year} — нет суммы налога в L39 (код 080)"
+        )
+        return
+
+    label = f"PROFIT_TAX {year} ({filename})"
+    _set_once(
+        taxes_paid_by_year, year, parsed.profit_tax_total,
+        source_trail, "taxes_paid", label, warnings,
     )
     for w in parsed.parse_warnings:
         warnings.append(f"{filename}: {w}")

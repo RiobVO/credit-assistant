@@ -19,6 +19,7 @@ from infrastructure.adapters.soliq_xltx.parser import SoliqXltxAdapter
 from tests.fixtures.soliq_xltx._factories import (
     build_form1_balance_sheet_wb,
     build_form2_income_statement_wb,
+    build_profit_tax_wb,
     build_vat_declaration_wb,
     build_vat_registry_wb,
 )
@@ -502,3 +503,157 @@ def test_empty_input_returns_empty_parsed(usecase: ParseManualInputFilesUseCase)
     assert result.revenue_by_year == {}
     assert result.parse_warnings == []
     assert result.source_trail == {}
+
+
+# ----------- T2.3: PROFIT_TAX → taxes_paid_by_year ----------------------------
+#
+# PROFIT_TAX (Расчёт налога на прибыль) — единственный источник для
+# `taxes_paid_by_year` (FORM_2 G30 в use case не мерджится). L39 (код 080
+# Сумма налога на прибыль – всего) идёт в map по year. Quarterly (Q1/Q2/Q3) —
+# silent skip с warning, mirror FORM_2 CA-027 option b.
+
+
+def test_profit_tax_q4_populates_taxes_paid_by_year(
+    usecase: ParseManualInputFilesUseCase,
+) -> None:
+    """PROFIT_TAX Q4 2025 → taxes_paid_by_year[2025] из L39 (×1, полные сум).
+
+    Реалистичные числа QADR DON NON (201308534, единственная прибыльная):
+    налог 31_777_673.85 сум.
+    """
+    content = _bytes(
+        build_profit_tax_wb(
+            inn=201308534,
+            period_year=2025,
+            period_quarter=4,
+            taxable_profit_amount=211851159.0,
+            profit_tax_total_amount=31777673.85,
+        )
+    )
+
+    result = usecase.execute([NamedFile(name="profit_tax_2025.xltx", content=content)])
+
+    assert result.taxes_paid_by_year == {2025: Decimal("31777673.85")}
+    assert "taxes_paid_2025" in result.source_trail
+    assert "PROFIT_TAX 2025" in result.source_trail["taxes_paid_2025"]
+    assert "profit_tax_2025.xltx" in result.source_trail["taxes_paid_2025"]
+    assert result.parse_warnings == []
+
+
+def test_profit_tax_zero_loss_year_still_populates(
+    usecase: ParseManualInputFilesUseCase,
+) -> None:
+    """Убыточная фирма (налог=0) — Decimal(0) попадает в map (не None).
+
+    Money(0) ≠ None semantically: «начислено, но ноль» vs «не заполнено».
+    """
+    content = _bytes(
+        build_profit_tax_wb(
+            inn=305002665,
+            period_year=2025,
+            period_quarter=4,
+            taxable_profit_amount=-146143099.0,  # loss
+            profit_tax_total_amount=0.0,
+        )
+    )
+
+    result = usecase.execute([NamedFile(name="profit_tax_loss.xltx", content=content)])
+
+    assert result.taxes_paid_by_year == {2025: Decimal("0")}
+    assert "taxes_paid_2025" in result.source_trail
+
+
+def test_profit_tax_q1_skipped_with_warning(
+    usecase: ParseManualInputFilesUseCase,
+) -> None:
+    """PROFIT_TAX за Q1 — промежуточный YTD, не годовой total → skip + warning.
+
+    Mirror FORM_2 CA-027 option b. Quarterly layout list01 ещё и плывёт
+    (ставка L36 в Q1 = мусор), так что использовать его как annual нельзя.
+    """
+    content = _bytes(
+        build_profit_tax_wb(
+            period_year=2026,
+            period_quarter=1,
+            profit_tax_total_amount=12345.0,
+        )
+    )
+
+    result = usecase.execute([NamedFile(name="profit_tax_q1.xltx", content=content)])
+
+    assert result.taxes_paid_by_year == {}
+    assert any(
+        "Q1" in w and "пропуск" in w
+        for w in result.parse_warnings
+    )
+
+
+def test_profit_tax_two_files_same_year_first_wins_with_warning(
+    usecase: ParseManualInputFilesUseCase,
+) -> None:
+    """Два PROFIT_TAX Q4 за один год → first wins + warning (single-source contract)."""
+    first = _bytes(
+        build_profit_tax_wb(period_year=2025, profit_tax_total_amount=100.0)
+    )
+    second = _bytes(
+        build_profit_tax_wb(period_year=2025, profit_tax_total_amount=999.0)
+    )
+
+    result = usecase.execute(
+        [
+            NamedFile(name="first.xltx", content=first),
+            NamedFile(name="second.xltx", content=second),
+        ]
+    )
+
+    assert result.taxes_paid_by_year[2025] == Decimal("100")
+    assert any(
+        "taxes_paid" in w and "уже было заполнено" in w
+        for w in result.parse_warnings
+    )
+
+
+def test_profit_tax_missing_total_warns_and_skips(
+    usecase: ParseManualInputFilesUseCase,
+) -> None:
+    """L39 пустой/'x' — нет суммы налога → warning + не пишем в map."""
+    content = _bytes(
+        build_profit_tax_wb(
+            period_year=2025,
+            period_quarter=4,
+            profit_tax_total_amount="x",
+        )
+    )
+
+    result = usecase.execute([NamedFile(name="profit_tax_empty.xltx", content=content)])
+
+    assert result.taxes_paid_by_year == {}
+    assert any("нет суммы налога" in w for w in result.parse_warnings)
+
+
+def test_profit_tax_mixed_with_form2_does_not_conflict(
+    usecase: ParseManualInputFilesUseCase,
+) -> None:
+    """FORM_2 (revenue) + PROFIT_TAX (taxes_paid) в одном batch — оба применяются."""
+    form2 = _bytes(
+        build_form2_income_statement_wb(
+            period_year=2025, period_quarter=4, revenue_current=5000.0
+        )
+    )
+    profit_tax = _bytes(
+        build_profit_tax_wb(
+            period_year=2025, period_quarter=4, profit_tax_total_amount=750000.0
+        )
+    )
+
+    result = usecase.execute(
+        [
+            NamedFile(name="form2.xltx", content=form2),
+            NamedFile(name="profit_tax.xltx", content=profit_tax),
+        ]
+    )
+
+    assert result.revenue_by_year[2025] == Decimal("5000000")  # ×1000 тыс. сум
+    assert result.taxes_paid_by_year[2025] == Decimal("750000")  # ×1 полные сум
+    assert "FORM_2" in result.source_trail["revenue_2025"]
+    assert "PROFIT_TAX" in result.source_trail["taxes_paid_2025"]
