@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from application.dto.analyst_identity import AnalystIdentity
+from application.ports.authn_port import AuthnResult
 from infrastructure.auth.password_hasher import PasswordHasher
 from infrastructure.persistence.mappers.analyst_mapper import analyst_from_orm
 from infrastructure.persistence.repositories.analyst_repository import (
@@ -28,7 +28,7 @@ class SeededAuthnAdapter:
 
     async def authenticate(
         self, email: str, password: str
-    ) -> AnalystIdentity | None:
+    ) -> AuthnResult | None:
         orm = await self._analyst_repo.get_by_email_with_hash(email)
         if orm is None:
             # Сравнение с заведомо неверным валидным bcrypt-hash. Время verify
@@ -44,4 +44,4 @@ class SeededAuthnAdapter:
             return None
         if not self._hasher.verify(password, orm.password_hash):
             return None
-        return analyst_from_orm(orm)
+        return AuthnResult(identity=analyst_from_orm(orm), source="seeded")
