@@ -1,5 +1,6 @@
 "use client";
 
+import * as Sentry from "@sentry/nextjs";
 import { useTranslations } from "next-intl";
 import { useEffect } from "react";
 
@@ -14,8 +15,12 @@ export default function GlobalError({
   const tCta = useTranslations("shared.cta");
 
   useEffect(() => {
-    // TODO[CA-064]: ship к real observability (Sentry/posthog) когда подключим.
-    console.error("Unhandled error:", error);
+    // T3.1: GlitchTip on-prem error tracking. Без активного DSN init
+    // (NEXT_PUBLIC_SENTRY_DSN env) — captureException no-op'ит. Tag
+    // ``digest`` позволяет cross-reference React error digest с event'ом.
+    Sentry.captureException(error, {
+      tags: { digest: error.digest ?? "unknown" },
+    });
   }, [error]);
 
   return (
