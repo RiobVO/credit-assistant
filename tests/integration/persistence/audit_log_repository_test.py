@@ -141,3 +141,42 @@ async def test_brand_id_isolated_between_repo_instances(
     rows = await audit_default.list_by_analyst(analyst_id)
     brand_ids = {row.brand_id for row in rows}
     assert brand_ids == {"default", "uzbekbank"}
+
+
+# T3.2 — request_id forensics.
+
+
+async def test_record_writes_request_id_from_contextvars(
+    pg_session: AsyncSession,
+) -> None:
+    """RequestIDMiddleware биндит request_id → repo пишет в row."""
+    from structlog.contextvars import bind_contextvars, clear_contextvars
+
+    clear_contextvars()
+    bind_contextvars(request_id="abc1234567890abcdef1234567890def")
+
+    audit = SqlAlchemyAuditLogRepository(pg_session)
+    analyst_id = await _make_analyst(pg_session, email="rid-bound@bank.uz")
+
+    await audit.record(event="login", analyst_id=analyst_id)
+
+    rows = await audit.list_by_analyst(analyst_id)
+    assert rows[0].request_id == "abc1234567890abcdef1234567890def"
+
+    clear_contextvars()
+
+
+async def test_record_without_request_id_keeps_null(
+    pg_session: AsyncSession,
+) -> None:
+    """Без middleware (CLI/job/тест) request_id остаётся NULL."""
+    from structlog.contextvars import clear_contextvars
+
+    clear_contextvars()
+    audit = SqlAlchemyAuditLogRepository(pg_session)
+    analyst_id = await _make_analyst(pg_session, email="rid-null@bank.uz")
+
+    await audit.record(event="login", analyst_id=analyst_id)
+
+    rows = await audit.list_by_analyst(analyst_id)
+    assert rows[0].request_id is None

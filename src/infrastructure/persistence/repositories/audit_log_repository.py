@@ -10,6 +10,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
+import structlog
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -37,6 +38,12 @@ class SqlAlchemyAuditLogRepository:
         target_id: UUID | None = None,
         payload: dict[str, Any] | None = None,
     ) -> UUID:
+        # T3.2: request_id вытаскивается из ``structlog.contextvars`` (его
+        # туда положил ``RequestIDMiddleware``). Best-effort: записи аудита
+        # из CLI/jobs/background-tasks без middleware остаются с NULL —
+        # это валидно по schema.
+        request_id = structlog.contextvars.get_contextvars().get("request_id")
+
         orm = AuditLogORM(
             analyst_id=analyst_id,
             event=event,
@@ -44,6 +51,7 @@ class SqlAlchemyAuditLogRepository:
             target_id=target_id,
             payload=payload or {},
             brand_id=self._brand_id,
+            request_id=request_id if isinstance(request_id, str) else None,
         )
         self._session.add(orm)
         await self._session.flush()
