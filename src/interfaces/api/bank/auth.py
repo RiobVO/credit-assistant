@@ -212,6 +212,13 @@ async def change_password(
         # 404 здесь означал бы рассинхрон БД между двумя запросами.
         raise HTTPException(status_code=404, detail="analyst_not_found")
 
+    # T1.5 (ADR-0019): LDAP-provisioned users держат password_hash=NULL —
+    # пароль владеется LDAP-server'ом, change через bank-API запрещён.
+    # UI обязан скрывать password-change для LDAP-users (флаг приходит
+    # с /me?); защитный гвард на API-уровне на всякий случай.
+    if orm.password_hash is None:
+        raise HTTPException(status_code=400, detail="ldap_user_cannot_change_password")
+
     # Запрет реюза текущего пароля: банковский compliance не любит «сменил на
     # тот же». Verify ДО hash() нового, чтобы не тратить bcrypt cost зря.
     if hasher.verify(payload.new_password, orm.password_hash):

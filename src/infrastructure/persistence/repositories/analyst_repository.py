@@ -74,3 +74,42 @@ class SqlAlchemyAnalystRepository:
         """
         stmt = select(AnalystORM).where(AnalystORM.email == email)
         return (await self._session.execute(stmt)).scalar_one_or_none()
+
+    async def upsert_from_ldap(
+        self, email: str, full_name: str, role: str
+    ) -> AnalystIdentity:
+        """T1.5 (ADR-0019): lazy provisioning row'а из LDAP attributes.
+
+        Создаёт row с ``password_hash=NULL``, ``authn_source='ldap'`` если
+        email ещё не существует. Если row есть — обновляет ``full_name`` и
+        ``role`` (LDAP-attrs могут меняться между логинами), оставляя
+        ``mfa_secret``/``mfa_enrolled_at`` нетронутыми (TOTP enrollment —
+        per-user flow в БД).
+
+        ``is_active`` ставится в True при upsert: LDAP — source of truth
+        для активности, deactivation делается через AD group removal, не
+        через ``is_active=False`` в local БД.
+        """
+        existing = await self.get_orm_by_email(email)
+        if existing is None:
+            orm = AnalystORM(
+                email=email,
+                password_hash=None,
+                full_name=full_name,
+                role=role,
+                is_active=True,
+                authn_source="ldap",
+            )
+            self._session.add(orm)
+            await self._session.flush()
+            return analyst_from_orm(orm)
+
+        existing.full_name = full_name
+        existing.role = role
+        existing.is_active = True
+        # authn_source не меняем: если в БД был 'seeded' row с тем же email
+        # (break-glass конфликт), upsert не должен silently превратить его
+        # в LDAP-row. Это инвариант contract'а — break-glass email'ы не
+        # должны попадать в LDAP-flow (BreakGlassAdapter их разводит).
+        await self._session.flush()
+        return analyst_from_orm(existing)

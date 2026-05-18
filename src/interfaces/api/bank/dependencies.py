@@ -22,9 +22,16 @@ from fastapi import Depends, Header, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from application.dto.analyst_identity import AnalystIdentity
+from application.ports.authn_port import AuthnPort
 from application.ports.refresh_token_denylist_port import RefreshTokenDenylistPort
 from config.settings import get_settings
+from infrastructure.auth.break_glass_authn_adapter import (
+    BreakGlassAuthnAdapter,
+    parse_break_glass_emails,
+)
 from infrastructure.auth.jwt_service import InvalidTokenError, JwtService
+from infrastructure.auth.ldap3_client import Ldap3Client
+from infrastructure.auth.ldap_authn_adapter import LdapAuthnAdapter, LdapSettings
 from infrastructure.auth.null_refresh_token_denylist import NullRefreshTokenDenylist
 from infrastructure.auth.password_hasher import PasswordHasher
 from infrastructure.auth.redis_refresh_token_denylist import RedisRefreshTokenDenylist
@@ -95,14 +102,77 @@ AnalystRepoDep = Annotated[SqlAlchemyAnalystRepository, Depends(get_analyst_repo
 AuditLogRepoDep = Annotated[SqlAlchemyAuditLogRepository, Depends(get_audit_log_repo)]
 
 
+@lru_cache(maxsize=1)
+def _get_ldap_settings() -> LdapSettings:
+    """T1.5 (ADR-0019): резолвит LdapSettings из Settings + cache singleton.
+
+    Зовётся только когда ``authn_mode=ldap``. Все обязательные LDAP-поля
+    должны быть заданы — иначе ``_validate_runtime_config`` свалит старт.
+    """
+    settings = get_settings()
+    if (
+        settings.ldap_uri is None
+        or settings.ldap_base_dn is None
+        or settings.ldap_bind_dn is None
+        or settings.ldap_bind_password is None
+        or settings.ldap_role_analyst_group is None
+        or settings.ldap_role_senior_analyst_group is None
+    ):
+        raise RuntimeError(
+            "LDAP-настройки неполные при AUTHN_MODE=ldap "
+            "(см. ADR-0019, docs/operations/ldap-setup.md). "
+            "Требуются: LDAP_URI, LDAP_BASE_DN, LDAP_BIND_DN, "
+            "LDAP_BIND_PASSWORD, LDAP_ROLE_ANALYST_GROUP, "
+            "LDAP_ROLE_SENIOR_ANALYST_GROUP."
+        )
+    return LdapSettings(
+        uri=settings.ldap_uri,
+        base_dn=settings.ldap_base_dn,
+        bind_dn=settings.ldap_bind_dn,
+        bind_password=settings.ldap_bind_password,
+        user_search_filter=settings.ldap_user_search_filter,
+        role_analyst_group=settings.ldap_role_analyst_group,
+        role_senior_analyst_group=settings.ldap_role_senior_analyst_group,
+    )
+
+
+@lru_cache(maxsize=1)
+def _get_ldap_client() -> Ldap3Client:
+    """Singleton Ldap3Client — Server-объект внутри переиспользуется
+    между запросами (DNS / TLS cache)."""
+    return Ldap3Client(_get_ldap_settings())
+
+
 async def get_authn_adapter(
     analyst_repo: AnalystRepoDep,
     hasher: HasherDep,
-) -> SeededAuthnAdapter:
-    return SeededAuthnAdapter(analyst_repo, hasher)
+) -> AuthnPort:
+    """T1.5 (ADR-0019): switch по ``authn_mode``.
+
+    * ``seeded`` (default, dev/staging): SeededAuthnAdapter напрямую.
+    * ``ldap`` (production bank): BreakGlassAuthnAdapter — email в whitelist
+      → SeededAdapter; иначе → LdapAuthnAdapter.
+    """
+    settings = get_settings()
+    seeded = SeededAuthnAdapter(analyst_repo, hasher)
+    if settings.authn_mode == "seeded":
+        return seeded
+
+    ldap = LdapAuthnAdapter(
+        client=_get_ldap_client(),
+        settings=_get_ldap_settings(),
+        analyst_upsert=analyst_repo,
+    )
+    return BreakGlassAuthnAdapter(
+        seeded=seeded,
+        ldap=ldap,
+        break_glass_emails=parse_break_glass_emails(
+            settings.admin_break_glass_emails
+        ),
+    )
 
 
-AuthnDep = Annotated[SeededAuthnAdapter, Depends(get_authn_adapter)]
+AuthnDep = Annotated[AuthnPort, Depends(get_authn_adapter)]
 
 
 _UNAUTHORIZED = HTTPException(
