@@ -7,6 +7,7 @@ API намеренно минимальное: запись и листинг п
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -66,4 +67,35 @@ class SqlAlchemyAuditLogRepository:
             .order_by(desc(AuditLogORM.created_at))
             .limit(limit)
         )
+        return list((await self._session.execute(stmt)).scalars())
+
+    async def export_range(
+        self,
+        *,
+        from_: datetime,
+        to: datetime,
+        event: str | None = None,
+    ) -> list[AuditLogORM]:
+        """T3.5: список записей audit-лога для CSV-экспорта.
+
+        Полу-открытый интервал ``[from_, to)``. Фильтр ``event`` —
+        опциональный exact match. brand_id-инвариант обеспечивается
+        конструктором: экспорт всегда отдаёт записи **текущей** инсталляции.
+
+        Возвращаем list для simplicity (audit-объёмы pre-demo ≤ 100K rows
+        не требуют streaming на repo-уровне — endpoint stream'ит CSV-байты,
+        не строки БД). При росте объёмов мигрировать на
+        ``stream_scalars()``.
+        """
+        from sqlalchemy import asc
+
+        stmt = (
+            select(AuditLogORM)
+            .where(AuditLogORM.brand_id == self._brand_id)
+            .where(AuditLogORM.created_at >= from_)
+            .where(AuditLogORM.created_at < to)
+            .order_by(asc(AuditLogORM.created_at))
+        )
+        if event is not None:
+            stmt = stmt.where(AuditLogORM.event == event)
         return list((await self._session.execute(stmt)).scalars())
