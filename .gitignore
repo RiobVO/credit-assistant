@@ -84,3 +84,9 @@ backups/
 *.dump
 *.dump.age
 backup-age-identity.txt
+
+# T3.6: release tarball build output
+dist/
+.env
+.env.local
+.env.production
