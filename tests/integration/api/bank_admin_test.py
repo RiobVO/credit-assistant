@@ -162,3 +162,158 @@ async def test_reset_mfa_requires_auth(api_client: httpx.AsyncClient) -> None:
         json={"email": TARGET_EMAIL},
     )
     assert resp.status_code == 401
+
+
+# T3.5 — audit-log CSV export.
+
+
+async def _seed_audit_row(
+    pg_session: AsyncSession,
+    *,
+    analyst_id: object,
+    event: str,
+    created_at: datetime,
+    payload: dict[str, object] | None = None,
+    request_id: str | None = None,
+) -> None:
+    row = AuditLogORM(
+        analyst_id=analyst_id,
+        event=event,
+        payload=payload or {},
+        request_id=request_id,
+        brand_id="default",
+    )
+    pg_session.add(row)
+    await pg_session.flush()
+    # Override server_default created_at напрямую (после flush — есть id).
+    row.created_at = created_at
+    await pg_session.flush()
+
+
+async def test_audit_export_happy_path_returns_csv(
+    api_client: httpx.AsyncClient, pg_session: AsyncSession
+) -> None:
+    senior = await _seed_analyst(pg_session, email=SENIOR_EMAIL, role="senior_analyst")
+    await _seed_audit_row(
+        pg_session,
+        analyst_id=senior.id,
+        event="login",
+        created_at=datetime(2026, 5, 17, 10, 0, tzinfo=UTC),
+        request_id="abc12345" + "0" * 24,
+    )
+    await _seed_audit_row(
+        pg_session,
+        analyst_id=senior.id,
+        event="view_dossier",
+        created_at=datetime(2026, 5, 17, 11, 0, tzinfo=UTC),
+        payload={"masked_inn": "XXXXXX1234"},
+    )
+
+    access = await _login(api_client, SENIOR_EMAIL)
+    resp = await api_client.get(
+        "/api/bank/admin/audit-log/export",
+        headers={"Authorization": f"Bearer {access}"},
+        params={"from": "2026-05-17T00:00:00Z", "to": "2026-05-18T00:00:00Z"},
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.headers["content-type"].startswith("text/csv")
+    assert "attachment" in resp.headers["content-disposition"]
+    assert "audit-log-20260517-20260518.csv" in resp.headers["content-disposition"]
+
+    csv_text = resp.text
+    lines = csv_text.strip().splitlines()
+    # header + 2 seeded rows + audit_log_export сам себе (записывается до stream)
+    assert lines[0].startswith("id,created_at,brand_id,request_id,event,")
+    events = [line.split(",")[4] for line in lines[1:]]
+    # хронологический порядок: login → view_dossier; audit_log_export может
+    # попасть либо в выборку (created_at NOW попадает в окно если to в будущем),
+    # либо нет — но 2 наших точно присутствуют.
+    assert "login" in events
+    assert "view_dossier" in events
+
+
+async def test_audit_export_event_filter(
+    api_client: httpx.AsyncClient, pg_session: AsyncSession
+) -> None:
+    senior = await _seed_analyst(pg_session, email=SENIOR_EMAIL, role="senior_analyst")
+    await _seed_audit_row(
+        pg_session,
+        analyst_id=senior.id,
+        event="login",
+        created_at=datetime(2026, 5, 17, 10, 0, tzinfo=UTC),
+    )
+    await _seed_audit_row(
+        pg_session,
+        analyst_id=senior.id,
+        event="view_dossier",
+        created_at=datetime(2026, 5, 17, 11, 0, tzinfo=UTC),
+    )
+
+    access = await _login(api_client, SENIOR_EMAIL)
+    resp = await api_client.get(
+        "/api/bank/admin/audit-log/export",
+        headers={"Authorization": f"Bearer {access}"},
+        params={
+            "from": "2026-05-17T00:00:00Z",
+            "to": "2026-05-18T00:00:00Z",
+            "event": "login",
+        },
+    )
+    assert resp.status_code == 200
+    events = [line.split(",")[4] for line in resp.text.strip().splitlines()[1:]]
+    assert "login" in events
+    assert "view_dossier" not in events
+
+
+async def test_audit_export_forbidden_for_regular_analyst(
+    api_client: httpx.AsyncClient, pg_session: AsyncSession
+) -> None:
+    await _seed_analyst(pg_session, email=SENIOR_EMAIL, role="analyst")
+    access = await _login(api_client, SENIOR_EMAIL)
+    resp = await api_client.get(
+        "/api/bank/admin/audit-log/export",
+        headers={"Authorization": f"Bearer {access}"},
+        params={"from": "2026-05-17T00:00:00Z", "to": "2026-05-18T00:00:00Z"},
+    )
+    assert resp.status_code == 403
+
+
+async def test_audit_export_invalid_date_range(
+    api_client: httpx.AsyncClient, pg_session: AsyncSession
+) -> None:
+    await _seed_analyst(pg_session, email=SENIOR_EMAIL, role="senior_analyst")
+    access = await _login(api_client, SENIOR_EMAIL)
+    resp = await api_client.get(
+        "/api/bank/admin/audit-log/export",
+        headers={"Authorization": f"Bearer {access}"},
+        params={"from": "2026-05-18T00:00:00Z", "to": "2026-05-17T00:00:00Z"},
+    )
+    assert resp.status_code == 422
+
+
+async def test_audit_export_self_logs_to_audit(
+    api_client: httpx.AsyncClient, pg_session: AsyncSession
+) -> None:
+    """Сам факт экспорта пишется в audit_log."""
+    senior = await _seed_analyst(pg_session, email=SENIOR_EMAIL, role="senior_analyst")
+    access = await _login(api_client, SENIOR_EMAIL)
+    resp = await api_client.get(
+        "/api/bank/admin/audit-log/export",
+        headers={"Authorization": f"Bearer {access}"},
+        params={"from": "2026-05-17T00:00:00Z", "to": "2026-05-18T00:00:00Z"},
+    )
+    assert resp.status_code == 200
+
+    rows = (
+        await pg_session.execute(
+            select(AuditLogORM).where(
+                AuditLogORM.analyst_id == senior.id,
+                AuditLogORM.event == "audit_log_export",
+            )
+        )
+    ).scalars().all()
+    assert len(rows) == 1
+    payload = rows[0].payload
+    assert payload["from"].startswith("2026-05-17")
+    assert payload["to"].startswith("2026-05-18")
+    assert "rows_count" in payload
