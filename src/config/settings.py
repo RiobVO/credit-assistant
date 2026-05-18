@@ -62,6 +62,13 @@ class Settings(BaseSettings):
     # См. docs/operations/pii-key-rotation.md.
     pii_enc_keys: str | None = None
 
+    # T1.4 (ADR-0018): идентификатор brand-tenant для текущего deployment.
+    # Single-tenant per deployment — каждая инсталляция = один банк. Значение
+    # должно соответствовать существующему `config/brands/<id>.json`; иначе
+    # startup-assert в `create_app` поднимет `RuntimeError`. Также проставляется
+    # в `audit_log.brand_id` для forensics-trail при misconfiguration.
+    brand_id: str = "default"
+
     # CORS: либо JSON-массив в .env, либо comma-separated — поддерживаем оба
     cors_allowed_origins: list[str] = Field(
         default_factory=lambda: ["http://localhost:3000"],

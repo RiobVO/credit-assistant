@@ -22,6 +22,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from config.constants import APP_NAME, APP_VERSION
 from config.logging import configure_logging
 from config.settings import Settings, get_settings
+from infrastructure.brand.brand_config import BrandConfigError, load_brand
 from infrastructure.jobs.uptime_collector import uptime_collector_loop
 from infrastructure.persistence.database import get_session_factory
 from interfaces.api.bank.admin import router as bank_admin_router
@@ -81,21 +82,41 @@ def _build_lifespan(
     return lifespan
 
 
-def create_app(settings: Settings | None = None) -> FastAPI:
-    """Собирает FastAPI с middleware и роутерами. Тесты могут передавать свои настройки."""
-    settings = settings or get_settings()
-    configure_logging(level=settings.log_level, json_logs=settings.app_env != "local")
+def _validate_runtime_config(settings: Settings) -> None:
+    """Startup-validation для критичных secrets/configs.
 
-    # T1.3 (ADR-0017): PII_ENC_KEYS обязателен в staging/prod — без ключа
-    # encryption-at-rest деградирует в passthrough, что не приемлемо для
-    # bank-grade compliance. Crash-on-boot гарантирует, что misconfigured
-    # production не запустится молча.
+    Каждый из них — crash-on-boot guard. Запускать misconfigured production
+    молча запрещено.
+
+    * BRAND_ID (T1.4 / ADR-0018): `config/brands/<id>.json` обязан существовать
+      и парситься. Иначе single-tenant deployment работает в неопределённом
+      контексте — audit-log brand_id и PDF chrome ссылаются на несуществующий
+      tenant.
+    * PII_ENC_KEYS (T1.3 / ADR-0017): обязателен в staging/prod. Без него
+      encryption-at-rest деградирует в passthrough.
+    """
+    try:
+        load_brand(settings.brand_id)
+    except BrandConfigError as exc:
+        raise RuntimeError(
+            f"BRAND_ID={settings.brand_id!r} не резолвится в config/brands/ "
+            f"(T1.4 / ADR-0018): {exc}"
+        ) from exc
+
     if settings.app_env in ("staging", "prod") and not settings.pii_enc_keys:
         raise RuntimeError(
             "PII_ENC_KEYS обязателен в staging/prod (T1.3 / ADR-0017). "
             "Generate: python -c 'from cryptography.fernet import Fernet; "
             "print(Fernet.generate_key().decode())'"
         )
+
+
+def create_app(settings: Settings | None = None) -> FastAPI:
+    """Собирает FastAPI с middleware и роутерами. Тесты могут передавать свои настройки."""
+    settings = settings or get_settings()
+    configure_logging(level=settings.log_level, json_logs=settings.app_env != "local")
+
+    _validate_runtime_config(settings)
 
     app = FastAPI(
         title=APP_NAME,

@@ -15,7 +15,7 @@ endpoint вернёт 503 при первом обращении, в Docker (com
 
 from __future__ import annotations
 
-from functools import lru_cache
+from functools import lru_cache, partial
 from typing import Literal
 from uuid import UUID
 
@@ -24,6 +24,7 @@ from fastapi.responses import Response
 
 from application.use_cases.load_dossier_for_view import LoadDossierForView
 from application.use_cases.render_dossier_pdf import Lang, RenderDossierPdf
+from config.settings import get_settings
 from infrastructure.brand.brand_config import load_brand
 from infrastructure.i18n.pdf_messages import default_pdf_messages
 from infrastructure.persistence.repositories.audit_log_repository import (
@@ -80,14 +81,18 @@ async def download_dossier_pdf(
         ),
     ),
 ) -> Response:
-    brand = load_brand()
+    # T1.4 (ADR-0018): brand_id берётся из Settings (env BRAND_ID),
+    # single source of truth. `load_brand()` теперь требует явный аргумент.
+    brand_id = get_settings().brand_id
+    brand_loader = partial(load_brand, brand_id)
+    brand = brand_loader()
     effective_lang = _resolve_lang(lang, brand.default_lang)
 
     use_case = RenderDossierPdf(
         loader=LoadDossierForView(storage.dossier),
         renderer=_get_pdf_renderer(),
         rule_registry=get_rule_registry(),
-        brand_loader=load_brand,
+        brand_loader=brand_loader,
         pdf_messages_loader=default_pdf_messages,
     )
 
