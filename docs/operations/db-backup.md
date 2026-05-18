@@ -326,10 +326,9 @@ multi-recipient access + off-site backup. **Никогда** не хранить
 * **Cross-region replication** не настроена.
 * **Backup encryption через app-layer** (age), **не disk-level**. Disk-level
   encryption (LUKS) — отдельный layer ответственности банк-IT.
-* ※ CI testcontainers Docker-job не настроен → `backup_postgres_test.py` и
-  `restore_drill_test.py` фактически skipped в текущем CI. Smoke выполняется
-  на production deploy и при сетевой dev-prove. Setup Docker-action в
-  workflow — отдельная задача T3.x hardening (post-demo).
+* CI integration smoke: ubuntu-latest runner имеет Docker + pg_dump
+  preinstalled, testcontainers Postgres работает out-of-box. 6 backup/drill
+  tests гоняются автоматически на каждый push.
 
 ---
 
