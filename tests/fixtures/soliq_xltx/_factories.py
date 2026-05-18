@@ -391,10 +391,28 @@ def build_profit_tax_wb(
     *,
     inn: float = 306399449,
     organization_name: str = '"AZ RUHDIL SAVDO" MCHJ',
-    period_year: int = 2026,
-    period_quarter: int = 1,
+    period_year: int = 2025,
+    period_quarter: int = 4,
+    # Сводка list01 rows 28-46. Column K = код, column L = значение.
+    # ×1 — PROFIT_TAX уже в полных сум (в отличие от FORM_2 в тыс. сум).
+    # Defaults — realistic numbers из profit_tax_2025_201308534 (QADR DON NON,
+    # единственная прибыльная фирма из 4): совок.доход 7.28B, налог 31.78M.
+    taxable_profit_amount: Any = 211851159.0,  # L31, код 030, signed (loss < 0)
+    profit_tax_total_amount: Any = 31777673.85,  # L39, код 080, gross computed
 ) -> WorkbookT:
-    """Расчёт налога на прибыль. 15 листов. Минимум для format_detector."""
+    """Расчёт налога на прибыль (PROFIT_TAX). 15 листов.
+
+    Header coordinates сверены с реальной фикстурой Q4 2025:
+    C4 ИНН, G8 organization, K6 year, G6 quarter, B2 sentinel.
+
+    Body — сводка на list01 rows 28-46 (column K = код строки, column L =
+    значение). Парсер читает только L31 (код 030 Налогооблагаемая прибыль) +
+    L39 (код 080 Сумма налога на прибыль – всего). Остальные cells сводки
+    (income/expenses/rate/payable) сейчас не используются — extend по требованию.
+
+    ``Any`` для money-параметров (поддержка 'x' / None / number) — best-effort
+    cell-skipping ветки (CA-014).
+    """
     wb = Workbook()
     ws1 = wb.active
     assert ws1 is not None
@@ -411,6 +429,11 @@ def build_profit_tax_wb(
     ws1["K6"] = float(period_year)
     ws1["B8"] = "Полное наименование налогоплательщика"
     ws1["G8"] = organization_name
+    # Сводка rows 28-46 (только используемые поля; остальные оставлены пустыми).
+    ws1["K31"] = "030"
+    ws1["L31"] = taxable_profit_amount
+    ws1["K39"] = "080"
+    ws1["L39"] = profit_tax_total_amount
     for i in range(2, 16):
         wb.create_sheet(f"list{i:02d}")
     return wb
