@@ -114,7 +114,7 @@ async def download_dossier_pdf(
         raise HTTPException(status_code=404, detail="Досье не найдено")
 
     if analyst is not None:
-        await SqlAlchemyAuditLogRepository(session).record(
+        await SqlAlchemyAuditLogRepository(session, brand_id=brand_id).record(
             event="download_pdf",
             analyst_id=analyst.id,
             target_type="dossier",
