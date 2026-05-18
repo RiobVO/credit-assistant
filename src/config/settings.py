@@ -8,6 +8,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 AppEnv = Literal["local", "dev", "staging", "prod"]
 AppMode = Literal["bank", "accountant"]
+AuthnMode = Literal["seeded", "ldap"]
 
 
 class Settings(BaseSettings):
@@ -68,6 +69,34 @@ class Settings(BaseSettings):
     # startup-assert в `create_app` поднимет `RuntimeError`. Также проставляется
     # в `audit_log.brand_id` для forensics-trail при misconfiguration.
     brand_id: str = "default"
+
+    # T1.5 (ADR-0019): AuthnPort backend selector.
+    # ``seeded`` — local bcrypt (dev/staging без LDAP).
+    # ``ldap`` — LDAP bind+search (production). Break-glass email whitelist
+    # см. ``admin_break_glass_emails`` ниже.
+    authn_mode: AuthnMode = "seeded"
+
+    # T1.5: LDAP connection params. Активируются только когда ``authn_mode=ldap``.
+    # URI: ``ldap://`` (port 389) или ``ldaps://`` (TLS, port 636).
+    # Base DN — корень поиска users. Bind DN/password — service account для
+    # search-фазы (после search'а user-bind для verify password — отдельный bind).
+    ldap_uri: str | None = None
+    ldap_base_dn: str | None = None
+    ldap_bind_dn: str | None = None
+    ldap_bind_password: str | None = None
+    # User search filter — `{email}` placeholder заменяется на запрашиваемый
+    # email. Default для AD: ``(&(objectClass=user)(mail={email}))``.
+    ldap_user_search_filter: str = "(&(objectClass=user)(mail={email}))"
+    # Group DNs для role mapping. User member of senior_analyst_group → senior;
+    # иначе если member analyst_group → analyst; иначе bind fail (no role).
+    ldap_role_analyst_group: str | None = None
+    ldap_role_senior_analyst_group: str | None = None
+
+    # T1.5: Break-glass email whitelist. Comma-separated. Для этих email'ов
+    # даже в ``authn_mode=ldap`` используется local SeededAuthnAdapter (bcrypt).
+    # Use-case: recovery когда LDAP-инфра недоступна или operator заблокирован.
+    # Список audit'ится в ``audit_log.payload.authn_source='break_glass'``.
+    admin_break_glass_emails: str = ""
 
     # CORS: либо JSON-массив в .env, либо comma-separated — поддерживаем оба
     cors_allowed_origins: list[str] = Field(
