@@ -32,6 +32,7 @@ from interfaces.api.bank.history import router as bank_history_router
 from interfaces.api.bank.mfa import router as bank_mfa_router
 from interfaces.api.bank.search import router as bank_search_router
 from interfaces.api.bank.stats import router as bank_stats_router
+from interfaces.api.middleware import RequestIDMiddleware
 from interfaces.api.shared.data_readiness import router as data_readiness_router
 from interfaces.api.shared.dossier import router as dossier_router
 from interfaces.api.shared.dossier_pdf import router as dossier_pdf_router
@@ -157,6 +158,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
         allow_headers=["*"],
     )
+
+    # T3.2: ``add_middleware`` стек FastAPI — LIFO; последний add → outer.
+    # RequestID должен быть outermost, чтобы:
+    # * bind contextvars произошёл ДО любого error-handler / CORS-обработки;
+    # * echo header добавился к финальному response (включая 4xx/5xx);
+    # * корреляция работала для **всех** записей stdlib/structlog внутри
+    #   handler-цепочки.
+    app.add_middleware(RequestIDMiddleware)
 
     app.include_router(health_router)
     # system_router — без auth, доступен в обоих режимах. Используется UI
