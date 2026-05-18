@@ -192,7 +192,7 @@
       "service_status_ok": "Работает",
       "service_status_degraded": "С задержкой",
       "service_status_down": "Недоступен",
-      "service_status_not_implemented": "В разработке",
+      "service_status_not_implemented": "Опционально",
       "about_title": "О системе",
       "about_hint": "Информация об установленной версии Credit Assistant.",
       "field_mode": "Режим работы",
