@@ -1,0 +1,13 @@
+# T3.4 + T3.6 — weekly drill schedule (воскресенье 04:00 Asia/Tashkent).
+
+[Unit]
+Description=Weekly Postgres restore drill for Credit Assistant
+Requires=credit-restore-drill.service
+
+[Timer]
+OnCalendar=Sun 04:00 Asia/Tashkent
+Persistent=true
+RandomizedDelaySec=15min
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,88 @@
+# T3.6 — Production override.
+#
+# Подъём: см. deploy/systemd/credit-assistant.service.
+# Manual: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Отличия от base docker-compose.yml:
+# * api/web — образы из tarball (`credit-api:vX.Y.Z`), не build.
+# * caddy — reverse proxy для HTTPS termination (mount Caddyfile + cert volume).
+# * postgres/redis без host port-bind (только internal compose-network).
+# * api без host 8000 — Caddy экспонит наружу.
+
+services:
+  postgres:
+    # Без public host port. Связь только через compose-network.
+    ports: !reset []
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-credit}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-credit}
+      POSTGRES_DB: ${POSTGRES_DB:-credit_assistant}
+
+  redis:
+    ports: !reset []
+
+  api:
+    # Tarball-loaded image (см. install.sh + scripts/build_release_tarball.sh).
+    image: credit-api:${RELEASE_VERSION:-latest}
+    build: !reset null
+    ports: !reset []
+    # APP_ENV=prod включает строгие startup-asserts (PII_ENC_KEYS обязателен).
+    environment:
+      APP_ENV: ${APP_ENV:-prod}
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      PII_ENC_KEYS: ${PII_ENC_KEYS}
+      JWT_SECRET: ${JWT_SECRET}
+      APP_MODE: ${APP_MODE:-bank}
+      BRAND_ID: ${BRAND_ID:-default}
+      AUTHN_MODE: ${AUTHN_MODE:-seeded}
+      LDAP_URI: ${LDAP_URI:-}
+      LDAP_BASE_DN: ${LDAP_BASE_DN:-}
+      LDAP_BIND_DN: ${LDAP_BIND_DN:-}
+      LDAP_BIND_PASSWORD: ${LDAP_BIND_PASSWORD:-}
+      LDAP_USER_SEARCH_FILTER: ${LDAP_USER_SEARCH_FILTER:-(&(objectClass=user)(mail={email}))}
+      LDAP_ROLE_ANALYST_GROUP: ${LDAP_ROLE_ANALYST_GROUP:-}
+      LDAP_ROLE_SENIOR_ANALYST_GROUP: ${LDAP_ROLE_SENIOR_ANALYST_GROUP:-}
+      ADMIN_BREAK_GLASS_EMAILS: ${ADMIN_BREAK_GLASS_EMAILS:-}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      UPTIME_COLLECTOR_ENABLED: ${UPTIME_COLLECTOR_ENABLED:-true}
+
+  web:
+    image: credit-web:${RELEASE_VERSION:-latest}
+    container_name: credit-web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      # BFF → api через compose-network.
+      NEXT_PUBLIC_API_BASE_URL: http://api:8000
+      DEFAULT_LOCALE: ${DEFAULT_LOCALE:-ru}
+    expose:
+      - "3000"
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: credit-caddy
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+      web:
+        condition: service_started
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      CADDY_DOMAIN: ${CADDY_DOMAIN}
+      CADDY_LETSENCRYPT_EMAIL: ${CADDY_LETSENCRYPT_EMAIL:-}
+    volumes:
+      - ./deploy/Caddyfile.template:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

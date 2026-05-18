@@ -1,0 +1,53 @@
+# T3.6 — Caddy reverse-proxy template.
+#
+# Подставляется через ``envsubst`` либо вручную:
+# * ``{$CADDY_DOMAIN}`` — публичный домен банка (e.g. credit.bank.uz).
+# * ``{$CADDY_LETSENCRYPT_EMAIL}`` — почта для ACME (если internet-facing).
+#
+# Два режима:
+#   internet-facing → Let's Encrypt автоматически (uncomment ``tls`` block).
+#   bank-internal   → mount внутренний CA cert/key в /run/secrets/ и
+#                     раскомментировать ``tls /run/secrets/cert /run/secrets/key``.
+
+{
+    email {$CADDY_LETSENCRYPT_EMAIL}
+    # Bank-internal без ACME: раскомментировать строку ниже + замените secrets.
+    # default_sni {$CADDY_DOMAIN}
+    # auto_https off
+}
+
+{$CADDY_DOMAIN} {
+    # Internet-facing: Caddy сам решает Let's Encrypt при первом запросе.
+    # Bank-internal: см. комментарий выше.
+
+    # API → uvicorn в credit-api.
+    handle_path /api/* {
+        reverse_proxy api:8000
+    }
+
+    # Health — отдельный endpoint без /api prefix (для k8s/load-balancer probes).
+    handle /health {
+        reverse_proxy api:8000
+    }
+
+    # Frontend → Next.js standalone в credit-web.
+    handle {
+        reverse_proxy web:3000
+    }
+
+    # Безопасные заголовки baseline. CSP не выставляем — Next.js
+    # сам добавляет nonce-based policy при необходимости.
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+
+    # Логирование в JSON для structured pipelines.
+    log {
+        output stdout
+        format json
+    }
+}
