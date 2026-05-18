@@ -41,9 +41,20 @@ services:
       - -c
       - |
         set -e
-        apk add --no-cache dcron age >/dev/null
-        chmod +x /scripts/backup_postgres.sh /scripts/restore_drill.sh
-        echo "0 2 * * * PGHOST=$$PGHOST PGPORT=$$PGPORT PGUSER=$$PGUSER PGPASSWORD=$$PGPASSWORD PGDATABASE=$$PGDATABASE BACKUP_DIR=$$BACKUP_DIR BACKUP_RETENTION_DAYS=$$BACKUP_RETENTION_DAYS BACKUP_AGE_RECIPIENT=$$BACKUP_AGE_RECIPIENT /scripts/backup_postgres.sh >> /var/log/backup.log 2>&1" > /etc/crontabs/root
-        echo "credit-db-backup ready: daily pg_dump at 02:00 UTC → $$BACKUP_DIR"
-        # Foreground cron-loop.
-        exec crond -f -l 8
+        apk add --no-cache bash age coreutils >/dev/null
+        # Скрипты примонтированы read-only (executable bit взведён в git
+        # через update-index --chmod=+x — host-bind сохраняет mode).
+        echo "credit-db-backup ready: hourly check, daily pg_dump → $$BACKUP_DIR"
+        # Простой sleep-loop вместо dcron: на Windows Docker Desktop /
+        # WSL2 crond падает на setpgid. Для prod использовать systemd-timer
+        # (см. deploy/systemd/credit-restore-drill.timer как образец).
+        # Запускаем backup один раз в сутки в 02:00 UTC.
+        last_run=""
+        while true; do
+          now="$$(date -u +%Y-%m-%d)"
+          hour="$$(date -u +%H)"
+          if [ "$$hour" = "02" ] && [ "$$now" != "$$last_run" ]; then
+            /scripts/backup_postgres.sh && last_run="$$now"
+          fi
+          sleep 600
+        done
