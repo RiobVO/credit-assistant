@@ -30,6 +30,7 @@ dependencies = [
     "redis>=5.0",
     "cryptography>=42",
     "ldap3>=2.9",
+    "sentry-sdk[fastapi]>=2.20",
 ]
 
 [dependency-groups]

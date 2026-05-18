@@ -98,6 +98,14 @@ class Settings(BaseSettings):
     # Список audit'ится в ``audit_log.payload.authn_source='break_glass'``.
     admin_break_glass_emails: str = ""
 
+    # T3.1 (ADR-0022): GlitchTip on-prem observability (Sentry SaaS forbidden
+    # per PROJECT_BRIEF Sec 8). ``None`` → SDK noop (default off в dev).
+    # Заполняется через .env с DSN от GlitchTip project. Environment — для
+    # фильтрации событий по среде в UI.
+    sentry_dsn: str | None = None
+    sentry_environment: str = "local"
+    sentry_release: str | None = None
+
     # CORS: либо JSON-массив в .env, либо comma-separated — поддерживаем оба
     cors_allowed_origins: list[str] = Field(
         default_factory=lambda: ["http://localhost:3000"],
