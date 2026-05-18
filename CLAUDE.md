@@ -62,7 +62,7 @@ Heads-up: **live-browser smoke** через `/`, `/search`, `/history`, `/dossie
 
 **Активная ветка:** `main`.
 
-**Stack state на 2026-05-18 (после T1.3):**
+**Stack state на 2026-05-18 (после Tier 0–2 closure):**
 - Docker compose поднят: `credit-api` (8000), `credit-postgres` (5433), `credit-redis` (6379). Все healthy.
 - Backend `APP_MODE=bank`, `BRAND_ID=default`, **`PII_ENC_KEYS` задан тестовым Fernet-ключом** (хранится в `/tmp/pii_key.txt` на dev-машине, prefix `iEuuP5WADM_sxwy7pgjU...`). БД сейчас зашифрована этим ключом. Без него — restore из `backup-pre-t13.sql` (pre-T1.3 plaintext snapshot, gitignored).
 - Frontend Next dev (Turbopack) `npm run dev` в web/ — порт 3000.
@@ -82,7 +82,29 @@ Heads-up: **live-browser smoke** через `/`, `/search`, `/history`, `/dossie
 > **Полный документ:** `docs/pre-demo-roadmap.md` (Tier-декомпозиция, acceptance, заблокированные, backlog).
 > **Critical rule:** работаю ТОЛЬКО над активным Tier. Всё что не в Tier 0–4 — Frozen.
 
-### T0.4 follow-up — UZ-локализация gaps (Active)
+### Active — Tier 3 (Operational readiness)
+
+**Tier 0 / Tier 1 / Tier 2 ✅ closed 2026-05-18.** Полная история закрытий — `docs/pre-demo-roadmap.md` + ADR-0014..0020. Sweep по deal-breakers / prod-killers / data-quality завершён.
+
+**Tier 3 items (6 штук, приоритизация в начале новой сессии):**
+1. **T3.1** Observability — Sentry или GlitchTip on-prem (CA-064). Backend + frontend `error.tsx` hook.
+2. **T3.2** Structured logging — `correlation_id` сквозь request → use-case → adapter. `logging.Filter` injection через FastAPI middleware.
+3. **T3.3** Prometheus `/metrics` + Grafana dashboard pack — latency p50/p99, error rate, PDF gen time, parser warnings rate.
+4. **T3.4** Postgres backup — `pg_dump` daily + retention 30d + restore drill, `docs/operations/db-backup.md`.
+5. **T3.5** Audit log export — `GET /api/admin/audit-log/export?from=...&to=...` → CSV.
+6. **T3.6** On-prem deploy — Ansible playbook или Docker compose + systemd unit + README «0 → running» за <30 минут.
+
+Tier 4 (Compliance pack: pentest, аттестат УзСтандарта на ПДн, IT-Park резидентство, Admin Guide / Security Architecture / DRP/BCP) идёт **параллельно** Tier 3, начинается за 2 месяца до подачи в банк-tender.
+
+**Lessons из закрытых Tier 0–2 (post-mortem):**
+- Перед claim «X everywhere» обязательно `grep -rn` на hardcoded strings — `feedback_nested_anchor_rtl_blind` extends на shared-зону consumers.
+- Pre-impl scope-review через grep на callers — `feedback_pre_impl_grep_all_callers`. План T1.1 underestimate'нул scope 10 → реально 22 файла.
+- TDD-цикл поймал bug в `CaseIdAllocator`: `max_year=None` (пустая БД) не должен trigger'ить ALTER SEQUENCE RESTART. Без integration-теста выпустил бы 0001/0001/0001.
+- ADR-0014 pattern переиспользован 3 раза (T0.2 CBU, T0.3 ГНК Phase A, sketch для T2.4b). ADR-0020 defer-decision принёс понимание fake-green risk без real-data.
+- Vitest jsdom singleton — `fireEvent.click()` без `afterEach(cleanup)` ломает соседние файлы (`feedback_vitest_dom_leak_cleanup`).
+
+<details>
+<summary>Historical context (раскрыть при необходимости): T0.4 follow-up + T1.1 closure narrative</summary>
 
 После закрытия T0.4 base scope (8 коммитов до `a7de8a3`) live-browser walkthrough на BR-EDFD (UZ-mode dossier UI + PDF) выявил, что **«UZ everywhere»** не достигнут — ADR-0015 покрыл PDF chrome + observations, но пропустил несколько кластеров hardcoded RU. Closer audit нашёл 5 багов:
 
@@ -125,6 +147,8 @@ Heads-up: **live-browser smoke** через `/`, `/search`, `/history`, `/dossie
 - Memory `feedback_dont_pause_between_commits.md` + `feedback_nbsp_write_loses_literal.md` добавлены 2026-05-18.
 - Pre-impl scope-review B4 (2026-05-18): описание в CLAUDE.md ловило только namesake `formatBigUzs`, но live-browser в UZ-mode `/search` дал бы тот же gap через `formatRevenueShort`. Расширение scope **до** коммита спасло 4-й T0.4 hotfix. Lesson: «один namesake = один сценарий» — ложная конвенция; искать **все** формат-хелперы той же семантики.
 
+</details>
+
 ### Tier 0 — Deal-breakers (closed)
 - ~~**T0.1**~~ → **DONE 2026-05-18**: 4 фирмы (201308534, 305002665, 308747266, 305738460) × 5 типов = formal набор, 28 xltx по факту в `tests/fixtures/soliq_xltx/` (включая q4 + monthly). Gitignored. Анонимизированные версии — **CA-DS30** в backlog (только 1/28 anon на месте; bulk anonymize через openpyxl script — post-T1 priority).
 - ~~**T0.2** CBU API real integration (CA-024b)~~ → **DONE 2026-05-17 (commit `b124af6`)**: cbu_client + usd_rate_service + usd_rate_repository (Postgres daily-cached) + endpoint switch. Fallback chain env → DB today → CBU live → DB latest → JSON. ADR-0014 «External API integration pattern». Live smoke ✓.
@@ -132,13 +156,13 @@ Heads-up: **live-browser smoke** через `/`, `/search`, `/history`, `/dossie
 - ~~**T0.4** UZ-локализация PDF (CA-DS29-pdf)~~ → **DONE 2026-05-18**: 8 коммитов от `ce2c47a` (ADR-0015) до `a7de8a3` (endpoint `?lang=`). Backend single source of truth — `config/pdf-i18n/{ru,uz}.json` через `PdfMessages` DTO + `infrastructure/i18n/pdf_messages.py` loader с `lru_cache(maxsize=2)`. `Rule.name_uz` required в YAML schema; 19 правил переведены. `RenderDossierPdf.execute(dossier_id, lang)`, observations_builder f-strings → `messages.X.format(...)`, dossier.html / pdf_renderer.py / template_filters.py / chart_renderer.py wiring через DI. Endpoint `GET /api/dossier/{id}/pdf?lang=ru|uz` + `BrandConfig.default_lang` fallback + audit-log `payload={"lang": ...}`. ADR-0015 «PDF localization strategy».
 - ~~**T0.5** VAT parser fix для real 10006_41/45/47 (промоут из CA-015)~~ → **DONE 2026-05-17 (commit `f5d7495`)**: NKM rows, trailing-empty stop, v1/v2 header dispatch. 19 real-xltx pass + 4 profit_tax xfail.
 
-**Tier 0 closed (включая T0.1).** Active — **T1.1 case_id monotonic sequence** (compromised B: sequence на `dossiers` table, без Phase 4 application entity — full Phase 4 entity 5-10 дней refactor; compromise даёт banking-grade monotonic ID до demo, post-demo миграция case_id на applications через FK). Decisions предыдущей сессии: (c) wizard placeholder вместо derived формат, advisory lock на year boundary, drop legacy `formatCaseId` helper. См. roadmap T1.1.
+**Tier 0 closed.** См. roadmap для полного списка commits.
 
-### Tier 1–4 (после T0)
-- **T1** Prod-killers: case_id sequence (CA-DS18b/c), refresh-token rotation + Redis (CA-019), PII encryption at rest (column-level через app-layer, **не наивный pgcrypto на JSONB** — см. ADR-0014 to write), multi-tenant runtime isolation (BRAND_ID env + startup assertion), LDAP/OAuth (CA-020).
-- **T2** Data quality: ~~dynamic units FORM_2+FORM_1 (CA-028)~~ ✅ done 2026-05-18, ~~PROFIT_TAX (CA-029b)~~ ✅ done 2026-05-18, ~~VAT real formats (CA-015)~~ ✅ done T0.5, ~~faktura.uz (CA-DS11)~~ ✅ done 2026-05-18 as honest stub (ADR-0020). **Tier 2 complete.**
-- **T3** Operational readiness: observability (CA-064), structured logging + correlation_id, Prometheus/Grafana, pg_dump backup, audit-log export, Ansible/systemd deploy.
-- **T4** Compliance pack (параллельно с T1–T3): pentest от лицензированной узб-лаборатории, аттестат УзСтандарта на ПДн, резидентство в IT-юрисдикции РУз, Admin Guide + Security Architecture + DRP/BCP (RU + UZ).
+### Tier 1–4 status (snapshot 2026-05-18)
+- ~~**T1** Prod-killers~~ ✅ done 2026-05-18 (T1.1 case_id seq · T1.2 refresh rotation · T1.3 PII encryption · T1.4 multi-tenant · T1.5 LDAP). ADR-0016/0017/0018/0019.
+- ~~**T2** Data quality~~ ✅ done 2026-05-18 (T2.1 dynamic units FORM_2+FORM_1 · T2.2 поглощено T0.5 · T2.3 PROFIT_TAX · T2.4 faktura.uz honest stub). ADR-0020.
+- **T3** Operational readiness — **Active.** Observability (CA-064), structured logging + correlation_id, Prometheus/Grafana, pg_dump backup, audit-log export, Ansible/systemd deploy. 6 items, приоритизация в начале новой сессии.
+- **T4** Compliance pack (параллельно с T3): pentest от лицензированной узб-лаборатории, аттестат УзСтандарта на ПДн, резидентство в IT-юрисдикции РУз, Admin Guide + Security Architecture + DRP/BCP (RU + UZ).
 
 ### Frozen scope (не трогать до post-demo)
 - UI polish: новые цвета, шрифты, тени, анимации.
