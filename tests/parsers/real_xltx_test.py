@@ -8,7 +8,7 @@
 пройдёт зелёным, не false-fail).
 
 Контракт T0.1: каждый поддержанный xltx-формат парсится без unexpected
-``parse_warnings``. PROFIT_TAX — ``xfail`` до T2.3 (parser ещё не реализован).
+``parse_warnings``. Все 5 форматов покрыты (T2.3 закрыл PROFIT_TAX).
 UNKNOWN — fail (детектор обязан опознать любой реальный файл — иначе либо
 формат изменился, либо нужен новый sentinel).
 """
@@ -59,9 +59,6 @@ def test_real_xltx_parses_without_unexpected_warnings(xltx_path: Path) -> None:
         f"detect_format не опознал {xltx_path.name} — "
         "либо файл повреждён, либо нужен новый sentinel в format_detector"
     )
-
-    if fmt is SoliqXltxFormat.PROFIT_TAX:
-        pytest.xfail("T2.3 PROFIT_TAX parser pending")
 
     dto = SoliqXltxAdapter().parse(xltx_path)
     warnings = list(getattr(dto, "parse_warnings", []))

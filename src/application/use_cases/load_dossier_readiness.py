@@ -82,8 +82,11 @@ def infer_parser_sources_from_snapshot(snapshot: BorrowerSnapshot) -> set[Parser
     ):
         sources.add(ParserSource.ESF_CSV)
 
-    # PROFIT_TAX парсер ещё не подключён (TODO[CA-029b]). taxes_paid сейчас
-    # приходит из manual ввода, поэтому не добавляем здесь по taxes_paid.
-    # Когда CA-029b закроется — расширить эту функцию.
+    # PROFIT_TAX (T2.3) пишет в FinancialReport.taxes_paid через
+    # taxes_paid_by_year, но snapshot не хранит per-source флаг — taxes_paid
+    # может прийти и из manual ввода. Без отдельной колонки/трассировки
+    # heuristic «PROFIT_TAX был» по snapshot построить нельзя; полагаемся
+    # на source_trail в draft (live) и manual-input fallback для готового
+    # досье. Оставлено sources-set без PROFIT_TAX entry sentinel.
 
     return sources
