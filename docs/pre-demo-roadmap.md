@@ -11,7 +11,9 @@
 
 **Tier 1 / T1.2 (2026-05-18):** ✅ **closed**. ADR-0016. `RefreshTokenDenylistPort` + `RedisRefreshTokenDenylist` (`SET NX EX` + TTL clamp) + `NullRefreshTokenDenylist` fallback. `/refresh` rotation, `/logout` денилист'ит refresh из BFF cookie.
 
-**Tier 1 / T1.3 (2026-05-18):** ✅ **closed**. ADR-0017. `PiiEncryptorPort` + `FernetPiiEncryptor` (`MultiFernet` rotation) + `NullPiiEncryptor` fallback. SQLAlchemy TypeDecorator (`EncryptedString`/`EncryptedJsonb`/`EncryptedBytea`) на 6 PII колонках. `audit_log` emails masked. Alembic `c5d2f3a7e1b4` (length expansions + data encrypt pass, idempotent). Production startup-assertion. Runbook `docs/operations/pii-key-rotation.md`. **Active — T1.4 multi-tenant runtime isolation (`BRAND_ID` env + startup assertion + cross-tenant guard).**
+**Tier 1 / T1.3 (2026-05-18):** ✅ **closed**. ADR-0017. `PiiEncryptorPort` + `FernetPiiEncryptor` (`MultiFernet` rotation) + `NullPiiEncryptor` fallback. SQLAlchemy TypeDecorator (`EncryptedString`/`EncryptedJsonb`/`EncryptedBytea`) на 6 PII колонках. `audit_log` emails masked. Alembic `c5d2f3a7e1b4` (length expansions + data encrypt pass, idempotent). Production startup-assertion. Runbook `docs/operations/pii-key-rotation.md`.
+
+**Tier 1 / T1.4 (2026-05-18):** ✅ **closed**. ADR-0018. Approach A pure — single-tenant per deployment (separate compose-project per bank), scope сужен после PROJECT_BRIEF Sec 11 review. `Settings.brand_id` + `_validate_runtime_config` helper в `app.py` (BRAND_ID resolves + PII_ENC_KEYS prod-mandatory, обобщает T1.3 inline check). `load_brand(brand_id)` mandatory arg — env-fallback внутри loader убран. `audit_log.brand_id` колонка (Alembic `e7f9a3c2b8d1`, NOT NULL DEFAULT 'default' + index `(brand_id, created_at)`) для forensics. Repository конструктор принимает brand_id, 5 callsites пробрасывают `settings.brand_id`. Playbook `docs/operations/multi-tenant-deploy.md`. **Active — T1.5 LDAP/OAuth AuthnAdapter (CA-020).**
 
 ---
 
@@ -165,16 +167,18 @@ ADR-0017 «PII encryption at rest». Design:
 
 ИНН + name ЮЛ + addresses + red_flags + audit-log non-email keys оставлены plain (публичные / search-critical / list-view perf / уже masked).
 
-### T1.4 — Multi-tenant isolation (runtime, не build-time)
-**Не build-arg per brand image** — N образов + CI matrix + registry storage избыточно. Build-arg не даёт значимой security gain (image тоже reverse-engineer'ится).
+### T1.4 — Multi-tenant runtime isolation ✅ DONE 2026-05-18
 
-Текущий подход: `BRAND_ID` runtime env. Усилить:
-1. **Startup assertion**: при старте API сравнить `os.environ["BRAND_ID"]` с `config/brands/<id>.json` — если файла нет или brand_id mismatch, crash на boot, не отдавать requests.
-2. **Cross-tenant guard**: все queries через `borrowers` фильтруются по `brand_id` колонке (добавить если нет) — single SQL view `borrowers_for_current_brand` или middleware filter.
-3. **Audit trail**: `audit_log.brand_id` колонка, indexed.
-4. **Deploy doc**: `docs/operations/multi-tenant-deploy.md` — одна команда `BRAND_ID=uzbekbank docker compose up` на инстанс банка.
+Approach A pure (single-tenant per deployment) — scope сужен после PROJECT_BRIEF Sec 11 review. Каждый банк = отдельный compose-project с отдельным Postgres-volume; brand_id колонки в data-tables НЕ добавляются (out of scope, см. ADR-0018).
 
-**Acceptance**: разворачиваешь 2 инстанса на одной машине (`uzbekbank` + `demo`), запросы между ними изолированы на DB-level.
+3 коммита:
+- `44c42a6` **T1.4.1**: `Settings.brand_id` + `_validate_runtime_config` helper в `app.py` (BRAND_ID resolves в `config/brands/<id>.json` или RuntimeError + PII_ENC_KEYS prod-mandatory, обобщает inline check из T1.3). `load_brand(brand_id)` mandatory arg, env-fallback внутри loader убран. PDF endpoint партиал-биндит `settings.brand_id` через `partial(load_brand, brand_id)`. ADR-0018 «Multi-tenant runtime isolation (Approach A)». 6 unit-тестов на `create_app` startup-validation.
+- `80e8cfc` **T1.4.2**: `audit_log.brand_id VARCHAR(50) NOT NULL DEFAULT 'default'` + index `(brand_id, created_at)`. Alembic `e7f9a3c2b8d1`, backfill 'default' для existing rows, down/up roundtrip verified. Repository конструктор принимает brand_id; 5 callsites пробрасывают `settings.brand_id` (DI factory `get_audit_log_repo` + shared/dossier × 2 + dossier_pdf + bank/search). 3 новых integration на repo round-trip.
+- `<this commit>` **T1.4.3**: `docs/operations/multi-tenant-deploy.md` playbook + roadmap status sync + CLAUDE.md current status.
+
+**Acceptance:** 2 compose-project'а на одной dev-машине (`credit-default` + `credit-uzbekbank`) с offset-портами (`8000`/`8001`, `5433`/`5434`, `6379`/`6380`), separate volumes, separate `.env`. Запросы изолированы на network-level и DB-level. Live-browser smoke на двух одновременных инстансах — не выполнен в этой Windows-сессии (отдельный заход через `docker compose -f` override).
+
+**Heads-up:** brand_id в data-tables (`borrowers/dossiers/snapshots/drafts/analysts`) НЕ добавлен — out of scope для Approach A. Если future shared-DB требование появится — отдельный таск с миграцией + middleware. См. ADR-0018 «Out of scope» section.
 
 ### T1.5 — LDAP/OAuth AuthnAdapter (CA-020)
 - `LdapAuthnAdapter` поверх существующего `AuthnPort`.
