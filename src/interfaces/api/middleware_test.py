@@ -81,6 +81,33 @@ def test_unbind_after_response_isolates_requests() -> None:
     assert probe["bound_request_id"] == rid
 
 
+def test_request_id_set_as_sentry_tag() -> None:
+    """T3.1: request_id попадает в Sentry scope как tag — для GlitchTip
+    фильтрации events по correlation_id."""
+    import sentry_sdk
+
+    captured: dict[str, str] = {}
+
+    def _fake_send(event: object, _hint: object) -> object:
+        # Sentry SDK noop без DSN; для test'а перехватываем через scope hook.
+        return None
+
+    app = FastAPI()
+    app.add_middleware(RequestIDMiddleware)
+
+    @app.get("/probe")
+    def probe_endpoint() -> dict[str, str]:
+        tags = sentry_sdk.get_current_scope()._tags
+        captured["request_id"] = tags.get("request_id", "")
+        return {"ok": "1"}
+
+    _ = _fake_send  # silence unused-warning for placeholder transport
+    with TestClient(app) as client:
+        client.get("/probe", headers={"X-Request-ID": "tag-test-123"})
+
+    assert captured["request_id"] == "tag-test-123"
+
+
 def test_structlog_logger_emits_request_id_during_request(
     caplog: pytest.LogCaptureFixture,
 ) -> None:

@@ -24,6 +24,7 @@ from config.logging import configure_logging
 from config.settings import Settings, get_settings
 from infrastructure.brand.brand_config import BrandConfigError, load_brand
 from infrastructure.jobs.uptime_collector import uptime_collector_loop
+from infrastructure.observability.sentry import init_sentry
 from infrastructure.persistence.database import get_session_factory
 from interfaces.api.bank.admin import router as bank_admin_router
 from interfaces.api.bank.auth import router as bank_auth_router
@@ -140,6 +141,12 @@ def _validate_runtime_config(settings: Settings) -> None:
 def create_app(settings: Settings | None = None) -> FastAPI:
     """Собирает FastAPI с middleware и роутерами. Тесты могут передавать свои настройки."""
     settings = settings or get_settings()
+    # T3.1: init Sentry ДО configure_logging — sentry-sdk LoggingIntegration
+    # add'ит свои handlers; configure_logging добавляет StreamHandler.
+    # Оба handler'а независимы, порядок init важен только для одной
+    # детали: глобальные tags (brand_id/app_mode) выставляются сразу,
+    # чтобы первые же log-events их подхватили.
+    init_sentry(settings)
     configure_logging(level=settings.log_level, json_logs=settings.app_env != "local")
 
     _validate_runtime_config(settings)
