@@ -18,6 +18,7 @@ from __future__ import annotations
 import uuid
 from typing import TYPE_CHECKING
 
+import sentry_sdk
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from structlog.contextvars import bind_contextvars, unbind_contextvars
 
@@ -41,6 +42,10 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
     ) -> Response:
         rid = request.headers.get(REQUEST_ID_HEADER) or uuid.uuid4().hex
         bind_contextvars(request_id=rid)
+        # T3.1: tag для GlitchTip — если Sentry SDK активен, событие
+        # получит request_id в tag-секции (поверх логов в structured logs).
+        # Без активного SDK — noop.
+        sentry_sdk.get_current_scope().set_tag("request_id", rid)
         try:
             response = await call_next(request)
         finally:
