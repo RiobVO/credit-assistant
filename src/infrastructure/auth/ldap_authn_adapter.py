@@ -24,6 +24,7 @@ from dataclasses import dataclass
 from typing import Protocol
 
 from application.dto.analyst_identity import AnalystIdentity
+from application.ports.authn_port import AuthnResult
 
 
 class LdapBindError(RuntimeError):
@@ -102,7 +103,7 @@ class LdapAuthnAdapter:
 
     async def authenticate(
         self, email: str, password: str
-    ) -> AnalystIdentity | None:
+    ) -> AuthnResult | None:
         # Service-bind + search. LdapBindError всплывает caller'у —
         # инфраструктурная проблема не маскируется под "wrong password".
         entry = await asyncio.to_thread(self._client.search_user, email)
@@ -127,9 +128,10 @@ class LdapAuthnAdapter:
             return None
 
         full_name = self._resolve_full_name(attributes, fallback=email)
-        return await self._upsert.upsert_from_ldap(
+        identity = await self._upsert.upsert_from_ldap(
             email=email, full_name=full_name, role=role
         )
+        return AuthnResult(identity=identity, source="ldap")
 
     def _resolve_role(self, attributes: dict[str, object]) -> str | None:
         """Senior precedence: если user в обеих группах — senior_analyst."""

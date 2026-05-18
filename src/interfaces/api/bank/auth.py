@@ -200,8 +200,8 @@ async def change_password(
     затем mutation на ORM-инстансе. Не делаем revoke сессий — JWT в v1
     stateless (TODO[CA-019]); access токен остаётся валидным до TTL.
     """
-    identity = await authn.authenticate(analyst.email, payload.current_password)
-    if identity is None:
+    auth_result = await authn.authenticate(analyst.email, payload.current_password)
+    if auth_result is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid_credentials"
         )
