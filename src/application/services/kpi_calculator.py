@@ -71,6 +71,8 @@ def compute_kpis(snapshot: BorrowerSnapshot) -> KpiBundle:
         dscr=_compute_dscr(latest, snapshot.loan_request),
         # ADR-0024 Session 2: Quick Ratio (acid-test ratio).
         quick_ratio=_compute_quick_ratio(latest),
+        # ADR-0024 Session 4: FX Exposure Ratio (8-й KPI).
+        fx_exposure_ratio=_compute_fx_exposure_ratio(latest),
     )
 
 
@@ -462,6 +464,56 @@ def _compute_quick_ratio(latest: FinancialReport | None) -> KpiValue | None:
         yoy_pct=None,
         sparkline=(),
         level_tone=_quick_ratio_level_tone(ratio),
+    )
+
+
+# ----------- ADR-0024 Session 4: FX Exposure Ratio (8th KPI) ------------------
+#
+# Доля валютных обязательств в общих обязательствах. Критичен для МСБ
+# Узбекистана с USD/EUR-долгами при UZS-выручке (currency mismatch → высокий
+# FX risk). Banker вводит liabilities_fx вручную в wizard Шаг 2; парсер FORM_1
+# не извлекает на v1.
+#
+# **БЕЗ level_tone в v1**: пороги отложены до verified § ЦБ РУз для FX-mismatch
+# у МСБ. Не плодим фабрикованные threshold'ы (lesson Qwen industry medians).
+# Banker читает число и применяет judgment. Backlog candidates: 0.25/0.50
+# (conservative) или 0.40/0.70 (lenient).
+
+
+def _compute_fx_exposure_ratio(latest: FinancialReport | None) -> KpiValue | None:
+    """FX Exposure = liabilities_fx / liabilities × 100 (PCT scale).
+
+    Доля валютных обязательств в общих. Consistent с ROE pattern
+    (ratio × 100 → unit=PCT, fmt_pct отрендерит как «40%»).
+
+    * latest None или balance_end None → None;
+    * liabilities или liabilities_fx None → None (silent на baseline, где
+      banker не заполнил FX-component);
+    * liabilities ≤ 0 → None (нечего соотносить, защита от деления на ноль).
+
+    Edge-case ratio > 100% (liabilities_fx > liabilities, например banker
+    ввёл 3 млрд FX при total 2 млрд): возвращаем raw значение без cap.
+    fmt_pct отрендерит честно «150%» — banker увидит абсурд и поймёт что
+    данные неверны. Acceptable UX для v1 manual-input (не parser-driven).
+
+    БЕЗ level_tone: пороги отложены до verified § ЦБ РУз (см. модуль-блок
+    выше).
+    """
+    if latest is None or latest.balance_end is None:
+        return None
+    liabilities = _money_amount(latest.balance_end.liabilities)
+    liabilities_fx = _money_amount(latest.balance_end.liabilities_fx)
+    if liabilities is None or liabilities_fx is None:
+        return None
+    if liabilities <= 0:
+        return None
+    ratio_pct = liabilities_fx / liabilities * Decimal(100)
+    return KpiValue(
+        value=ratio_pct,
+        unit=KpiUnit.PCT,
+        yoy_pct=None,
+        sparkline=(),
+        # level_tone=None намеренно: см. модуль-блок выше про backlog ЦБ РУз.
     )
 
 
