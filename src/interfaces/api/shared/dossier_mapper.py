@@ -320,6 +320,7 @@ def _kpi_bundle_to_output(bundle: KpiBundle) -> KpiBundleOutput:
         working_capital=_kpi_value_to_output(bundle.working_capital),
         interest_coverage=_kpi_value_to_output(bundle.interest_coverage),
         dscr=_kpi_value_to_output(bundle.dscr),
+        quick_ratio=_kpi_value_to_output(bundle.quick_ratio),
     )
 
 

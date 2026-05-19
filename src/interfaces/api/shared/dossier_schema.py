@@ -312,6 +312,8 @@ class KpiBundleOutput(_StrictModel):
     working_capital: KpiValueOutput | None = None
     interest_coverage: KpiValueOutput | None = None
     dscr: KpiValueOutput | None = None
+    # ADR-0024 (Session 2):
+    quick_ratio: KpiValueOutput | None = None
 
 
 class MonthlyRevenuePointOutput(_StrictModel):
