@@ -28,9 +28,9 @@ def _make_borrower(
         registration_date=date(2018, 3, 15),
         director_name="Иванов И.И.",
         director_appointed_at=date(2022, 1, 10),
-        okved_main="62.01",
+        oked_main="62.01",
         registered_address="г. Ташкент, ул. Амира Темура, 1",
-        okved_main_changed_at=date(2024, 6, 1) if with_okved_change else None,
+        oked_main_changed_at=date(2024, 6, 1) if with_okved_change else None,
         charter_capital=Money(Decimal("50000000.00"), Currency.UZS) if with_capital else None,
         oked_changed_by_owner=oked_changed_by_owner,
     )
@@ -53,7 +53,7 @@ def test_borrower_round_trip_minimal() -> None:
     restored = _round_trip(original)
     assert restored == original
     assert restored.charter_capital is None
-    assert restored.okved_main_changed_at is None
+    assert restored.oked_main_changed_at is None
 
 
 def test_borrower_kwargs_no_id() -> None:
