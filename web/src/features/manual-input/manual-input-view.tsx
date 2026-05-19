@@ -122,7 +122,7 @@ function ManualInputPageInner() {
           name: prefill.name,
           legalForm,
           registrationDate: prefill.registration_date,
-          okvedMain: prefill.okved_main,
+          okedMain: prefill.oked_main,
           directorName: prefill.director_name,
           directorAppointedAt: prefill.director_appointed_at,
           registeredAddress: prefill.registered_address,
@@ -130,7 +130,7 @@ function ManualInputPageInner() {
           // Если ОКЭД сменился ранее (через парсер) — toggle отражает
           // current flag в БД; analyst может его поменять.
           okedChangedByOwner: prefill.oked_changed_by_owner,
-          okvedMainChangedAt: prefill.okved_main_changed_at,
+          okedMainChangedAt: prefill.oked_main_changed_at,
         },
       });
       return;

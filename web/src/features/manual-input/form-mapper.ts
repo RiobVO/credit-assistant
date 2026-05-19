@@ -71,7 +71,7 @@ export type ManualInputPayload = {
     registration_date: string;
     director_name: string;
     director_appointed_at: string;
-    okved_main: string;
+    oked_main: string;
     registered_address: string;
     // ADR-0024 Session 3: narrow для OKVED_CHANGED_12M. Default false для
     // brand-new dossiers; true только когда analyst поставил toggle во
@@ -197,7 +197,7 @@ export function formValuesToPayload(values: FormValues): ManualInputPayload {
       registration_date: step1.registrationDate,
       director_name: step1.directorName,
       director_appointed_at: step1.directorAppointedAt,
-      okved_main: step1.okvedMain,
+      oked_main: step1.okedMain,
       registered_address: step1.registeredAddress,
       oked_changed_by_owner: step1.okedChangedByOwner,
     },

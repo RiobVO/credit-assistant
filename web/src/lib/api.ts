@@ -54,9 +54,9 @@ export type DossierViewDto = DossierResponseDto & {
     registration_date: string; // ISO YYYY-MM-DD
     director_name: string;
     director_appointed_at: string;
-    okved_main: string;
+    oked_main: string;
     registered_address: string;
-    okved_main_changed_at: string | null;
+    oked_main_changed_at: string | null;
     charter_capital: { amount: string; currency: "UZS" | "USD" } | null;
     // ADR-0024 Session 3: narrow flag для OKVED_CHANGED_12M (правило fires
     // только при owner-initiated смене ОКЭД, не Госкомстат overwrite).

@@ -2,7 +2,7 @@
 // для smart-narrow OKVED_CHANGED_12M rule.
 //
 // Покрываем:
-//   • hidden когда okvedMainChangedAt = null (brand-new dossier flow)
+//   • hidden когда okedMainChangedAt = null (brand-new dossier flow)
 //   • visible когда дата задана + чекбокс отражает значение field
 //   • toggle меняет значение в RHF state
 //   • date форматируется DD.MM.YYYY
@@ -28,7 +28,7 @@ function Harness({
       ...defaultFormValues(),
       step1: {
         ...defaultFormValues().step1,
-        okvedMainChangedAt: date,
+        okedMainChangedAt: date,
         okedChangedByOwner: initialChecked,
       },
     },

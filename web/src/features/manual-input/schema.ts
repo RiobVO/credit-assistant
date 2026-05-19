@@ -99,7 +99,7 @@ export const step1Schema = z
     name: z.string().trim().min(2, "Заполните наименование"),
     legalForm: z.enum(["llc", "jsc", "ie"]),
     registrationDate: isoDate,
-    okvedMain: z.string().trim().min(2, "Укажите ОКВЭД"),
+    okedMain: z.string().trim().min(2, "Укажите ОКЭД"),
     directorName: z.string().trim().min(2, "Укажите Ф.И.О. директора"),
     directorAppointedAt: isoDate,
     // CA-038: адрес «Ташкент» проходил min(3); банк требует улицу+дом.
@@ -110,7 +110,7 @@ export const step1Schema = z
       .min(15, "Адрес должен содержать не менее 15 символов (улица, дом)")
       .refine((v) => /\d/.test(v), "Адрес должен содержать номер дома"),
     // ADR-0024 Session 3: narrow scope для OKVED_CHANGED_12M. Toggle
-    // reachable только когда `okvedMainChangedAt` пришло с backend (через
+    // reachable только когда `okedMainChangedAt` пришло с backend (через
     // «Пересобрать с дополнениями»); в brand-new dossier flow поле hidden,
     // default false. Date picker не добавляется — поле parser-driven,
     // editable date = data-integrity bug с future parser re-runs.
@@ -119,7 +119,7 @@ export const step1Schema = z
     // ОКЭД (через парсер/ORM), null иначе. UI читает значение для
     // conditional rendering toggle; в submit payload не уходит — backend
     // имеет авторитетное значение через borrower-record.
-    okvedMainChangedAt: z.string().nullable(),
+    okedMainChangedAt: z.string().nullable(),
   })
   .refine(
     ({ registrationDate, directorAppointedAt }) => {
@@ -238,7 +238,7 @@ export function defaultFormValues(): FormValues {
       name: "",
       legalForm: "llc",
       registrationDate: "",
-      okvedMain: "",
+      okedMain: "",
       directorName: "",
       directorAppointedAt: "",
       registeredAddress: "",
@@ -246,7 +246,7 @@ export function defaultFormValues(): FormValues {
       // existing borrower (через CA-058 sessionStorage) перетирает значение
       // на actual flag из БД.
       okedChangedByOwner: false,
-      okvedMainChangedAt: null,
+      okedMainChangedAt: null,
     },
     step2: {
       revenue: {

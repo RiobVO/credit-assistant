@@ -616,7 +616,7 @@
   <p class="cover-subtitle">
     {{ t.running_head_inn_prefix }}&nbsp;<span class="mono">{{ borrower.inn.value | fmt_inn }}</span> ·
     {{ legal_form_label }} ·
-    {{ t.identity_okved_label }}&nbsp;{{ borrower.okved_main }}
+    {{ t.identity_okved_label }}&nbsp;{{ borrower.oked_main }}
   </p>
 
   <div class="cover-divider"></div>
@@ -747,7 +747,7 @@
         <div class="stat-sub">{{ region_district }}</div>
       </div>
       <div class="stat-tile" style="border-top-color: {{ brand.primary }}">
-        <div class="stat-num mono">{{ borrower.okved_main }}</div>
+        <div class="stat-num mono">{{ borrower.oked_main }}</div>
         <div class="stat-label">{{ t.identity_okved_label }}</div>
         <div class="stat-sub">{{ okved_short_label }}</div>
       </div>
@@ -764,7 +764,7 @@
       </div>
       <div class="row">
         <div class="k">{{ t.identity_main_activity }}</div>
-        <div class="v">{{ borrower.okved_main }} — {{ okved_full_label }}</div>
+        <div class="v">{{ borrower.oked_main }} — {{ okved_full_label }}</div>
       </div>
       {% if gnk_certificate %}
       <div class="row">

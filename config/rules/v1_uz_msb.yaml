@@ -9,8 +9,8 @@ version: v1
 #   reconcile (Claude/ChatGPT/Qwen). Прежние ссылки на «ЦБ РУз №27-п»,
 #   «НК РУз ст.256» и «Group-IB UZ fraud report» заменены на актуальные.
 # T0.4 / ADR-0015: name_uz — финальные UZ-переводы (commit 3). Терминология:
-# Soliq xltx стандарт (QQS, EHF), gov.uz словарь. ОКВЭД / INN — кириллица /
-# латиница сохранены как общеупотребимые сокращения.
+# Soliq xltx стандарт (QQS, EHF), gov.uz словарь. ОКЭД (per ПКМ РУз №275 от
+# 24.08.2016) / INN — кириллица / латиница сохранены.
 
 rules:
   # --- Структурные ---
@@ -31,7 +31,7 @@ rules:
     severity: medium
     source: "Постановление КМ РУз №275 от 24.08.2016 (UZ-ОКЭД ред.2); FATF Recommendation 10 (CDD); внутренние методики UZ-банков"
     source_uz: "ЎзР Вазирлар Маҳкамасининг 24.08.2016 №275-сонли қарори (UZ-ОКЭД); FATF tavsiya 10 (CDD)"
-    formula: "borrower.oked_changed_by_owner AND (as_of - okved_main_changed_at).days <= 365"
+    formula: "borrower.oked_changed_by_owner AND (as_of - oked_main_changed_at).days <= 365"
     rationale: "Смена деятельности собственником перед кредитом — AML/CDD сигнал (может скрывать фрод-схему). ADR-0024 Session 3: добавлен gate `oked_changed_by_owner=True` — Госкомстат auto-overwrite (массовая перекатегоризация без заёмщика) больше не триггерит правило"
 
   - id: LOAN_TO_REVENUE_RATIO

@@ -56,7 +56,7 @@ export function BorrowerCard({
             </>
           }
         />
-        <Row label={t("row_okved")} value={borrower.okved_main} />
+        <Row label={t("row_okved")} value={borrower.oked_main} />
         <Row label={t("row_address")} value={borrower.registered_address} />
         {gnkCertificate !== null && gnkCertificate.cert_id !== null && (
           <Row label={t("row_gnk_cert_id")} value={
