@@ -26,7 +26,7 @@ from application.dto.brand_config import BrandConfig
 from application.dto.dossier_pdf_bundle import DossierPdfBundle
 from application.dto.pdf_messages import PdfMessages
 from application.ports.pdf_report_port import PdfReportPort
-from application.services.observations_builder import build_observations
+from application.services.observations_builder import BenchmarkLookup, build_observations
 from application.services.pdf_data_aggregator import (
     compute_tax_summary,
     compute_top_buyers,
@@ -47,12 +47,14 @@ class RenderDossierPdf:
         rule_registry: RuleRegistry,
         brand_loader: Callable[[], BrandConfig],
         pdf_messages_loader: Callable[[Lang], PdfMessages],
+        benchmark_catalog: BenchmarkLookup | None = None,
     ) -> None:
         self._loader = loader
         self._renderer = renderer
         self._registry = rule_registry
         self._brand_loader = brand_loader
         self._messages_loader = pdf_messages_loader
+        self._benchmark_catalog = benchmark_catalog
 
     async def execute(self, dossier_id: UUID, lang: Lang = DEFAULT_LANG) -> bytes | None:
         view_bundle = await self._loader.execute(dossier_id)
@@ -67,6 +69,7 @@ class RenderDossierPdf:
             red_flags=view_bundle.view.dossier.red_flags,
             registry=self._registry,
             messages=messages,
+            benchmark_catalog=self._benchmark_catalog,
         )
         bundle = DossierPdfBundle(
             view_bundle=view_bundle,

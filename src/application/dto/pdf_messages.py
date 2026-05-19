@@ -128,7 +128,8 @@ class PdfMessages:
     obs_revenue_growth_ctx_chain: str
     obs_revenue_growth_ctx_ltm_only: str
     obs_roe_head: str
-    obs_roe_ctx: str
+    obs_roe_ctx_with_industry: str  # ADR-0024: «отрасль "{industry}" — UZ-медиана не публикуется»
+    obs_roe_ctx_no_industry: str  # fallback если ОКЭД unknown в catalog
     obs_profit_head: str
     obs_profit_ctx_growth: str
     obs_profit_ctx_positive: str

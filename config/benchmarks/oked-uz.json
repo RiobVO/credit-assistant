@@ -1,0 +1,118 @@
+{
+  "version": "1.0",
+  "classifier": "UZ-OKED",
+  "classifier_authority": "Государственный комитет по статистике РУз (Госкомстат)",
+  "classifier_source": "ПКМ КМ РУз №275 от 24.08.2016",
+  "classifier_basis": "NACE Rev.2 + ISIC Rev.4",
+  "updated_at": "2026-05-19",
+  "data_year": "2024 (latest available)",
+  "policy": "UZ-specific net margin / ROE / asset turnover medians per ОКЭД section не публикуются в открытом виде stat.uz / ЦБ РУз / CERR. Все числовые поля = null до commission'а отраслевого исследования (CERR / KPMG / Stat.uz микроданные). Запрещено заменять null на fake-числа из соседних стран (KZ/RU).",
+  "fallback_recommendation": "Использовать Basel III standardized risk weights (75% retail SME, 100% other corporate) + bank-internal historical data до получения UZ-specific medians.",
+  "buckets": [
+    {
+      "code_prefix": "A",
+      "oked_subsections": ["01", "02", "03"],
+      "name_ru": "Сельское, лесное и рыбное хозяйство",
+      "name_uz": "Qishloq, oʻrmon va baliq xoʻjaligi",
+      "median": {
+        "roe_pct": null,
+        "net_margin_pct": null,
+        "asset_turnover": null,
+        "debt_to_equity": null
+      },
+      "sample_size": null,
+      "source": "Stat.uz EXCLUDES dehkan/farmer households from sectoral profitability data",
+      "notes": "Сезонность EXTREME (Q3 peak harvest). Murodov 2025 (cotton ginning UZ): minimum safe DSCR threshold 1.3. UZ-specific medians не публикуются."
+    },
+    {
+      "code_prefix": "C",
+      "oked_subsections": ["10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", "33"],
+      "name_ru": "Обрабатывающая промышленность",
+      "name_uz": "Qayta ishlash sanoati",
+      "median": {
+        "roe_pct": null,
+        "net_margin_pct": null,
+        "asset_turnover": null,
+        "debt_to_equity": null
+      },
+      "sample_size": null,
+      "source": "Stat.uz: абсолютная прибыль 72 309.8 млрд UZS Jan-Nov 2024, но per-bucket median не publishes",
+      "notes": "Largest absolute profit pool. Heterogeneous: food (C10) ≠ textile (C13) ≠ chemicals (C20). Рекомендуется sub-bucketing после получения UZ-data."
+    },
+    {
+      "code_prefix": "F",
+      "oked_subsections": ["41", "42", "43"],
+      "name_ru": "Строительство",
+      "name_uz": "Qurilish",
+      "median": {
+        "roe_pct": null,
+        "net_margin_pct": null,
+        "asset_turnover": null,
+        "debt_to_equity": null
+      },
+      "sample_size": null,
+      "source": "Stat.uz",
+      "notes": "Сильная сезонность (Q1 trough, Q3 peak). Lower-margin сектор по сравнению с торговлей. SQB FY2024 portfolio: construction 3% — банки treat cautiously. 'Серая' дельта (under-declared revenue) распространена. CRITICAL FIX: ОКЭД 43.39 (отделочные работы) ← это bucket F, не G."
+    },
+    {
+      "code_prefix": "G",
+      "oked_subsections": ["45", "46", "47"],
+      "name_ru": "Оптовая и розничная торговля; ремонт автотранспорта",
+      "name_uz": "Ulgurji va chakana savdo; avtomobillarni taʼmirlash",
+      "median": {
+        "roe_pct": null,
+        "net_margin_pct": null,
+        "asset_turnover": null,
+        "debt_to_equity": null
+      },
+      "sample_size": null,
+      "source": "Stat.uz UZ enterprises by industry, Jan 2024 (~158 000 предприятий)",
+      "notes": "Largest enterprise count. Heterogeneous: wholesale food (G46.3) ≠ retail electronics (G47.4) ≠ auto parts (G45.3). UZ-specific medians не publishes."
+    },
+    {
+      "code_prefix": "H",
+      "oked_subsections": ["49", "50", "51", "52", "53"],
+      "name_ru": "Перевозка и хранение",
+      "name_uz": "Tashish va saqlash",
+      "median": {
+        "roe_pct": null,
+        "net_margin_pct": null,
+        "asset_turnover": null,
+        "debt_to_equity": null
+      },
+      "sample_size": null,
+      "source": "Stat.uz: абсолютная прибыль 10 005.8 млрд UZS Jan-Nov 2024",
+      "notes": "Second-largest profit pool. UZ Railways quasi-government — exclude from MSB benchmark."
+    },
+    {
+      "code_prefix": "I",
+      "oked_subsections": ["55", "56"],
+      "name_ru": "Услуги по размещению и питанию",
+      "name_uz": "Joylashtirish va ovqatlanish xizmatlari",
+      "median": {
+        "roe_pct": null,
+        "net_margin_pct": null,
+        "asset_turnover": null,
+        "debt_to_equity": null
+      },
+      "sample_size": null,
+      "source": "Stat.uz",
+      "notes": "Tourism boom post-2017 reforms. UZ-specific medians не publishes."
+    },
+    {
+      "code_prefix": "J",
+      "oked_subsections": ["58", "59", "60", "61", "62", "63"],
+      "name_ru": "Информация и связь",
+      "name_uz": "Axborot va aloqa",
+      "median": {
+        "roe_pct": null,
+        "net_margin_pct": null,
+        "asset_turnover": null,
+        "debt_to_equity": null
+      },
+      "sample_size": null,
+      "source": "Stat.uz; CERR 2024 (services +20% YoY)",
+      "notes": "IT Park UZ residents — special tax regime (0% profit tax to 2040). Apparent profitability может быть inflated due to subsidies."
+    }
+  ]
+}
