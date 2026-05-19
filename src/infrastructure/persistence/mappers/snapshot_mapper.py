@@ -198,18 +198,21 @@ def _counterparty_to_dict(c: Counterparty) -> dict[str, Any]:
         "name": c.name,
         "registration_date": c.registration_date.isoformat(),
         "opf": c.opf.value if c.opf is not None else None,
+        "is_foreign": c.is_foreign,
     }
 
 
 def _counterparty_from_dict(d: dict[str, Any]) -> Counterparty:
-    # ADR-0024 Session 3: opf — legacy payloads ключа не содержат, читаем
-    # через `.get(...)` consistent с дефолтом entity (None).
+    # ADR-0024 Session 3: opf / is_foreign — legacy payloads ключей не
+    # содержат, читаем через `.get(...)` consistent с дефолтами entity
+    # (None / False).
     opf_raw = d.get("opf")
     return Counterparty(
         inn=INN(d["inn"]),
         name=d["name"],
         registration_date=date.fromisoformat(d["registration_date"]),
         opf=LegalForm(opf_raw) if opf_raw is not None else None,
+        is_foreign=d.get("is_foreign", False),
     )
 
 
