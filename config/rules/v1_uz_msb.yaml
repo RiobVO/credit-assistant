@@ -1,8 +1,13 @@
 version: v1
 
-# 17 red-flag правил для МСБ-заёмщиков Узбекистана.
+# 19 red-flag правил для МСБ-заёмщиков Узбекистана.
 # Severity weights калибруем после Phase 2 на реальных кейсах.
-# Источники: ЦБ РУз, НК РУз, Базель III, Group-IB UZ fraud reports.
+# Источники: ЦБ РУз №2696 (lex.uz/ru/docs/2703056), НК РУз (lex.uz/ru/docs/4674893),
+#   Базель III (BCBS d424 — bis.org/bcbs/publ/d424.pdf), FATF Recommendations,
+#   EAG (Eurasian Group), Закон РУз ЗРУ-660 «О ПОД/ФТ».
+# ADR-0024 (2026-05-19): foundational sources verified через 3-way research
+#   reconcile (Claude/ChatGPT/Qwen). Прежние ссылки на «ЦБ РУз №27-п»,
+#   «НК РУз ст.256» и «Group-IB UZ fraud report» заменены на актуальные.
 # T0.4 / ADR-0015: name_uz — финальные UZ-переводы (commit 3). Терминология:
 # Soliq xltx стандарт (QQS, EHF), gov.uz словарь. ОКВЭД / INN — кириллица /
 # латиница сохранены как общеупотребимые сокращения.
@@ -14,20 +19,20 @@ rules:
     name_uz: "Soʻnggi 6 oyda direktor almashishi"
     category: structural
     severity: medium
-    source: "Group-IB Uzbekistan fraud report 2024-2025; внутренние методики банков"
-    source_uz: "Group-IB Uzbekistan fraud report 2024-2025; banklarning ichki uslublari"
+    source: "FATF Recommendation 24 (Beneficial Ownership) — fatf-gafi.org; Закон РУз ЗРУ-660 «О противодействии легализации доходов»; внутренние методики UZ-банков"
+    source_uz: "FATF tavsiya 24 (Beneficial Ownership); ЎзР ЗРУ-660 sonli qonun; UZ-banklarning ichki uslublari"
     formula: "(as_of - director_appointed_at).days <= 180"
-    rationale: "Свежий директор перед заявкой — паттерн фронт-фигуры"
+    rationale: "Свежий директор перед заявкой — паттерн фронт-фигуры (AML/CDD risk indicator)"
 
   - id: OKVED_CHANGED_12M
-    name: "Изменение основного ОКВЭД за последние 12 месяцев"
-    name_uz: "Soʻnggi 12 oyda asosiy ОКВЭД oʻzgarishi"
+    name: "Изменение основного ОКЭД за последние 12 месяцев"
+    name_uz: "Soʻnggi 12 oyda asosiy ОКЭД oʻzgarishi"
     category: structural
     severity: medium
-    source: "Внутренние методики UZ-банков; Group-IB fraud patterns"
-    source_uz: "Oʻzbekiston banklarining ichki uslublari; Group-IB fraud patterns"
+    source: "Постановление КМ РУз №275 от 24.08.2016 (UZ-ОКЭД ред.2); FATF Recommendation 10 (CDD); внутренние методики UZ-банков"
+    source_uz: "ЎзР Вазирлар Маҳкамасининг 24.08.2016 №275-сонли қарори (UZ-ОКЭД); FATF tavsiya 10 (CDD)"
     formula: "(as_of - okved_main_changed_at).days <= 365"
-    rationale: "Смена деятельности перед кредитом — может скрывать фрод-схему"
+    rationale: "Смена деятельности перед кредитом — может скрывать фрод-схему (AML/CDD risk indicator)"
 
   - id: LOAN_TO_REVENUE_RATIO
     name: "Запрашиваемая сумма >50% годовой выручки"
@@ -45,8 +50,8 @@ rules:
     name_uz: "Tushumning oydan oyga 30% dan ortiq pasayishi ketma-ket 2 oy"
     category: financial
     severity: high
-    source: "ЦБ РУз положение №27-п, п.4.5; Базель III IRB approach"
-    source_uz: "ЦБ РУз положение №27-п, п.4.5; Базель III IRB approach"
+    source: "ЦБ РУз Положение №2696 «О порядке классификации качества активов» (lex.uz/ru/docs/2703056, посл. ред. 2696-5 от 23.12.2025); Basel III SREP; внутренняя методология"
+    source_uz: "ЎзР МБ №2696-сонли қарори (актив сифатини таснифлаш тартиби); Basel III SREP"
     formula: "mom_pct < -0.30 for 2 consecutive months"
     rationale: "Резкое падение выручки — сильный предиктор дефолта на 6 мес"
 
@@ -55,8 +60,8 @@ rules:
     name_uz: "Yillik tushumning yildan yilga 50% dan ortiq pasayishi"
     category: financial
     severity: high
-    source: "ЦБ РУз положение №27-п; Базель III IRB approach"
-    source_uz: "ЦБ РУз положение №27-п; Базель III IRB approach"
+    source: "ЦБ РУз Положение №2696 (lex.uz/ru/docs/2703056); Altman Z-score методология; внутренняя методология"
+    source_uz: "ЎзР МБ №2696-сонли қарори; Altman Z-score методологияси"
     formula: "(curr_revenue - prev_revenue) / prev_revenue < -0.50"
     rationale: "Стратегическое сжатие бизнеса"
 
@@ -65,8 +70,8 @@ rules:
     name_uz: "Sof foyda ketma-ket 3 chorakda ≤0"
     category: financial
     severity: high
-    source: "ЦБ РУз положение №27-п; стандартная практика МСБ-кредитования"
-    source_uz: "ЦБ РУз положение №27-п; KOʻB kreditlash standart amaliyoti"
+    source: "ЦБ РУз Положение №2696 (lex.uz/ru/docs/2703056); Altman & Iwanicz-Drozdowska et al. (JIFM 2017); BCBS d424 §50"
+    source_uz: "ЎзР МБ №2696-сонли қарори; Altman модели; BCBS d424 §50"
     formula: "all(net_profit <= 0 for last 3 quarters)"
     rationale: "Системная убыточность — высокий риск default"
 
@@ -95,8 +100,8 @@ rules:
     name_uz: "QQS deklaratsiyasi va EHF oʻrtasidagi farq 15% dan ortiq"
     category: financial
     severity: critical
-    source: "НК РУз ст. 256; Soliq внутренние методики"
-    source_uz: "НК РУз ст. 256; Soliq ichki uslublari"
+    source: "НК РУз ст. 47 (счёт-фактура) + ст. 257 (корректировка налоговой базы) + ст. 223 (сокрытие, штраф 20%) (lex.uz/ru/docs/4674893); ПКМ РУз №489 (порядок выставления ЭСФ); ст. 175-1 КоАО РУз (адм. штрафы 5-20 БРВ)"
+    source_uz: "ЎзР СК 47-моддаси (ҳисобварақ-фактура) + 257 + 223 (lex.uz/ru/docs/4674893); ВМ №489-сонли қарори; МЖтК 175-1-моддаси"
     formula: "abs(vat_declared - sum_seller_esf_vat) / vat_declared > 0.15"
     rationale: "Прямое расхождение — признак фиктивной отчётности"
 
@@ -167,8 +172,8 @@ rules:
     name_uz: "Yangi kontragentlar (<180 kun) aylanmaning 30% dan ortigʻini beradi"
     category: counterparty
     severity: high
-    source: "Group-IB Uzbekistan fraud report 2024-2025"
-    source_uz: "Group-IB Uzbekistan fraud report 2024-2025"
+    source: "FATF Recommendation 10 (Customer Due Diligence); Закон РУз ЗРУ-660 «О ПОД/ФТ»; EAG (Eurasian Group on combating money laundering) typology reports"
+    source_uz: "FATF tavsiya 10 (CDD); ЎзР ЗРУ-660-сонли қонуни (АКМ ва ПФ); EAG типология ҳисоботлари"
     formula: "sum(share for new_counterparties) > 0.30"
     rationale: "Типичная схема накрутки оборотов перед получением кредита"
 
@@ -177,8 +182,8 @@ rules:
     name_uz: "INN olingan vaqti 6 oydan kam boʻlgan kontragentlar"
     category: counterparty
     severity: high
-    source: "Group-IB Uzbekistan fraud report 2024-2025; AML compliance"
-    source_uz: "Group-IB Uzbekistan fraud report 2024-2025; AML compliance"
+    source: "FATF Recommendation 10 (CDD) + Recommendation 24 (Beneficial Ownership); Закон РУз ЗРУ-660 «О ПОД/ФТ»; EAG typology — shell-company misuse"
+    source_uz: "FATF tavsiya 10 (CDD) ва 24 (Beneficial Ownership); ЎзР ЗРУ-660-сонли қонуни; EAG типология"
     formula: "any(months_since_registration(cp) < 6)"
     rationale: "Классическая схема фиктивной отчётности"
 
@@ -187,8 +192,8 @@ rules:
     name_uz: "Kontragentlar bilan tsiklik EHF"
     category: counterparty
     severity: high
-    source: "Group-IB UZ fraud report 2024-2025; AML — накачивание оборота"
-    source_uz: "Group-IB UZ fraud report 2024-2025; AML — aylanmani sunʼiy oshirish"
+    source: "НК РУз гл. 17 (НДС, выставление счетов-фактур); EAG typology reports — VAT carousel patterns; Закон РУз ЗРУ-660; FATF Recommendation 21 (suspicious transactions)"
+    source_uz: "ЎзР СК 17-боби (QQS, ҳисобварақ-фактуралар); EAG типология ҳисоботлари — QQS «карусели»; ЎзР ЗРУ-660; FATF tavsiya 21"
     formula: "exists 2-cycle: A→B and B→A within 90 days (упрощ.)"
     rationale: "Симулированный документооборот для увеличения видимого оборота"
 
