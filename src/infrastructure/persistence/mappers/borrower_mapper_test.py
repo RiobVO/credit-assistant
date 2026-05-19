@@ -15,7 +15,12 @@ from infrastructure.persistence.mappers.borrower_mapper import (
 from infrastructure.persistence.models.borrower import BorrowerORM
 
 
-def _make_borrower(*, with_capital: bool, with_okved_change: bool) -> Borrower:
+def _make_borrower(
+    *,
+    with_capital: bool,
+    with_okved_change: bool,
+    oked_changed_by_owner: bool = False,
+) -> Borrower:
     return Borrower(
         inn=INN("123456789"),
         name='ООО "Пример"',
@@ -27,6 +32,7 @@ def _make_borrower(*, with_capital: bool, with_okved_change: bool) -> Borrower:
         registered_address="г. Ташкент, ул. Амира Темура, 1",
         okved_main_changed_at=date(2024, 6, 1) if with_okved_change else None,
         charter_capital=Money(Decimal("50000000.00"), Currency.UZS) if with_capital else None,
+        oked_changed_by_owner=oked_changed_by_owner,
     )
 
 
@@ -57,3 +63,28 @@ def test_borrower_kwargs_no_id() -> None:
     assert "id" not in kwargs
     assert "created_at" not in kwargs
     assert "updated_at" not in kwargs
+
+
+def test_session3_oked_changed_by_owner_round_trip() -> None:
+    """ADR-0024 Session 3: oked_changed_by_owner round-trip True / False."""
+    with_owner_change = _make_borrower(
+        with_capital=False,
+        with_okved_change=True,
+        oked_changed_by_owner=True,
+    )
+    assert _round_trip(with_owner_change).oked_changed_by_owner is True
+
+    without_owner_change = _make_borrower(
+        with_capital=False,
+        with_okved_change=True,
+        oked_changed_by_owner=False,
+    )
+    assert _round_trip(without_owner_change).oked_changed_by_owner is False
+
+
+def test_session3_oked_changed_by_owner_default_false() -> None:
+    """Default False — consistent с миграцией server_default='false'."""
+    borrower = _make_borrower(with_capital=False, with_okved_change=False)
+    assert borrower.oked_changed_by_owner is False
+    kwargs = borrower_to_orm_kwargs(borrower)
+    assert kwargs["oked_changed_by_owner"] is False
