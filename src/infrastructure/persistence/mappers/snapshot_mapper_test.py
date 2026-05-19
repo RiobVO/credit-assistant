@@ -210,6 +210,7 @@ def test_ca037_financial_report_round_trip_with_all_extensions() -> None:
                     total_debt=_money(618_267_000),
                     current_assets=_money(1_300_000_000),
                     current_liabilities=_money(700_000_000),
+                    inventory=_money(180_000_000),
                 ),
                 balance_start=BalanceSnapshot(
                     assets=_money(2_087_582_000),
@@ -218,6 +219,7 @@ def test_ca037_financial_report_round_trip_with_all_extensions() -> None:
                     total_debt=_money(332_222_000),
                     current_assets=_money(1_050_000_000),
                     current_liabilities=_money(550_000_000),
+                    inventory=_money(150_000_000),
                 ),
             ),
         ],
@@ -245,6 +247,12 @@ def test_ca037_financial_report_round_trip_with_all_extensions() -> None:
     assert r.balance_end.current_assets.amount == Decimal("1300000000")
     assert r.balance_end.current_liabilities is not None
     assert r.balance_end.current_liabilities.amount == Decimal("700000000")
+    # ADR-0024 Session 2: inventory для Quick Ratio.
+    assert r.balance_end.inventory is not None
+    assert r.balance_end.inventory.amount == Decimal("180000000")
+    assert r.balance_start is not None
+    assert r.balance_start.inventory is not None
+    assert r.balance_start.inventory.amount == Decimal("150000000")
 
 
 def test_ca037_legacy_payload_without_new_keys_still_loads() -> None:
@@ -284,6 +292,42 @@ def test_ca037_legacy_payload_without_new_keys_still_loads() -> None:
     # всеми None».
     assert r.balance_end is None
     assert r.balance_start is None
+
+
+def test_session2_inventory_backward_compat_with_current_assets_present() -> None:
+    """ADR-0024 Session 2: payload, записанный после Session 1 (есть
+    current_assets/current_liabilities), но до Session 2 (нет inventory) —
+    balance_end не сворачивается в None; inventory == None.
+    """
+    session1_payload: dict[str, object] = {
+        "as_of": "2025-12-31",
+        "annual_reports": [
+            {
+                "period": {"start": "2025-01-01", "end": "2025-12-31"},
+                "revenue": {"amount": "5000000000", "currency": "UZS"},
+                "net_profit": {"amount": "300000000", "currency": "UZS"},
+                "current_assets": {"amount": "1300000000", "currency": "UZS"},
+                "current_liabilities": {"amount": "700000000", "currency": "UZS"},
+                # Никаких Session 2 ключей (inventory) — записано до Session 2.
+            },
+        ],
+        "quarterly_reports": [],
+        "monthly_turnover": [],
+        "counterparties_buyers": [],
+        "counterparties_suppliers": [],
+        "buyer_revenue_share": {},
+        "supplier_purchase_share": {},
+        "invoices": [],
+        "tax_events": [],
+        "vat_periods": [],
+        "loan_request": None,
+    }
+    restored = snapshot_from_payload(session1_payload, _borrower())
+    r = restored.annual_reports[0]
+    assert r.balance_end is not None  # current_assets есть → snapshot не пустой
+    assert r.balance_end.current_assets is not None
+    assert r.balance_end.current_assets.amount == Decimal("1300000000")
+    assert r.balance_end.inventory is None  # Session 2 поля legacy → None
 
 
 def test_snapshot_decimal_precision_preserved() -> None:

@@ -587,6 +587,8 @@
       "s2_assets_help": "Buxgalteriya balansi boʻyicha, №1 forma",
       "s2_liabs_label": "Majburiyatlar (qator 770)",
       "s2_liabs_help": "Qisqa muddatli + uzoq muddatli majburiyatlar",
+      "s2_inventory_label": "Tovar-moddiy zaxiralar (TMZ)",
+      "s2_inventory_help": "1-shakl boʻyicha tovar-moddiy zaxiralar, Quick Ratio uchun",
       "s2_da_label": "Qarz ÷ Aktivlar",
       "s2_da_sub": "Debt-to-Assets",
       "s2_equity_label": "Kapital",

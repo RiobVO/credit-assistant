@@ -104,12 +104,14 @@ def _financial_report_to_dict(r: FinancialReport) -> dict[str, Any]:
         "total_debt": _money_to_dict(end.total_debt),
         "current_assets": _money_to_dict(end.current_assets),
         "current_liabilities": _money_to_dict(end.current_liabilities),
+        "inventory": _money_to_dict(end.inventory),
         "assets_period_start": _money_to_dict(start.assets),
         "liabilities_period_start": _money_to_dict(start.liabilities),
         "equity_period_start": _money_to_dict(start.equity),
         "total_debt_period_start": _money_to_dict(start.total_debt),
         "current_assets_period_start": _money_to_dict(start.current_assets),
         "current_liabilities_period_start": _money_to_dict(start.current_liabilities),
+        "inventory_period_start": _money_to_dict(start.inventory),
     }
 
 
@@ -135,6 +137,7 @@ def _financial_report_from_dict(d: dict[str, Any]) -> FinancialReport:
         total_debt=_money_from_dict(d.get("total_debt")),
         current_assets=_money_from_dict(d.get("current_assets")),
         current_liabilities=_money_from_dict(d.get("current_liabilities")),
+        inventory=_money_from_dict(d.get("inventory")),
     )
     balance_start = BalanceSnapshot(
         assets=_money_from_dict(d.get("assets_period_start")),
@@ -143,6 +146,7 @@ def _financial_report_from_dict(d: dict[str, Any]) -> FinancialReport:
         total_debt=_money_from_dict(d.get("total_debt_period_start")),
         current_assets=_money_from_dict(d.get("current_assets_period_start")),
         current_liabilities=_money_from_dict(d.get("current_liabilities_period_start")),
+        inventory=_money_from_dict(d.get("inventory_period_start")),
     )
     return FinancialReport(
         period=period,

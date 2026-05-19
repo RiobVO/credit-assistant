@@ -95,6 +95,10 @@ class FinancialReportInput(_StrictModel):
     liabilities_period_start: MoneyInput | None = None
     equity_period_start: MoneyInput | None = None
     total_debt_period_start: MoneyInput | None = None
+    # ADR-0024 Session 2: inventory для Quick Ratio. Принимаем только end (UI
+    # вводит одно значение «Запасы на отчётную дату»); period_start доступен
+    # через JSONB загрузку (test fixtures / future FORM_1 parser).
+    inventory: MoneyInput | None = None
 
 
 class MonthlyTurnoverInput(_StrictModel):

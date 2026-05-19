@@ -587,6 +587,8 @@
       "s2_assets_help": "По бухгалтерскому балансу, форма №1",
       "s2_liabs_label": "Обязательства (стр. 770)",
       "s2_liabs_help": "Краткосрочные + долгосрочные обязательства",
+      "s2_inventory_label": "Запасы (TMZ)",
+      "s2_inventory_help": "Товарно-материальные запасы по форме №1, для Quick Ratio",
       "s2_da_label": "Долг ÷ Активы",
       "s2_da_sub": "Debt-to-Assets",
       "s2_equity_label": "Капитал",
