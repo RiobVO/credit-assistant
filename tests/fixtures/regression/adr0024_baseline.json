@@ -1,0 +1,111 @@
+[
+  {
+    "case_id": "BR-2026-0030",
+    "recommendation": "approve",
+    "red_flags": [
+      {
+        "rule_id": "DIRECTOR_CHANGED_6M",
+        "severity": "medium"
+      },
+      {
+        "rule_id": "LOW_MARGIN_HIGH_TURNOVER",
+        "severity": "medium"
+      }
+    ],
+    "rules_evaluated": 19,
+    "rules_version": "v1",
+    "score": 6,
+    "severity_breakdown": {
+      "critical": 0,
+      "high": 0,
+      "low": 0,
+      "medium": 2
+    }
+  },
+  {
+    "case_id": "BR-2026-0040",
+    "recommendation": "approve",
+    "red_flags": [],
+    "rules_evaluated": 19,
+    "rules_version": "v1",
+    "score": 0,
+    "severity_breakdown": {
+      "critical": 0,
+      "high": 0,
+      "low": 0,
+      "medium": 0
+    }
+  },
+  {
+    "case_id": "BR-2026-0042",
+    "recommendation": "approve",
+    "red_flags": [],
+    "rules_evaluated": 19,
+    "rules_version": "v1",
+    "score": 0,
+    "severity_breakdown": {
+      "critical": 0,
+      "high": 0,
+      "low": 0,
+      "medium": 0
+    }
+  },
+  {
+    "case_id": "BR-2026-0046",
+    "recommendation": "review",
+    "red_flags": [
+      {
+        "rule_id": "VAT_ESF_MISMATCH",
+        "severity": "critical"
+      },
+      {
+        "rule_id": "DIRECTOR_CHANGED_6M",
+        "severity": "medium"
+      },
+      {
+        "rule_id": "LOW_MARGIN_HIGH_TURNOVER",
+        "severity": "medium"
+      }
+    ],
+    "rules_evaluated": 19,
+    "rules_version": "v1",
+    "score": 21,
+    "severity_breakdown": {
+      "critical": 1,
+      "high": 0,
+      "low": 0,
+      "medium": 2
+    }
+  },
+  {
+    "case_id": "BR-2026-0047",
+    "recommendation": "review",
+    "red_flags": [
+      {
+        "rule_id": "VAT_ESF_MISMATCH",
+        "severity": "critical"
+      },
+      {
+        "rule_id": "INSUFFICIENT_DATA",
+        "severity": "high"
+      },
+      {
+        "rule_id": "LOAN_TO_REVENUE_RATIO",
+        "severity": "high"
+      },
+      {
+        "rule_id": "DIRECTOR_CHANGED_6M",
+        "severity": "medium"
+      }
+    ],
+    "rules_evaluated": 19,
+    "rules_version": "v1",
+    "score": 50,
+    "severity_breakdown": {
+      "critical": 1,
+      "high": 2,
+      "low": 0,
+      "medium": 1
+    }
+  }
+]

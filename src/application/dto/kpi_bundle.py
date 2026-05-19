@@ -16,6 +16,29 @@ parser, не покрыт PROFIT_TAX scope). Имя поля честное: с�
 * EBIT ≤ 0 → KPI None (убыток, оценка некорректна);
 * иначе → Decimal ratio в формате ``X.XX``.
 
+ADR-0024 (Session 1) добавил 6 расширенных KPI **рядом** с legacy парой
+``ebit``/``debt_to_ebit`` (CA-037 invariant: не переименовываем, добавляем):
+
+* ``ebitda`` = ``profit_before_tax + interest_expense + depreciation_amortization``.
+  D&A nullable в ``FinancialReport`` — если отсутствует, ``ebitda = None`` (не
+  fallback на EBIT: пользователь должен явно видеть «нет D&A → нет EBITDA»).
+* ``debt_to_ebitda`` = ``total_debt / EBITDA``. Аналог ``debt_to_ebit``, но с
+  более правильным знаменателем. Пороги: <3× GOOD / 3..5 WARN / >5× BAD
+  (Basel III IRB).
+* ``current_ratio`` = ``current_assets / current_liabilities``. Пороги:
+  >1.5 GOOD / 1.0..1.5 WARN / <1.0 BAD (IFC SME ch.4).
+* ``working_capital`` = ``current_assets − current_liabilities``. Money-KPI
+  без universal threshold — level_tone=None.
+* ``interest_coverage`` = ``EBIT / interest_expense``. Пороги: >3 GOOD /
+  1.5..3 WARN / <1.5 BAD (Basel III IRB).
+* ``dscr`` = ``OCF / annual_debt_service`` (fallback chain OCF → EBITDA → EBIT
+  такая же, как в правиле DSCR_LOW). Пороги: >1.5 GOOD / 1.2..1.5 WARN / <1.2
+  BAD (Murodov O.J. 2025 + IFC SME ch.4).
+
+Тред «KPI None» сохраняется во всей расширенной шестёрке: любой отсутствующий
+компонент → ``None``; делитель ≤ 0 → ``None``. EBITDA ≤ 0 проксирует «нет
+покрытия» — ``debt_to_ebitda`` тогда тоже ``None``.
+
 CA-048: ``KpiValue.level_tone`` — ортогональный сигнал «absolute level»
 для UI/PDF (left severity stripe). Заполняется только для ROE и
 Debt-to-EBIT; для revenue/ebit остаётся ``None`` (нет универсального
@@ -69,6 +92,13 @@ class KpiBundle:
     ebit: KpiValue | None  # CA-037: PBT + interest_expense (прокси EBITDA до FORM_5)
     roe: KpiValue | None
     debt_to_ebit: KpiValue | None  # CA-037: total_debt / EBIT_LTM
+    # ADR-0024 (Session 1): расширенные KPI рядом с legacy парой.
+    ebitda: KpiValue | None = None  # PBT + interest_expense + D&A
+    debt_to_ebitda: KpiValue | None = None  # total_debt / EBITDA
+    current_ratio: KpiValue | None = None  # current_assets / current_liabilities
+    working_capital: KpiValue | None = None  # current_assets − current_liabilities (UZS)
+    interest_coverage: KpiValue | None = None  # EBIT / interest_expense
+    dscr: KpiValue | None = None  # OCF / debt_service_annual (fallback EBITDA → EBIT)
 
 
 @dataclass(frozen=True, slots=True)
