@@ -81,9 +81,9 @@ def to_borrower(payload: BorrowerInput) -> Borrower:
         registration_date=payload.registration_date,
         director_name=payload.director_name,
         director_appointed_at=payload.director_appointed_at,
-        okved_main=payload.okved_main,
+        oked_main=payload.oked_main,
         registered_address=payload.registered_address,
-        okved_main_changed_at=payload.okved_main_changed_at,
+        oked_main_changed_at=payload.oked_main_changed_at,
         charter_capital=_to_money_optional(payload.charter_capital),
         oked_changed_by_owner=payload.oked_changed_by_owner,
     )
@@ -285,9 +285,9 @@ def _borrower_to_output(b: Borrower) -> BorrowerOutput:
         registration_date=b.registration_date,
         director_name=b.director_name,
         director_appointed_at=b.director_appointed_at,
-        okved_main=b.okved_main,
+        oked_main=b.oked_main,
         registered_address=b.registered_address,
-        okved_main_changed_at=b.okved_main_changed_at,
+        oked_main_changed_at=b.oked_main_changed_at,
         charter_capital=_money_to_output(b.charter_capital) if b.charter_capital else None,
         oked_changed_by_owner=b.oked_changed_by_owner,
     )

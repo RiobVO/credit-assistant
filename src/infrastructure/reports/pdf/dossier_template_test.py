@@ -96,7 +96,7 @@ def _minimal_context(locale: str = "ru") -> dict[str, object]:
             registration_date=date(2018, 3, 14),
             director_name="Каримов Шохрух",
             director_appointed_at=date(2018, 3, 14),
-            okved_main="46.39",
+            oked_main="46.39",
             registered_address="г. Ташкент, Юнусабадский р-н",
         ),
         "borrower_initials": "ПЗ",

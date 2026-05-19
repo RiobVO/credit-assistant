@@ -68,7 +68,7 @@ export function Step1Borrower() {
   const innTouched = touchedFields.step1?.inn;
   const nameErr = errors.step1?.name?.message;
   const regErr = errors.step1?.registrationDate?.message;
-  const okvedErr = errors.step1?.okvedMain?.message;
+  const okvedErr = errors.step1?.okedMain?.message;
   const dirErr = errors.step1?.directorName?.message;
   const apptErr = errors.step1?.directorAppointedAt?.message;
   const addrErr = errors.step1?.registeredAddress?.message;
@@ -193,16 +193,16 @@ export function Step1Borrower() {
           />
         </Field>
 
-        {/* ОКВЭД autocomplete */}
+        {/* ОКЭД autocomplete */}
         <Field
-          label={t("s1_okved_label")}
+          label={t("s1_oked_label")}
           required
-          help={t("s1_okved_help")}
+          help={t("s1_oked_help")}
           error={okvedErr}
         >
           <Controller
             control={control}
-            name="step1.okvedMain"
+            name="step1.okedMain"
             render={({ field }) => (
               <OkvedAutocomplete
                 value={field.value ?? ""}
@@ -215,9 +215,9 @@ export function Step1Borrower() {
           {/* ADR-0024 Session 3: conditional block — показывается только когда
               backend знает дату смены ОКЭД (через парсер/ORM, prefill из
               «Пересобрать с дополнениями»). В brand-new dossier flow hidden. */}
-          {step1?.okvedMainChangedAt ? (
+          {step1?.okedMainChangedAt ? (
             <OkedChangedByOwnerBlock
-              date={step1.okvedMainChangedAt}
+              date={step1.okedMainChangedAt}
               control={control}
             />
           ) : null}
@@ -459,7 +459,7 @@ function OpfSegmented({
 }
 
 // ─────────────────────────────────────────────────────────────────
-// ОКВЭД autocomplete
+// ОКЭД autocomplete
 // ─────────────────────────────────────────────────────────────────
 
 export function OkvedAutocomplete({
@@ -576,7 +576,7 @@ export function OkvedAutocomplete({
               setOpen(false);
             }
           }}
-          placeholder={t("s1_okved_placeholder")}
+          placeholder={t("s1_oked_placeholder")}
           aria-invalid={invalid || undefined}
           role="combobox"
           aria-autocomplete="list"
@@ -601,11 +601,11 @@ export function OkvedAutocomplete({
           {catalogQuery.isPending ? (
             <div className="flex items-center gap-2 px-3 py-2 text-[12.5px] text-[var(--ink-4)]">
               <Loader2 className="size-3.5 animate-spin" />
-              {t("s1_okved_loading")}
+              {t("s1_oked_loading")}
             </div>
           ) : filtered.length === 0 ? (
             <div className="px-3 py-2 text-[12.5px] text-[var(--ink-4)]">
-              {t("s1_okved_empty")}
+              {t("s1_oked_empty")}
             </div>
           ) : (
             filtered.map((opt, idx) => (
@@ -641,7 +641,7 @@ export function OkvedAutocomplete({
             ))
           )}
           <div className="border-t border-dashed border-[var(--border)] bg-[var(--surface-2)] px-3 py-1.5 text-[11.5px] text-[var(--ink-4)]">
-            {t("s1_okved_kbd_hint")}
+            {t("s1_oked_kbd_hint")}
           </div>
         </div>
       ) : null}
@@ -770,7 +770,7 @@ function countFilled(s: FormValues["step1"] | undefined): number {
   if ((s.name ?? "").trim().length >= 2) n++;
   if (s.legalForm) n++;
   if (s.registrationDate) n++;
-  if ((s.okvedMain ?? "").trim().length >= 2) n++;
+  if ((s.okedMain ?? "").trim().length >= 2) n++;
   if ((s.directorName ?? "").trim().length >= 2) n++;
   if (s.directorAppointedAt) n++;
   const addr = s.registeredAddress ?? "";

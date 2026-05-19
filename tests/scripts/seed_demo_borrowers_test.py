@@ -68,7 +68,7 @@ def test_spec_to_borrower_preserves_dates_and_okved() -> None:
     borrower = _spec_to_borrower(retail_spec)
     assert borrower.registration_date == date(2017, 4, 12)
     assert borrower.director_appointed_at == date(2021, 2, 15)
-    assert borrower.okved_main == "47.51"
+    assert borrower.oked_main == "47.51"
 
 
 def test_spec_to_chunk_emits_two_annuals_aligned_to_demo_year() -> None:

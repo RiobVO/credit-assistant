@@ -5,7 +5,7 @@
 // (только если нет draft) и через form.reset наполняет Шаг 1. Затем
 // чистит ключ — повторный mount не подхватит stale data.
 //
-// Семантика: borrower-данные (ОПФ, ОКВЭД, директор, адрес, даты) реально
+// Семантика: borrower-данные (ОПФ, ОКЭД, директор, адрес, даты) реально
 // не меняются между submit'ами, аналитик не должен переписывать их при
 // каждой пересборке. Финансы (Шаг 2) и кредит (Шаг 3) — заново, потому
 // что они меняются, и именно для них аналитик пересобирает досье.
@@ -22,11 +22,11 @@ export type Step1Prefill = {
   registration_date: string;
   director_name: string;
   director_appointed_at: string;
-  okved_main: string;
+  oked_main: string;
   registered_address: string;
   // ADR-0024 Session 3: parser/ORM-driven поля. Используются для conditional
   // rendering toggle «ОКЭД сменился по инициативе собственника» в Step 1.
-  okved_main_changed_at: string | null;
+  oked_main_changed_at: string | null;
   oked_changed_by_owner: boolean;
 };
 

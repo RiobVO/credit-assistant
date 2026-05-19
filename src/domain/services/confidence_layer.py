@@ -94,7 +94,7 @@ def compute_confidence(snapshot: BorrowerSnapshot) -> ConfidenceResult:
         [
             bool(borrower.inn),
             bool(borrower.legal_form),
-            bool(borrower.okved_main),
+            bool(borrower.oked_main),
             bool(borrower.director_name),
         ]
     )
