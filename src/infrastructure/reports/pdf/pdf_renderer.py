@@ -325,10 +325,11 @@ def _build_kpi_slots(
     """KPI карточки для PDF F-секции: legacy 4 (revenue_ltm / ebit / roe /
     debt_to_ebit) + ADR-0024 Session 1 6 (ebitda / debt_to_ebitda /
     current_ratio / working_capital / interest_coverage / dscr) + Session 2
-    1 (quick_ratio). CA-037 invariant — legacy остаются рядом с расширением,
-    не вместо. ADR-0024 Session 2: пустые слоты (kpi=None) скрываются после
-    сборки — banker-clean view, align с UI поведением. Аналитик увидит
-    «нет данных» в manual-input wizard, не в готовом PDF.
+    1 (quick_ratio) + Session 4 1 (fx_exposure_ratio). CA-037 invariant —
+    legacy остаются рядом с расширением, не вместо. ADR-0024 Session 2:
+    пустые слоты (kpi=None) скрываются после сборки — banker-clean view,
+    align с UI поведением. Аналитик увидит «нет данных» в manual-input
+    wizard, не в готовом PDF.
 
     Если значение ``None`` — карточка показывает «—» + локализованный hint.
     Универсальный `_kpi_slot` форматирует UZS/PCT/RATIO + level_tone (CA-048).
@@ -349,6 +350,8 @@ def _build_kpi_slots(
         _kpi_slot("dscr", kpis.dscr, messages, fmt_uzs),
         # ADR-0024 (Session 2):
         _kpi_slot("quick_ratio", kpis.quick_ratio, messages, fmt_uzs),
+        # ADR-0024 (Session 4): FX Exposure Ratio (8-й KPI).
+        _kpi_slot("fx_exposure_ratio", kpis.fx_exposure_ratio, messages, fmt_uzs),
     ]
     # ADR-0024 Session 2: hide empty cards — banker-clean PDF, align с UI.
     return [s for s in slots if s["value"] is not None]

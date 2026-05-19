@@ -219,6 +219,8 @@ def test_ca037_financial_report_round_trip_with_all_extensions() -> None:
                     current_assets=_money(1_300_000_000),
                     current_liabilities=_money(700_000_000),
                     inventory=_money(180_000_000),
+                    # ADR-0024 Session 4: FX-component для fx_exposure_ratio.
+                    liabilities_fx=_money(394_010_000),
                 ),
                 balance_start=BalanceSnapshot(
                     assets=_money(2_087_582_000),
@@ -228,6 +230,7 @@ def test_ca037_financial_report_round_trip_with_all_extensions() -> None:
                     current_assets=_money(1_050_000_000),
                     current_liabilities=_money(550_000_000),
                     inventory=_money(150_000_000),
+                    liabilities_fx=_money(278_722_000),
                 ),
             ),
         ],
@@ -268,6 +271,11 @@ def test_ca037_financial_report_round_trip_with_all_extensions() -> None:
     assert r.leases_outstanding.amount == Decimal("30000000")
     assert r.letters_of_credit_outstanding is not None
     assert r.letters_of_credit_outstanding.amount == Decimal("20000000")
+    # ADR-0024 Session 4: liabilities_fx для fx_exposure_ratio.
+    assert r.balance_end.liabilities_fx is not None
+    assert r.balance_end.liabilities_fx.amount == Decimal("394010000")
+    assert r.balance_start.liabilities_fx is not None
+    assert r.balance_start.liabilities_fx.amount == Decimal("278722000")
 
 
 def test_ca037_legacy_payload_without_new_keys_still_loads() -> None:
@@ -404,6 +412,41 @@ def test_session3_tax_event_material_legacy_defaults_false() -> None:
     }
     restored = snapshot_from_payload(legacy_payload, _borrower())
     assert restored.tax_events[0].material is False
+
+
+def test_session4_liabilities_fx_backward_compat_with_liabilities_present() -> None:
+    """ADR-0024 Session 4: payload, записанный до Session 4 (есть liabilities, но
+    нет liabilities_fx) — balance_end не сворачивается в None; liabilities_fx
+    == None. KPI fx_exposure_ratio будет silent на legacy записях.
+    """
+    legacy_payload: dict[str, object] = {
+        "as_of": "2025-12-31",
+        "annual_reports": [
+            {
+                "period": {"start": "2025-01-01", "end": "2025-12-31"},
+                "revenue": {"amount": "5000000000", "currency": "UZS"},
+                "net_profit": {"amount": "300000000", "currency": "UZS"},
+                "liabilities": {"amount": "2000000000", "currency": "UZS"},
+                # Никаких Session 4 ключей (liabilities_fx) — записано до Session 4.
+            },
+        ],
+        "quarterly_reports": [],
+        "monthly_turnover": [],
+        "counterparties_buyers": [],
+        "counterparties_suppliers": [],
+        "buyer_revenue_share": {},
+        "supplier_purchase_share": {},
+        "invoices": [],
+        "tax_events": [],
+        "vat_periods": [],
+        "loan_request": None,
+    }
+    restored = snapshot_from_payload(legacy_payload, _borrower())
+    r = restored.annual_reports[0]
+    assert r.balance_end is not None  # liabilities есть → snapshot не пустой
+    assert r.balance_end.liabilities is not None
+    assert r.balance_end.liabilities.amount == Decimal("2000000000")
+    assert r.balance_end.liabilities_fx is None  # Session 4 поле legacy → None
 
 
 def test_session2_inventory_backward_compat_with_current_assets_present() -> None:
