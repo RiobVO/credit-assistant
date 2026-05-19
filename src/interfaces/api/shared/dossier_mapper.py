@@ -100,6 +100,9 @@ def _to_financial_report(p: FinancialReportInput) -> FinancialReport:
         total_debt=_to_money_optional(p.total_debt),
         # ADR-0024 Session 2: inventory только в end (UI вводит одно значение).
         inventory=_to_money_optional(p.inventory),
+        # ADR-0024 Session 4: liabilities_fx тоже end-only (UI вводит одно
+        # значение в Шаг 2 «Обязательства в иностранной валюте»).
+        liabilities_fx=_to_money_optional(p.liabilities_fx),
     )
     balance_start = BalanceSnapshot(
         assets=_to_money_optional(p.assets_period_start),
@@ -327,6 +330,8 @@ def _kpi_bundle_to_output(bundle: KpiBundle) -> KpiBundleOutput:
         interest_coverage=_kpi_value_to_output(bundle.interest_coverage),
         dscr=_kpi_value_to_output(bundle.dscr),
         quick_ratio=_kpi_value_to_output(bundle.quick_ratio),
+        # ADR-0024 (Session 4): FX Exposure Ratio (8-й KPI).
+        fx_exposure_ratio=_kpi_value_to_output(bundle.fx_exposure_ratio),
     )
 
 
