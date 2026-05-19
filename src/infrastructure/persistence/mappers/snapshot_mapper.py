@@ -78,10 +78,14 @@ def _money_from_dict(d: dict[str, str] | None) -> Money | None:
 
 
 def _financial_report_to_dict(r: FinancialReport) -> dict[str, Any]:
-    # CA-047: JSONB-формат остаётся flat (8 balance-полей на верхнем уровне) —
+    # CA-047: JSONB-формат остаётся flat (balance-поля на верхнем уровне) —
     # legacy записи в БД (до CA-047) читаются без миграции. Группировка в
     # BalanceSnapshot — только domain-уровень; разворачиваем обратно при
     # сериализации.
+    # ADR-0024: добавились current_assets/current_liabilities (period_end +
+    # period_start) и depreciation_amortization/operating_cash_flow на
+    # report level — пробрасываем через `.get(...)` при чтении, чтобы legacy
+    # payloads (до ADR-0024) грузились без миграции.
     end = r.balance_end or BalanceSnapshot()
     start = r.balance_start or BalanceSnapshot()
     return {
@@ -94,12 +98,18 @@ def _financial_report_to_dict(r: FinancialReport) -> dict[str, Any]:
         "liabilities": _money_to_dict(end.liabilities),
         "profit_before_tax": _money_to_dict(r.profit_before_tax),
         "interest_expense": _money_to_dict(r.interest_expense),
+        "depreciation_amortization": _money_to_dict(r.depreciation_amortization),
+        "operating_cash_flow": _money_to_dict(r.operating_cash_flow),
         "equity": _money_to_dict(end.equity),
         "total_debt": _money_to_dict(end.total_debt),
+        "current_assets": _money_to_dict(end.current_assets),
+        "current_liabilities": _money_to_dict(end.current_liabilities),
         "assets_period_start": _money_to_dict(start.assets),
         "liabilities_period_start": _money_to_dict(start.liabilities),
         "equity_period_start": _money_to_dict(start.equity),
         "total_debt_period_start": _money_to_dict(start.total_debt),
+        "current_assets_period_start": _money_to_dict(start.current_assets),
+        "current_liabilities_period_start": _money_to_dict(start.current_liabilities),
     }
 
 
@@ -114,20 +124,25 @@ def _financial_report_from_dict(d: dict[str, Any]) -> FinancialReport:
     # его как обязательное поле; новые могут не содержать ключа вовсе.
     if revenue is None or net_profit is None:
         raise ValueError("financial report revenue/net_profit cannot be null")
-    # CA-047: собираем BalanceSnapshot из flat-ключей JSONB. Пустой snapshot
-    # (все 4 None) → None, чтобы readers не разделяли «нет данных» vs «есть
-    # snapshot со всеми None» — семантически одно и то же.
+    # CA-047 / ADR-0024: собираем BalanceSnapshot из flat-ключей JSONB.
+    # Пустой snapshot (все поля None) → None, чтобы readers не разделяли
+    # «нет данных» vs «есть snapshot со всеми None» — семантически одно
+    # и то же.
     balance_end = BalanceSnapshot(
         assets=_money_from_dict(d.get("assets")),
         liabilities=_money_from_dict(d.get("liabilities")),
         equity=_money_from_dict(d.get("equity")),
         total_debt=_money_from_dict(d.get("total_debt")),
+        current_assets=_money_from_dict(d.get("current_assets")),
+        current_liabilities=_money_from_dict(d.get("current_liabilities")),
     )
     balance_start = BalanceSnapshot(
         assets=_money_from_dict(d.get("assets_period_start")),
         liabilities=_money_from_dict(d.get("liabilities_period_start")),
         equity=_money_from_dict(d.get("equity_period_start")),
         total_debt=_money_from_dict(d.get("total_debt_period_start")),
+        current_assets=_money_from_dict(d.get("current_assets_period_start")),
+        current_liabilities=_money_from_dict(d.get("current_liabilities_period_start")),
     )
     return FinancialReport(
         period=period,
@@ -139,6 +154,9 @@ def _financial_report_from_dict(d: dict[str, Any]) -> FinancialReport:
         # для legacy записей до CA-037.
         profit_before_tax=_money_from_dict(d.get("profit_before_tax")),
         interest_expense=_money_from_dict(d.get("interest_expense")),
+        # ADR-0024: cash-flow nullable поля (D&A / OCF).
+        depreciation_amortization=_money_from_dict(d.get("depreciation_amortization")),
+        operating_cash_flow=_money_from_dict(d.get("operating_cash_flow")),
         balance_end=balance_end if not balance_end.is_empty() else None,
         balance_start=balance_start if not balance_start.is_empty() else None,
     )
