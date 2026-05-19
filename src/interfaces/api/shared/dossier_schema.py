@@ -137,6 +137,10 @@ class TaxEventInput(_StrictModel):
     amount: MoneyInput | None = None
     delay_days: int | None = None
     duration_days: int | None = None
+    # ADR-0024 Session 3: material — ст.223 НК РУз (сокрытие, штраф 20%)
+    # vs ст.219 КоАО (просрочка отчёта, БРВ-штраф). Default False —
+    # обратная совместимость c data sources, которые поле не заполняют.
+    material: bool = False
 
 
 class LoanRequestInput(_StrictModel):
