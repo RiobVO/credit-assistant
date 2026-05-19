@@ -1,0 +1,26 @@
+# T3.3 — Prometheus scrape config для Credit Assistant.
+#
+# Scrape интервал 15s — баланс между свежестью данных и storage overhead
+# (15s * 86400 / day = 5760 datapoints / metric / day).
+
+global:
+  scrape_interval: 15s
+  scrape_timeout: 10s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: credit-api
+    static_configs:
+      - targets: ["api:8000"]
+        labels:
+          service: credit-api
+    metrics_path: /metrics
+
+  # GlitchTip сам экспортирует метрики (event ingestion rate), если включён.
+  # Раскомментируйте если поднят docker-compose.observability.yml stack.
+  # - job_name: glitchtip
+  #   static_configs:
+  #     - targets: ["glitchtip-web:8000"]
+  #       labels:
+  #         service: glitchtip
+  #   metrics_path: /metrics
