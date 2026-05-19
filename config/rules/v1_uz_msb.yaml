@@ -35,14 +35,14 @@ rules:
     rationale: "Смена деятельности собственником перед кредитом — AML/CDD сигнал (может скрывать фрод-схему). ADR-0024 Session 3: добавлен gate `oked_changed_by_owner=True` — Госкомстат auto-overwrite (массовая перекатегоризация без заёмщика) больше не триггерит правило"
 
   - id: LOAN_TO_REVENUE_RATIO
-    name: "Запрашиваемая сумма >40% годовой выручки"
-    name_uz: "Soʻralayotgan summa yillik tushumning 40% dan ortiq"
+    name: "Запрашиваемая сумма vs годовая выручка (secured-variant)"
+    name_uz: "Soʻralayotgan summa yillik tushum bilan (taʼminot variantini hisobga olgan)"
     category: structural
     severity: high
-    source: "IFC SME Banking Knowledge Guide (unsecured МСБ-baseline 0.30-0.40); внутренние методики UZ-банков"
-    source_uz: "IFC SME Banking Knowledge Guide (taʼminlanmagan KOʻB baseline 0.30-0.40); UZ-banklarning ichki uslublari"
-    formula: "loan_request_amount / latest_annual_revenue > 0.40"
-    rationale: "Перекредитованность — ведущий предиктор дефолта. ADR-0024 audit: порог 0.50→0.40 как консервативный unsecured-default; secured-уточнение до 0.70 — backlog (требует loan_request.collateral_type)"
+    source: "IFC SME Banking Knowledge Guide (unsecured МСБ-baseline 0.30-0.40, secured 0.60-0.70); внутренние методики UZ-банков"
+    source_uz: "IFC SME Banking Knowledge Guide (taʼminlanmagan KOʻB baseline 0.30-0.40, taʼminlangan 0.60-0.70); UZ-banklarning ichki uslublari"
+    formula: "ratio > 0.40 (unsecured / collateral=none|null) OR ratio > 0.70 (secured)"
+    rationale: "Перекредитованность — ведущий предиктор дефолта. ADR-0024 Session 3: добавлен secured-variant — `collateral_type` ∈ {real_estate, movable, guarantee, other} поднимает порог до 0.70 (банк имеет страховочную базу). None / 'none' (legacy + unsecured) → строгий порог 0.40 (IFC SME baseline)"
 
   # --- Финансовые ---
   - id: REVENUE_DROP_MOM_30

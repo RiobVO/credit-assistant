@@ -47,6 +47,7 @@ def _loan_request_to_dict(lr: LoanRequest | None) -> dict[str, Any] | None:
         "rate_pct": str(lr.rate_pct),
         "purpose": lr.purpose,
         "category": lr.category,
+        "collateral_type": lr.collateral_type,
     }
 
 
@@ -56,12 +57,15 @@ def _loan_request_from_dict(d: dict[str, Any] | None) -> LoanRequest | None:
     amount = _money_from_dict(d["amount"])
     if amount is None:
         raise ValueError("loan_request.amount cannot be null")
+    # ADR-0024 Session 3: collateral_type — legacy payloads ключа не содержат,
+    # читаем `.get(...)` consistent с дефолтом entity (None).
     return LoanRequest(
         amount=amount,
         term_months=int(d["term_months"]),
         rate_pct=Decimal(d["rate_pct"]),
         purpose=d["purpose"],
         category=d["category"],
+        collateral_type=d.get("collateral_type"),
     )
 
 

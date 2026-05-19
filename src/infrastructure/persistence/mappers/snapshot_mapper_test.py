@@ -136,6 +136,7 @@ def _full_snapshot() -> BorrowerSnapshot:
             rate_pct=Decimal("22.5"),
             purpose="working_capital",
             category="standard",
+            collateral_type="real_estate",
         ),
     )
 
@@ -310,6 +311,37 @@ def test_ca037_legacy_payload_without_new_keys_still_loads() -> None:
     # всеми None».
     assert r.balance_end is None
     assert r.balance_start is None
+
+
+def test_session3_loan_request_collateral_type_legacy_defaults_none() -> None:
+    """ADR-0024 Session 3: legacy `loan_request` без ключа `collateral_type` —
+    после snapshot_from_payload поле = None, conservative read (трактуется как
+    unsecured порог 0.40).
+    """
+    legacy_payload: dict[str, object] = {
+        "as_of": "2026-04-01",
+        "annual_reports": [],
+        "quarterly_reports": [],
+        "monthly_turnover": [],
+        "counterparties_buyers": [],
+        "counterparties_suppliers": [],
+        "buyer_revenue_share": {},
+        "supplier_purchase_share": {},
+        "invoices": [],
+        "tax_events": [],
+        "vat_periods": [],
+        "loan_request": {
+            "amount": {"amount": "500000000", "currency": "UZS"},
+            "term_months": 24,
+            "rate_pct": "22.5",
+            "purpose": "working_capital",
+            "category": "standard",
+            # Никаких Session 3 ключей (collateral_type) — записано до Session 3.
+        },
+    }
+    restored = snapshot_from_payload(legacy_payload, _borrower())
+    assert restored.loan_request is not None
+    assert restored.loan_request.collateral_type is None
 
 
 def test_session3_counterparty_opf_legacy_defaults_none() -> None:
