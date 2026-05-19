@@ -237,6 +237,8 @@ sudo systemctl daemon-reload
 ## 8. References
 
 * ADR-0021 — on-prem tarball deploy architecture decision.
+* `docs/operations/pre-demo-smoke.md` — обязательный live-browser smoke перед demo trip.
+* `docs/demo/scenarios.md` — 5 заранее подготовленных borrower-сценариев для walkthrough.
 * `docs/operations/db-backup.md` — backup + restore drill (T3.4).
 * `docs/operations/pii-key-rotation.md` — PII_ENC_KEYS lifecycle (T1.3).
 * `docs/operations/ldap-setup.md` — LDAP authentication setup (T1.5).
