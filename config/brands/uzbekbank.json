@@ -8,6 +8,7 @@
   "primarySoft": "#F7E8DF",
   "primaryInk": "#6E2F1C",
   "primaryRing": "rgba(204,120,92,0.22)",
+  "defaultLang": "uz",
   "support": {
     "phone": "+998 71 200-00-00",
     "phoneTel": "tel:+998712000000",

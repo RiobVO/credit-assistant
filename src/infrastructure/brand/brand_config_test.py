@@ -26,6 +26,9 @@ def test_load_uzbekbank_brand() -> None:
     assert brand.name == "Uzbekbank Credit"
     assert brand.logo_mark == "UB"
     assert brand.primary == "#CC785C"
+    # T0.4 / ADR-0015: UZ-демо validation closed → uzbekbank по умолчанию
+    # рендерит PDF на узбекском, fallback chain `query → brand.default_lang → "ru"`.
+    assert brand.default_lang == "uz"
 
 
 def test_missing_brand_raises() -> None:
