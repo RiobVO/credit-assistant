@@ -105,6 +105,18 @@ class ParseManualInputFilesUseCase:
 
             try:
                 parsed = self.adapter.parse(f.content)
+                # T3.3: counter cell-level warnings per format. Inc по
+                # количеству warnings, label = lower-case format name
+                # (vat_declaration / form_2 / ...). Spike signal на
+                # регрессию layout Soliq.
+                if parsed.parse_warnings:
+                    from infrastructure.observability.metrics import (
+                        parser_warnings_total,
+                    )
+
+                    parser_warnings_total.labels(format=fmt.value).inc(
+                        len(parsed.parse_warnings)
+                    )
             except UnsupportedFormatError as exc:
                 # Reachable теоретически если detect_format вернёт новый формат
                 # без соответствующего парсера (все 5 поддержаны: VAT_DECLARATION,
