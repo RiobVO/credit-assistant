@@ -23,7 +23,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import Decimal
-
 from typing import Protocol
 
 from application.dto.kpi_bundle import KpiBundle, KpiLevelTone
