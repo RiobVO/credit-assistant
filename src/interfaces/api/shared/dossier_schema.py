@@ -67,6 +67,13 @@ class BorrowerInput(_StrictModel):
     registered_address: str
     okved_main_changed_at: date | None = None
     charter_capital: MoneyInput | None = None
+    # ADR-0024 Session 3: narrow для OKVED_CHANGED_12M — true означает «смена
+    # ОКЭД инициирована собственником» (vs Госкомстат auto-overwrite). Default
+    # False — backward-compat: brand-new dossiers через wizard и parser-driven
+    # источники без поля становятся silent для правила. Toggle reachable
+    # только в UI Step 1 во flow «Пересобрать с дополнениями» (требует
+    # parser-given okved_main_changed_at).
+    oked_changed_by_owner: bool = False
 
     @field_validator("inn")
     @classmethod
@@ -270,6 +277,9 @@ class BorrowerOutput(_StrictModel):
     registered_address: str
     okved_main_changed_at: date | None = None
     charter_capital: MoneyOutput | None = None
+    # ADR-0024 Session 3: см. BorrowerInput.oked_changed_by_owner. Frontend
+    # рендерит conditional toggle в Step 1 «Пересобрать с дополнениями».
+    oked_changed_by_owner: bool = False
 
 
 class ApplicationOutput(_StrictModel):

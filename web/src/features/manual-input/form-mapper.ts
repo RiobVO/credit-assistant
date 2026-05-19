@@ -69,6 +69,10 @@ export type ManualInputPayload = {
     director_appointed_at: string;
     okved_main: string;
     registered_address: string;
+    // ADR-0024 Session 3: narrow для OKVED_CHANGED_12M. Default false для
+    // brand-new dossiers; true только когда analyst поставил toggle во
+    // flow «Пересобрать с дополнениями».
+    oked_changed_by_owner: boolean;
   };
   as_of: string;
   annual_reports: FinancialReport[];
@@ -191,6 +195,7 @@ export function formValuesToPayload(values: FormValues): ManualInputPayload {
       director_appointed_at: step1.directorAppointedAt,
       okved_main: step1.okvedMain,
       registered_address: step1.registeredAddress,
+      oked_changed_by_owner: step1.okedChangedByOwner,
     },
     as_of: today,
     annual_reports: annual,
