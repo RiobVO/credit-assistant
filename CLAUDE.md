@@ -15,9 +15,9 @@
 - **Tier 1 prod-killers**: case_id seq BR-YYYY-NNNN (T1.1) · refresh-token rotation + Redis denylist (T1.2, ADR-0016) · PII encryption at rest Fernet/MultiFernet (T1.3, ADR-0017) · multi-tenant Approach A pure (T1.4, ADR-0018) · LDAP AuthnAdapter (T1.5, ADR-0019).
 - **Tier 2 data quality**: dynamic units FORM_1/2 (T2.1) · VAT через T0.5 · PROFIT_TAX (T2.3) · faktura.uz honest stub (T2.4, ADR-0020). Все 5 xltx-форматов покрыты.
 - **Tier 3 operational readiness (6/6)**: structured logging + correlation_id (T3.2) · Postgres backup + restore drill (T3.4) · on-prem tarball deploy (T3.6, ADR-0021) · audit-log CSV export (T3.5) · observability GlitchTip on-prem (T3.1, ADR-0022) · Prometheus + Grafana metrics (T3.3, ADR-0023). 3 ADR'а, 4 playbook'а, 7 ops-scripts/configs.
-- **ADR-0024 research closure** (2026-05-19): 3-way reconcile Claude / ChatGPT / Qwen — 9 правил с подложными источниками заменены (ЦБ РУз №2696, НК РУз ст.47+257+489, FATF/EAG/ЗРУ-660); confidence layer заменил `INSUFFICIENT_DATA` (BR-2026-0050 TEST bug); OKED-UZ benchmark catalog; 3 новых правил (FX_MISMATCH_HIGH / DSCR_LOW / WC_INSUFFICIENT) + supporting data structures (BalanceSnapshot +current_assets/current_liabilities, FinancialReport +D&A/OCF); 7 правил с threshold-only adjustments per Q0.B. Research outputs: `docs/research/2026-05-19-3way-reconcile/`. Архитектурно тяжёлые правки (OKVED→ОКЭД rename, dual-severity, новые Counterparty/LoanRequest fields, stat.uz industry medians) — backlog в ADR-0024.
+- **ADR-0024 research closure** (2026-05-19): 3-way reconcile Claude / ChatGPT / Qwen — 9 правил с подложными источниками заменены (ЦБ РУз №2696, НК РУз ст.47+257+489, FATF/EAG/ЗРУ-660); confidence layer заменил `INSUFFICIENT_DATA` (BR-2026-0050 TEST bug); OKED-UZ benchmark catalog; 3 новых правил (FX_MISMATCH_HIGH / DSCR_LOW / WC_INSUFFICIENT) + supporting data structures (BalanceSnapshot +current_assets/current_liabilities, FinancialReport +D&A/OCF); 7 правил с threshold-only adjustments per Q0.B. Research outputs: `docs/research/2026-05-19-3way-reconcile/`. Архитектурно тяжёлые правки (OKVED→ОКЭД rename, dual-severity, новые Counterparty/LoanRequest fields, stat.uz industry medians) — backlog в ADR-0024. **Session 1 (2026-05-19) closed**: 6 KPI (`ebitda` / `debt_to_ebitda` / `current_ratio` / `working_capital` / `interest_coverage` / `dscr`) end-to-end в calculator + PDF + UI. **Session 2 backlog**: `quick_ratio` (нужно поле `inventory` в `BalanceSnapshot`) и `fx_exposure` (нужна currency-breakdown по обязательствам).
 
-### Stack state (2026-05-18)
+### Stack state (2026-05-19)
 
 - Docker compose поднят: `credit-api` (8000), `credit-postgres` (5433), `credit-redis` (6379) — все healthy. Сегодня smoke'нул `credit-db-backup` sidecar (backup + restore_drill PASS exit=0).
 - Backend env: `APP_MODE=bank`, `BRAND_ID=default`, `PII_ENC_KEYS` задан тестовым Fernet-ключом (`/tmp/pii_key.txt`, prefix `iEuuP5WADM_...`). БД зашифрована — без ключа restore из `backup-pre-t13.sql` (gitignored).
@@ -25,6 +25,7 @@
 - Seeded analyst для smoke: **email `t04@bank.uz`** / **password `T04Smoke!`**, без MFA.
 - Dossiers в БД: 49 (47 backfilled `BR-2026-0001..0047` + smoke `BR-2026-0048..0049`). Snapshot.payload + drafts.payload зашифрованы. Demo scenarios используют `BR-2026-0030/0040/0042/0046/0047` (см. `docs/demo/scenarios.md`).
 - Backups: `./backups/` (gitignored) — 2 dump'а после T3.4 smoke.
+- ADR-0024 Session 1 (2026-05-19): 6 новых KPI в `src/application/services/kpi_calculator.py` (`ebitda`, `debt_to_ebitda`, `current_ratio`, `working_capital`, `interest_coverage`, `dscr`) — end-to-end через PDF (`config/pdf-i18n/{ru,uz}.json` + `dossier.html`) и UI (`web/src/features/dossier/kpi-row.tsx`). T4 compliance skeleton доставлен (`docs/compliance/{admin-guide,security-architecture,drp-bcp}.md`, 1007 строк bilingual, UZ-блоки помечены `TODO[CA-T4-UZ]`). CA-DS30 закрыт — 27 anonymized xltx fixtures + `scripts/anonymize_xltx.py` + 6 unit-тестов. Pre-demo smoke playbook расширен (8×3 matrix + 4 пути 2FA + 8 edge UX + sign-off table); журнал прогонов — `docs/operations/pre-demo-smoke-history.md`.
 
 ### Active focus — выбор следующего шага
 
@@ -37,7 +38,7 @@ Q0.B threshold adjustments на 7 правил → docs sync. Подробнос
 
 Открытые направления (НЕ блокеры, dispatch по сигналу):
 
-1. **T4 compliance pack** (параллельно): pentest узб-лаборатории · аттестат УзСтандарта на ПДн (Закон РУз №547) · IT-Park / Uzinfocom резидентство · Admin Guide / Security Architecture / DRP/BCP RU+UZ. Старт за 2 мес до bank tender.
+1. **T4 compliance pack**: skeleton доставлен (`docs/compliance/{admin-guide,security-architecture,drp-bcp}.md`, 1007 строк bilingual RU+UZ). Открыто: UZ-перевод (грепай `TODO[CA-T4-UZ]`) — нужен носитель / compliance-эксперт; pentest узб-лаборатории; аттестат УзСтандарта на ПДн (Закон РУз №547); IT-Park / Uzinfocom резидентство. Старт за 2 мес до bank tender.
 2. **Real-bank pilot trip**: install playbook `deploy/README.md` + demo walkthrough `docs/demo/scenarios.md` (5 готовых сценариев на существующих BR-2026-00XX) + onboarding session с пилот-банком.
 3. **Pre-pilot smoke (✋ обязательно перед demo trip)** — playbook `docs/operations/pre-demo-smoke.md`: 8 routes × 3 темы + 4 пути 2FA + 8 edge-UX сценариев (Блок 5). Console-error gate, sign-off table. Прогон ~60–90 минут, повторный за 24 часа до выезда.
 4. **Post-demo hardening backlog** (не блокеры):
@@ -48,7 +49,10 @@ Q0.B threshold adjustments на 7 правил → docs sync. Подробнос
    - **T2.4b** faktura.uz real client — pre-condition: пилот-банк даёт OAuth-токен.
    - **T1.5b** OAuth2/OIDC AuthnAdapter — pre-condition: запрос пилот-банка на Okta/Azure AD.
    - **T1.5c** openldap testcontainer (T1.5 покрыт mock-only).
+   - **Flaky test** `web/src/features/manual-input/components/custom-dropdown.test.tsx` — DOM-leak между файлами без `afterEach(cleanup)`. Прецедент в memory `feedback_vitest_dom_leak_cleanup.md`.
 5. **ADR-0024 backlog** (требуют расширения domain entities / новых каталогов — см. ADR-0024 «Research debt remaining»):
+   - **Session 2 KPI**: `quick_ratio` требует `BalanceSnapshot.inventory: Money | None`; `fx_exposure` требует currency-breakdown по `BalanceSnapshot.liabilities_total` (либо новый агрегат). Парсеры FORM_1 + snapshot_mapper round-trip + UI/PDF mapping.
+   - **UI vs PDF inconsistency для пустых KPI**: UI рендерит placeholder для KPI = None, PDF скрывает строку. Привести к единому контракту (видимо UI → hide для consistency с печатной формой).
    - **OKVED → ОКЭД rename**: `Borrower.okved_main` → `oked_main`, парсеры FORM_1/PROFIT_TAX, snapshot_mapper, UI Step 1, 49 dossiers миграция. Per Claude Q0.B: УзР официальный термин — ОКЭД (ПКМ №275 от 24.08.2016).
    - **OKVED_CHANGED_12M narrow scope**: + поле `Borrower.oked_changed_by_owner: bool` + Госкомстат ОКЭД-API.
    - **SINGLE_BUYER_CONCENTRATION dual-severity** (0.50 medium / 0.70 high) — split в 2 правила или ввести `severity_fn` в RuleSpec.
@@ -57,7 +61,6 @@ Q0.B threshold adjustments на 7 правил → docs sync. Подробнос
    - **TAX_PENALTIES_CURRENT_YEAR severity filter**: поле `TaxEvent.severity: 'MATERIAL' | 'PROCEDURAL'` (ст. 223 vs ст. 219 НК РУз).
    - **LOAN_TO_REVENUE_RATIO secured-variant** (порог 0.70): поле `LoanRequest.collateral_type`.
    - **LOW_MARGIN_HIGH_TURNOVER vs industry_median**: stat.uz net-margin catalog по ОКЭД. Текущий `config/benchmarks/oked-uz.json` все 7 buckets с null.
-   - **KPI calculator extension**: добавить `ebitda` / `debt_to_ebitda` / `current_ratio` / `working_capital` KPI после ADR-0024 добавил D&A + current_assets/current_liabilities (CA-037 анонс).
 6. **Active code-level TODOs** (`grep TODO\\[CA- src/ web/src/`):
    - **CA-001** ИНН checksum по ГНК-алгоритму (`src/domain/value_objects/inn.py`).
    - **CA-002** Circular invoicing — полноценная graph-детекция циклов через `networkx` для 3+ узлов (`src/domain/rules/counterparty/`).
@@ -67,7 +70,6 @@ Q0.B threshold adjustments на 7 правил → docs sync. Подробнос
    - **CA-DS19** Pulse-dot motion cleanup в DSCR-summary (UI polish, frozen pre-demo).
    - **CA-DS25** KPI sparkline — pre-condition: monthly_turnover≥12 источник (VAT_DECL monthly chain или ESF). Не PROFIT_TAX (annual).
    - **CA-DS28** ГНК public lookup на soliq.uz/services/search/ — pre-condition: legal review.
-   - **CA-DS30** Bulk anonymize 28 xltx fixtures через openpyxl script (1/28 anon на месте сейчас).
 
 ### Frozen scope (не трогать до post-demo)
 - UI polish: новые цвета, шрифты, тени, анимации.
@@ -203,6 +205,7 @@ Q0.B threshold adjustments на 7 правил → docs sync. Подробнос
 ## Operations playbooks
 
 - **Pre-demo smoke (gate перед pilot trip, ~60–90 мин)** — `docs/operations/pre-demo-smoke.md`.
+- **Pre-demo smoke history журнал** — `docs/operations/pre-demo-smoke-history.md` (вести запись каждого прогона перед demo trip).
 - **Demo scenarios walkthrough (5 готовых borrower'ов, ~25–30 мин)** — `docs/demo/scenarios.md`.
 - **2FA smoke (4 пути, ~10 мин)** — `docs/operations/2fa-smoke.md`.
 - **PII key rotation + recovery** — `docs/operations/pii-key-rotation.md` (T1.3 / ADR-0017).
@@ -223,4 +226,6 @@ Q0.B threshold adjustments на 7 правил → docs sync. Подробнос
 - `docs/session-log.md` — полная хронологическая история по сессиям с commit hashes
 - `docs/design-sweep-archive.md` — детали Phase 1-9 (preview HTML, иттерации, lessons)
 - `docs/operations/2fa-smoke.md` — пошаговая инструкция smoke 2FA
-- `docs/adr/` — Architecture Decision Records (0001..0011)
+- `docs/adr/` — Architecture Decision Records (0001..0024)
+- `docs/compliance/` — T4 артефакты (Admin Guide, Security Architecture, DRP/BCP) для bank tender pack
+- `docs/research/2026-05-19-3way-reconcile/` — Claude / ChatGPT / Qwen research outputs за ADR-0024
