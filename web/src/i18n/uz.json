@@ -804,7 +804,9 @@
       "label_interest_coverage": "Foiz qoplash",
       "interest_coverage_empty_hint": "EBIT va foiz xarajatlari kerak",
       "label_dscr": "DSCR",
-      "dscr_empty_hint": "Kredit soʻrovi, OCF/EBITDA/EBIT va foizlar kerak"
+      "dscr_empty_hint": "Kredit soʻrovi, OCF/EBITDA/EBIT va foizlar kerak",
+      "label_quick_ratio": "Quick Ratio",
+      "quick_ratio_empty_hint": "Qisqa muddatli aktivlar, zaxiralar va majburiyatlar kerak"
     },
     "risk": {
       "title": "Qizil bayroqlar",

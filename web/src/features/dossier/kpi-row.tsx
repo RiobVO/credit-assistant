@@ -17,11 +17,12 @@ export function KpiRow({
   dossierId: string;
 }) {
   const t = useTranslations("dossier.kpi");
-  // ADR-0024 (Session 1): 10 KPI карточек = legacy 4 (EBIT/ROE/Debt-to-EBIT +
-  // Readiness как замена revenue_ltm в этом ряду) + расширенные 6 (EBITDA /
-  // Debt-to-EBITDA / Current Ratio / Working Capital / Interest Coverage / DSCR).
-  // CA-037 invariant — legacy остаются рядом с расширением, не вместо.
-  // Grid xl:grid-cols-4 → 10 cards в 3 ряда (4+4+2), читаемо без сжатия меток.
+  // ADR-0024 (Session 2): пустые KPI карточки (kpi == null) скрываются —
+  // banker-clean view, align с PDF behavior. Аналитик видит подсказки в
+  // manual-input wizard, не в готовом досье. Slots возвращают null когда
+  // данных нет; React просто не вставляет узел в grid. ReadinessKpiCard
+  // и NoDebtCard (Decimal(0)) и Debt-to-EBIT-loss-card остаются — это
+  // самостоятельные сигналы, не «нет данных».
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
       <EbitSlot kpi={kpis.ebit} />
@@ -35,6 +36,8 @@ export function KpiRow({
       <WorkingCapitalSlot kpi={kpis.working_capital} />
       <InterestCoverageSlot kpi={kpis.interest_coverage} />
       <DscrSlot kpi={kpis.dscr} />
+      {/* ADR-0024 (Session 2) — Quick Ratio: */}
+      <QuickRatioSlot kpi={kpis.quick_ratio} />
     </div>
   );
 }
@@ -44,19 +47,11 @@ export function KpiRow({
 function EbitSlot({ kpi }: { kpi: KpiValueDto | null }) {
   const t = useTranslations("dossier.kpi");
   const locale = useLocale() as UzsLocale;
+  if (kpi == null) return null;
   // CA-037 контракт: пока depreciation/amortization недоступен, показываем EBIT
   // как прокси EBITDA. Tooltip объясняет honest scoping.
   const label = t("label_ebit");
   const tooltip = t("ebit_tooltip");
-  if (kpi == null) {
-    return (
-      <EmptyKpiCard
-        label={label}
-        hint={t("ebit_empty_hint")}
-        tooltip={tooltip}
-      />
-    );
-  }
   const value = parseFloat(kpi.value);
   const yoy = kpi.yoy_pct !== null ? parseFloat(kpi.yoy_pct) : null;
   return (
@@ -74,13 +69,8 @@ function EbitSlot({ kpi }: { kpi: KpiValueDto | null }) {
 
 function RoeSlot({ kpi }: { kpi: KpiValueDto | null }) {
   const t = useTranslations("dossier.kpi");
+  if (kpi == null) return null;
   const label = t("label_roe");
-  if (kpi == null) {
-    // Backend возвращает null когда equity_avg ≤ 0 или компоненты отсутствуют.
-    // Без отдельного флага frontend не может различить эти две причины — даём
-    // составную подсказку, которая корректна в обоих случаях.
-    return <EmptyKpiCard label={label} hint={t("roe_empty_hint")} />;
-  }
   const value = parseFloat(kpi.value);
   const yoy = kpi.yoy_pct !== null ? parseFloat(kpi.yoy_pct) : null;
   return (
@@ -124,13 +114,15 @@ function DebtToEbitSlot({
     );
   }
   // Case 3: ratio null + ebit известен и ≤ 0 — убыток скрывает оценку.
+  // Это самостоятельный финансовый сигнал, оставляем (не «пустая» карточка).
   if (ebit != null && parseFloat(ebit.value) <= 0) {
     return (
       <EmptyKpiCard label={label} hint={t("debt_loss_hint")} tone="danger" />
     );
   }
-  // Case 4 (default): нет данных FORM_1 (debt = None) или ebit неизвестен.
-  return <EmptyKpiCard label={label} hint={t("debt_no_data_hint")} />;
+  // Case 4 (default): нет данных FORM_1 (debt = None) или ebit неизвестен —
+  // ADR-0024 Session 2: hide для banker-clean view.
+  return null;
 }
 
 // ----------- Empty / no-debt cards ------------------------------------------
@@ -209,10 +201,8 @@ function NoDebtCard({ label, pillLabel }: { label: string; pillLabel: string }) 
 function EbitdaSlot({ kpi }: { kpi: KpiValueDto | null }) {
   const t = useTranslations("dossier.kpi");
   const locale = useLocale() as UzsLocale;
+  if (kpi == null) return null;
   const label = t("label_ebitda");
-  if (kpi == null) {
-    return <EmptyKpiCard label={label} hint={t("ebitda_empty_hint")} />;
-  }
   const value = parseFloat(kpi.value);
   return (
     <KpiCard
@@ -243,17 +233,16 @@ function DebtToEbitdaSlot({ debtToEbitda }: { debtToEbitda: KpiValueDto | null }
       />
     );
   }
-  return <EmptyKpiCard label={label} hint={t("debt_ebitda_empty_hint")} />;
+  // ADR-0024 Session 2: пустая карточка → hide.
+  return null;
 }
 
 // ----------- Current Ratio ---------------------------------------------------
 
 function CurrentRatioSlot({ kpi }: { kpi: KpiValueDto | null }) {
   const t = useTranslations("dossier.kpi");
+  if (kpi == null) return null;
   const label = t("label_current_ratio");
-  if (kpi == null) {
-    return <EmptyKpiCard label={label} hint={t("current_ratio_empty_hint")} />;
-  }
   return (
     <KpiCard
       label={label}
@@ -270,10 +259,8 @@ function CurrentRatioSlot({ kpi }: { kpi: KpiValueDto | null }) {
 function WorkingCapitalSlot({ kpi }: { kpi: KpiValueDto | null }) {
   const t = useTranslations("dossier.kpi");
   const locale = useLocale() as UzsLocale;
+  if (kpi == null) return null;
   const label = t("label_working_capital");
-  if (kpi == null) {
-    return <EmptyKpiCard label={label} hint={t("working_capital_empty_hint")} />;
-  }
   const value = parseFloat(kpi.value);
   // Знак — единственный сигнал WC (нет universal threshold). Отрицательный WC
   // визуально оборачиваем в negative tone без BAD stripe.
@@ -291,10 +278,8 @@ function WorkingCapitalSlot({ kpi }: { kpi: KpiValueDto | null }) {
 
 function InterestCoverageSlot({ kpi }: { kpi: KpiValueDto | null }) {
   const t = useTranslations("dossier.kpi");
+  if (kpi == null) return null;
   const label = t("label_interest_coverage");
-  if (kpi == null) {
-    return <EmptyKpiCard label={label} hint={t("interest_coverage_empty_hint")} />;
-  }
   return (
     <KpiCard
       label={label}
@@ -310,10 +295,25 @@ function InterestCoverageSlot({ kpi }: { kpi: KpiValueDto | null }) {
 
 function DscrSlot({ kpi }: { kpi: KpiValueDto | null }) {
   const t = useTranslations("dossier.kpi");
+  if (kpi == null) return null;
   const label = t("label_dscr");
-  if (kpi == null) {
-    return <EmptyKpiCard label={label} hint={t("dscr_empty_hint")} />;
-  }
+  return (
+    <KpiCard
+      label={label}
+      value={formatRatio(parseFloat(kpi.value))}
+      yoyPct={null}
+      changeTone="positive"
+      levelTone={kpi.level_tone ?? undefined}
+    />
+  );
+}
+
+// ----------- Quick Ratio (ADR-0024 Session 2) --------------------------------
+
+function QuickRatioSlot({ kpi }: { kpi: KpiValueDto | null }) {
+  const t = useTranslations("dossier.kpi");
+  if (kpi == null) return null;
+  const label = t("label_quick_ratio");
   return (
     <KpiCard
       label={label}
