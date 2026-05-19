@@ -149,10 +149,12 @@ def high_risk_borrower() -> BorrowerSnapshot:
             _annual(2024, 4 * B, 400 * 1_000_000),
             _annual(2025, 4 * B, 100 * 1_000_000),
         ],
+        # ADR-0024: окно март–май, вне seasonal filter (12, 1, 2). Раньше
+        # февраль попадал в filter и блокировал MoM-fire.
         monthly_turnover=[
-            _month(2026, 2, 1_000_000_000),
-            _month(2026, 3, 600_000_000),  # -40%
-            _month(2026, 4, 350_000_000),  # -42%
+            _month(2026, 3, 1_000_000_000),
+            _month(2026, 4, 600_000_000),  # -40%
+            _month(2026, 5, 350_000_000),  # -42%
         ],
         counterparties_buyers=[new_buyer],
         buyer_revenue_share={"200000020": Decimal("0.50")},
