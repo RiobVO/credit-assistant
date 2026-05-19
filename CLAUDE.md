@@ -46,7 +46,6 @@ Pre-demo MVP ready. Открытые направления (НЕ блокеры
    - **CA-003** Real ГНК lookup — pre-condition: legal review (см. также CA-DS28).
    - **CA-019** Access-token denylist для force-logout (formally T1.2 закрыта только refresh-rotation; access ttl 15м истекает сам).
    - **CA-031** Source-trail invasive refactor — `applyToForm` все ячейки формы (UX nice-to-have).
-   - **CA-068** ⚠️ TODO stale — `password_changed_at` уже обновляется в change-password endpoint `auth.py:228`; можно убрать comment в `analyst.py:51` + migration comment hygiene.
    - **CA-DS19** Pulse-dot motion cleanup в DSCR-summary (UI polish, frozen pre-demo).
    - **CA-DS25** KPI sparkline — pre-condition: monthly_turnover≥12 источник (VAT_DECL monthly chain или ESF). Не PROFIT_TAX (annual).
    - **CA-DS28** ГНК public lookup на soliq.uz/services/search/ — pre-condition: legal review.

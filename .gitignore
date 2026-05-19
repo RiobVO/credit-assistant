@@ -79,6 +79,9 @@ photo_*.jpg
 photo_*.png
 backup-pre-t13.sql
 
+# --- Local smoke PDF outputs (T0.4 UZ/RU rendering smoke) ---
+smoke-pdfs/
+
 # T3.4: Postgres backups (encrypted/plain dumps + age private keys)
 backups/
 *.dump
