@@ -136,6 +136,7 @@ def _to_counterparty(p: CounterpartyInput) -> Counterparty:
         name=p.name,
         registration_date=p.registration_date,
         opf=LegalForm(p.opf) if p.opf is not None else None,
+        is_foreign=p.is_foreign,
     )
 
 

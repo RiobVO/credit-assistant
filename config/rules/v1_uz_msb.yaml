@@ -208,14 +208,14 @@ rules:
     rationale: "Высокий риск потери всего бизнеса при уходе клиента"
 
   - id: SINGLE_SUPPLIER_CONCENTRATION
-    name: "Концентрация >60% закупок у одного поставщика"
-    name_uz: "Xaridlarning 60% dan ortigʻi bitta yetkazib beruvchidan"
+    name: "Концентрация закупок у одного поставщика (foreign-escalation)"
+    name_uz: "Xaridlarning bitta yetkazib beruvchida toʻplanishi (chet ellik-eskalatsiya)"
     category: counterparty
     severity: medium
-    source: "Базель III concentration risk; supply-chain risk practice"
-    source_uz: "Базель III concentration risk; supply-chain risk practice"
-    formula: "max_supplier_purchase_share > 0.60"
-    rationale: "Зависимость от единственного поставщика"
+    source: "Basel III concentration risk; FATF Recommendation 10 (CDD — foreign-counterparty enhanced due diligence); supply-chain risk practice"
+    source_uz: "Basel III concentration risk; FATF tavsiya 10 (CDD — chet ellik kontragent uchun kuchaytirilgan tekshiruv); supply-chain tavakkalligi amaliyoti"
+    formula: "(max_supplier.is_foreign AND max_share > 0.50) → high; max_share > 0.60 → medium"
+    rationale: "Зависимость от единственного поставщика. ADR-0024 Session 3: dual-severity — foreign-поставщик при доле >0.50 эскалируется до HIGH (FATF R.10 enhanced CDD, supply-chain currency/sanctions exposure), domestic >0.60 остаётся MEDIUM (Basel III baseline). Severity HIGH передаётся через FiringEvidence override поверх YAML medium"
 
   - id: NEW_COUNTERPARTY_LARGE_SHARE
     name: "Новые контрагенты (<180 дней) дают >30% оборота"
