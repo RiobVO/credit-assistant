@@ -107,6 +107,12 @@
   "kpi_label.ebit": "EBIT (прокси EBITDA)",
   "kpi_label.roe": "ROE",
   "kpi_label.debt_to_ebit": "Долг / EBIT",
+  "kpi_label.ebitda": "EBITDA",
+  "kpi_label.debt_to_ebitda": "Долг / EBITDA",
+  "kpi_label.current_ratio": "Текущая ликвидность",
+  "kpi_label.working_capital": "Оборотный капитал",
+  "kpi_label.interest_coverage": "Покрытие процентов",
+  "kpi_label.dscr": "DSCR",
 
   "legal_form_full.llc": "Общество с ограниченной ответственностью",
   "legal_form_full.pe": "Частное предприятие",

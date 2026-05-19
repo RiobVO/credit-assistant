@@ -322,9 +322,13 @@ def _build_signal_breakdown(
 def _build_kpi_slots(
     view_bundle: DossierViewBundle, messages: PdfMessages
 ) -> list[dict[str, object]]:
-    """4 карточки в порядке: revenue_ltm / ebit / roe / debt_to_ebit.
+    """10 карточек в порядке: legacy 4 (revenue_ltm / ebit / roe / debt_to_ebit)
+    + ADR-0024 6 (ebitda / debt_to_ebitda / current_ratio / working_capital /
+    interest_coverage / dscr). CA-037 invariant — legacy остаются рядом с
+    расширением, не вместо.
 
     Если значение ``None`` — карточка показывает «—» + локализованный hint.
+    Универсальный `_kpi_slot` форматирует UZS/PCT/RATIO + level_tone (CA-048).
     """
     kpis = view_bundle.kpis
     fmt_uzs = make_fmt_uzs(messages)
@@ -333,6 +337,13 @@ def _build_kpi_slots(
         _kpi_slot("ebit", kpis.ebit, messages, fmt_uzs),
         _kpi_slot("roe", kpis.roe, messages, fmt_uzs),
         _kpi_slot("debt_to_ebit", kpis.debt_to_ebit, messages, fmt_uzs),
+        # ADR-0024 (Session 1): расширенная шестёрка.
+        _kpi_slot("ebitda", kpis.ebitda, messages, fmt_uzs),
+        _kpi_slot("debt_to_ebitda", kpis.debt_to_ebitda, messages, fmt_uzs),
+        _kpi_slot("current_ratio", kpis.current_ratio, messages, fmt_uzs),
+        _kpi_slot("working_capital", kpis.working_capital, messages, fmt_uzs),
+        _kpi_slot("interest_coverage", kpis.interest_coverage, messages, fmt_uzs),
+        _kpi_slot("dscr", kpis.dscr, messages, fmt_uzs),
     ]
 
 
