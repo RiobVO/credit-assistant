@@ -10,7 +10,12 @@ from domain.entities.borrower_snapshot import BorrowerSnapshot
 from domain.rules.protocol import FiringEvidence
 
 VAT_GROWTH_THRESHOLD = Decimal("0.20")  # рост НДС >20%
-REVENUE_GROWTH_CEILING = Decimal("0")  # выручка не растёт (≤0)
+# ADR-0024: ceiling 0 → 0.05 — порог 0% (Commit 1) пропускал «выручка
+# едва-едва не падает». При росте выручки до +5% параллельный рост НДС-
+# обязательств на >20% по-прежнему остаётся аномалией: декларация НДС
+# завышается без коммерческой причины (накачивание оборота / impostor
+# счета-фактуры). Per Claude Q0.B audit.
+REVENUE_GROWTH_CEILING = Decimal("0.05")
 
 
 def vat_growth_no_revenue(snapshot: BorrowerSnapshot) -> FiringEvidence | None:
