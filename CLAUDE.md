@@ -31,7 +31,7 @@ Pre-demo MVP ready. Открытые направления (НЕ блокеры
 
 1. **T4 compliance pack** (параллельно): pentest узб-лаборатории · аттестат УзСтандарта на ПДн (Закон РУз №547) · IT-Park / Uzinfocom резидентство · Admin Guide / Security Architecture / DRP/BCP RU+UZ. Старт за 2 мес до bank tender.
 2. **Real-bank pilot trip**: install playbook `deploy/README.md` + onboarding session с пилот-банком.
-3. **Pre-pilot smoke (✋ обязательно перед demo trip)**: live-browser walkthrough через `/`, `/search`, `/history`, `/dossier/{id}`, `/help`, `/settings` × 3 темы (light/dark/system) — RTL/jsdom не ловят visual regressions, hydration errors, nested-anchor html validity. Lesson `feedback_nested_anchor_rtl_blind`.
+3. **Pre-pilot smoke (✋ обязательно перед demo trip)** — playbook `docs/operations/pre-demo-smoke.md`: 8 routes × 3 темы + 4 пути 2FA + 8 edge-UX сценариев (Блок 5). Console-error gate, sign-off table. Прогон ~60–90 минут, повторный за 24 часа до выезда.
 4. **Post-demo hardening backlog** (не блокеры):
    - CI Docker job (опционально — ubuntu-latest уже работает).
    - Sentry sourcemaps upload через release pipeline (`sentry-cli sourcemaps upload`).
@@ -183,6 +183,7 @@ Pre-demo MVP ready. Открытые направления (НЕ блокеры
 
 ## Operations playbooks
 
+- **Pre-demo smoke (gate перед pilot trip, ~60–90 мин)** — `docs/operations/pre-demo-smoke.md`.
 - **2FA smoke (4 пути, ~10 мин)** — `docs/operations/2fa-smoke.md`.
 - **PII key rotation + recovery** — `docs/operations/pii-key-rotation.md` (T1.3 / ADR-0017).
 - **Multi-tenant deploy (separate compose-project per bank)** — `docs/operations/multi-tenant-deploy.md` (T1.4 / ADR-0018).
