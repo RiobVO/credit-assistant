@@ -250,3 +250,59 @@ class TestLocalization:
         )
         obs = build_observations(_snapshot(), kpis, (), _registry(), _uz_messages())
         assert any("Qarz yuki yoʻq" in s.head for s in obs.strengths)
+
+
+class TestRoeBenchmarkCtx:
+    """ADR-0024 / Commit 3: industry-aware ROE ctx через OkedBenchmarkCatalog.
+
+    Старый bug: hardcoded «бенчмарк опт. торговли пищ. продуктами ≈ 12%»
+    для любого ОКЭД. Fix: catalog injection + ОКЭД-section lookup, либо
+    neutral fallback если catalog None / OKED unknown.
+    """
+
+    def _good_roe_kpis(self) -> KpiBundle:
+        return KpiBundle(
+            revenue_ltm=None,
+            ebit=None,
+            roe=_kpi("18.2", tone=KpiLevelTone.GOOD),
+            debt_to_ebit=None,
+        )
+
+    def test_ctx_no_industry_fallback_when_no_catalog(self) -> None:
+        obs = build_observations(
+            _snapshot(), self._good_roe_kpis(), (), _registry(), _ru_messages()
+        )
+        roe_obs = next(o for o in obs.strengths if "ROE" in o.head)
+        # Без catalog — neutral fallback, не hardcoded «пищ. продуктами»
+        assert "пищ. продуктами" not in roe_obs.ctx
+        assert "UZ-данных" in roe_obs.ctx
+
+    def test_ctx_with_industry_when_catalog_resolves_oked(self) -> None:
+        from infrastructure.catalog.oked_benchmark import default_catalog
+
+        # _borrower() default ОКЭД 46.39 → секция G (Оптовая торговля)
+        obs = build_observations(
+            _snapshot(),
+            self._good_roe_kpis(),
+            (),
+            _registry(),
+            _ru_messages(),
+            benchmark_catalog=default_catalog(),
+        )
+        roe_obs = next(o for o in obs.strengths if "ROE" in o.head)
+        assert "Оптовая" in roe_obs.ctx or "торговля" in roe_obs.ctx.lower()
+
+    def test_ctx_uz_locale_uses_uz_industry_name(self) -> None:
+        from infrastructure.catalog.oked_benchmark import default_catalog
+
+        obs = build_observations(
+            _snapshot(),
+            self._good_roe_kpis(),
+            (),
+            _registry(),
+            _uz_messages(),
+            benchmark_catalog=default_catalog(),
+        )
+        roe_obs = next(o for o in obs.strengths if "tarmoq medianasidan" in o.head)
+        # UZ name для секции G: "Ulgurji va chakana savdo..."
+        assert "Ulgurji" in roe_obs.ctx or "savdo" in roe_obs.ctx.lower()

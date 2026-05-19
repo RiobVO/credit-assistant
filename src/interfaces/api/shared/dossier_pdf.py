@@ -26,6 +26,9 @@ from application.use_cases.load_dossier_for_view import LoadDossierForView
 from application.use_cases.render_dossier_pdf import Lang, RenderDossierPdf
 from config.settings import get_settings
 from infrastructure.brand.brand_config import load_brand
+from infrastructure.catalog.oked_benchmark import (
+    default_catalog as default_oked_benchmark_catalog,
+)
 from infrastructure.i18n.pdf_messages import default_pdf_messages
 from infrastructure.persistence.repositories.audit_log_repository import (
     SqlAlchemyAuditLogRepository,
@@ -94,6 +97,7 @@ async def download_dossier_pdf(
         rule_registry=get_rule_registry(),
         brand_loader=brand_loader,
         pdf_messages_loader=default_pdf_messages,
+        benchmark_catalog=default_oked_benchmark_catalog(),
     )
 
     try:

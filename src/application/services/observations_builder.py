@@ -24,13 +24,27 @@ from __future__ import annotations
 from dataclasses import dataclass
 from decimal import Decimal
 
+from typing import Protocol
+
 from application.dto.kpi_bundle import KpiBundle, KpiLevelTone
+from application.dto.oked_benchmark import OkedBenchmarkBucket
 from application.dto.pdf_messages import PdfMessages
 from domain.entities.borrower_snapshot import BorrowerSnapshot
 from domain.entities.red_flag import RedFlag
 from domain.rules.rule import RuleRegistry, UnknownRuleError
 
 MAX_OBSERVATIONS_PER_SIDE = 3
+
+
+class BenchmarkLookup(Protocol):
+    """ADR-0024 / Commit 3: structural protocol для DI каталога UZ-ОКЭД медиан.
+
+    Observations_builder использует только метод ``by_oked_code``. Production —
+    ``infrastructure.catalog.oked_benchmark.OkedBenchmarkCatalog``. Тесты могут
+    реализовать минимальный stub без полного JSON loader'а.
+    """
+
+    def by_oked_code(self, code: str) -> OkedBenchmarkBucket | None: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -54,10 +68,17 @@ def build_observations(
     red_flags: tuple[RedFlag, ...],
     registry: RuleRegistry,
     messages: PdfMessages,
+    benchmark_catalog: BenchmarkLookup | None = None,
 ) -> Observations:
-    """Собирает strengths (по KPI/financials) и risks (top red flags)."""
+    """Собирает strengths (по KPI/financials) и risks (top red flags).
+
+    ADR-0024 / Commit 3: ``benchmark_catalog`` опционально инжектится для
+    ROE-наблюдения. Если ``None`` — fallback на neutral строку без
+    industry-имени (раньше PDF писал hardcoded «опт. торговли пищ. продуктами»
+    — это был bug для всех ОКЭД ≠ G46.3).
+    """
     return Observations(
-        strengths=_build_strengths(snapshot, kpis, messages),
+        strengths=_build_strengths(snapshot, kpis, messages, benchmark_catalog),
         risks=_build_risks(red_flags, registry),
     )
 
@@ -66,7 +87,10 @@ def build_observations(
 
 
 def _build_strengths(
-    snapshot: BorrowerSnapshot, kpis: KpiBundle, messages: PdfMessages
+    snapshot: BorrowerSnapshot,
+    kpis: KpiBundle,
+    messages: PdfMessages,
+    benchmark_catalog: BenchmarkLookup | None,
 ) -> tuple[Observation, ...]:
     """Кандидаты: revenue growth · strong ROE · positive profit · low debt.
 
@@ -79,7 +103,7 @@ def _build_strengths(
     if revenue_obs:
         candidates.append(revenue_obs)
 
-    roe_obs = _roe_observation(kpis, messages)
+    roe_obs = _roe_observation(snapshot, kpis, messages, benchmark_catalog)
     if roe_obs:
         candidates.append(roe_obs)
 
@@ -116,15 +140,42 @@ def _revenue_growth_observation(
     )
 
 
-def _roe_observation(kpis: KpiBundle, messages: PdfMessages) -> Observation | None:
+def _roe_observation(
+    snapshot: BorrowerSnapshot,
+    kpis: KpiBundle,
+    messages: PdfMessages,
+    benchmark_catalog: BenchmarkLookup | None,
+) -> Observation | None:
     if kpis.roe is None or kpis.roe.level_tone != KpiLevelTone.GOOD:
         return None
     roe_value = _format_pct(kpis.roe.value)
+    ctx = _resolve_roe_ctx(snapshot, messages, benchmark_catalog)
     return Observation(
         head=messages.obs_roe_head.format(value=roe_value),
         num=roe_value,
-        ctx=messages.obs_roe_ctx,
+        ctx=ctx,
     )
+
+
+def _resolve_roe_ctx(
+    snapshot: BorrowerSnapshot,
+    messages: PdfMessages,
+    benchmark_catalog: BenchmarkLookup | None,
+) -> str:
+    """ADR-0024: industry-aware ctx для ROE-наблюдения.
+
+    Lookup ``snapshot.borrower.okved_main`` → bucket (section letter A/C/F/…).
+    Если bucket найден — name_ru/name_uz зависит от locale messages.
+    Catalog ``None`` или код unknown → neutral fallback без industry-имени.
+    """
+    if benchmark_catalog is None:
+        return messages.obs_roe_ctx_no_industry
+    code = snapshot.borrower.okved_main
+    bucket = benchmark_catalog.by_oked_code(code) if code else None
+    if bucket is None:
+        return messages.obs_roe_ctx_no_industry
+    industry_name = bucket.name_uz if messages.locale == "uz" else bucket.name_ru
+    return messages.obs_roe_ctx_with_industry.format(industry=industry_name)
 
 
 def _net_profit_observation(
