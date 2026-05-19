@@ -31,7 +31,26 @@ Pre-demo MVP ready. Открытые направления (НЕ блокеры
 
 1. **T4 compliance pack** (параллельно): pentest узб-лаборатории · аттестат УзСтандарта на ПДн (Закон РУз №547) · IT-Park / Uzinfocom резидентство · Admin Guide / Security Architecture / DRP/BCP RU+UZ. Старт за 2 мес до bank tender.
 2. **Real-bank pilot trip**: install playbook `deploy/README.md` + onboarding session с пилот-банком.
-3. **Post-demo hardening backlog** (не блокеры): CI Docker job (опционально — ubuntu-latest уже работает) · Sentry sourcemaps upload через release pipeline · AlertManager rules-as-code · T2.1b real-fixture «млн/полные сум» · T2.4b faktura.uz real client (pre-condition OAuth-токен пилот-банка) · T1.5b OAuth/OIDC · T1.5c openldap testcontainer · CA-DS25 (sparkline нужен monthly_turnover источник) · CA-DS28 (ГНК public lookup, legal review) · CA-DS30 (bulk anonymize 28 xltx).
+3. **Pre-pilot smoke (✋ обязательно перед demo trip)**: live-browser walkthrough через `/`, `/search`, `/history`, `/dossier/{id}`, `/help`, `/settings` × 3 темы (light/dark/system) — RTL/jsdom не ловят visual regressions, hydration errors, nested-anchor html validity. Lesson `feedback_nested_anchor_rtl_blind`.
+4. **Post-demo hardening backlog** (не блокеры):
+   - CI Docker job (опционально — ubuntu-latest уже работает).
+   - Sentry sourcemaps upload через release pipeline (`sentry-cli sourcemaps upload`).
+   - AlertManager rules-as-code (сейчас в Grafana UI).
+   - **T2.1b** real-fixture smoke на «млн / полные сум» multiplier branches FORM_1/2 (нет fixture от папы).
+   - **T2.4b** faktura.uz real client — pre-condition: пилот-банк даёт OAuth-токен.
+   - **T1.5b** OAuth2/OIDC AuthnAdapter — pre-condition: запрос пилот-банка на Okta/Azure AD.
+   - **T1.5c** openldap testcontainer (T1.5 покрыт mock-only).
+5. **Active code-level TODOs** (`grep TODO\\[CA- src/ web/src/`):
+   - **CA-001** ИНН checksum по ГНК-алгоритму (`src/domain/value_objects/inn.py`).
+   - **CA-002** Circular invoicing — полноценная graph-детекция циклов через `networkx` для 3+ узлов (`src/domain/rules/counterparty/`).
+   - **CA-003** Real ГНК lookup — pre-condition: legal review (см. также CA-DS28).
+   - **CA-019** Access-token denylist для force-logout (formally T1.2 закрыта только refresh-rotation; access ttl 15м истекает сам).
+   - **CA-031** Source-trail invasive refactor — `applyToForm` все ячейки формы (UX nice-to-have).
+   - **CA-068** ⚠️ TODO stale — `password_changed_at` уже обновляется в change-password endpoint `auth.py:228`; можно убрать comment в `analyst.py:51` + migration comment hygiene.
+   - **CA-DS19** Pulse-dot motion cleanup в DSCR-summary (UI polish, frozen pre-demo).
+   - **CA-DS25** KPI sparkline — pre-condition: monthly_turnover≥12 источник (VAT_DECL monthly chain или ESF). Не PROFIT_TAX (annual).
+   - **CA-DS28** ГНК public lookup на soliq.uz/services/search/ — pre-condition: legal review.
+   - **CA-DS30** Bulk anonymize 28 xltx fixtures через openpyxl script (1/28 anon на месте сейчас).
 
 ### Frozen scope (не трогать до post-demo)
 - UI polish: новые цвета, шрифты, тени, анимации.
