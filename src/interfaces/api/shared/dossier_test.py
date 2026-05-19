@@ -116,6 +116,7 @@ def _borrower_payload(
     *,
     director_appointed_at: str = "2020-01-01",
     okved_main_changed_at: str | None = None,
+    oked_changed_by_owner: bool = False,
 ) -> dict[str, Any]:
     return {
         "inn": BORROWER_INN,
@@ -127,6 +128,10 @@ def _borrower_payload(
         "okved_main": "46.49",
         "registered_address": "Ташкент, ул. Амира Темура, 1",
         "okved_main_changed_at": okved_main_changed_at,
+        # ADR-0024 Session 3: OKVED_CHANGED_12M fires только при owner-initiated
+        # смене ОКЭД. Helper-level default False; тесты, полагающиеся на
+        # firing, передают True явно.
+        "oked_changed_by_owner": oked_changed_by_owner,
     }
 
 
@@ -311,7 +316,11 @@ class TestDirectorChangedRule:
 class TestOkvedChangedRule:
     def test_okved_changed_within_12_months_fires(self, client: TestClient) -> None:
         payload = {
-            "borrower": _borrower_payload(okved_main_changed_at="2025-08-01"),
+            "borrower": _borrower_payload(
+                okved_main_changed_at="2025-08-01",
+                # ADR-0024 Session 3: правило требует owner-initiated смену.
+                oked_changed_by_owner=True,
+            ),
             "as_of": "2026-05-08",
         }
         r = client.post(ENDPOINT, json=payload)
@@ -346,6 +355,9 @@ class TestRiskScoreCombination:
             "borrower": _borrower_payload(
                 director_appointed_at="2026-01-15",       # medium
                 okved_main_changed_at="2025-08-01",        # medium
+                # ADR-0024 Session 3: явный owner-initiated флаг для firing
+                # OKVED_CHANGED_12M в скор-комбинации.
+                oked_changed_by_owner=True,
             ),
             "as_of": "2026-05-08",
             "annual_reports": [_annual(2025, revenue="1000000000")],
