@@ -8,7 +8,7 @@ Create Date: 2026-05-14 10:00:00.000000+00:00
 
 - ``analysts.password_changed_at`` (NOT NULL, default now()) — для UI-индикатора
   «пароль свежий — N дней». Backfill по existing analysts через server_default.
-  Real-update произойдёт когда появится endpoint change-password (TODO[CA-068]).
+  Real-update — `POST /api/bank/auth/change-password` (см. CA-068, коммит 7d65e29).
 - ``analysts.mfa_enabled`` (NOT NULL, default false) — флаг 2FA-enrollment'а.
   Заполняется seed-скриптом для admin@ как «enrolled in bank SSO/AD». Real
   TOTP/SMS enrollment-flow — отдельный эпик (TODO[CA-DS10]).

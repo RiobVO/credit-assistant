@@ -47,8 +47,8 @@ class AnalystORM(Base):
         nullable=False,
     )
 
-    # Phase 5 Settings: трекинг свежести пароля.
-    # `password_changed_at` обновляется будущим endpoint change-password (TODO[CA-068]).
+    # Phase 5 Settings: трекинг свежести пароля. Update в
+    # `POST /api/bank/auth/change-password` (см. auth.py).
     password_changed_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
