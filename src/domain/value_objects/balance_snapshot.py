@@ -14,6 +14,12 @@ ADR-0024 (2026-05-19) добавил два current-баланса (`current_ass
 итого по разделу II актива и разделу IV пассива). Парсер FORM_1
 пока не извлекает их — поля заполняются вручную через manual-input.
 
+ADR-0024 Session 2 (2026-05-19) добавил `inventory` — компонент
+Quick Ratio = (current_assets − inventory) / current_liabilities
+(IFC SME Knowledge Guide ch.4). В UZ FORM_1 это строка «Товарно-
+материальные запасы» в разделе II актива. Парсер FORM_1 пока не
+извлекает — заполняется вручную через manual-input wizard Шаг 2.
+
 Все поля nullable — FORM_1 может отдать частичный снимок (например, только
 assets+liabilities без equity), мы парсим best-effort.
 
@@ -35,6 +41,8 @@ class BalanceSnapshot:
     # ADR-0024: current-баланс для WC_INSUFFICIENT.
     current_assets: Money | None = None
     current_liabilities: Money | None = None
+    # ADR-0024 Session 2: inventory для Quick Ratio = (CA − inventory) / CL.
+    inventory: Money | None = None
 
     def is_empty(self) -> bool:
         """True если все поля None — снимок не несёт информации."""
@@ -45,4 +53,5 @@ class BalanceSnapshot:
             and self.total_debt is None
             and self.current_assets is None
             and self.current_liabilities is None
+            and self.inventory is None
         )

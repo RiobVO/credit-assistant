@@ -1,6 +1,7 @@
-// ADR-0024 (Session 1) — KpiRow с расширенным набором KPI.
-// Проверяем: новые карточки рендерятся; null → EmptyKpiCard с hint;
-// level_tone из backend становится stripe.
+// ADR-0024 (Session 2) — KpiRow с hide-empty контрактом.
+// Проверяем: null KPI → карточка не рендерится (banker-clean align с PDF);
+// value KPI → карточка с правильным форматом и level_tone stripe;
+// NoDebtCard (Decimal 0) и quick_ratio добавлены к покрытию.
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
@@ -42,6 +43,8 @@ const ALL_NULL_KPIS: DossierViewDto["kpis"] = {
   working_capital: null,
   interest_coverage: null,
   dscr: null,
+  // ADR-0024 Session 2:
+  quick_ratio: null,
 };
 
 function renderRow(kpis: DossierViewDto["kpis"]) {
@@ -59,32 +62,44 @@ function renderRow(kpis: DossierViewDto["kpis"]) {
   );
 }
 
-describe("KpiRow — ADR-0024 extended KPI set", () => {
-  it("все 6 новых меток присутствуют в degraded mode (null значения)", () => {
+describe("KpiRow — ADR-0024 Session 2 hide-empty contract", () => {
+  it("все null KPI скрыты — labels не рендерятся в banker-clean view", () => {
     renderRow(ALL_NULL_KPIS);
-    expect(screen.getByText("EBITDA")).toBeInTheDocument();
-    expect(screen.getByText("Долг / EBITDA")).toBeInTheDocument();
-    expect(screen.getByText("Текущая ликвидность")).toBeInTheDocument();
-    expect(screen.getByText("Оборотный капитал")).toBeInTheDocument();
-    expect(screen.getByText("Покрытие процентов")).toBeInTheDocument();
-    expect(screen.getByText("DSCR")).toBeInTheDocument();
+    // Session 1 / Session 2 extended labels — все hidden при null.
+    expect(screen.queryByText("EBITDA")).toBeNull();
+    expect(screen.queryByText("Долг / EBITDA")).toBeNull();
+    expect(screen.queryByText("Текущая ликвидность")).toBeNull();
+    expect(screen.queryByText("Оборотный капитал")).toBeNull();
+    expect(screen.queryByText("Покрытие процентов")).toBeNull();
+    expect(screen.queryByText("DSCR")).toBeNull();
+    expect(screen.queryByText("Quick Ratio")).toBeNull();
+    // Legacy CA-037 labels тоже hidden при null.
+    expect(screen.queryByText("EBIT (прокси EBITDA)")).toBeNull();
+    expect(screen.queryByText("ROE")).toBeNull();
+    expect(screen.queryByText("Долг / EBIT")).toBeNull();
   });
 
-  it("null EBITDA → empty hint", () => {
+  it("hint-сообщения для пустых KPI убраны — banker не видит analyst-подсказок", () => {
     renderRow(ALL_NULL_KPIS);
-    expect(screen.getByText("Нужны PBT, проценты и D&A (амортизация)")).toBeInTheDocument();
+    expect(
+      screen.queryByText("Нужны PBT, проценты и D&A (амортизация)"),
+    ).toBeNull();
+    expect(
+      screen.queryByText("Нужны краткосрочные активы, запасы и обязательства"),
+    ).toBeNull();
   });
 
   it("current_ratio с tone good рендерится как ratio с stripe", () => {
     const kpis = { ...ALL_NULL_KPIS, current_ratio: _kpi("1.8", "good") };
     const { container } = renderRow(kpis);
     expect(screen.getByText("1,8x")).toBeInTheDocument();
+    expect(screen.getByText("Текущая ликвидность")).toBeInTheDocument();
     // CA-048 left stripe: ищем элемент с border-l-4 классом.
     const stripeEl = container.querySelector(".border-l-4");
     expect(stripeEl).not.toBeNull();
   });
 
-  it("debt_to_ebitda = 0 → NoDebtCard с зелёным pill", () => {
+  it("debt_to_ebitda = 0 → NoDebtCard с зелёным pill (не hide)", () => {
     const kpis = { ...ALL_NULL_KPIS, debt_to_ebitda: _kpi("0") };
     renderRow(kpis);
     expect(screen.getByText("Нет долга")).toBeInTheDocument();
@@ -104,5 +119,33 @@ describe("KpiRow — ADR-0024 extended KPI set", () => {
     const { container } = renderRow(kpis);
     expect(screen.getByText("0,9x")).toBeInTheDocument();
     expect(container.querySelector(".border-l-4")).not.toBeNull();
+  });
+
+  it("quick_ratio с tone warn рендерится с ratio и stripe (ADR-0024 Session 2)", () => {
+    const kpis = { ...ALL_NULL_KPIS, quick_ratio: _kpi("0.8", "warn") };
+    const { container } = renderRow(kpis);
+    expect(screen.getByText("Quick Ratio")).toBeInTheDocument();
+    // formatRatio округляет до 1 знака после запятой.
+    expect(screen.getByText("0,8x")).toBeInTheDocument();
+    expect(container.querySelector(".border-l-4")).not.toBeNull();
+  });
+
+  it("quick_ratio с tone good рендерится без BAD stripe colour", () => {
+    const kpis = { ...ALL_NULL_KPIS, quick_ratio: _kpi("1.5", "good") };
+    renderRow(kpis);
+    expect(screen.getByText("Quick Ratio")).toBeInTheDocument();
+    expect(screen.getByText("1,5x")).toBeInTheDocument();
+  });
+
+  it("debt_to_ebit Case 3 (ebit ≤ 0) рендерит EmptyKpiCard danger — это сигнал, не пустота", () => {
+    // ebit > 0 но debt_to_ebit null с ebit известным ≤ 0 — Case 3 (loss masks rating).
+    // Это самостоятельный финансовый сигнал, оставляем (НЕ hide).
+    const kpis = {
+      ...ALL_NULL_KPIS,
+      ebit: _kpi_uzs("-100000000"),
+      debt_to_ebit: null,
+    };
+    renderRow(kpis);
+    expect(screen.getByText("Долг / EBIT")).toBeInTheDocument();
   });
 });

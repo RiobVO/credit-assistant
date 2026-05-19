@@ -99,6 +99,8 @@ class KpiBundle:
     working_capital: KpiValue | None = None  # current_assets − current_liabilities (UZS)
     interest_coverage: KpiValue | None = None  # EBIT / interest_expense
     dscr: KpiValue | None = None  # OCF / debt_service_annual (fallback EBITDA → EBIT)
+    # ADR-0024 (Session 2): Quick Ratio (acid-test ratio).
+    quick_ratio: KpiValue | None = None  # (current_assets − inventory) / current_liabilities
 
 
 @dataclass(frozen=True, slots=True)

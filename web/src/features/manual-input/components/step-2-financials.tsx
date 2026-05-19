@@ -191,6 +191,12 @@ function AnnualBlock() {
           ariaLabelKey="s2_liabs_label"
           required
         />
+        <UzsRow
+          fieldName="step2.inventoryEnd25"
+          labelKey="s2_inventory_label"
+          ariaLabelKey="s2_inventory_label"
+          required={false}
+        />
         <BalanceComputed />
       </AnnualGroup>
 
@@ -268,7 +274,8 @@ type UzsFieldName =
   | "step2.taxesPaid24"
   | "step2.taxesPaid25"
   | "step2.totalAssets"
-  | "step2.totalLiabilities";
+  | "step2.totalLiabilities"
+  | "step2.inventoryEnd25";
 
 function UzsRow({
   fieldName,
