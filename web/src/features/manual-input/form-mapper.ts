@@ -42,6 +42,8 @@ type FinancialReport = {
   total_debt_period_start?: Money;
   // ADR-0024 Session 2: inventory для Quick Ratio.
   inventory?: Money;
+  // ADR-0024 Session 4: FX-компонент total liabilities для fx_exposure_ratio.
+  liabilities_fx?: Money;
 };
 
 type VatPeriodReport = {
@@ -159,6 +161,10 @@ export function formValuesToPayload(values: FormValues): ManualInputPayload {
         // ADR-0024 Session 2: inventory как latest-only (UI вводит одно значение).
         const inv = moneyOptional(step2.inventoryEnd25);
         if (inv) report.inventory = inv;
+        // ADR-0024 Session 4: liabilities_fx latest-only (UI вводит одно значение
+        // в Шаг 2 «Обязательства в иностранной валюте»).
+        const fx = moneyOptional(step2.liabilitiesFxEnd25);
+        if (fx) report.liabilities_fx = fx;
       } else if (y === 2024) {
         // CA-037: PBT/interest_expense за 2024 — только для EBIT YoY%
         // в досье. Полный balance snapshot 2024 не требуется (UI карточки
