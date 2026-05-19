@@ -22,7 +22,7 @@
 - Backend env: `APP_MODE=bank`, `BRAND_ID=default`, `PII_ENC_KEYS` задан тестовым Fernet-ключом (`/tmp/pii_key.txt`, prefix `iEuuP5WADM_...`). БД зашифрована — без ключа restore из `backup-pre-t13.sql` (gitignored).
 - Frontend Next dev (Turbopack) `npm run dev` в `web/` — порт 3000. После T3.6.1 production-image тоже билдится.
 - Seeded analyst для smoke: **email `t04@bank.uz`** / **password `T04Smoke!`**, без MFA.
-- Dossiers в БД: 48 (47 backfilled `BR-2026-0001..0047` + 1 smoke `BR-2026-0048`). Snapshot.payload + drafts.payload зашифрованы.
+- Dossiers в БД: 49 (47 backfilled `BR-2026-0001..0047` + smoke `BR-2026-0048..0049`). Snapshot.payload + drafts.payload зашифрованы. Demo scenarios используют `BR-2026-0030/0040/0042/0046/0047` (см. `docs/demo/scenarios.md`).
 - Backups: `./backups/` (gitignored) — 2 dump'а после T3.4 smoke.
 
 ### Active focus — выбор следующего шага
@@ -30,7 +30,7 @@
 Pre-demo MVP ready. Открытые направления (НЕ блокеры, dispatch по сигналу):
 
 1. **T4 compliance pack** (параллельно): pentest узб-лаборатории · аттестат УзСтандарта на ПДн (Закон РУз №547) · IT-Park / Uzinfocom резидентство · Admin Guide / Security Architecture / DRP/BCP RU+UZ. Старт за 2 мес до bank tender.
-2. **Real-bank pilot trip**: install playbook `deploy/README.md` + onboarding session с пилот-банком.
+2. **Real-bank pilot trip**: install playbook `deploy/README.md` + demo walkthrough `docs/demo/scenarios.md` (5 готовых сценариев на существующих BR-2026-00XX) + onboarding session с пилот-банком.
 3. **Pre-pilot smoke (✋ обязательно перед demo trip)** — playbook `docs/operations/pre-demo-smoke.md`: 8 routes × 3 темы + 4 пути 2FA + 8 edge-UX сценариев (Блок 5). Console-error gate, sign-off table. Прогон ~60–90 минут, повторный за 24 часа до выезда.
 4. **Post-demo hardening backlog** (не блокеры):
    - CI Docker job (опционально — ubuntu-latest уже работает).
@@ -184,6 +184,7 @@ Pre-demo MVP ready. Открытые направления (НЕ блокеры
 ## Operations playbooks
 
 - **Pre-demo smoke (gate перед pilot trip, ~60–90 мин)** — `docs/operations/pre-demo-smoke.md`.
+- **Demo scenarios walkthrough (5 готовых borrower'ов, ~25–30 мин)** — `docs/demo/scenarios.md`.
 - **2FA smoke (4 пути, ~10 мин)** — `docs/operations/2fa-smoke.md`.
 - **PII key rotation + recovery** — `docs/operations/pii-key-rotation.md` (T1.3 / ADR-0017).
 - **Multi-tenant deploy (separate compose-project per bank)** — `docs/operations/multi-tenant-deploy.md` (T1.4 / ADR-0018).
