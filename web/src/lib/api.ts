@@ -80,6 +80,8 @@ export type DossierViewDto = DossierResponseDto & {
     working_capital: KpiValueDto | null;
     interest_coverage: KpiValueDto | null;
     dscr: KpiValueDto | null;
+    // ADR-0024 (Session 2): Quick Ratio = (CA − inventory) / CL.
+    quick_ratio: KpiValueDto | null;
   };
   monthly_revenue_24m: Array<{
     month: string; // YYYY-MM

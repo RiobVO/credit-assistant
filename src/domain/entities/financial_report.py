@@ -24,6 +24,14 @@ interest_expense + D&A); анонсирован в CA-037. ``operating_cash_flow
 числитель полноценного DSCR (Murodov O.J. 2025: cotton ginning DSCR≥1.3).
 Оба nullable — FORM_2 / отчёт о движении денежных средств могут не
 приходить вместе с другими формами.
+
+ADR-0024 Session 2 (2026-05-19) добавил три off-balance-sheet поля для
+правила OFF_BALANCE_COMMITMENTS (BCBS d424 §50 «Off-balance sheet items»):
+``guarantees_outstanding`` — открытые банковские гарантии;
+``leases_outstanding`` — лизинговые обязательства (операционные + финансовые);
+``letters_of_credit_outstanding`` — открытые аккредитивы.
+Все nullable — данные приходят через JSONB-загрузку (test fixtures /
+future FORM_1 parser extension); UI manual-input их пока не вводит.
 """
 
 from dataclasses import dataclass
@@ -45,5 +53,9 @@ class FinancialReport:
     # ADR-0024: компоненты EBITDA / DSCR / NEGATIVE_OCF_RULE backlog.
     depreciation_amortization: Money | None = None
     operating_cash_flow: Money | None = None
+    # ADR-0024 Session 2: off-balance commitments для OFF_BALANCE_COMMITMENTS rule.
+    guarantees_outstanding: Money | None = None
+    leases_outstanding: Money | None = None
+    letters_of_credit_outstanding: Money | None = None
     balance_end: BalanceSnapshot | None = None
     balance_start: BalanceSnapshot | None = None

@@ -322,17 +322,20 @@ def _build_signal_breakdown(
 def _build_kpi_slots(
     view_bundle: DossierViewBundle, messages: PdfMessages
 ) -> list[dict[str, object]]:
-    """10 карточек в порядке: legacy 4 (revenue_ltm / ebit / roe / debt_to_ebit)
-    + ADR-0024 6 (ebitda / debt_to_ebitda / current_ratio / working_capital /
-    interest_coverage / dscr). CA-037 invariant — legacy остаются рядом с
-    расширением, не вместо.
+    """KPI карточки для PDF F-секции: legacy 4 (revenue_ltm / ebit / roe /
+    debt_to_ebit) + ADR-0024 Session 1 6 (ebitda / debt_to_ebitda /
+    current_ratio / working_capital / interest_coverage / dscr) + Session 2
+    1 (quick_ratio). CA-037 invariant — legacy остаются рядом с расширением,
+    не вместо. ADR-0024 Session 2: пустые слоты (kpi=None) скрываются после
+    сборки — banker-clean view, align с UI поведением. Аналитик увидит
+    «нет данных» в manual-input wizard, не в готовом PDF.
 
     Если значение ``None`` — карточка показывает «—» + локализованный hint.
     Универсальный `_kpi_slot` форматирует UZS/PCT/RATIO + level_tone (CA-048).
     """
     kpis = view_bundle.kpis
     fmt_uzs = make_fmt_uzs(messages)
-    return [
+    slots = [
         _kpi_slot("revenue_ltm", kpis.revenue_ltm, messages, fmt_uzs),
         _kpi_slot("ebit", kpis.ebit, messages, fmt_uzs),
         _kpi_slot("roe", kpis.roe, messages, fmt_uzs),
@@ -344,7 +347,11 @@ def _build_kpi_slots(
         _kpi_slot("working_capital", kpis.working_capital, messages, fmt_uzs),
         _kpi_slot("interest_coverage", kpis.interest_coverage, messages, fmt_uzs),
         _kpi_slot("dscr", kpis.dscr, messages, fmt_uzs),
+        # ADR-0024 (Session 2):
+        _kpi_slot("quick_ratio", kpis.quick_ratio, messages, fmt_uzs),
     ]
+    # ADR-0024 Session 2: hide empty cards — banker-clean PDF, align с UI.
+    return [s for s in slots if s["value"] is not None]
 
 
 def _kpi_slot(

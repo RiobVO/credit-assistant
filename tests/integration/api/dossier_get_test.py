@@ -95,7 +95,7 @@ async def test_get_dossier_returns_full_view(
     assert body["dossier_id"] == dossier_id
     assert body["borrower_inn_masked"] == "XXXXX0888"
     assert body["as_of"] == "2026-05-08"
-    assert body["rules_evaluated"] == 22  # ADR-0024: +FX_MISMATCH_HIGH/DSCR_LOW/WC_INSUFFICIENT
+    assert body["rules_evaluated"] == 24  # ADR-0024 Session 2: +OFF_BALANCE_COMMITMENTS/CASH_FLOW_QUALITY
 
     # Score: и raw, и display одновременно (правило A).
     risk = body["risk_score"]
