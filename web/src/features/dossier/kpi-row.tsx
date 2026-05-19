@@ -38,6 +38,8 @@ export function KpiRow({
       <DscrSlot kpi={kpis.dscr} />
       {/* ADR-0024 (Session 2) — Quick Ratio: */}
       <QuickRatioSlot kpi={kpis.quick_ratio} />
+      {/* ADR-0024 (Session 4) — FX Exposure Ratio (8-й KPI): */}
+      <FxExposureRatioSlot kpi={kpis.fx_exposure_ratio} />
     </div>
   );
 }
@@ -321,6 +323,26 @@ function QuickRatioSlot({ kpi }: { kpi: KpiValueDto | null }) {
       yoyPct={null}
       changeTone="positive"
       levelTone={kpi.level_tone ?? undefined}
+    />
+  );
+}
+
+// ----------- FX Exposure Ratio (ADR-0024 Session 4) --------------------------
+
+function FxExposureRatioSlot({ kpi }: { kpi: KpiValueDto | null }) {
+  const t = useTranslations("dossier.kpi");
+  if (kpi == null) return null;
+  const label = t("label_fx_exposure_ratio");
+  // KpiUnit.PCT — backend уже даёт value в процентах (ratio × 100 в calculator).
+  // formatPct рендерит «40,0%» / «150,0%» (без cap >100%).
+  // БЕЗ level_tone в v1: пороги ЦБ РУз отложены. changeTone="negative" —
+  // высокая FX-exposure = высокий риск (визуальный сигнал, не GOOD/WARN/BAD).
+  return (
+    <KpiCard
+      label={label}
+      value={formatPct(parseFloat(kpi.value))}
+      yoyPct={null}
+      changeTone="negative"
     />
   );
 }

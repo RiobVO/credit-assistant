@@ -178,6 +178,9 @@ export const step2Schema = z.object({
   liabilitiesStart25: uzsAmountOptional,
   // ADR-0024 Session 2: запасы для Quick Ratio = (CA − inventory) / CL.
   inventoryEnd25: uzsAmountOptional,
+  // ADR-0024 Session 4: FX-компонент для fx_exposure_ratio (доля валютных
+  // обязательств в общих обязательствах). Banker вводит вручную в Шаг 2.
+  liabilitiesFxEnd25: uzsAmountOptional,
 });
 
 export const step3Schema = z.object({
@@ -278,6 +281,7 @@ export function defaultFormValues(): FormValues {
       assetsStart25: "",
       liabilitiesStart25: "",
       inventoryEnd25: "",
+      liabilitiesFxEnd25: "",
     },
     step3: {
       loanAmount: "",
