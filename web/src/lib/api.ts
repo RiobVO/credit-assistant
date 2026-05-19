@@ -85,6 +85,10 @@ export type DossierViewDto = DossierResponseDto & {
     dscr: KpiValueDto | null;
     // ADR-0024 (Session 2): Quick Ratio = (CA − inventory) / CL.
     quick_ratio: KpiValueDto | null;
+    // ADR-0024 (Session 4): FX Exposure Ratio (8-й KPI) = liabilities_fx /
+    // liabilities × 100 (PCT scale). БЕЗ level_tone в v1 (пороги ЦБ РУз
+    // отложены) — backend всегда возвращает level_tone: null.
+    fx_exposure_ratio: KpiValueDto | null;
   };
   monthly_revenue_24m: Array<{
     month: string; // YYYY-MM
