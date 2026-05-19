@@ -1,11 +1,18 @@
 """ScoringService: агрегация RedFlag → RiskScore + Recommendation."""
 
 from datetime import date
+from decimal import Decimal
 
+from domain.entities.borrower import Borrower, LegalForm
+from domain.entities.borrower_snapshot import BorrowerSnapshot
+from domain.entities.financial_report import FinancialReport
 from domain.entities.red_flag import RedFlag
 from domain.rules.meta.insufficient_data import INSUFFICIENT_DATA_RULE_ID
 from domain.services.scoring_service import Recommendation, ScoringService
+from domain.value_objects.date_range import DateRange
 from domain.value_objects.flag_severity import FlagSeverity
+from domain.value_objects.inn import INN
+from domain.value_objects.money import Currency, Money
 
 
 def _flag(severity: FlagSeverity, *, rule_id: str | None = None) -> RedFlag:
@@ -152,3 +159,140 @@ class TestInsufficientDataPolicy:
         result = ScoringService().score([])
         assert result.score == 0
         assert result.recommendation == Recommendation.APPROVE
+
+
+# ───────── ADR-0024 Commit 2: Confidence Layer integration ──────────────
+
+
+def _money(amount: int) -> Money:
+    return Money(Decimal(amount), Currency.UZS)
+
+
+def _full_borrower() -> Borrower:
+    return Borrower(
+        inn=INN("306399449"),
+        name="ООО Тест",
+        legal_form=LegalForm.LLC,
+        registration_date=date(2018, 1, 1),
+        director_name="И.И.",
+        director_appointed_at=date(2018, 1, 1),
+        okved_main="46.39",
+        registered_address="г. Ташкент",
+    )
+
+
+def _annual(year: int) -> FinancialReport:
+    return FinancialReport(
+        period=DateRange(start=date(year, 1, 1), end=date(year, 12, 31)),
+        revenue=_money(14_000_000_000),
+        net_profit=_money(1_000_000_000),
+        taxes_paid=_money(0),
+    )
+
+
+def _partial_snapshot() -> BorrowerSnapshot:
+    """Репро BR-2026-0050 TEST: только borrower + 2 annual reports."""
+    from domain.value_objects.loan_request import LoanRequest
+
+    return BorrowerSnapshot(
+        borrower=_full_borrower(),
+        as_of=date(2026, 5, 1),
+        annual_reports=[_annual(2024), _annual(2025)],
+        loan_request=LoanRequest(
+            amount=_money(100_000_000),
+            term_months=12,
+            rate_pct=Decimal("24.5"),
+            purpose="working_capital",
+            category="business",
+        ),
+    )
+
+
+class TestConfidenceLayerIntegration:
+    """ADR-0024: Confidence Layer применяется когда snapshot передан в score()."""
+
+    def test_score_without_snapshot_legacy_behavior(self) -> None:
+        """Backward-compat: без snapshot Confidence Layer не активируется."""
+        result = ScoringService().score([])
+        assert result.score == 0
+        assert result.recommendation == Recommendation.APPROVE
+        assert result.confidence is None
+
+    def test_partial_data_forces_review_floor_50(self) -> None:
+        """BR-2026-0050 REPRO: 0 правил + partial data → score 50, REVIEW.
+
+        Раньше: 0 flags + 100/Approve. После Commit 2: confidence LOW → floor 50.
+        """
+        result = ScoringService().score([], snapshot=_partial_snapshot())
+        assert result.score == 50
+        assert result.recommendation == Recommendation.REVIEW
+        assert result.confidence is not None
+        from domain.services.confidence_layer import ConfidenceTier
+
+        assert result.confidence.tier == ConfidenceTier.LOW
+
+    def test_high_confidence_full_data_no_change(self) -> None:
+        """Full snapshot с большим coverage → HIGH tier → score не меняется."""
+        from domain.entities.counterparty import Counterparty
+        from domain.entities.monthly_turnover import MonthlyTurnover
+        from domain.entities.tax_event import TaxEvent, TaxEventType
+        from domain.entities.vat_period_report import VatPeriodReport
+        from domain.value_objects.loan_request import LoanRequest
+
+        snap = BorrowerSnapshot(
+            borrower=_full_borrower(),
+            as_of=date(2026, 5, 1),
+            annual_reports=[_annual(2024), _annual(2025)],
+            monthly_turnover=[
+                MonthlyTurnover(
+                    month_start=date(2025, m, 1),
+                    revenue=_money(1_000_000_000),
+                )
+                for m in range(1, 13)
+            ],
+            vat_periods=[
+                VatPeriodReport(
+                    period=DateRange(start=date(2025, m, 1), end=date(2025, m, 28)),
+                    vat_declared=_money(1_000_000),
+                    esf_seller_vat_total=_money(1_000_000),
+                )
+                for m in range(1, 7)
+            ],
+            tax_events=[
+                TaxEvent(
+                    date=date(2025, m, 1),
+                    type=TaxEventType.PAYMENT,
+                    amount=_money(1_000_000),
+                    delay_days=0,
+                )
+                for m in range(1, 7)
+            ],
+            counterparties_buyers=[
+                Counterparty(inn=INN("100100100"), name="B1", registration_date=date(2020, 1, 1))
+            ],
+            counterparties_suppliers=[
+                Counterparty(inn=INN("200200200"), name="S1", registration_date=date(2020, 1, 1))
+            ],
+            loan_request=LoanRequest(
+                amount=_money(100_000_000),
+                term_months=12,
+                rate_pct=Decimal("24.5"),
+                purpose="working_capital",
+                category="business",
+            ),
+        )
+        result = ScoringService().score([], snapshot=snap)
+        from domain.services.confidence_layer import ConfidenceTier
+
+        assert result.confidence is not None
+        assert result.confidence.tier == ConfidenceTier.HIGH
+        assert result.score == 0  # no flags + HIGH conf → no penalty
+        assert result.recommendation == Recommendation.APPROVE
+
+    def test_low_confidence_with_high_raw_score_keeps_reject(self) -> None:
+        """LOW confidence + raw score уже REJECT (≥30) → остаётся REJECT, не downgrade в REVIEW."""
+        flags = [_flag(FlagSeverity.CRITICAL)] * 3  # 45 → REJECT
+        result = ScoringService().score(flags, snapshot=_partial_snapshot())
+        # raw=45, LOW floor 50 → score=50; raw rec был REJECT (≥30) → остаётся REJECT.
+        assert result.score == 50
+        assert result.recommendation == Recommendation.REJECT

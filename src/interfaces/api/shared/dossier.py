@@ -76,7 +76,9 @@ async def manual_input_dossier(
     )
 
     flags = registry.run_all(snapshot)
-    score = scoring.score(flags)
+    # ADR-0024 Commit 2: передаём snapshot для активации Confidence Layer
+    # (partial-data floor + tier-aware penalty).
+    score = scoring.score(flags, snapshot=snapshot)
 
     # T3.3: counter сработавших red-flag rules per scoring run, labelled
     # severity. Spike critical/h ≈ anomaly signal (fraud wave либо
