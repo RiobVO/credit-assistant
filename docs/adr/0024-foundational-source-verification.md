@@ -139,20 +139,63 @@ LOW confidence source.
 
 ## Research debt remaining
 
-Не покрыто этим ADR (backlog):
+Закрыто этой сессией (6 commits 2026-05-19):
 
-* **Q0.B per-rule audit**: 16 правил с verdict ADJUST из Claude research —
-  thresholds правки (LOAN_TO_REVENUE 0.50 → 0.40 unsecured / 0.70 secured,
-  VAT_ESF_MISMATCH 15% → 10% retest, sezonniy filter для MoM/YoY правил,
-  и т.д.). Покрыто Commit 5 этой же сессии.
-* **Q0.C категориальные gaps**: FX exposure, DSCR, working capital adequacy,
-  cash flow quality, related-party transactions, off-balance commitments,
-  microfinance stacking. Top-3 critical (FX/DSCR/WC) — Commit 4 этой сессии.
-* **Q1 Confidence Layer**: замена правила `INSUFFICIENT_DATA` на multi-tier
-  partial-data scoring (per FRB SR 11-7 / SR 26-02). Commit 2 этой сессии.
-* **Q3 OKED-UZ benchmark catalog**: classifier verification (UZ-ОКЭД ред.2 per
-  ПКМ №275 от 24.08.2016), 7 buckets с null + honest notes (UZ net margin
-  medians не публикуются в открытых источниках). Commit 3 этой сессии.
+* **Commit 1** (`5f634eb`) — foundational source replacement (ЦБ РУз №2696,
+  НК РУз ст.47+257+489, FATF/EAG/ЗРУ-660) в 9 правилах.
+* **Commit 2** (`9fa3d91`) — **Q1 Confidence Layer**: замена правила
+  `INSUFFICIENT_DATA` на multi-tier partial-data scoring (HIGH/MEDIUM/LOW/
+  CRITICAL по coverage, MEDIUM +5 score penalty, LOW/CRITICAL floor 50 +
+  force REVIEW). Закрывает BR-2026-0050 TEST «score 100 на partial data» bug.
+* **Commit 3** (`9972435`) — **Q3 OKED-UZ benchmark catalog**: classifier
+  verification (UZ-ОКЭД ред.2 per ПКМ №275 от 24.08.2016), 7 buckets с null +
+  honest notes (UZ net margin medians не публикуются в открытых источниках) +
+  observations_builder industry-aware ROE context.
+* **Commit 4** (`6ea4653`) — **Q0.C top-3 critical категориальные gaps**:
+  FX_MISMATCH_HIGH (World Bank FSAP UZ 2025), DSCR_LOW (Murodov O.J. 2025 +
+  IFC SME ch.4), WC_INSUFFICIENT (IFC SME ch.4 + Murodov). Расширение
+  data structures (BalanceSnapshot +current_assets/current_liabilities,
+  FinancialReport +depreciation_amortization/operating_cash_flow).
+* **Commit 5** (`6447aa8`) — **Q0.B threshold-only adjustments** (7 правил):
+  VAT_GROWTH_NO_REVENUE ceiling 0→0.05; VAT_ESF_MISMATCH + материальный
+  порог 10 млн UZS; DIRECTOR_CHANGED_6M + материальный порог loan
+  500 млн UZS; REVENUE_DROP_YOY_50 + материальный порог prev 200 млн UZS;
+  REVENUE_DROP_MOM_30 + seasonal filter (12, 1, 2); LOAN_TO_REVENUE_RATIO
+  0.50→0.40 unsecured baseline; CIRCULAR_INVOICING + материальный порог
+  пары 100 млн UZS.
+* **Commit 6** (текущий) — docs sync: research outputs в
+  `docs/research/2026-05-19-3way-reconcile/`, CLAUDE.md Active focus.
+
+Backlog (требуют расширения domain entities / новых каталогов):
+
+* **OKVED_CHANGED_12M narrow scope**: `oked_changed_by_owner=true` фильтр —
+  нужно поле `Borrower.oked_changed_by_owner: bool` + парсер Госкомстат
+  ОКЭД-API (current code rule fires на любое изменение).
+* **OKVED → ОКЭД rename**: invasive — `Borrower.okved_main` → `oked_main`,
+  парсеры FORM_1/PROFIT_TAX, snapshot_mapper, UI Step 1, 49 dossiers
+  миграция. Per Claude Q0.B: в УзР официальный термин — ОКЭД (Госкомстат
+  ПКМ №275 от 24.08.2016), не ОКВЭД (RF).
+* **SINGLE_BUYER_CONCENTRATION dual-severity** (0.50 medium / 0.70 high) —
+  архитектурно: один YAML id ↔ одна severity. Варианты: (а) разбить на
+  2 правила (BUYER_CONCENTRATION_MEDIUM / BUYER_CONCENTRATION_HIGH);
+  (б) ввести severity_fn в RuleSpec. Не fits в threshold-only refactor.
+* **SINGLE_SUPPLIER_CONCENTRATION + supplier_is_foreign** — нужно поле
+  `Counterparty.is_foreign: bool` (ИНН резидент УзР vs нерезидент). Без
+  него foreign-supplier severity escalation невозможна.
+* **LOW_MARGIN_HIGH_TURNOVER vs industry_median(oked)** — нужен stat.uz
+  net-margin catalog по ОКЭД. Каталог сейчас (`config/benchmarks/oked-uz.json`)
+  все 7 buckets с null — публичных source'ов нет.
+* **SHELL_COMPANY_PARTNERS + opf check** (`cp.opf != 'IE'`) — нужно поле
+  `Counterparty.opf: LegalForm | None`. ИП (Yakka tartibdagi tadbirkor) часто
+  моложе 6 месяцев legitimно.
+* **TAX_PENALTIES_CURRENT_YEAR severity filter** — нужно поле
+  `TaxEvent.severity: Literal['MATERIAL', 'PROCEDURAL']` для отличия
+  «сокрытие НДС» (ст. 223 НК РУз) от «просрочка отчёта» (ст. 219).
+* **LOAN_TO_REVENUE_RATIO secured-вариант** (порог 0.70) — нужно поле
+  `LoanRequest.collateral_type: Literal['none', 'real_estate', 'movable',
+  'guarantee', 'other'] | None`.
+* **CIRCULAR_INVOICING 3+ node cycles** (CA-002, networkx) — текущая
+  реализация ловит только 2-cycles A→B+B→A.
 
 ## References
 

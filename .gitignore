@@ -93,3 +93,8 @@ dist/
 .env
 .env.local
 .env.production
+
+# --- Office lock files (Word/Excel temp owner-files) ---
+~$*
+# Local research backups (Office editables alongside committed .md/.pdf)
+*.docx
