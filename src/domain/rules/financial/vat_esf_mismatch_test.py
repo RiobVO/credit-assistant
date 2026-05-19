@@ -13,6 +13,9 @@ from domain.value_objects.money import Currency, Money
 
 UZS = Currency.UZS
 PERIOD = DateRange(date(2026, 3, 1), date(2026, 3, 31))
+# ADR-0024: VAT_DECLARED_MIN_THRESHOLD = 10_000_000 UZS. Используем M = 1 млн
+# UZS как scale-factor, чтобы все cases выше материального порога.
+M = 1_000_000
 
 
 def _period(
@@ -49,47 +52,52 @@ def _snapshot(*periods: VatPeriodReport) -> BorrowerSnapshot:
 
 class TestVatEsfMismatch:
     def test_fires_at_20pct_mismatch(self) -> None:
-        # Декларация=100, агрегат ЭСФ=80, разрыв 20%
-        ev = vat_esf_mismatch(_snapshot(_period(100, 80)))
+        # Декларация=100M, агрегат ЭСФ=80M, разрыв 20%
+        ev = vat_esf_mismatch(_snapshot(_period(100 * M, 80 * M)))
         assert ev is not None
 
     def test_silent_at_5pct_mismatch(self) -> None:
-        assert vat_esf_mismatch(_snapshot(_period(100, 95))) is None
+        assert vat_esf_mismatch(_snapshot(_period(100 * M, 95 * M))) is None
 
     def test_silent_at_exactly_15pct(self) -> None:
-        # 100 vs 85 = 15% разрыв, граница — silent
-        assert vat_esf_mismatch(_snapshot(_period(100, 85))) is None
+        # 100M vs 85M = 15% разрыв, граница — silent
+        assert vat_esf_mismatch(_snapshot(_period(100 * M, 85 * M))) is None
 
     def test_silent_when_vat_declared_missing(self) -> None:
         # Только реестр ЭСФ, без декларации — period неполный, правило молчит.
-        assert vat_esf_mismatch(_snapshot(_period(None, 80))) is None
+        assert vat_esf_mismatch(_snapshot(_period(None, 80 * M))) is None
 
     def test_silent_when_esf_aggregate_missing(self) -> None:
         # Декларация без ilova-реестра — degraded режим, правило молчит.
-        assert vat_esf_mismatch(_snapshot(_period(100, None))) is None
+        assert vat_esf_mismatch(_snapshot(_period(100 * M, None))) is None
 
     def test_silent_when_no_periods(self) -> None:
         assert vat_esf_mismatch(_snapshot()) is None
 
     def test_fires_when_zero_seller_esf_vs_positive_declared(self) -> None:
-        # Агрегат ЭСФ = 0, декларация = 100 → разрыв 100%, fires.
-        ev = vat_esf_mismatch(_snapshot(_period(100, 0)))
+        # Агрегат ЭСФ = 0, декларация = 100M → разрыв 100%, fires.
+        ev = vat_esf_mismatch(_snapshot(_period(100 * M, 0)))
         assert ev is not None
 
     def test_silent_when_zero_declared(self) -> None:
         # Декларация = 0 — деление на 0 → silent (нечего сравнивать).
         assert vat_esf_mismatch(_snapshot(_period(0, 0))) is None
 
+    def test_silent_below_material_threshold(self) -> None:
+        # ADR-0024: vat_declared=5 млн (<10M threshold) — silent
+        # даже при 50% mismatch.
+        assert vat_esf_mismatch(_snapshot(_period(5 * M, 2 * M))) is None
+
     def test_picks_latest_period_by_end_date(self) -> None:
         # Старый период чистый, последний — расхождение → fires на последнем.
         old_clean = _period(
-            100,
-            98,
+            100 * M,
+            98 * M,
             range_=DateRange(date(2026, 1, 1), date(2026, 1, 31)),
         )
         latest_dirty = _period(
-            100,
-            50,
+            100 * M,
+            50 * M,
             range_=DateRange(date(2026, 3, 1), date(2026, 3, 31)),
         )
         ev = vat_esf_mismatch(_snapshot(old_clean, latest_dirty))
@@ -100,12 +108,12 @@ class TestVatEsfMismatch:
         # Latest по end-date — неполный (только декларация); предыдущий полный с
         # расхождением → правило выбирает полный, fires.
         complete_dirty = _period(
-            100,
-            50,
+            100 * M,
+            50 * M,
             range_=DateRange(date(2026, 2, 1), date(2026, 2, 28)),
         )
         latest_incomplete = _period(
-            100,
+            100 * M,
             None,
             range_=DateRange(date(2026, 3, 1), date(2026, 3, 31)),
         )
