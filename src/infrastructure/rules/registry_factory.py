@@ -25,6 +25,7 @@ from domain.rules.financial.fx_mismatch import fx_mismatch
 from domain.rules.financial.low_margin_high_turnover import low_margin_high_turnover
 from domain.rules.financial.negative_equity import negative_equity
 from domain.rules.financial.negative_profit_3q import negative_profit_3q
+from domain.rules.financial.off_balance_commitments import off_balance_commitments
 from domain.rules.financial.revenue_drop_mom_30 import revenue_drop_mom_30
 from domain.rules.financial.revenue_drop_yoy_50 import revenue_drop_yoy_50
 from domain.rules.financial.vat_esf_mismatch import vat_esf_mismatch
@@ -64,6 +65,7 @@ CODE_RULES: dict[str, RuleFn] = {
     "FX_MISMATCH_HIGH": fx_mismatch,
     "DSCR_LOW": dscr_low,
     "WC_INSUFFICIENT": wc_insufficient,
+    "OFF_BALANCE_COMMITMENTS": off_balance_commitments,
     "TAX_PAYMENT_DELAYS": tax_payment_delays,
     "BANK_ACCOUNT_FROZEN_12M": bank_account_frozen_12m,
     "TAX_PENALTIES_CURRENT_YEAR": tax_penalties_current_year,

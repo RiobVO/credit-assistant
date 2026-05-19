@@ -1,6 +1,6 @@
 version: v1
 
-# 19 red-flag правил для МСБ-заёмщиков Узбекистана.
+# 23 red-flag правил для МСБ-заёмщиков Узбекистана.
 # Severity weights калибруем после Phase 2 на реальных кейсах.
 # Источники: ЦБ РУз №2696 (lex.uz/ru/docs/2703056), НК РУз (lex.uz/ru/docs/4674893),
 #   Базель III (BCBS d424 — bis.org/bcbs/publ/d424.pdf), FATF Recommendations,
@@ -144,6 +144,16 @@ rules:
     source_uz: "IFC SME Knowledge Guide 4-bob «Likvidlik va aylanma kapital» — Current Ratio < 1.0 = qisqa muddatli majburiyatlar joriy aktivlardan ortiq; Murodov O.J. 2025 — UZ-cotton uchun yetakchi default indikator"
     formula: "current_ratio = current_assets / current_liabilities < 1.0"
     rationale: "Дефицит ликвидности на горизонте 12 мес — заёмщик не способен платить по краткосрочным обязательствам без рефинансирования"
+
+  - id: OFF_BALANCE_COMMITMENTS
+    name: "Off-balance обязательства >50% активов"
+    name_uz: "Balansdan tashqari majburiyatlar aktivlarning 50% dan ortiq"
+    category: financial
+    severity: high
+    source: "BCBS d424 «Basel III: Finalising post-crisis reforms» §50 «Off-balance sheet items» (bis.org/bcbs/publ/d424.pdf); внутренние методики UZ-банков по портфельному risk weighting гарантий, лизинговых обязательств и аккредитивов"
+    source_uz: "BCBS d424 «Basel III: post-crisis reforms» §50 «Balansdan tashqari moddalar»; UZ-banklarning kafolat, lizing va akkreditivlar boʻyicha portfel risk weighting uslublari"
+    formula: "(guarantees_outstanding + leases_outstanding + letters_of_credit_outstanding) / total_assets > 0.50"
+    rationale: "Off-balance commitments выходящие за 50% балансовых активов — leveraged exposure, невидимый в традиционных Debt/Assets и Current Ratio. ADR-0024 Session 2: при выплате по гарантии / экспирации аккредитива / лизинговом платеже создают cash-outflow без отражения в балансе"
 
   # --- Платёжная дисциплина ---
   - id: TAX_PAYMENT_DELAYS
