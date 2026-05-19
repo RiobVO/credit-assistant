@@ -15,6 +15,7 @@
 - **Tier 1 prod-killers**: case_id seq BR-YYYY-NNNN (T1.1) · refresh-token rotation + Redis denylist (T1.2, ADR-0016) · PII encryption at rest Fernet/MultiFernet (T1.3, ADR-0017) · multi-tenant Approach A pure (T1.4, ADR-0018) · LDAP AuthnAdapter (T1.5, ADR-0019).
 - **Tier 2 data quality**: dynamic units FORM_1/2 (T2.1) · VAT через T0.5 · PROFIT_TAX (T2.3) · faktura.uz honest stub (T2.4, ADR-0020). Все 5 xltx-форматов покрыты.
 - **Tier 3 operational readiness (6/6)**: structured logging + correlation_id (T3.2) · Postgres backup + restore drill (T3.4) · on-prem tarball deploy (T3.6, ADR-0021) · audit-log CSV export (T3.5) · observability GlitchTip on-prem (T3.1, ADR-0022) · Prometheus + Grafana metrics (T3.3, ADR-0023). 3 ADR'а, 4 playbook'а, 7 ops-scripts/configs.
+- **ADR-0024 research closure** (2026-05-19): 3-way reconcile Claude / ChatGPT / Qwen — 9 правил с подложными источниками заменены (ЦБ РУз №2696, НК РУз ст.47+257+489, FATF/EAG/ЗРУ-660); confidence layer заменил `INSUFFICIENT_DATA` (BR-2026-0050 TEST bug); OKED-UZ benchmark catalog; 3 новых правил (FX_MISMATCH_HIGH / DSCR_LOW / WC_INSUFFICIENT) + supporting data structures (BalanceSnapshot +current_assets/current_liabilities, FinancialReport +D&A/OCF); 7 правил с threshold-only adjustments per Q0.B. Research outputs: `docs/research/2026-05-19-3way-reconcile/`. Архитектурно тяжёлые правки (OKVED→ОКЭД rename, dual-severity, новые Counterparty/LoanRequest fields, stat.uz industry medians) — backlog в ADR-0024.
 
 ### Stack state (2026-05-18)
 
@@ -27,7 +28,14 @@
 
 ### Active focus — выбор следующего шага
 
-Pre-demo MVP ready. Открытые направления (НЕ блокеры, dispatch по сигналу):
+Pre-demo MVP ready. **ADR-0024 (2026-05-19) 3-way research reconcile закрыт** —
+6 атомарных коммитов: foundational sources replacement → confidence layer →
+OKED-UZ benchmark catalog → FX/DSCR/WC rules + supporting data structures →
+Q0.B threshold adjustments на 7 правил → docs sync. Подробности
+`docs/adr/0024-foundational-source-verification.md` + research outputs
+`docs/research/2026-05-19-3way-reconcile/` (Claude / ChatGPT / Qwen).
+
+Открытые направления (НЕ блокеры, dispatch по сигналу):
 
 1. **T4 compliance pack** (параллельно): pentest узб-лаборатории · аттестат УзСтандарта на ПДн (Закон РУз №547) · IT-Park / Uzinfocom резидентство · Admin Guide / Security Architecture / DRP/BCP RU+UZ. Старт за 2 мес до bank tender.
 2. **Real-bank pilot trip**: install playbook `deploy/README.md` + demo walkthrough `docs/demo/scenarios.md` (5 готовых сценариев на существующих BR-2026-00XX) + onboarding session с пилот-банком.
@@ -40,7 +48,17 @@ Pre-demo MVP ready. Открытые направления (НЕ блокеры
    - **T2.4b** faktura.uz real client — pre-condition: пилот-банк даёт OAuth-токен.
    - **T1.5b** OAuth2/OIDC AuthnAdapter — pre-condition: запрос пилот-банка на Okta/Azure AD.
    - **T1.5c** openldap testcontainer (T1.5 покрыт mock-only).
-5. **Active code-level TODOs** (`grep TODO\\[CA- src/ web/src/`):
+5. **ADR-0024 backlog** (требуют расширения domain entities / новых каталогов — см. ADR-0024 «Research debt remaining»):
+   - **OKVED → ОКЭД rename**: `Borrower.okved_main` → `oked_main`, парсеры FORM_1/PROFIT_TAX, snapshot_mapper, UI Step 1, 49 dossiers миграция. Per Claude Q0.B: УзР официальный термин — ОКЭД (ПКМ №275 от 24.08.2016).
+   - **OKVED_CHANGED_12M narrow scope**: + поле `Borrower.oked_changed_by_owner: bool` + Госкомстат ОКЭД-API.
+   - **SINGLE_BUYER_CONCENTRATION dual-severity** (0.50 medium / 0.70 high) — split в 2 правила или ввести `severity_fn` в RuleSpec.
+   - **SINGLE_SUPPLIER_CONCENTRATION + supplier_is_foreign**: поле `Counterparty.is_foreign: bool`.
+   - **SHELL_COMPANY_PARTNERS + opf-check**: поле `Counterparty.opf: LegalForm | None` (ИП legitimно молодые).
+   - **TAX_PENALTIES_CURRENT_YEAR severity filter**: поле `TaxEvent.severity: 'MATERIAL' | 'PROCEDURAL'` (ст. 223 vs ст. 219 НК РУз).
+   - **LOAN_TO_REVENUE_RATIO secured-variant** (порог 0.70): поле `LoanRequest.collateral_type`.
+   - **LOW_MARGIN_HIGH_TURNOVER vs industry_median**: stat.uz net-margin catalog по ОКЭД. Текущий `config/benchmarks/oked-uz.json` все 7 buckets с null.
+   - **KPI calculator extension**: добавить `ebitda` / `debt_to_ebitda` / `current_ratio` / `working_capital` KPI после ADR-0024 добавил D&A + current_assets/current_liabilities (CA-037 анонс).
+6. **Active code-level TODOs** (`grep TODO\\[CA- src/ web/src/`):
    - **CA-001** ИНН checksum по ГНК-алгоритму (`src/domain/value_objects/inn.py`).
    - **CA-002** Circular invoicing — полноценная graph-детекция циклов через `networkx` для 3+ узлов (`src/domain/rules/counterparty/`).
    - **CA-003** Real ГНК lookup — pre-condition: legal review (см. также CA-DS28).
@@ -67,6 +85,7 @@ Pre-demo MVP ready. Открытые направления (НЕ блокеры
 ### Domain / data contracts
 - **VAT-периоды** (ADR 0006): `BorrowerSnapshot.vat_periods: list[VatPeriodReport]`. Декларация → `vat_declared`, ilova → `esf_seller_vat_total`. Сравнение в рамках одного налогового периода.
 - **ИНН заёмщика**: приходит явно от пользователя, не угадывается из имени файла.
+- **ADR-0024 data structures**: `BalanceSnapshot` расширен полями `current_assets` / `current_liabilities` (Money | None) — компоненты Current Ratio для WC_INSUFFICIENT. `FinancialReport` расширен полями `depreciation_amortization` / `operating_cash_flow` (Money | None) — D&A для EBITDA-числителя DSCR_LOW (CA-037 анонс выполнен), OCF для proper DSCR per Murodov 2025. Snapshot_mapper round-trip покрывает оба расширения; legacy payloads (до ADR-0024) грузятся через `.get()` без миграции. Парсеры FORM_1 пока не извлекают новые поля — заполняются вручную через manual-input.
 - **xltx форматы (5 типов)**: VAT_DECLARATION (8 листов), VAT_REGISTRY_ILOVA (10, Приложение №4), FORM_2_INCOME_STATEMENT (3), FORM_1_BALANCE_SHEET (4), PROFIT_TAX (15). Distinguished по сигнатурным cells list01.
 - **Парсер soliq_xltx best-effort**: raises только на формат (UnsupportedFormatError, XltxBorrowerMismatchError); cell-level → warn + None. Каждый DTO имеет `parse_warnings: list[str]`.
 - **Реальные данные папы**: локально в `~/Downloads` / `tests/fixtures/**/*_full.*`, не в git. В repo — `*_sample.csv` + synthetic factory-helpers.
