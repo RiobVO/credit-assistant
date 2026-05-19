@@ -166,6 +166,6 @@ def _placeholder_borrower() -> Borrower:
         registration_date=date(2000, 1, 1),
         director_name="<placeholder>",
         director_appointed_at=date(2000, 1, 1),
-        okved_main="00.00",
+        oked_main="00.00",
         registered_address="<placeholder>",
     )

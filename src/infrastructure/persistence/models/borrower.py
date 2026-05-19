@@ -32,9 +32,9 @@ class BorrowerORM(Base):
     # Length 500 для Fernet token (255 plaintext → ~432 base64 chars).
     director_name: Mapped[str] = mapped_column(EncryptedString(500), nullable=False)
     director_appointed_at: Mapped[date] = mapped_column(nullable=False)
-    okved_main: Mapped[str] = mapped_column(String(50), nullable=False)
+    oked_main: Mapped[str] = mapped_column(String(50), nullable=False)
     registered_address: Mapped[str] = mapped_column(String(500), nullable=False)
-    okved_main_changed_at: Mapped[date | None] = mapped_column(nullable=True)
+    oked_main_changed_at: Mapped[date | None] = mapped_column(nullable=True)
     # ADR-0024 Session 3: narrow для OKVED_CHANGED_12M (см. domain
     # `Borrower.oked_changed_by_owner` docstring). NOT NULL DEFAULT false —
     # 49 existing borrowers получают false через миграцию c5e9d2a7b1f4.
