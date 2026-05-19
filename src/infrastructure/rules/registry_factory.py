@@ -20,6 +20,7 @@ from domain.rules.counterparty.single_buyer_concentration import (
 from domain.rules.counterparty.single_supplier_concentration import (
     single_supplier_concentration,
 )
+from domain.rules.financial.cash_flow_quality import cash_flow_quality
 from domain.rules.financial.dscr_low import dscr_low
 from domain.rules.financial.fx_mismatch import fx_mismatch
 from domain.rules.financial.low_margin_high_turnover import low_margin_high_turnover
@@ -66,6 +67,7 @@ CODE_RULES: dict[str, RuleFn] = {
     "DSCR_LOW": dscr_low,
     "WC_INSUFFICIENT": wc_insufficient,
     "OFF_BALANCE_COMMITMENTS": off_balance_commitments,
+    "CASH_FLOW_QUALITY": cash_flow_quality,
     "TAX_PAYMENT_DELAYS": tax_payment_delays,
     "BANK_ACCOUNT_FROZEN_12M": bank_account_frozen_12m,
     "TAX_PENALTIES_CURRENT_YEAR": tax_penalties_current_year,

@@ -1,6 +1,6 @@
 version: v1
 
-# 23 red-flag правил для МСБ-заёмщиков Узбекистана.
+# 24 red-flag правил для МСБ-заёмщиков Узбекистана.
 # Severity weights калибруем после Phase 2 на реальных кейсах.
 # Источники: ЦБ РУз №2696 (lex.uz/ru/docs/2703056), НК РУз (lex.uz/ru/docs/4674893),
 #   Базель III (BCBS d424 — bis.org/bcbs/publ/d424.pdf), FATF Recommendations,
@@ -154,6 +154,16 @@ rules:
     source_uz: "BCBS d424 «Basel III: post-crisis reforms» §50 «Balansdan tashqari moddalar»; UZ-banklarning kafolat, lizing va akkreditivlar boʻyicha portfel risk weighting uslublari"
     formula: "(guarantees_outstanding + leases_outstanding + letters_of_credit_outstanding) / total_assets > 0.50"
     rationale: "Off-balance commitments выходящие за 50% балансовых активов — leveraged exposure, невидимый в традиционных Debt/Assets и Current Ratio. ADR-0024 Session 2: при выплате по гарантии / экспирации аккредитива / лизинговом платеже создают cash-outflow без отражения в балансе"
+
+  - id: CASH_FLOW_QUALITY
+    name: "OCF <50% чистой прибыли — низкое качество прибыли"
+    name_uz: "OCF sof foydaning 50% dan past — foyda sifati past"
+    category: financial
+    severity: medium
+    source: "IFC SME Banking Knowledge Guide ch.4 «Cash Flow Analysis»; стандартная accrual-vs-cash quality analysis (Beneish M-score 1999, Healy & Wahlen JIFM 1999 «A Review of the Earnings Management Literature»)"
+    source_uz: "IFC SME Banking Knowledge Guide 4-bob «Pul oqimi tahlili»; standart accrual-vs-cash sifat tahlili (Beneish M-score 1999, Healy & Wahlen JIFM 1999)"
+    formula: "operating_cash_flow / net_profit < 0.50 AND net_profit > 0"
+    rationale: "OCF существенно ниже net profit = прибыль на бумаге не подкреплена реальным cash flow. Сигнал earnings manipulation или агрессивного revenue recognition. ADR-0024 Session 2: silent при net_profit ≤ 0 — эту ситуацию ловит NEGATIVE_PROFIT_3Q"
 
   # --- Платёжная дисциплина ---
   - id: TAX_PAYMENT_DELAYS
