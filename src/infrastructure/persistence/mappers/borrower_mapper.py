@@ -22,6 +22,7 @@ def borrower_to_orm_kwargs(borrower: Borrower) -> dict[str, Any]:
         "okved_main": borrower.okved_main,
         "registered_address": borrower.registered_address,
         "okved_main_changed_at": borrower.okved_main_changed_at,
+        "oked_changed_by_owner": borrower.oked_changed_by_owner,
     }
     if borrower.charter_capital is not None:
         kwargs["charter_capital_amount"] = borrower.charter_capital.amount
@@ -47,4 +48,5 @@ def borrower_from_orm(orm: BorrowerORM) -> Borrower:
         registered_address=orm.registered_address,
         okved_main_changed_at=orm.okved_main_changed_at,
         charter_capital=charter_capital,
+        oked_changed_by_owner=orm.oked_changed_by_owner,
     )

@@ -21,6 +21,7 @@ import {
   Controller,
   useFormContext,
   useWatch,
+  type Control,
 } from "react-hook-form";
 
 import { getOkvedCatalog, type OkvedItemDto } from "@/lib/api";
@@ -211,6 +212,15 @@ export function Step1Borrower() {
               />
             )}
           />
+          {/* ADR-0024 Session 3: conditional block — показывается только когда
+              backend знает дату смены ОКЭД (через парсер/ORM, prefill из
+              «Пересобрать с дополнениями»). В brand-new dossier flow hidden. */}
+          {step1?.okvedMainChangedAt ? (
+            <OkedChangedByOwnerBlock
+              date={step1.okvedMainChangedAt}
+              control={control}
+            />
+          ) : null}
         </Field>
 
         {/* Директор */}
@@ -635,6 +645,61 @@ export function OkvedAutocomplete({
           </div>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// ADR-0024 Session 3: ОКЭД owner-initiated toggle
+// ─────────────────────────────────────────────────────────────────
+
+export function OkedChangedByOwnerBlock({
+  date,
+  control,
+}: {
+  date: string;
+  control: Control<FormValues>;
+}) {
+  const t = useTranslations("accountant.manual_input");
+  // Форматирование ISO `yyyy-MM-dd` → `DD.MM.YYYY` для display.
+  // Без локалей — banker-style RU/UZ единый формат.
+  const formatted = useMemo(() => {
+    const d = parse(date, "yyyy-MM-dd", new Date());
+    if (!isValid(d)) return date;
+    return `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}.${d.getFullYear()}`;
+  }, [date]);
+
+  return (
+    <div className="mt-2 rounded-[8px] border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2">
+      <div className="flex items-center justify-between gap-3">
+        <div className="text-[12px] text-[var(--ink-3)]">
+          <span className="font-semibold text-[var(--ink-2)]">
+            {t("s1_oked_changed_label")}:
+          </span>{" "}
+          <span className="font-mono tabular-nums text-[var(--ink-1)]">
+            {formatted}
+          </span>
+        </div>
+        <Controller
+          control={control}
+          name="step1.okedChangedByOwner"
+          render={({ field }) => (
+            <label className="flex cursor-pointer items-center gap-2 text-[12px] font-semibold text-[var(--ink-2)]">
+              <input
+                type="checkbox"
+                checked={field.value}
+                onChange={(e) => field.onChange(e.target.checked)}
+                className="size-[15px] cursor-pointer accent-[var(--brand-primary)]"
+                aria-label={t("s1_oked_changed_by_owner_label")}
+              />
+              {t("s1_oked_changed_by_owner_label")}
+            </label>
+          )}
+        />
+      </div>
+      <p className="mt-1.5 text-[11.5px] leading-[1.4] text-[var(--ink-4)]">
+        {t("s1_oked_changed_help")}
+      </p>
     </div>
   );
 }

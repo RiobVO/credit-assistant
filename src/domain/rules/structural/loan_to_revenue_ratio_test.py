@@ -24,17 +24,23 @@ def _annual(revenue: int) -> FinancialReport:
     )
 
 
-def _loan(amount: int) -> LoanRequest:
+def _loan(amount: int, *, collateral: str | None = None) -> LoanRequest:
     return LoanRequest(
         amount=Money(amount, UZS),
         term_months=24,
         rate_pct=Decimal("22.5"),
         purpose="working_capital",
         category="standard",
+        collateral_type=collateral,  # type: ignore[arg-type]
     )
 
 
-def _snapshot(loan: int | None, annual_revenue: int | None) -> BorrowerSnapshot:
+def _snapshot(
+    loan: int | None,
+    annual_revenue: int | None,
+    *,
+    collateral: str | None = None,
+) -> BorrowerSnapshot:
     borrower = Borrower(
         inn=INN("123456789"),
         name="ООО",
@@ -48,7 +54,7 @@ def _snapshot(loan: int | None, annual_revenue: int | None) -> BorrowerSnapshot:
     return BorrowerSnapshot(
         borrower=borrower,
         as_of=date(2026, 5, 8),
-        loan_request=_loan(loan) if loan is not None else None,
+        loan_request=_loan(loan, collateral=collateral) if loan is not None else None,
         annual_reports=[_annual(annual_revenue)] if annual_revenue is not None else [],
     )
 
@@ -84,3 +90,45 @@ class TestLoanToRevenueRatio:
     def test_fires_when_revenue_zero_and_loan_positive(self) -> None:
         ev = loan_to_revenue_ratio(_snapshot(1_000_000_000, 0))
         assert ev is not None
+
+
+class TestLoanToRevenueSecuredVariant:
+    """ADR-0024 Session 3: secured-variant поднимает порог с 0.40 до 0.70."""
+
+    def test_secured_at_50pct_silent(self) -> None:
+        # 0.50 unsecured fires, но с real_estate-обеспечением — silent
+        # (порог 0.70).
+        ev = loan_to_revenue_ratio(
+            _snapshot(500_000_000, 1_000_000_000, collateral="real_estate")
+        )
+        assert ev is None
+
+    def test_secured_at_75pct_fires(self) -> None:
+        # 0.75 > 0.70 — fires даже с обеспечением.
+        ev = loan_to_revenue_ratio(
+            _snapshot(750_000_000, 1_000_000_000, collateral="real_estate")
+        )
+        assert ev is not None
+        assert ev.evidence["secured"] is True
+
+    def test_collateral_none_treated_as_unsecured(self) -> None:
+        # collateral_type='none' == legacy None == unsecured (порог 0.40).
+        ev = loan_to_revenue_ratio(
+            _snapshot(500_000_000, 1_000_000_000, collateral="none")
+        )
+        assert ev is not None
+        assert ev.evidence["secured"] is False
+
+    def test_movable_collateral_uses_secured_threshold(self) -> None:
+        # 0.65 movable < 0.70 secured threshold — silent.
+        ev = loan_to_revenue_ratio(
+            _snapshot(650_000_000, 1_000_000_000, collateral="movable")
+        )
+        assert ev is None
+
+    def test_guarantee_uses_secured_threshold(self) -> None:
+        ev = loan_to_revenue_ratio(
+            _snapshot(800_000_000, 1_000_000_000, collateral="guarantee")
+        )
+        assert ev is not None
+        assert ev.evidence["secured"] is True

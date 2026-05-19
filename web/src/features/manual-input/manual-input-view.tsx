@@ -126,6 +126,11 @@ function ManualInputPageInner() {
           directorName: prefill.director_name,
           directorAppointedAt: prefill.director_appointed_at,
           registeredAddress: prefill.registered_address,
+          // ADR-0024 Session 3: pre-fill из существующего borrower record.
+          // Если ОКЭД сменился ранее (через парсер) — toggle отражает
+          // current flag в БД; analyst может его поменять.
+          okedChangedByOwner: prefill.oked_changed_by_owner,
+          okvedMainChangedAt: prefill.okved_main_changed_at,
         },
       });
       return;
