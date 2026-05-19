@@ -790,7 +790,19 @@
       "debt_loss_hint": "Qarz yuki baholab boʻlmaydi (zarar)",
       "debt_no_data_hint": "№1 formani yuklang",
       "no_data_default": "Hisoblash uchun maʻlumot yoʻq",
-      "no_debt_pill": "Qarz yoʻq"
+      "no_debt_pill": "Qarz yoʻq",
+      "label_ebitda": "EBITDA",
+      "ebitda_empty_hint": "PBT, foizlar va D&A (amortizatsiya) kerak",
+      "label_debt_ebitda": "Qarz / EBITDA",
+      "debt_ebitda_empty_hint": "total_debt va EBITDA kerak",
+      "label_current_ratio": "Joriy likvidlik",
+      "current_ratio_empty_hint": "Qisqa muddatli aktivlar va majburiyatlar kerak",
+      "label_working_capital": "Aylanma kapital",
+      "working_capital_empty_hint": "Qisqa muddatli aktivlar va majburiyatlar kerak",
+      "label_interest_coverage": "Foiz qoplash",
+      "interest_coverage_empty_hint": "EBIT va foiz xarajatlari kerak",
+      "label_dscr": "DSCR",
+      "dscr_empty_hint": "Kredit soʻrovi, OCF/EBITDA/EBIT va foizlar kerak"
     },
     "risk": {
       "title": "Qizil bayroqlar",

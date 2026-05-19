@@ -72,6 +72,14 @@ export type DossierViewDto = DossierResponseDto & {
     ebit: KpiValueDto | null;
     roe: KpiValueDto | null;
     debt_to_ebit: KpiValueDto | null;
+    // ADR-0024 (Session 1): расширенный KPI набор. Все nullable, degraded mode.
+    // CA-037 invariant — legacy ebit/debt_to_ebit живут рядом, не вместо.
+    ebitda: KpiValueDto | null;
+    debt_to_ebitda: KpiValueDto | null;
+    current_ratio: KpiValueDto | null;
+    working_capital: KpiValueDto | null;
+    interest_coverage: KpiValueDto | null;
+    dscr: KpiValueDto | null;
   };
   monthly_revenue_24m: Array<{
     month: string; // YYYY-MM
