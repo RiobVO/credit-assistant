@@ -184,10 +184,11 @@ def test_financial_report_round_trip_with_taxes_paid_none() -> None:
 
 
 def test_ca037_financial_report_round_trip_with_all_extensions() -> None:
-    """CA-037: 8 nullable полей (PBT/interest/equity/total_debt × end/start)
-    переживают JSONB round-trip без потерь. До этого фикса они тихо терялись
-    в snapshot_to_payload → KPI calculator получал None → EBIT/ROE/Debt-to-EBIT
-    оставались пустыми даже при полном payload в /api/manual-input.
+    """CA-037 + ADR-0024: nullable поля (PBT/interest/equity/total_debt × end/start,
+    plus D&A/OCF/current_assets/current_liabilities × end/start) переживают
+    JSONB round-trip без потерь. До CA-037 KPI calculator получал None из
+    snapshot_to_payload → EBIT/ROE/Debt-to-EBIT оставались пустыми. До ADR-0024
+    DSCR/WC_INSUFFICIENT не имели данных.
     """
     original = BorrowerSnapshot(
         borrower=_borrower(),
@@ -200,17 +201,23 @@ def test_ca037_financial_report_round_trip_with_all_extensions() -> None:
                 taxes_paid=_money(56_000_000),
                 profit_before_tax=_money(189_060_000),
                 interest_expense=_money(67_803_000),
+                depreciation_amortization=_money(45_000_000),
+                operating_cash_flow=_money(220_000_000),
                 balance_end=BalanceSnapshot(
                     assets=_money(2_533_084_000),
                     liabilities=_money(985_025_000),
                     equity=_money(1_548_059_000),
                     total_debt=_money(618_267_000),
+                    current_assets=_money(1_300_000_000),
+                    current_liabilities=_money(700_000_000),
                 ),
                 balance_start=BalanceSnapshot(
                     assets=_money(2_087_582_000),
                     liabilities=_money(696_805_000),
                     equity=_money(1_390_777_000),
                     total_debt=_money(332_222_000),
+                    current_assets=_money(1_050_000_000),
+                    current_liabilities=_money(550_000_000),
                 ),
             ),
         ],
@@ -229,6 +236,15 @@ def test_ca037_financial_report_round_trip_with_all_extensions() -> None:
     assert r.balance_end.equity.amount == Decimal("1548059000")
     assert r.balance_end.total_debt is not None
     assert r.balance_end.total_debt.amount == Decimal("618267000")
+    # ADR-0024 поля для DSCR/WC.
+    assert r.depreciation_amortization is not None
+    assert r.depreciation_amortization.amount == Decimal("45000000")
+    assert r.operating_cash_flow is not None
+    assert r.operating_cash_flow.amount == Decimal("220000000")
+    assert r.balance_end.current_assets is not None
+    assert r.balance_end.current_assets.amount == Decimal("1300000000")
+    assert r.balance_end.current_liabilities is not None
+    assert r.balance_end.current_liabilities.amount == Decimal("700000000")
 
 
 def test_ca037_legacy_payload_without_new_keys_still_loads() -> None:
@@ -260,8 +276,12 @@ def test_ca037_legacy_payload_without_new_keys_still_loads() -> None:
     r = restored.annual_reports[0]
     assert r.profit_before_tax is None
     assert r.interest_expense is None
-    # CA-047: пустой BalanceSnapshot (все 4 None) сворачивается в None,
-    # читатели должны различать «нет snapshot» и «есть snapshot со всеми None».
+    # ADR-0024 поля тоже None для legacy.
+    assert r.depreciation_amortization is None
+    assert r.operating_cash_flow is None
+    # CA-047 / ADR-0024: пустой BalanceSnapshot (все поля None) сворачивается
+    # в None, читатели должны различать «нет snapshot» и «есть snapshot со
+    # всеми None».
     assert r.balance_end is None
     assert r.balance_start is None
 

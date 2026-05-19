@@ -17,6 +17,13 @@ CA-047 сгруппировал балансовые поля в ``BalanceSnapsh
 accepted tradeoff в CA-037 ради минимального blast radius. Теперь читатели
 обращаются как ``latest.balance_end.equity``, mapper-ы один раз сериализуют
 snapshot вместо 8 повторов.
+
+ADR-0024 (2026-05-19) добавил два cash-flow поля:
+``depreciation_amortization`` — D&A для EBITDA (= profit_before_tax +
+interest_expense + D&A); анонсирован в CA-037. ``operating_cash_flow`` —
+числитель полноценного DSCR (Murodov O.J. 2025: cotton ginning DSCR≥1.3).
+Оба nullable — FORM_2 / отчёт о движении денежных средств могут не
+приходить вместе с другими формами.
 """
 
 from dataclasses import dataclass
@@ -35,5 +42,8 @@ class FinancialReport:
     vat_declared: Money | None = None
     profit_before_tax: Money | None = None
     interest_expense: Money | None = None
+    # ADR-0024: компоненты EBITDA / DSCR / NEGATIVE_OCF_RULE backlog.
+    depreciation_amortization: Money | None = None
+    operating_cash_flow: Money | None = None
     balance_end: BalanceSnapshot | None = None
     balance_start: BalanceSnapshot | None = None

@@ -20,6 +20,8 @@ from domain.rules.counterparty.single_buyer_concentration import (
 from domain.rules.counterparty.single_supplier_concentration import (
     single_supplier_concentration,
 )
+from domain.rules.financial.dscr_low import dscr_low
+from domain.rules.financial.fx_mismatch import fx_mismatch
 from domain.rules.financial.low_margin_high_turnover import low_margin_high_turnover
 from domain.rules.financial.negative_equity import negative_equity
 from domain.rules.financial.negative_profit_3q import negative_profit_3q
@@ -27,6 +29,7 @@ from domain.rules.financial.revenue_drop_mom_30 import revenue_drop_mom_30
 from domain.rules.financial.revenue_drop_yoy_50 import revenue_drop_yoy_50
 from domain.rules.financial.vat_esf_mismatch import vat_esf_mismatch
 from domain.rules.financial.vat_growth_no_revenue import vat_growth_no_revenue
+from domain.rules.financial.wc_insufficient import wc_insufficient
 from domain.rules.meta.insufficient_data import insufficient_data
 from domain.rules.payment_discipline.bank_account_frozen_12m import (
     bank_account_frozen_12m,
@@ -58,6 +61,9 @@ CODE_RULES: dict[str, RuleFn] = {
     "VAT_GROWTH_NO_REVENUE": vat_growth_no_revenue,
     "VAT_ESF_MISMATCH": vat_esf_mismatch,
     "LOW_MARGIN_HIGH_TURNOVER": low_margin_high_turnover,
+    "FX_MISMATCH_HIGH": fx_mismatch,
+    "DSCR_LOW": dscr_low,
+    "WC_INSUFFICIENT": wc_insufficient,
     "TAX_PAYMENT_DELAYS": tax_payment_delays,
     "BANK_ACCOUNT_FROZEN_12M": bank_account_frozen_12m,
     "TAX_PENALTIES_CURRENT_YEAR": tax_penalties_current_year,

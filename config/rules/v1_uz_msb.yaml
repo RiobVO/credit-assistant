@@ -115,6 +115,36 @@ rules:
     formula: "annual_revenue > 5_000_000_000 and margin < 0.05"
     rationale: "Большой оборот без прибыли — подозрительная схема"
 
+  - id: FX_MISMATCH_HIGH
+    name: "Валютный заём против выручки в UZS"
+    name_uz: "UZS dagi tushumga qarshi valyutadagi kredit"
+    category: financial
+    severity: high
+    source: "World Bank Financial Sector Assessment Program — Uzbekistan 2025 (FSAP UZ 2025): 44% МСБ-портфеля в иностранной валюте при доминировании UZS-выручки → open FX exposure"
+    source_uz: "Jahon banki Moliyaviy sektor baholash dasturi — Oʻzbekiston 2025 (FSAP UZ 2025): KOʻB-portfelining 44% chet el valyutasida, daromad esa asosan UZS da → ochiq FX tavakkalligi"
+    formula: "loan_request.amount.currency != latest_annual.revenue.currency"
+    rationale: "Девальвация UZS делает обслуживание валютного долга дороже на ту же долю, при этом UZS-выручка не пересчитывается; FSAP UZ 2025 — доминирующий драйвер дефолтов МСБ"
+
+  - id: DSCR_LOW
+    name: "DSCR ниже 1,3 — обслуживание долга не покрыто"
+    name_uz: "DSCR 1,3 dan past — qarz xizmati taʼminlanmagan"
+    category: financial
+    severity: high
+    source: "Murodov O.J. (2025), Tashkent State University of Economics — DSCR≥1.3 minimum для УзР МСБ (cotton ginning); IFC SME Knowledge Guide ch.4 (DSCR≥1.25 minimum, ≥1.5 comfort)"
+    source_uz: "Murodov O.J. (2025), Toshkent davlat iqtisodiyot universiteti — UZ KOʻB uchun DSCR≥1.3 minimum; IFC SME Knowledge Guide 4-bob (DSCR≥1.25 minimum)"
+    formula: "DSCR = operating_cash_flow / (interest_expense + loan_amount * 12 / term_months) < 1.3"
+    rationale: "Если денежного потока недостаточно для покрытия процентов + основного долга — дефолт горизонта 12 мес. Murodov 2025: эмпирический минимум 1,3 для UZ-cotton, IFC: 1,25 generic SME"
+
+  - id: WC_INSUFFICIENT
+    name: "Current Ratio <1,0 — дефицит оборотного капитала"
+    name_uz: "Current Ratio 1,0 dan past — aylanma kapital yetishmasligi"
+    category: financial
+    severity: medium
+    source: "IFC SME Knowledge Guide ch.4 «Liquidity & Working Capital» — Current Ratio < 1.0 = краткосрочные обязательства превышают оборотные активы; Murodov O.J. 2025 — leading default indicator для UZ-cotton"
+    source_uz: "IFC SME Knowledge Guide 4-bob «Likvidlik va aylanma kapital» — Current Ratio < 1.0 = qisqa muddatli majburiyatlar joriy aktivlardan ortiq; Murodov O.J. 2025 — UZ-cotton uchun yetakchi default indikator"
+    formula: "current_ratio = current_assets / current_liabilities < 1.0"
+    rationale: "Дефицит ликвидности на горизонте 12 мес — заёмщик не способен платить по краткосрочным обязательствам без рефинансирования"
+
   # --- Платёжная дисциплина ---
   - id: TAX_PAYMENT_DELAYS
     name: "Задержки уплаты налогов >30 дней"
