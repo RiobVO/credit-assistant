@@ -18,7 +18,7 @@ from decimal import Decimal
 from typing import Any, cast
 from uuid import UUID
 
-from domain.entities.borrower import Borrower
+from domain.entities.borrower import Borrower, LegalForm
 from domain.entities.borrower_snapshot import BorrowerSnapshot
 from domain.entities.counterparty import Counterparty
 from domain.entities.financial_report import FinancialReport
@@ -47,6 +47,7 @@ def _loan_request_to_dict(lr: LoanRequest | None) -> dict[str, Any] | None:
         "rate_pct": str(lr.rate_pct),
         "purpose": lr.purpose,
         "category": lr.category,
+        "collateral_type": lr.collateral_type,
     }
 
 
@@ -56,12 +57,15 @@ def _loan_request_from_dict(d: dict[str, Any] | None) -> LoanRequest | None:
     amount = _money_from_dict(d["amount"])
     if amount is None:
         raise ValueError("loan_request.amount cannot be null")
+    # ADR-0024 Session 3: collateral_type — legacy payloads ключа не содержат,
+    # читаем `.get(...)` consistent с дефолтом entity (None).
     return LoanRequest(
         amount=amount,
         term_months=int(d["term_months"]),
         rate_pct=Decimal(d["rate_pct"]),
         purpose=d["purpose"],
         category=d["category"],
+        collateral_type=d.get("collateral_type"),
     )
 
 
@@ -197,14 +201,22 @@ def _counterparty_to_dict(c: Counterparty) -> dict[str, Any]:
         "inn": c.inn.value,
         "name": c.name,
         "registration_date": c.registration_date.isoformat(),
+        "opf": c.opf.value if c.opf is not None else None,
+        "is_foreign": c.is_foreign,
     }
 
 
 def _counterparty_from_dict(d: dict[str, Any]) -> Counterparty:
+    # ADR-0024 Session 3: opf / is_foreign — legacy payloads ключей не
+    # содержат, читаем через `.get(...)` consistent с дефолтами entity
+    # (None / False).
+    opf_raw = d.get("opf")
     return Counterparty(
         inn=INN(d["inn"]),
         name=d["name"],
         registration_date=date.fromisoformat(d["registration_date"]),
+        opf=LegalForm(opf_raw) if opf_raw is not None else None,
+        is_foreign=d.get("is_foreign", False),
     )
 
 
@@ -238,16 +250,21 @@ def _tax_event_to_dict(t: TaxEvent) -> dict[str, Any]:
         "amount": _money_to_dict(t.amount),
         "delay_days": t.delay_days,
         "duration_days": t.duration_days,
+        "material": t.material,
     }
 
 
 def _tax_event_from_dict(d: dict[str, Any]) -> TaxEvent:
+    # ADR-0024 Session 3: material — legacy payloads (до Session 3) ключа
+    # не содержат, читаем через `.get(..., False)` consistent с дефолтом
+    # entity.
     return TaxEvent(
         date=date.fromisoformat(d["date"]),
         type=TaxEventType(d["type"]),
         amount=_money_from_dict(d.get("amount")),
         delay_days=d.get("delay_days"),
         duration_days=d.get("duration_days"),
+        material=d.get("material", False),
     )
 
 

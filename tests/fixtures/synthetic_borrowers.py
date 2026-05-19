@@ -40,6 +40,7 @@ def _borrower(
     inn: str = "100000001",
     director_appointed_at: date = date(2020, 1, 1),
     okved_changed_at: date | None = None,
+    oked_changed_by_owner: bool = False,
 ) -> Borrower:
     return Borrower(
         inn=INN(inn),
@@ -51,6 +52,10 @@ def _borrower(
         okved_main="62.01",
         okved_main_changed_at=okved_changed_at,
         registered_address="г. Ташкент",
+        # ADR-0024 Session 3: OKVED_CHANGED_12M теперь fires только если
+        # `oked_changed_by_owner=True`. fixtures, передающие
+        # `okved_changed_at`, должны явно ставить флаг для срабатывания.
+        oked_changed_by_owner=oked_changed_by_owner,
     )
 
 
@@ -125,6 +130,9 @@ def medium_risk_borrower() -> BorrowerSnapshot:
         borrower=_borrower(
             inn="100000002",
             okved_changed_at=AS_OF - timedelta(days=200),
+            # ADR-0024 Session 3: фикстура полагается на OKVED_CHANGED_12M
+            # firing — флаг явно True (смена ОКЭД инициирована собственником).
+            oked_changed_by_owner=True,
         ),
         as_of=AS_OF,
         annual_reports=[_annual(2025, 3 * B, 300 * 1_000_000)],
@@ -206,6 +214,10 @@ def critical_borrower() -> BorrowerSnapshot:
                 date=date(2026, 2, 1),
                 type=TaxEventType.PENALTY,
                 amount=Money(Decimal(50_000_000), UZS),
+                # ADR-0024 Session 3: фикстура полагается на
+                # TAX_PENALTIES_CURRENT_YEAR firing — пеня материальная
+                # (ст.223 НК РУз, сокрытие, штраф 20% от суммы).
+                material=True,
             ),
             TaxEvent(date=date(2025, 11, 1), type=TaxEventType.ACCOUNT_FREEZE, duration_days=30),
         ],
@@ -221,6 +233,9 @@ def loan_oversize_borrower() -> BorrowerSnapshot:
         borrower=_borrower(
             inn="100000005",
             okved_changed_at=AS_OF - timedelta(days=200),  # +medium для REVIEW
+            # ADR-0024 Session 3: explicit owner flag — фикстура полагается
+            # на OKVED_CHANGED_12M firing для подъёма score до REVIEW.
+            oked_changed_by_owner=True,
         ),
         as_of=AS_OF,
         annual_reports=[_annual(2025, 1 * B, -50_000_000)],

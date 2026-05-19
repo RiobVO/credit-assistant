@@ -24,6 +24,10 @@ export type Step1Prefill = {
   director_appointed_at: string;
   okved_main: string;
   registered_address: string;
+  // ADR-0024 Session 3: parser/ORM-driven поля. Используются для conditional
+  // rendering toggle «ОКЭД сменился по инициативе собственника» в Step 1.
+  okved_main_changed_at: string | null;
+  oked_changed_by_owner: boolean;
 };
 
 export function rememberStep1Prefill(data: Step1Prefill): void {

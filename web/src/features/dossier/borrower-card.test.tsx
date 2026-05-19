@@ -21,6 +21,7 @@ const BORROWER: DossierViewDto["borrower"] = {
   registered_address: "Tashkent",
   okved_main_changed_at: null,
   charter_capital: null,
+  oked_changed_by_owner: false,
 };
 
 function renderCard(gnkCertificate: DossierViewDto["gnk_certificate"]) {
