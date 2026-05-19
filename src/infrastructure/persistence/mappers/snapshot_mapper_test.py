@@ -203,6 +203,9 @@ def test_ca037_financial_report_round_trip_with_all_extensions() -> None:
                 interest_expense=_money(67_803_000),
                 depreciation_amortization=_money(45_000_000),
                 operating_cash_flow=_money(220_000_000),
+                guarantees_outstanding=_money(50_000_000),
+                leases_outstanding=_money(30_000_000),
+                letters_of_credit_outstanding=_money(20_000_000),
                 balance_end=BalanceSnapshot(
                     assets=_money(2_533_084_000),
                     liabilities=_money(985_025_000),
@@ -253,6 +256,13 @@ def test_ca037_financial_report_round_trip_with_all_extensions() -> None:
     assert r.balance_start is not None
     assert r.balance_start.inventory is not None
     assert r.balance_start.inventory.amount == Decimal("150000000")
+    # ADR-0024 Session 2: off-balance commitments.
+    assert r.guarantees_outstanding is not None
+    assert r.guarantees_outstanding.amount == Decimal("50000000")
+    assert r.leases_outstanding is not None
+    assert r.leases_outstanding.amount == Decimal("30000000")
+    assert r.letters_of_credit_outstanding is not None
+    assert r.letters_of_credit_outstanding.amount == Decimal("20000000")
 
 
 def test_ca037_legacy_payload_without_new_keys_still_loads() -> None:
@@ -287,6 +297,10 @@ def test_ca037_legacy_payload_without_new_keys_still_loads() -> None:
     # ADR-0024 поля тоже None для legacy.
     assert r.depreciation_amortization is None
     assert r.operating_cash_flow is None
+    # ADR-0024 Session 2: off-balance commitments None для legacy.
+    assert r.guarantees_outstanding is None
+    assert r.leases_outstanding is None
+    assert r.letters_of_credit_outstanding is None
     # CA-047 / ADR-0024: пустой BalanceSnapshot (все поля None) сворачивается
     # в None, читатели должны различать «нет snapshot» и «есть snapshot со
     # всеми None».
