@@ -1,12 +1,20 @@
-"""CIRCULAR_INVOICING (упрощ.): 2-узловые циклы A→B + B→A в близком окне."""
+"""CIRCULAR_INVOICING: graph-based detection через networkx (CA-002).
+
+2-cycle case покрыт existing test'ами; 3-node cycle добавлен через
+monkeypatch на `_build_graph` (на текущих данных edges всегда через
+borrower → 3+ unreachable до появления external invoices, CA-002b).
+"""
 
 from datetime import date
 from decimal import Decimal
+
+import pytest
 
 from domain.entities.borrower import Borrower, LegalForm
 from domain.entities.borrower_snapshot import BorrowerSnapshot
 from domain.entities.invoice import Invoice, InvoiceRole
 from domain.rules.counterparty.circular_invoicing import circular_invoicing
+from domain.value_objects.flag_severity import FlagSeverity
 from domain.value_objects.inn import INN
 from domain.value_objects.money import Currency, Money
 
@@ -97,3 +105,65 @@ class TestCircularInvoicing:
         ))
         assert ev is not None
         assert ev.evidence["cycle_count"] == 2
+
+    def test_2_node_cycle_does_not_escalate_severity(self) -> None:
+        # 2-cycle = baseline → severity override не выставляется
+        # (run_all возьмёт rule.severity=high из YAML).
+        ev = circular_invoicing(_snapshot(
+            _inv(date(2026, 4, 1), InvoiceRole.SELLER),
+            _inv(date(2026, 4, 15), InvoiceRole.BUYER),
+        ))
+        assert ev is not None
+        assert ev.severity is None
+        assert ev.evidence["max_cycle_length"] == 2
+
+    def test_fires_for_3_node_cycle_via_graph_override(
+        self, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        # BorrowerSnapshot.invoices хранит только наши ЭСФ → 3-node cycle
+        # A→B→C→A нельзя собрать из real Invoice'ов без external invoices
+        # source (CA-002b backlog). Этот тест monkeypatch'ит _build_graph
+        # на synthetic 3-node DiGraph: проверяем что сам алгоритм
+        # корректно ловит 3+ node циклы, когда они реально доступны.
+        import networkx as nx
+
+        from domain.rules.counterparty import circular_invoicing as ci_module
+
+        a_inn, b_inn, c_inn = "123456789", "222222222", "333333333"
+        invs_a_to_b = [_inv(date(2026, 4, 1), InvoiceRole.SELLER, cp_inn=b_inn)]
+        synth_b_to_c = Invoice(
+            date=date(2026, 4, 8),
+            amount=Money(Decimal(60_000_000), Currency.UZS),
+            our_role=InvoiceRole.SELLER,
+            counterparty_inn=INN(c_inn),
+            counterparty_name="ООО C",
+        )
+        synth_c_to_a = Invoice(
+            date=date(2026, 4, 15),
+            amount=Money(Decimal(60_000_000), Currency.UZS),
+            our_role=InvoiceRole.BUYER,
+            counterparty_inn=INN(c_inn),
+            counterparty_name="ООО C",
+        )
+
+        def fake_build_graph(
+            _snapshot: BorrowerSnapshot,
+        ) -> tuple[nx.DiGraph, dict[tuple[str, str], list[Invoice]]]:
+            graph = nx.DiGraph()
+            edges: dict[tuple[str, str], list[Invoice]] = {
+                (a_inn, b_inn): invs_a_to_b,
+                (b_inn, c_inn): [synth_b_to_c],
+                (c_inn, a_inn): [synth_c_to_a],
+            }
+            for frm, to in edges:
+                graph.add_edge(frm, to)
+            return graph, edges
+
+        monkeypatch.setattr(ci_module, "_build_graph", fake_build_graph)
+
+        ev = circular_invoicing(_snapshot(*invs_a_to_b))
+        assert ev is not None
+        assert ev.evidence["max_cycle_length"] == 3
+        assert ev.evidence["cycle_count"] == 1
+        # Session 3 severity override: 3+ узлов → CRITICAL поверх YAML high
+        assert ev.severity == FlagSeverity.CRITICAL
