@@ -75,3 +75,49 @@ def test_kpi_slot_none_kpi_returns_level_tone_none() -> None:
     при `{% if slot.level_tone %}`."""
     slot = _kpi_slot("ebit", None, _RU, _FMT_UZS)
     assert slot["level_tone"] is None
+
+
+# ----------- ADR-0024 (Session 1): расширенный KPI набор ---------------------
+#
+# Проверяем что новые kpi_label entries резолвятся для обеих локалей
+# и slot dict-форма не падает.
+
+
+_UZ = load_pdf_messages("uz")
+_FMT_UZS_UZ = make_fmt_uzs(_UZ)
+
+
+def test_kpi_slot_ebitda_label_resolves_ru() -> None:
+    kpi = KpiValue(value=Decimal("200000000"), unit=KpiUnit.UZS, yoy_pct=None, sparkline=())
+    slot = _kpi_slot("ebitda", kpi, _RU, _FMT_UZS)
+    assert slot["label"] == "EBITDA"
+
+
+def test_kpi_slot_current_ratio_label_resolves_uz() -> None:
+    kpi = KpiValue(
+        value=Decimal("1.8"),
+        unit=KpiUnit.RATIO,
+        yoy_pct=None,
+        sparkline=(),
+        level_tone=KpiLevelTone.GOOD,
+    )
+    slot = _kpi_slot("current_ratio", kpi, _UZ, _FMT_UZS_UZ)
+    assert slot["label"] == "Joriy likvidlik"
+    assert slot["level_tone"] == "good"
+
+
+def test_kpi_slot_dscr_ru_label() -> None:
+    kpi = KpiValue(value=Decimal("1.25"), unit=KpiUnit.RATIO, yoy_pct=None, sparkline=())
+    slot = _kpi_slot("dscr", kpi, _RU, _FMT_UZS)
+    assert slot["label"] == "DSCR"
+
+
+def test_kpi_slot_working_capital_ru_label_uzs_value() -> None:
+    """Working Capital — UZS Money; fmt_uzs форматирует с billions=True."""
+    kpi = KpiValue(value=Decimal("2000000000"), unit=KpiUnit.UZS, yoy_pct=None, sparkline=())
+    slot = _kpi_slot("working_capital", kpi, _RU, _FMT_UZS)
+    assert slot["label"] == "Оборотный капитал"
+    # 2 млрд → fmt_uzs ставит «2,0 млрд сум» или подобное; деталь форматирования
+    # покрыта другим тестом template_filters, тут проверяем тип и непустоту.
+    assert isinstance(slot["value"], str)
+    assert slot["value"] != "—"

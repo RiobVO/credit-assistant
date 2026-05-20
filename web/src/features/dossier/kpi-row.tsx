@@ -17,12 +17,24 @@ export function KpiRow({
   dossierId: string;
 }) {
   const t = useTranslations("dossier.kpi");
+  // ADR-0024 (Session 1): 10 KPI карточек = legacy 4 (EBIT/ROE/Debt-to-EBIT +
+  // Readiness как замена revenue_ltm в этом ряду) + расширенные 6 (EBITDA /
+  // Debt-to-EBITDA / Current Ratio / Working Capital / Interest Coverage / DSCR).
+  // CA-037 invariant — legacy остаются рядом с расширением, не вместо.
+  // Grid xl:grid-cols-4 → 10 cards в 3 ряда (4+4+2), читаемо без сжатия меток.
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
       <EbitSlot kpi={kpis.ebit} />
       <RoeSlot kpi={kpis.roe} />
       <DebtToEbitSlot debtToEbit={kpis.debt_to_ebit} ebit={kpis.ebit} />
       <ReadinessKpiCard dossierId={dossierId} label={t("label_readiness")} />
+      {/* ADR-0024 (Session 1) — расширенный KPI набор: */}
+      <EbitdaSlot kpi={kpis.ebitda} />
+      <DebtToEbitdaSlot debtToEbitda={kpis.debt_to_ebitda} />
+      <CurrentRatioSlot kpi={kpis.current_ratio} />
+      <WorkingCapitalSlot kpi={kpis.working_capital} />
+      <InterestCoverageSlot kpi={kpis.interest_coverage} />
+      <DscrSlot kpi={kpis.dscr} />
     </div>
   );
 }
@@ -176,5 +188,139 @@ function NoDebtCard({ label, pillLabel }: { label: string; pillLabel: string }) 
         {pillLabel}
       </div>
     </div>
+  );
+}
+
+// =============================================================================
+// ADR-0024 (Session 1): расширенный KPI набор
+// =============================================================================
+//
+// 6 slot-компонентов по pattern legacy EbitSlot/RoeSlot. Все:
+// * null → EmptyKpiCard с локализованным hint
+// * value → KpiCard (UZS/RATIO formatting) + level_tone из backend
+//
+// Тонкие хвосты бэкенда обработаны:
+// * debt_to_ebitda Decimal("0") = «нет долга» → NoDebtCard (как debt_to_ebit)
+// * interest_coverage с отрицательным ratio (EBIT < 0) backend всё равно
+//   возвращает KpiValue с tone BAD — frontend рендерит число, не «—»
+
+// ----------- EBITDA ----------------------------------------------------------
+
+function EbitdaSlot({ kpi }: { kpi: KpiValueDto | null }) {
+  const t = useTranslations("dossier.kpi");
+  const locale = useLocale() as UzsLocale;
+  const label = t("label_ebitda");
+  if (kpi == null) {
+    return <EmptyKpiCard label={label} hint={t("ebitda_empty_hint")} />;
+  }
+  const value = parseFloat(kpi.value);
+  return (
+    <KpiCard
+      label={label}
+      value={formatBigUzs(value, locale)}
+      yoyPct={null}
+      changeTone="positive"
+    />
+  );
+}
+
+// ----------- Debt / EBITDA — same 4-case как DebtToEbitSlot ------------------
+
+function DebtToEbitdaSlot({ debtToEbitda }: { debtToEbitda: KpiValueDto | null }) {
+  const t = useTranslations("dossier.kpi");
+  const label = t("label_debt_ebitda");
+  if (debtToEbitda != null && parseFloat(debtToEbitda.value) === 0) {
+    return <NoDebtCard label={label} pillLabel={t("no_debt_pill")} />;
+  }
+  if (debtToEbitda != null) {
+    return (
+      <KpiCard
+        label={label}
+        value={formatRatio(parseFloat(debtToEbitda.value))}
+        yoyPct={null}
+        changeTone="negative"
+        levelTone={debtToEbitda.level_tone ?? undefined}
+      />
+    );
+  }
+  return <EmptyKpiCard label={label} hint={t("debt_ebitda_empty_hint")} />;
+}
+
+// ----------- Current Ratio ---------------------------------------------------
+
+function CurrentRatioSlot({ kpi }: { kpi: KpiValueDto | null }) {
+  const t = useTranslations("dossier.kpi");
+  const label = t("label_current_ratio");
+  if (kpi == null) {
+    return <EmptyKpiCard label={label} hint={t("current_ratio_empty_hint")} />;
+  }
+  return (
+    <KpiCard
+      label={label}
+      value={formatRatio(parseFloat(kpi.value))}
+      yoyPct={null}
+      changeTone="positive"
+      levelTone={kpi.level_tone ?? undefined}
+    />
+  );
+}
+
+// ----------- Working Capital -------------------------------------------------
+
+function WorkingCapitalSlot({ kpi }: { kpi: KpiValueDto | null }) {
+  const t = useTranslations("dossier.kpi");
+  const locale = useLocale() as UzsLocale;
+  const label = t("label_working_capital");
+  if (kpi == null) {
+    return <EmptyKpiCard label={label} hint={t("working_capital_empty_hint")} />;
+  }
+  const value = parseFloat(kpi.value);
+  // Знак — единственный сигнал WC (нет universal threshold). Отрицательный WC
+  // визуально оборачиваем в negative tone без BAD stripe.
+  return (
+    <KpiCard
+      label={label}
+      value={formatBigUzs(value, locale)}
+      yoyPct={null}
+      changeTone={value >= 0 ? "positive" : "negative"}
+    />
+  );
+}
+
+// ----------- Interest Coverage -----------------------------------------------
+
+function InterestCoverageSlot({ kpi }: { kpi: KpiValueDto | null }) {
+  const t = useTranslations("dossier.kpi");
+  const label = t("label_interest_coverage");
+  if (kpi == null) {
+    return <EmptyKpiCard label={label} hint={t("interest_coverage_empty_hint")} />;
+  }
+  return (
+    <KpiCard
+      label={label}
+      value={formatRatio(parseFloat(kpi.value))}
+      yoyPct={null}
+      changeTone="positive"
+      levelTone={kpi.level_tone ?? undefined}
+    />
+  );
+}
+
+// ----------- DSCR ------------------------------------------------------------
+
+function DscrSlot({ kpi }: { kpi: KpiValueDto | null }) {
+  const t = useTranslations("dossier.kpi");
+  const label = t("label_dscr");
+  if (kpi == null) {
+    return <EmptyKpiCard label={label} hint={t("dscr_empty_hint")} />;
+  }
+  return (
+    <KpiCard
+      label={label}
+      value={formatRatio(parseFloat(kpi.value))}
+      yoyPct={null}
+      changeTone="positive"
+      levelTone={kpi.level_tone ?? undefined}
+    />
   );
 }

@@ -310,6 +310,14 @@ def _kpi_bundle_to_output(bundle: KpiBundle) -> KpiBundleOutput:
         ebit=_kpi_value_to_output(bundle.ebit),
         roe=_kpi_value_to_output(bundle.roe),
         debt_to_ebit=_kpi_value_to_output(bundle.debt_to_ebit),
+        # ADR-0024 (Session 1): extended KPI set. Универсальный
+        # _kpi_value_to_output уже умеет UZS/PCT/RATIO + level_tone.
+        ebitda=_kpi_value_to_output(bundle.ebitda),
+        debt_to_ebitda=_kpi_value_to_output(bundle.debt_to_ebitda),
+        current_ratio=_kpi_value_to_output(bundle.current_ratio),
+        working_capital=_kpi_value_to_output(bundle.working_capital),
+        interest_coverage=_kpi_value_to_output(bundle.interest_coverage),
+        dscr=_kpi_value_to_output(bundle.dscr),
     )
 
 

@@ -107,6 +107,12 @@
   "kpi_label.ebit": "EBIT (EBITDA proksisi)",
   "kpi_label.roe": "ROE",
   "kpi_label.debt_to_ebit": "Qarz / EBIT",
+  "kpi_label.ebitda": "EBITDA",
+  "kpi_label.debt_to_ebitda": "Qarz / EBITDA",
+  "kpi_label.current_ratio": "Joriy likvidlik",
+  "kpi_label.working_capital": "Aylanma kapital",
+  "kpi_label.interest_coverage": "Foiz qoplash",
+  "kpi_label.dscr": "DSCR",
 
   "legal_form_full.llc": "Masʼuliyati cheklangan jamiyat",
   "legal_form_full.pe": "Xususiy korxona",

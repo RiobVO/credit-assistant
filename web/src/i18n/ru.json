@@ -790,7 +790,19 @@
       "debt_loss_hint": "Долговая нагрузка не оценима (убыток)",
       "debt_no_data_hint": "Загрузите Форму №1",
       "no_data_default": "Нет данных для расчёта",
-      "no_debt_pill": "Нет долга"
+      "no_debt_pill": "Нет долга",
+      "label_ebitda": "EBITDA",
+      "ebitda_empty_hint": "Нужны PBT, проценты и D&A (амортизация)",
+      "label_debt_ebitda": "Долг / EBITDA",
+      "debt_ebitda_empty_hint": "Нужны total_debt и EBITDA",
+      "label_current_ratio": "Текущая ликвидность",
+      "current_ratio_empty_hint": "Нужны краткосрочные активы и обязательства",
+      "label_working_capital": "Оборотный капитал",
+      "working_capital_empty_hint": "Нужны краткосрочные активы и обязательства",
+      "label_interest_coverage": "Покрытие процентов",
+      "interest_coverage_empty_hint": "Нужны EBIT и процентные расходы",
+      "label_dscr": "DSCR",
+      "dscr_empty_hint": "Нужна кредитная заявка, OCF/EBITDA/EBIT и проценты"
     },
     "risk": {
       "title": "Красные флаги",

@@ -455,9 +455,12 @@
   table.t tbody td.dim { color: var(--ink-3); }
 
   /* === KPI strip === */
+  /* ADR-0024 (Session 1): 10 карточек = 2 ряда по 5. Legacy 4 + расширенная
+     шестёрка живут рядом. page-break-inside снят — 2-ряд блок может не влезать
+     целиком на одну страницу с предыдущей таблицей; разрыв допустим. */
   .kpi-row {
-    display: grid; grid-template-columns: repeat(4, 1fr);
-    gap: 10pt; margin-top: 18pt; page-break-inside: avoid;
+    display: grid; grid-template-columns: repeat(5, 1fr);
+    gap: 8pt; margin-top: 18pt;
   }
   .kpi {
     border: 0.5pt solid var(--border);

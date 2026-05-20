@@ -27,6 +27,7 @@ from domain.entities.monthly_turnover import MonthlyTurnover
 from domain.value_objects.balance_snapshot import BalanceSnapshot
 from domain.value_objects.date_range import DateRange
 from domain.value_objects.inn import INN
+from domain.value_objects.loan_request import LoanRequest
 from domain.value_objects.money import Currency, Money
 
 UZS = Currency.UZS
@@ -198,8 +199,15 @@ def _annual_extended(
     equity_start: int | None = 450_000_000,
     total_debt_end: int | None = 200_000_000,
     total_debt_start: int | None = 180_000_000,
+    # ADR-0024 (Session 1): новые опциональные поля под расширенный KPI набор.
+    # Defaults None — старые тесты не аффектятся (новые KPI просто возвращают None).
+    depreciation_amortization: int | None = None,
+    operating_cash_flow: int | None = None,
+    current_assets_end: int | None = None,
+    current_liabilities_end: int | None = None,
 ) -> FinancialReport:
-    """Годовой отчёт с CA-037 расширениями. None — поле отсутствует в исходных.
+    """Годовой отчёт с CA-037 расширениями + ADR-0024 (Session 1) полями.
+    None — поле отсутствует в исходных.
 
     CA-047: balance_end / balance_start как BalanceSnapshot sub-entity;
     пустой snapshot (`is_empty()=True`) превращается в None — KPI calculator
@@ -210,7 +218,10 @@ def _annual_extended(
         return Money(Decimal(v), UZS) if v is not None else None
 
     balance_end = BalanceSnapshot(
-        equity=money_opt(equity_end), total_debt=money_opt(total_debt_end),
+        equity=money_opt(equity_end),
+        total_debt=money_opt(total_debt_end),
+        current_assets=money_opt(current_assets_end),
+        current_liabilities=money_opt(current_liabilities_end),
     )
     balance_start = BalanceSnapshot(
         equity=money_opt(equity_start), total_debt=money_opt(total_debt_start),
@@ -223,6 +234,8 @@ def _annual_extended(
         taxes_paid=Money(Decimal(revenue // 20), UZS),
         profit_before_tax=money_opt(profit_before_tax),
         interest_expense=money_opt(interest_expense),
+        depreciation_amortization=money_opt(depreciation_amortization),
+        operating_cash_flow=money_opt(operating_cash_flow),
         balance_end=balance_end if not balance_end.is_empty() else None,
         balance_start=balance_start if not balance_start.is_empty() else None,
     )
@@ -497,15 +510,25 @@ def test_ebit_has_no_level_tone() -> None:
     assert bundle.ebit.level_tone is None
 
 
-def test_kpi_bundle_renamed_fields_replace_ebitda() -> None:
-    """CA-037 контракт: KpiBundle экспортирует `ebit` / `debt_to_ebit` —
-    старые имена ebitda/debt_to_ebitda удалены. Это breaking change для
-    DossierViewResponseSchema (CA-037.5) и frontend (CA-037.6)."""
+def test_kpi_bundle_legacy_and_extended_coexist() -> None:
+    """CA-037 invariant + ADR-0024: legacy ``ebit`` / ``debt_to_ebit`` и
+    расширенные ``ebitda`` / ``debt_to_ebitda`` живут **рядом** — не
+    переименовываем после появления D&A. UI/PDF показывают и то, и другое
+    отдельными карточками."""
     bundle = compute_kpis(_snapshot())
+    # CA-037: legacy пара осталась.
     assert hasattr(bundle, "ebit")
     assert hasattr(bundle, "debt_to_ebit")
-    assert not hasattr(bundle, "ebitda")
-    assert not hasattr(bundle, "debt_to_ebitda")
+    # ADR-0024 (Session 1): расширенная шестёрка добавлена.
+    for field in (
+        "ebitda",
+        "debt_to_ebitda",
+        "current_ratio",
+        "working_capital",
+        "interest_coverage",
+        "dscr",
+    ):
+        assert hasattr(bundle, field), f"KpiBundle missing field {field!r}"
 
 
 # ----------- monthly_revenue_24m chart -----------------------------------------
@@ -565,3 +588,309 @@ def test_monthly_revenue_24m_filters_non_uzs() -> None:
 
     assert len(points) == 12  # USD точка отброшена
     assert all(p.month_start.year == 2025 for p in points)
+
+
+# ============================================================================
+# ADR-0024 (Session 1): EBITDA / debt_to_ebitda / current_ratio /
+# working_capital / interest_coverage / DSCR
+# ============================================================================
+#
+# Контракт: 6 расширенных KPI рядом с legacy ebit/debt_to_ebit. Каждое поле
+# nullable: отсутствует компонент или невозможная арифметика → None.
+# Пороги — single source of truth в kpi_calculator (CA-048).
+
+
+def _loan_uzs(amount: int, term_months: int = 12) -> LoanRequest:
+    return LoanRequest(
+        amount=Money(Decimal(amount), UZS),
+        term_months=term_months,
+        rate_pct=Decimal("24.0"),
+        purpose="working_capital",
+        category="msb",
+    )
+
+
+def _snapshot_with_loan(
+    annual: list[FinancialReport],
+    loan: LoanRequest | None = None,
+) -> BorrowerSnapshot:
+    return BorrowerSnapshot(
+        borrower=_borrower(),
+        as_of=date(2026, 5, 8),
+        annual_reports=annual,
+        loan_request=loan,
+    )
+
+
+# ----------- EBITDA -----------------------------------------------------------
+
+
+def test_ebitda_fires_when_pbt_interest_da_present() -> None:
+    """EBITDA = PBT + interest_expense + D&A. Все компоненты заданы → значение."""
+    annual = _annual_extended(
+        2025,
+        profit_before_tax=130_000_000,
+        interest_expense=20_000_000,
+        depreciation_amortization=50_000_000,
+    )
+    bundle = compute_kpis(_snapshot(annual=[annual]))
+    assert bundle.ebitda is not None
+    assert bundle.ebitda.value == Decimal("200000000")
+    assert bundle.ebitda.unit is KpiUnit.UZS
+    # EBITDA — absolute UZS, без universal threshold.
+    assert bundle.ebitda.level_tone is None
+
+
+def test_ebitda_none_when_da_missing() -> None:
+    """D&A None → EBITDA None (НЕ fallback на EBIT — иначе дубликат EBIT)."""
+    annual = _annual_extended(
+        2025,
+        profit_before_tax=130_000_000,
+        interest_expense=20_000_000,
+        depreciation_amortization=None,
+    )
+    bundle = compute_kpis(_snapshot(annual=[annual]))
+    assert bundle.ebitda is None
+    # EBIT при этом всё равно посчитан — две карточки независимы.
+    assert bundle.ebit is not None
+
+
+def test_ebitda_negative_is_valid_signed() -> None:
+    """Знак сохраняется: PBT убыточен, D&A малая → отрицательная EBITDA.
+    KPI это валидное состояние, debt_to_ebitda тогда дополнительно сигналит None.
+    """
+    annual = _annual_extended(
+        2025,
+        profit_before_tax=-100_000_000,
+        interest_expense=10_000_000,
+        depreciation_amortization=5_000_000,
+    )
+    bundle = compute_kpis(_snapshot(annual=[annual]))
+    assert bundle.ebitda is not None
+    assert bundle.ebitda.value == Decimal("-85000000")
+
+
+# ----------- debt_to_ebitda ---------------------------------------------------
+
+
+def test_debt_to_ebitda_fires_with_level_tone() -> None:
+    """Happy: debt = 800M, EBITDA = 200M → 4.0× → WARN (3..5)."""
+    annual = _annual_extended(
+        2025,
+        profit_before_tax=130_000_000,
+        interest_expense=20_000_000,
+        depreciation_amortization=50_000_000,
+        total_debt_end=800_000_000,
+    )
+    bundle = compute_kpis(_snapshot(annual=[annual]))
+    assert bundle.debt_to_ebitda is not None
+    assert bundle.debt_to_ebitda.value == Decimal(4)
+    assert bundle.debt_to_ebitda.level_tone is KpiLevelTone.WARN
+
+
+def test_debt_to_ebitda_zero_debt_returns_zero_good() -> None:
+    """total_debt = 0 → Decimal(0), tone GOOD. EBITDA не требуется (даже если
+    D&A None — это «нет долга» сигнал, важнее EBITDA-неопределённости)."""
+    annual = _annual_extended(
+        2025,
+        total_debt_end=0,
+        depreciation_amortization=None,  # EBITDA сама была бы None
+    )
+    bundle = compute_kpis(_snapshot(annual=[annual]))
+    assert bundle.debt_to_ebitda is not None
+    assert bundle.debt_to_ebitda.value == Decimal(0)
+    assert bundle.debt_to_ebitda.level_tone is KpiLevelTone.GOOD
+
+
+def test_debt_to_ebitda_none_when_ebitda_nonpositive() -> None:
+    """EBITDA ≤ 0 → debt_to_ebitda None (нельзя оценить нагрузку при убытке)."""
+    annual = _annual_extended(
+        2025,
+        profit_before_tax=-200_000_000,
+        interest_expense=10_000_000,
+        depreciation_amortization=5_000_000,  # EBITDA = -185M
+        total_debt_end=500_000_000,
+    )
+    bundle = compute_kpis(_snapshot(annual=[annual]))
+    assert bundle.debt_to_ebitda is None
+
+
+# ----------- current_ratio ----------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "ca,cl,expected_value,expected_tone",
+    [
+        (3_000_000, 1_000_000, Decimal(3), KpiLevelTone.GOOD),  # 3.0 > 1.5
+        (1_510_000, 1_000_000, Decimal("1.51"), KpiLevelTone.GOOD),  # 1.51 > 1.5
+        (1_500_000, 1_000_000, Decimal("1.5"), KpiLevelTone.WARN),  # 1.50 boundary
+        (1_200_000, 1_000_000, Decimal("1.2"), KpiLevelTone.WARN),
+        (1_000_000, 1_000_000, Decimal(1), KpiLevelTone.WARN),  # 1.00 boundary
+        (990_000, 1_000_000, Decimal("0.99"), KpiLevelTone.BAD),
+    ],
+)
+def test_current_ratio_level_tone_boundary(
+    ca: int, cl: int, expected_value: Decimal, expected_tone: KpiLevelTone,
+) -> None:
+    """Current Ratio пороги: >1.5 GOOD, 1.0..1.5 WARN, <1.0 BAD. Boundary
+    inclusive — 1.50 и 1.00 → WARN."""
+    annual = _annual_extended(
+        2025, current_assets_end=ca, current_liabilities_end=cl,
+    )
+    bundle = compute_kpis(_snapshot(annual=[annual]))
+    assert bundle.current_ratio is not None
+    assert bundle.current_ratio.value == expected_value
+    assert bundle.current_ratio.level_tone is expected_tone
+
+
+def test_current_ratio_none_when_components_missing() -> None:
+    """CA или CL None → None. Парсер FORM_1 пока не извлекает поля,
+    snapshot почти всегда без них до manual-input."""
+    annual = _annual_extended(2025)  # current_* defaults to None
+    bundle = compute_kpis(_snapshot(annual=[annual]))
+    assert bundle.current_ratio is None
+
+
+def test_current_ratio_none_when_cl_zero() -> None:
+    """CL ≤ 0 → None (ratio неопределим)."""
+    annual = _annual_extended(
+        2025, current_assets_end=1_000_000, current_liabilities_end=0,
+    )
+    bundle = compute_kpis(_snapshot(annual=[annual]))
+    assert bundle.current_ratio is None
+
+
+# ----------- working_capital --------------------------------------------------
+
+
+def test_working_capital_positive_sign() -> None:
+    """WC = CA − CL. Положительный → UZS Money. level_tone=None (Money-KPI)."""
+    annual = _annual_extended(
+        2025,
+        current_assets_end=3_000_000_000,
+        current_liabilities_end=1_000_000_000,
+    )
+    bundle = compute_kpis(_snapshot(annual=[annual]))
+    assert bundle.working_capital is not None
+    assert bundle.working_capital.value == Decimal("2000000000")
+    assert bundle.working_capital.unit is KpiUnit.UZS
+    assert bundle.working_capital.level_tone is None
+
+
+def test_working_capital_negative_is_valid() -> None:
+    """Отрицательный WC валиден — может быть OK для retail с быстрым cash cycle.
+    Знак не превращается в BAD — нет universal threshold."""
+    annual = _annual_extended(
+        2025,
+        current_assets_end=500_000_000,
+        current_liabilities_end=1_000_000_000,
+    )
+    bundle = compute_kpis(_snapshot(annual=[annual]))
+    assert bundle.working_capital is not None
+    assert bundle.working_capital.value == Decimal("-500000000")
+    assert bundle.working_capital.level_tone is None
+
+
+def test_working_capital_none_when_components_missing() -> None:
+    """CA или CL None → None (нет вычитания без обоих)."""
+    annual = _annual_extended(2025)  # defaults None
+    bundle = compute_kpis(_snapshot(annual=[annual]))
+    assert bundle.working_capital is None
+
+
+# ----------- interest_coverage ------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "pbt,interest,expected_tone",
+    [
+        # EBIT = PBT + interest. ratio = EBIT / interest.
+        (280_000_000, 20_000_000, KpiLevelTone.GOOD),  # ebit=300, ratio=15
+        (41_000_000, 20_000_000, KpiLevelTone.GOOD),  # ebit=61, ratio=3.05
+        (40_000_000, 20_000_000, KpiLevelTone.WARN),  # ebit=60, ratio=3.0 (bndry)
+        (10_000_000, 20_000_000, KpiLevelTone.WARN),  # ebit=30, ratio=1.5 (bndry)
+        (5_000_000, 20_000_000, KpiLevelTone.BAD),  # ebit=25, ratio=1.25
+        (0, 20_000_000, KpiLevelTone.BAD),  # ebit=20, ratio=1.0
+    ],
+)
+def test_interest_coverage_level_tone(
+    pbt: int, interest: int, expected_tone: KpiLevelTone,
+) -> None:
+    """Interest Coverage = EBIT/Interest. Пороги: >3 GOOD, 1.5..3 WARN, <1.5 BAD.
+    Boundary inclusive — 3.00 и 1.50 → WARN."""
+    annual = _annual_extended(2025, profit_before_tax=pbt, interest_expense=interest)
+    bundle = compute_kpis(_snapshot(annual=[annual]))
+    assert bundle.interest_coverage is not None
+    assert bundle.interest_coverage.level_tone is expected_tone
+
+
+def test_interest_coverage_none_when_interest_zero() -> None:
+    """interest = 0 → ratio неопределим, None. Семантически: «нет процентных
+    расходов» — coverage не нужен."""
+    annual = _annual_extended(2025, profit_before_tax=100_000_000, interest_expense=0)
+    bundle = compute_kpis(_snapshot(annual=[annual]))
+    assert bundle.interest_coverage is None
+
+
+def test_interest_coverage_negative_ratio_when_ebit_negative() -> None:
+    """EBIT отрицательный → отрицательный ratio с tone BAD. Банк видит «не
+    покрывает» вместо «нет данных»."""
+    annual = _annual_extended(2025, profit_before_tax=-30_000_000, interest_expense=10_000_000)
+    bundle = compute_kpis(_snapshot(annual=[annual]))
+    # ebit = -30+10 = -20; ratio = -20/10 = -2
+    assert bundle.interest_coverage is not None
+    assert bundle.interest_coverage.value == Decimal(-2)
+    assert bundle.interest_coverage.level_tone is KpiLevelTone.BAD
+
+
+# ----------- DSCR -------------------------------------------------------------
+
+
+def test_dscr_ocf_path_fires_with_tone() -> None:
+    """OCF доступен → числитель OCF. DSCR = 200M / (20M + 100M loan/12*12 = 20M + 100M) = 200/120
+    ≈ 1.67 → GOOD (>1.5)."""
+    annual = _annual_extended(
+        2025,
+        operating_cash_flow=200_000_000,
+        interest_expense=20_000_000,
+        profit_before_tax=100_000_000,
+        depreciation_amortization=50_000_000,
+    )
+    loan = _loan_uzs(amount=100_000_000, term_months=12)
+    bundle = compute_kpis(_snapshot_with_loan(annual=[annual], loan=loan))
+    # principal_annual = 100M * 12 / 12 = 100M; debt_service = 20 + 100 = 120M
+    # numerator OCF = 200M; ratio = 200/120 = 1.666...
+    assert bundle.dscr is not None
+    expected = Decimal("200000000") / Decimal("120000000")
+    assert bundle.dscr.value == expected
+    assert bundle.dscr.level_tone is KpiLevelTone.GOOD
+
+
+def test_dscr_fallback_to_ebitda_when_no_ocf() -> None:
+    """OCF None, D&A+PBT есть → numerator EBITDA. DSCR через fallback chain."""
+    annual = _annual_extended(
+        2025,
+        operating_cash_flow=None,
+        interest_expense=20_000_000,
+        profit_before_tax=100_000_000,
+        depreciation_amortization=50_000_000,
+    )
+    loan = _loan_uzs(amount=100_000_000, term_months=12)
+    bundle = compute_kpis(_snapshot_with_loan(annual=[annual], loan=loan))
+    # EBITDA = 100 + 20 + 50 = 170M; debt_service = 120M; ratio = 170/120 ≈ 1.42 → WARN
+    assert bundle.dscr is not None
+    expected = Decimal("170000000") / Decimal("120000000")
+    assert bundle.dscr.value == expected
+    assert bundle.dscr.level_tone is KpiLevelTone.WARN
+
+
+def test_dscr_none_without_loan_request() -> None:
+    """Нет loan_request → нечем считать debt_service → None. (KPI рассчитан
+    только когда есть заявка — иначе нет знаменателя.)"""
+    annual = _annual_extended(
+        2025,
+        operating_cash_flow=200_000_000,
+        interest_expense=20_000_000,
+    )
+    bundle = compute_kpis(_snapshot_with_loan(annual=[annual], loan=None))
+    assert bundle.dscr is None

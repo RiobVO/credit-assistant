@@ -290,12 +290,24 @@ class KpiValueOutput(_StrictModel):
 class KpiBundleOutput(_StrictModel):
     """CA-037: ``ebit`` / ``debt_to_ebit`` (вместо EBITDA-имён) — честно отражают,
     что D&A не входит в расчёт (нужен FORM_5 cashflow). Когда появятся данные —
-    добавим отдельные ``ebitda`` / ``debt_to_ebitda`` рядом."""
+    добавим отдельные ``ebitda`` / ``debt_to_ebitda`` рядом.
+
+    ADR-0024 (Session 1): 6 расширенных KPI рядом с legacy парой. CA-037
+    invariant держим — legacy ebit/debt_to_ebit НЕ переименовываем. Все 6
+    nullable (degraded mode правило A): None → UI/PDF рендерит empty card.
+    """
 
     revenue_ltm: KpiValueOutput | None
     ebit: KpiValueOutput | None
     roe: KpiValueOutput | None
     debt_to_ebit: KpiValueOutput | None
+    # ADR-0024 (Session 1):
+    ebitda: KpiValueOutput | None = None
+    debt_to_ebitda: KpiValueOutput | None = None
+    current_ratio: KpiValueOutput | None = None
+    working_capital: KpiValueOutput | None = None
+    interest_coverage: KpiValueOutput | None = None
+    dscr: KpiValueOutput | None = None
 
 
 class MonthlyRevenuePointOutput(_StrictModel):
