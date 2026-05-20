@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from domain.entities.borrower_snapshot import BorrowerSnapshot
+from domain.value_objects.flag_severity import FlagSeverity
 
 
 @dataclass(frozen=True, slots=True)
@@ -21,6 +22,11 @@ class FiringEvidence:
     # T0.4 follow-up B2: UZ-перевод message. Soft default="" для test-fixtures.
     # Production rule-функции формируют обе строки параллельно (strategy D).
     message_uz: str = ""
+    # ADR-0024 Session 3: dual-severity escalation. None → run_all берёт
+    # rule.severity из YAML (поведение до Session 3). Конкретное значение →
+    # перекрывает rule.severity для одиночного срабатывания. Применяется
+    # SINGLE_SUPPLIER_CONCENTRATION (foreign-supplier → high поверх medium).
+    severity: FlagSeverity | None = None
 
     def __hash__(self) -> int:
         return hash(self.message)
