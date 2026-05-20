@@ -1,7 +1,9 @@
 """Анонимизатор soliq xltx-выгрузок для коммита в git.
 
 CLI:
-    python scripts/anonymize_xltx.py <input.xltx> <output.xltx>
+    Single-file:  python scripts/anonymize_xltx.py <input.xltx> <output.xltx>
+    Batch:        python scripts/anonymize_xltx.py --batch <input_dir> \\
+                                                   --output-dir <output_dir> [--force]
 
 Замазывает:
 - **ИНН** (9 или 14 подряд цифр) → детерминированный hash той же длины. Один и тот же
@@ -15,6 +17,11 @@ CLI:
 Формулы (cells с data_type='f') не трогаются — после ``/10`` они пересчитаются
 автоматически. Cell с ``data_only=True`` value формулы виделась бы как число —
 открываем workbook с ``data_only=False`` чтобы различать formula vs literal.
+
+Batch mode: подхватывает все ``*_full.xltx`` в input_dir, генерирует
+``*_anon.xltx`` имена через детерминированную INN-substitution в стеме
+(защита от collision'ов когда несколько firms делят префикс). Существующие
+anon-файлы пропускаются без ``--force`` — идемпотентный re-run.
 
 Acceptance — anon-файл:
 1. Открывается parser'ом без UnsupportedFormatError (sentinel-cells не тронуты —
@@ -108,6 +115,23 @@ def _anonymize_number(value: float | int) -> float | int | None:
     return round(value / 10, 2)
 
 
+def _anonymize_filename(input_path: Path) -> str:
+    """Преобразует path real ``*_full.xltx`` → anon filename.
+
+    9/14-digit INN в стеме заменяется на детерминированный hash — same
+    `_deterministic_inn` что для cell-значений, поэтому cross-file anon-INN
+    consistency между filename и содержимым сохраняется.
+
+    Защищает от collision'а когда несколько firms делят префикс
+    (``form1_2025_<inn>_full.xltx`` × 4 разных INN → 4 разных anon-имени).
+    """
+    stem = input_path.stem
+    if stem.endswith("_full"):
+        stem = stem[: -len("_full")]
+    stem = _INN_PATTERN.sub(lambda m: _deterministic_inn(m.group(0)), stem)
+    return f"{stem}_anon{input_path.suffix}"
+
+
 def anonymize_xltx(input_path: Path, output_path: Path) -> dict[str, int]:
     """Анонимизирует xltx-файл, сохраняет в output_path. Возвращает счётчики."""
     wb = load_workbook(filename=str(input_path), data_only=False, read_only=False)
@@ -145,13 +169,116 @@ def anonymize_xltx(input_path: Path, output_path: Path) -> dict[str, int]:
     return totals
 
 
+def _run_batch(input_dir: Path, output_dir: Path, force: bool) -> int:
+    """Прогоняет анонимизацию по всем ``*_full.xltx`` в input_dir.
+
+    Существующие ``*_anon.xltx`` в output_dir пропускаются без ``--force`` —
+    идемпотентный re-run не перетирает уже закоммиченные fixtures (которые
+    могли быть сгенерированы более ранней версией скрипта).
+    """
+    if not input_dir.is_dir():
+        _logger.error("[FAIL] --batch %s не директория", input_dir)
+        return 2
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    full_files = sorted(input_dir.glob("*_full.xltx"))
+    if not full_files:
+        _logger.error("[FAIL] в %s нет *_full.xltx", input_dir)
+        return 2
+
+    processed = 0
+    skipped = 0
+    for full_path in full_files:
+        anon_name = _anonymize_filename(full_path)
+        anon_path = output_dir / anon_name
+        if anon_path.exists() and not force:
+            _logger.info(
+                "[SKIP] %s → %s (уже существует, --force чтобы перезаписать)",
+                full_path.name,
+                anon_name,
+            )
+            skipped += 1
+            continue
+        totals = anonymize_xltx(full_path, anon_path)
+        _logger.info(
+            "[OK] %s → %s (ИНН=%d, имена=%d, суммы=%d)",
+            full_path.name,
+            anon_name,
+            totals["inn"],
+            totals["name"],
+            totals["amount"],
+        )
+        processed += 1
+
+    _logger.info(
+        "[DONE] processed=%d skipped=%d total=%d",
+        processed,
+        skipped,
+        len(full_files),
+    )
+    return 0
+
+
 def _main() -> int:
     parser = argparse.ArgumentParser(
         description="Анонимизировать soliq xltx для коммита в git",
+        epilog=(
+            "Single-file: python scripts/anonymize_xltx.py input.xltx output.xltx\n"
+            "Batch:       python scripts/anonymize_xltx.py "
+            "--batch <input_dir> --output-dir <output_dir> [--force]"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("input", type=Path, help="входной xltx (real)")
-    parser.add_argument("output", type=Path, help="выходной xltx (anon)")
+    parser.add_argument(
+        "input",
+        type=Path,
+        nargs="?",
+        help="входной xltx (single-file mode)",
+    )
+    parser.add_argument(
+        "output",
+        type=Path,
+        nargs="?",
+        help="выходной xltx (single-file mode)",
+    )
+    parser.add_argument(
+        "--batch",
+        type=Path,
+        default=None,
+        help="директория с *_full.xltx для bulk anonymize",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=None,
+        help="куда писать *_anon.xltx в batch mode",
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="перезаписывать существующие *_anon.xltx (default: skip)",
+    )
     args = parser.parse_args()
+
+    if args.batch is not None:
+        if args.input is not None or args.output is not None:
+            _logger.error("[FAIL] --batch несовместим с positional input/output")
+            return 2
+        if args.output_dir is None:
+            _logger.error("[FAIL] --batch требует --output-dir")
+            return 2
+        return _run_batch(args.batch, args.output_dir, args.force)
+
+    if args.output_dir is not None:
+        _logger.error("[FAIL] --output-dir работает только с --batch")
+        return 2
+
+    if args.input is None or args.output is None:
+        _logger.error(
+            "[FAIL] нужно либо positional input/output, либо --batch + --output-dir"
+        )
+        return 2
 
     if not args.input.is_file():
         _logger.error("[FAIL] input не найден: %s", args.input)

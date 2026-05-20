@@ -23,6 +23,19 @@
      tests/fixtures/soliq_xltx/vat_decl_q4_2025_anon.xltx
    ```
 
+   Bulk-режим (для всех `*_full.xltx` в директории):
+
+   ```bash
+   python scripts/anonymize_xltx.py \
+     --batch tests/fixtures/soliq_xltx/ \
+     --output-dir tests/fixtures/soliq_xltx/
+   ```
+
+   Существующие `*_anon.xltx` пропускаются — добавь `--force` для overwrite.
+   В batch-режиме `*_anon.xltx` имена строятся через детерминированную подмену
+   9/14-digit INN в стеме (защита от collision'ов: `form1_2025_<inn>_full.xltx`
+   с разными INN дают разные anon-имена).
+
 3. Прогнать тест (Docker не нужен — тест лежит в `tests/parsers/`, не `tests/integration/`):
 
    ```bash
