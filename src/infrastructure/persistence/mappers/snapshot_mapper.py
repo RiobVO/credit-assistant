@@ -100,16 +100,21 @@ def _financial_report_to_dict(r: FinancialReport) -> dict[str, Any]:
         "interest_expense": _money_to_dict(r.interest_expense),
         "depreciation_amortization": _money_to_dict(r.depreciation_amortization),
         "operating_cash_flow": _money_to_dict(r.operating_cash_flow),
+        "guarantees_outstanding": _money_to_dict(r.guarantees_outstanding),
+        "leases_outstanding": _money_to_dict(r.leases_outstanding),
+        "letters_of_credit_outstanding": _money_to_dict(r.letters_of_credit_outstanding),
         "equity": _money_to_dict(end.equity),
         "total_debt": _money_to_dict(end.total_debt),
         "current_assets": _money_to_dict(end.current_assets),
         "current_liabilities": _money_to_dict(end.current_liabilities),
+        "inventory": _money_to_dict(end.inventory),
         "assets_period_start": _money_to_dict(start.assets),
         "liabilities_period_start": _money_to_dict(start.liabilities),
         "equity_period_start": _money_to_dict(start.equity),
         "total_debt_period_start": _money_to_dict(start.total_debt),
         "current_assets_period_start": _money_to_dict(start.current_assets),
         "current_liabilities_period_start": _money_to_dict(start.current_liabilities),
+        "inventory_period_start": _money_to_dict(start.inventory),
     }
 
 
@@ -135,6 +140,7 @@ def _financial_report_from_dict(d: dict[str, Any]) -> FinancialReport:
         total_debt=_money_from_dict(d.get("total_debt")),
         current_assets=_money_from_dict(d.get("current_assets")),
         current_liabilities=_money_from_dict(d.get("current_liabilities")),
+        inventory=_money_from_dict(d.get("inventory")),
     )
     balance_start = BalanceSnapshot(
         assets=_money_from_dict(d.get("assets_period_start")),
@@ -143,6 +149,7 @@ def _financial_report_from_dict(d: dict[str, Any]) -> FinancialReport:
         total_debt=_money_from_dict(d.get("total_debt_period_start")),
         current_assets=_money_from_dict(d.get("current_assets_period_start")),
         current_liabilities=_money_from_dict(d.get("current_liabilities_period_start")),
+        inventory=_money_from_dict(d.get("inventory_period_start")),
     )
     return FinancialReport(
         period=period,
@@ -157,6 +164,10 @@ def _financial_report_from_dict(d: dict[str, Any]) -> FinancialReport:
         # ADR-0024: cash-flow nullable поля (D&A / OCF).
         depreciation_amortization=_money_from_dict(d.get("depreciation_amortization")),
         operating_cash_flow=_money_from_dict(d.get("operating_cash_flow")),
+        # ADR-0024 Session 2: off-balance commitments (3 nullable поля).
+        guarantees_outstanding=_money_from_dict(d.get("guarantees_outstanding")),
+        leases_outstanding=_money_from_dict(d.get("leases_outstanding")),
+        letters_of_credit_outstanding=_money_from_dict(d.get("letters_of_credit_outstanding")),
         balance_end=balance_end if not balance_end.is_empty() else None,
         balance_start=balance_start if not balance_start.is_empty() else None,
     )

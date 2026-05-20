@@ -69,6 +69,8 @@ def compute_kpis(snapshot: BorrowerSnapshot) -> KpiBundle:
         working_capital=_compute_working_capital(latest),
         interest_coverage=_compute_interest_coverage(latest),
         dscr=_compute_dscr(latest, snapshot.loan_request),
+        # ADR-0024 Session 2: Quick Ratio (acid-test ratio).
+        quick_ratio=_compute_quick_ratio(latest),
     )
 
 
@@ -292,6 +294,10 @@ _DEBT_EBITDA_GOOD = Decimal("3")
 _DEBT_EBITDA_WARN = Decimal("5")
 _IC_GOOD = Decimal("3")
 _IC_WARN = Decimal("1.5")
+# ADR-0024 Session 2: Quick Ratio = (CA − inventory) / CL. Boundary inclusive:
+# 1.00 / 0.70 → WARN. Source: IFC SME Knowledge Guide ch.4 «Liquidity».
+_QUICK_GOOD = Decimal("1.0")
+_QUICK_WARN = Decimal("0.7")
 # DSCR principal annualization: same формула что в domain/rules/financial/dscr_low.py.
 _DSCR_MONTHS_IN_YEAR = Decimal("12")
 
@@ -414,6 +420,48 @@ def _compute_working_capital(latest: FinancialReport | None) -> KpiValue | None:
         return None
     return KpiValue(
         value=ca - cl, unit=KpiUnit.UZS, yoy_pct=None, sparkline=(),
+    )
+
+
+def _quick_ratio_level_tone(ratio: Decimal) -> KpiLevelTone:
+    """Пороги Quick Ratio: >1.0 GOOD, 0.7..1.0 WARN, <0.7 BAD. Boundary
+    inclusive: 0.70 и 1.00 → WARN. Source: IFC SME Knowledge Guide ch.4.
+    """
+    if ratio > _QUICK_GOOD:
+        return KpiLevelTone.GOOD
+    if ratio >= _QUICK_WARN:
+        return KpiLevelTone.WARN
+    return KpiLevelTone.BAD
+
+
+def _compute_quick_ratio(latest: FinancialReport | None) -> KpiValue | None:
+    """Quick Ratio (acid-test) = (CA − inventory) / CL.
+
+    Более строгая мера ликвидности чем Current Ratio: исключает inventory
+    из числителя, поскольку запасы хуже всего конвертируются в cash в
+    стрессовом сценарии. Source: IFC SME Knowledge Guide ch.4 «Liquidity».
+
+    * latest None или balance_end None → None;
+    * CA / inventory / CL — любой None → None (все три компонента обязательны);
+    * CL ≤ 0 → None (ratio неопределим, как и в Current Ratio);
+    * иначе → ratio с level_tone (>1.0 / 0.7..1.0 / <0.7).
+    """
+    if latest is None or latest.balance_end is None:
+        return None
+    ca = _money_amount(latest.balance_end.current_assets)
+    inv = _money_amount(latest.balance_end.inventory)
+    cl = _money_amount(latest.balance_end.current_liabilities)
+    if ca is None or inv is None or cl is None:
+        return None
+    if cl <= 0:
+        return None
+    ratio = (ca - inv) / cl
+    return KpiValue(
+        value=ratio,
+        unit=KpiUnit.RATIO,
+        yoy_pct=None,
+        sparkline=(),
+        level_tone=_quick_ratio_level_tone(ratio),
     )
 
 

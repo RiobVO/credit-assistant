@@ -182,7 +182,7 @@ class TestEmptyPayload:
         assert "INSUFFICIENT_DATA" in rule_ids
         assert data["risk_score"]["score"] == 50
         assert data["risk_score"]["recommendation"] == "review"
-        assert data["rules_evaluated"] == 22  # ADR-0024: +FX/DSCR/WC
+        assert data["rules_evaluated"] == 24  # ADR-0024 Session 2: +OFF_BALANCE/CASH_FLOW
 
 
 class TestOptionalTaxesPaid:

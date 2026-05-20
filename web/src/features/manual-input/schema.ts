@@ -154,6 +154,8 @@ export const step2Schema = z.object({
   totalDebtStart25: uzsAmountOptional,
   assetsStart25: uzsAmountOptional,
   liabilitiesStart25: uzsAmountOptional,
+  // ADR-0024 Session 2: запасы для Quick Ratio = (CA − inventory) / CL.
+  inventoryEnd25: uzsAmountOptional,
 });
 
 export const step3Schema = z.object({
@@ -238,6 +240,7 @@ export function defaultFormValues(): FormValues {
       totalDebtStart25: "",
       assetsStart25: "",
       liabilitiesStart25: "",
+      inventoryEnd25: "",
     },
     step3: {
       loanAmount: "",

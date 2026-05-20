@@ -23,8 +23,9 @@ class TestLoadRegistryHappyPath:
     def test_loads_full_registry_from_default_yaml(self) -> None:
         registry = load_registry(DEFAULT_YAML)
         # 17 продакшн-правил + NEGATIVE_EQUITY (CA-049) + 1 meta (INSUFFICIENT_DATA,
-        # CA-016) + 3 ADR-0024 (FX_MISMATCH_HIGH, DSCR_LOW, WC_INSUFFICIENT) = 22.
-        assert len(registry.rules) == 22
+        # CA-016) + 3 ADR-0024 Session 1 (FX_MISMATCH_HIGH, DSCR_LOW, WC_INSUFFICIENT)
+        # + 2 ADR-0024 Session 2 (OFF_BALANCE_COMMITMENTS, CASH_FLOW_QUALITY) = 24.
+        assert len(registry.rules) == 24
         # Все in-code правила должны быть в registry
         for rule_id in CODE_RULES:
             assert registry.by_id(rule_id).id == rule_id

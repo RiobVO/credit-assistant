@@ -113,6 +113,7 @@
   "kpi_label.working_capital": "Оборотный капитал",
   "kpi_label.interest_coverage": "Покрытие процентов",
   "kpi_label.dscr": "DSCR",
+  "kpi_label.quick_ratio": "Quick Ratio",
 
   "legal_form_full.llc": "Общество с ограниченной ответственностью",
   "legal_form_full.pe": "Частное предприятие",

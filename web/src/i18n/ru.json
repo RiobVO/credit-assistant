@@ -587,6 +587,8 @@
       "s2_assets_help": "По бухгалтерскому балансу, форма №1",
       "s2_liabs_label": "Обязательства (стр. 770)",
       "s2_liabs_help": "Краткосрочные + долгосрочные обязательства",
+      "s2_inventory_label": "Запасы (TMZ)",
+      "s2_inventory_help": "Товарно-материальные запасы по форме №1, для Quick Ratio",
       "s2_da_label": "Долг ÷ Активы",
       "s2_da_sub": "Debt-to-Assets",
       "s2_equity_label": "Капитал",
@@ -802,7 +804,9 @@
       "label_interest_coverage": "Покрытие процентов",
       "interest_coverage_empty_hint": "Нужны EBIT и процентные расходы",
       "label_dscr": "DSCR",
-      "dscr_empty_hint": "Нужна кредитная заявка, OCF/EBITDA/EBIT и проценты"
+      "dscr_empty_hint": "Нужна кредитная заявка, OCF/EBITDA/EBIT и проценты",
+      "label_quick_ratio": "Quick Ratio",
+      "quick_ratio_empty_hint": "Нужны краткосрочные активы, запасы и обязательства"
     },
     "risk": {
       "title": "Красные флаги",

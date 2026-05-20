@@ -40,6 +40,8 @@ type FinancialReport = {
   liabilities_period_start?: Money;
   equity_period_start?: Money;
   total_debt_period_start?: Money;
+  // ADR-0024 Session 2: inventory для Quick Ratio.
+  inventory?: Money;
 };
 
 type VatPeriodReport = {
@@ -146,6 +148,9 @@ export function formValuesToPayload(values: FormValues): ManualInputPayload {
         if (aStart) report.assets_period_start = aStart;
         const lStart = moneyOptional(step2.liabilitiesStart25);
         if (lStart) report.liabilities_period_start = lStart;
+        // ADR-0024 Session 2: inventory как latest-only (UI вводит одно значение).
+        const inv = moneyOptional(step2.inventoryEnd25);
+        if (inv) report.inventory = inv;
       } else if (y === 2024) {
         // CA-037: PBT/interest_expense за 2024 — только для EBIT YoY%
         // в досье. Полный balance snapshot 2024 не требуется (UI карточки

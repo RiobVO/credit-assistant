@@ -97,6 +97,8 @@ def _to_financial_report(p: FinancialReportInput) -> FinancialReport:
         liabilities=_to_money_optional(p.liabilities),
         equity=_to_money_optional(p.equity),
         total_debt=_to_money_optional(p.total_debt),
+        # ADR-0024 Session 2: inventory только в end (UI вводит одно значение).
+        inventory=_to_money_optional(p.inventory),
     )
     balance_start = BalanceSnapshot(
         assets=_to_money_optional(p.assets_period_start),
@@ -318,6 +320,7 @@ def _kpi_bundle_to_output(bundle: KpiBundle) -> KpiBundleOutput:
         working_capital=_kpi_value_to_output(bundle.working_capital),
         interest_coverage=_kpi_value_to_output(bundle.interest_coverage),
         dscr=_kpi_value_to_output(bundle.dscr),
+        quick_ratio=_kpi_value_to_output(bundle.quick_ratio),
     )
 
 

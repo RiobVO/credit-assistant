@@ -203,6 +203,9 @@ def test_ca037_financial_report_round_trip_with_all_extensions() -> None:
                 interest_expense=_money(67_803_000),
                 depreciation_amortization=_money(45_000_000),
                 operating_cash_flow=_money(220_000_000),
+                guarantees_outstanding=_money(50_000_000),
+                leases_outstanding=_money(30_000_000),
+                letters_of_credit_outstanding=_money(20_000_000),
                 balance_end=BalanceSnapshot(
                     assets=_money(2_533_084_000),
                     liabilities=_money(985_025_000),
@@ -210,6 +213,7 @@ def test_ca037_financial_report_round_trip_with_all_extensions() -> None:
                     total_debt=_money(618_267_000),
                     current_assets=_money(1_300_000_000),
                     current_liabilities=_money(700_000_000),
+                    inventory=_money(180_000_000),
                 ),
                 balance_start=BalanceSnapshot(
                     assets=_money(2_087_582_000),
@@ -218,6 +222,7 @@ def test_ca037_financial_report_round_trip_with_all_extensions() -> None:
                     total_debt=_money(332_222_000),
                     current_assets=_money(1_050_000_000),
                     current_liabilities=_money(550_000_000),
+                    inventory=_money(150_000_000),
                 ),
             ),
         ],
@@ -245,6 +250,19 @@ def test_ca037_financial_report_round_trip_with_all_extensions() -> None:
     assert r.balance_end.current_assets.amount == Decimal("1300000000")
     assert r.balance_end.current_liabilities is not None
     assert r.balance_end.current_liabilities.amount == Decimal("700000000")
+    # ADR-0024 Session 2: inventory для Quick Ratio.
+    assert r.balance_end.inventory is not None
+    assert r.balance_end.inventory.amount == Decimal("180000000")
+    assert r.balance_start is not None
+    assert r.balance_start.inventory is not None
+    assert r.balance_start.inventory.amount == Decimal("150000000")
+    # ADR-0024 Session 2: off-balance commitments.
+    assert r.guarantees_outstanding is not None
+    assert r.guarantees_outstanding.amount == Decimal("50000000")
+    assert r.leases_outstanding is not None
+    assert r.leases_outstanding.amount == Decimal("30000000")
+    assert r.letters_of_credit_outstanding is not None
+    assert r.letters_of_credit_outstanding.amount == Decimal("20000000")
 
 
 def test_ca037_legacy_payload_without_new_keys_still_loads() -> None:
@@ -279,11 +297,51 @@ def test_ca037_legacy_payload_without_new_keys_still_loads() -> None:
     # ADR-0024 поля тоже None для legacy.
     assert r.depreciation_amortization is None
     assert r.operating_cash_flow is None
+    # ADR-0024 Session 2: off-balance commitments None для legacy.
+    assert r.guarantees_outstanding is None
+    assert r.leases_outstanding is None
+    assert r.letters_of_credit_outstanding is None
     # CA-047 / ADR-0024: пустой BalanceSnapshot (все поля None) сворачивается
     # в None, читатели должны различать «нет snapshot» и «есть snapshot со
     # всеми None».
     assert r.balance_end is None
     assert r.balance_start is None
+
+
+def test_session2_inventory_backward_compat_with_current_assets_present() -> None:
+    """ADR-0024 Session 2: payload, записанный после Session 1 (есть
+    current_assets/current_liabilities), но до Session 2 (нет inventory) —
+    balance_end не сворачивается в None; inventory == None.
+    """
+    session1_payload: dict[str, object] = {
+        "as_of": "2025-12-31",
+        "annual_reports": [
+            {
+                "period": {"start": "2025-01-01", "end": "2025-12-31"},
+                "revenue": {"amount": "5000000000", "currency": "UZS"},
+                "net_profit": {"amount": "300000000", "currency": "UZS"},
+                "current_assets": {"amount": "1300000000", "currency": "UZS"},
+                "current_liabilities": {"amount": "700000000", "currency": "UZS"},
+                # Никаких Session 2 ключей (inventory) — записано до Session 2.
+            },
+        ],
+        "quarterly_reports": [],
+        "monthly_turnover": [],
+        "counterparties_buyers": [],
+        "counterparties_suppliers": [],
+        "buyer_revenue_share": {},
+        "supplier_purchase_share": {},
+        "invoices": [],
+        "tax_events": [],
+        "vat_periods": [],
+        "loan_request": None,
+    }
+    restored = snapshot_from_payload(session1_payload, _borrower())
+    r = restored.annual_reports[0]
+    assert r.balance_end is not None  # current_assets есть → snapshot не пустой
+    assert r.balance_end.current_assets is not None
+    assert r.balance_end.current_assets.amount == Decimal("1300000000")
+    assert r.balance_end.inventory is None  # Session 2 поля legacy → None
 
 
 def test_snapshot_decimal_precision_preserved() -> None:

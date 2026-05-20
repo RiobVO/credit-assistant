@@ -164,6 +164,10 @@ describe("CustomDropdown keyboard nav (CA-DS22)", () => {
     const options = screen.getAllByRole("option");
     // First ArrowDown открывает + ставит highlight на selected (24 → idx 2).
     // Дизайн-инвариант: keyboard nav начинает с currently selected, а не с 0.
-    expect(button.getAttribute("aria-activedescendant")).toBe(options[2].id);
+    // setHighlight идёт через setTimeout(0) (макротаск) — без waitFor full-run
+    // vitest race-condition'ит при нагруженной queue (single-file успевает).
+    await waitFor(() => {
+      expect(button.getAttribute("aria-activedescendant")).toBe(options[2].id);
+    });
   });
 });

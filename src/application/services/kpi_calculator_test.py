@@ -205,6 +205,8 @@ def _annual_extended(
     operating_cash_flow: int | None = None,
     current_assets_end: int | None = None,
     current_liabilities_end: int | None = None,
+    # ADR-0024 (Session 2): inventory под Quick Ratio.
+    inventory_end: int | None = None,
 ) -> FinancialReport:
     """Годовой отчёт с CA-037 расширениями + ADR-0024 (Session 1) полями.
     None — поле отсутствует в исходных.
@@ -222,6 +224,7 @@ def _annual_extended(
         total_debt=money_opt(total_debt_end),
         current_assets=money_opt(current_assets_end),
         current_liabilities=money_opt(current_liabilities_end),
+        inventory=money_opt(inventory_end),
     )
     balance_start = BalanceSnapshot(
         equity=money_opt(equity_start), total_debt=money_opt(total_debt_start),
@@ -796,6 +799,79 @@ def test_working_capital_none_when_components_missing() -> None:
     annual = _annual_extended(2025)  # defaults None
     bundle = compute_kpis(_snapshot(annual=[annual]))
     assert bundle.working_capital is None
+
+
+# ----------- quick_ratio (ADR-0024 Session 2) ---------------------------------
+
+
+@pytest.mark.parametrize(
+    "ca,inv,cl,expected_value,expected_tone",
+    [
+        # Quick Ratio = (CA − inventory) / CL. >1.0 GOOD / 0.7..1.0 WARN / <0.7 BAD.
+        (3_000_000, 500_000, 1_000_000, Decimal("2.5"), KpiLevelTone.GOOD),
+        (1_500_000, 400_000, 1_000_000, Decimal("1.1"), KpiLevelTone.GOOD),
+        # Boundary 1.00 → WARN.
+        (1_500_000, 500_000, 1_000_000, Decimal(1), KpiLevelTone.WARN),
+        (1_200_000, 300_000, 1_000_000, Decimal("0.9"), KpiLevelTone.WARN),
+        # Boundary 0.70 → WARN.
+        (1_000_000, 300_000, 1_000_000, Decimal("0.7"), KpiLevelTone.WARN),
+        (1_000_000, 400_000, 1_000_000, Decimal("0.6"), KpiLevelTone.BAD),
+    ],
+)
+def test_quick_ratio_level_tone_boundary(
+    ca: int,
+    inv: int,
+    cl: int,
+    expected_value: Decimal,
+    expected_tone: KpiLevelTone,
+) -> None:
+    """Quick Ratio пороги: >1.0 GOOD, 0.7..1.0 WARN, <0.7 BAD. Boundary
+    inclusive — 0.70 и 1.00 → WARN. Source: IFC SME Knowledge Guide ch.4."""
+    annual = _annual_extended(
+        2025,
+        current_assets_end=ca,
+        current_liabilities_end=cl,
+        inventory_end=inv,
+    )
+    bundle = compute_kpis(_snapshot(annual=[annual]))
+    assert bundle.quick_ratio is not None
+    assert bundle.quick_ratio.value == expected_value
+    assert bundle.quick_ratio.level_tone is expected_tone
+    assert bundle.quick_ratio.unit is KpiUnit.RATIO
+
+
+def test_quick_ratio_silent_when_inventory_missing() -> None:
+    """inventory None → quick_ratio None. Не предполагаем inventory=0 — это
+    дало бы false-GOOD для retail без inventory FORM_1 загрузки."""
+    annual = _annual_extended(
+        2025,
+        current_assets_end=1_500_000,
+        current_liabilities_end=1_000_000,
+        # inventory_end остаётся None
+    )
+    bundle = compute_kpis(_snapshot(annual=[annual]))
+    assert bundle.quick_ratio is None
+    # Current Ratio тем временем определён — он не требует inventory.
+    assert bundle.current_ratio is not None
+
+
+def test_quick_ratio_silent_when_current_assets_missing() -> None:
+    """current_assets None → quick_ratio None."""
+    annual = _annual_extended(2025, inventory_end=200_000)
+    bundle = compute_kpis(_snapshot(annual=[annual]))
+    assert bundle.quick_ratio is None
+
+
+def test_quick_ratio_silent_when_cl_zero() -> None:
+    """CL ≤ 0 → None (ratio неопределим, как Current Ratio)."""
+    annual = _annual_extended(
+        2025,
+        current_assets_end=1_500_000,
+        current_liabilities_end=0,
+        inventory_end=200_000,
+    )
+    bundle = compute_kpis(_snapshot(annual=[annual]))
+    assert bundle.quick_ratio is None
 
 
 # ----------- interest_coverage ------------------------------------------------
