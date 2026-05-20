@@ -182,7 +182,7 @@ class TestEmptyPayload:
         assert "INSUFFICIENT_DATA" in rule_ids
         assert data["risk_score"]["score"] == 50
         assert data["risk_score"]["recommendation"] == "review"
-        assert data["rules_evaluated"] == 19  # CA-049: +NEGATIVE_EQUITY
+        assert data["rules_evaluated"] == 22  # ADR-0024: +FX/DSCR/WC
 
 
 class TestOptionalTaxesPaid:
@@ -296,9 +296,11 @@ class TestLoanToRevenueRule:
 class TestDirectorChangedRule:
     def test_director_appointed_within_6_months_fires(self, client: TestClient) -> None:
         # as_of 2026-05-08, директор назначен 2026-01-15 → ~4 месяца назад
+        # ADR-0024: правилу теперь нужен материальный loan ≥500 млн UZS.
         payload = {
             "borrower": _borrower_payload(director_appointed_at="2026-01-15"),
             "as_of": "2026-05-08",
+            "loan_request": _loan_request("700000000"),
         }
         r = client.post(ENDPOINT, json=payload)
         assert r.status_code == 200
@@ -370,9 +372,11 @@ class TestRiskScoreCombination:
 
 class TestEvidenceShape:
     def test_red_flag_includes_source_and_evidence(self, client: TestClient) -> None:
+        # ADR-0024: DIRECTOR_CHANGED_6M требует материального loan_request.
         payload = {
             "borrower": _borrower_payload(director_appointed_at="2026-01-15"),
             "as_of": "2026-05-08",
+            "loan_request": _loan_request("700000000"),
         }
         r = client.post(ENDPOINT, json=payload)
         flag = next(
