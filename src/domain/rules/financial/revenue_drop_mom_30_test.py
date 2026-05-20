@@ -25,24 +25,31 @@ def _borrower() -> Borrower:
     )
 
 
-def _snapshot(*revenues: int) -> BorrowerSnapshot:
+# ADR-0024: правило молчит если ЛЮБОЙ из 3 окон-месяцев попадает в
+# (12, 1, 2). Дефолт — окно март–май, всё вне seasonal filter.
+DEFAULT_START_MONTH = 3
+
+
+def _snapshot(*revenues: int, start_month: int = DEFAULT_START_MONTH) -> BorrowerSnapshot:
     months = [
         MonthlyTurnover(
-            month_start=date(2026, i + 1, 1),
+            month_start=date(2026, start_month + i, 1),
             revenue=Money(rev, UZS),
         )
         for i, rev in enumerate(revenues)
     ]
     return BorrowerSnapshot(
         borrower=_borrower(),
-        as_of=date(2026, len(revenues) + 1, 1) if revenues else date(2026, 5, 8),
+        as_of=date(2026, start_month + len(revenues), 1)
+        if revenues
+        else date(2026, 5, 8),
         monthly_turnover=months,
     )
 
 
 class TestRevenueDropMom30:
     def test_fires_when_two_consecutive_drops_over_30pct(self) -> None:
-        # 100 → 60 (-40%) → 35 (-42%)
+        # 100 → 60 (-40%) → 35 (-42%), окно март–май: вне seasonal filter
         ev = revenue_drop_mom_30(_snapshot(100, 60, 35))
         assert ev is not None
 
@@ -68,3 +75,33 @@ class TestRevenueDropMom30:
     def test_silent_when_zero_baseline(self) -> None:
         # Деление на 0 → silent (некорректные данные, не правилом ловить)
         assert revenue_drop_mom_30(_snapshot(0, 0, 0)) is None
+
+    def test_silent_in_seasonal_window_december_to_february(self) -> None:
+        # ADR-0024: декабрь→январь→февраль — сезонный спад натуральный,
+        # правило молчит даже при -40%/-42% MoM. Cross-year, ручная сборка.
+        months = [
+            MonthlyTurnover(month_start=date(2025, 12, 1), revenue=Money(100, UZS)),
+            MonthlyTurnover(month_start=date(2026, 1, 1), revenue=Money(60, UZS)),
+            MonthlyTurnover(month_start=date(2026, 2, 1), revenue=Money(35, UZS)),
+        ]
+        snap = BorrowerSnapshot(
+            borrower=_borrower(),
+            as_of=date(2026, 3, 1),
+            monthly_turnover=months,
+        )
+        assert revenue_drop_mom_30(snap) is None
+
+    def test_silent_when_window_overlaps_january(self) -> None:
+        # ADR-0024: ноябрь→декабрь→январь — спадает на январский filter
+        # (декабрь и январь оба в seasonal). Ручная сборка через cross-year.
+        months = [
+            MonthlyTurnover(month_start=date(2025, 11, 1), revenue=Money(100, UZS)),
+            MonthlyTurnover(month_start=date(2025, 12, 1), revenue=Money(60, UZS)),
+            MonthlyTurnover(month_start=date(2026, 1, 1), revenue=Money(35, UZS)),
+        ]
+        snap = BorrowerSnapshot(
+            borrower=_borrower(),
+            as_of=date(2026, 2, 1),
+            monthly_turnover=months,
+        )
+        assert revenue_drop_mom_30(snap) is None

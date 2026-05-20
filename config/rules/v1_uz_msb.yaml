@@ -15,14 +15,14 @@ version: v1
 rules:
   # --- Структурные ---
   - id: DIRECTOR_CHANGED_6M
-    name: "Смена директора за последние 6 месяцев"
-    name_uz: "Soʻnggi 6 oyda direktor almashishi"
+    name: "Смена директора за последние 6 месяцев + материальная заявка"
+    name_uz: "Soʻnggi 6 oyda direktor almashishi + jiddiy soʻrov"
     category: structural
     severity: medium
     source: "FATF Recommendation 24 (Beneficial Ownership) — fatf-gafi.org; Закон РУз ЗРУ-660 «О противодействии легализации доходов»; внутренние методики UZ-банков"
     source_uz: "FATF tavsiya 24 (Beneficial Ownership); ЎзР ЗРУ-660 sonli qonun; UZ-banklarning ichki uslublari"
-    formula: "(as_of - director_appointed_at).days <= 180"
-    rationale: "Свежий директор перед заявкой — паттерн фронт-фигуры (AML/CDD risk indicator)"
+    formula: "(as_of - director_appointed_at).days <= 180 AND loan_request.amount > 500_000_000 UZS"
+    rationale: "Свежий директор + материальная заявка (≥500 млн сум) — паттерн фронт-фигуры (AML/CDD). Без материальной заявки чаще operational change, чем AML — ADR-0024 audit"
 
   - id: OKVED_CHANGED_12M
     name: "Изменение основного ОКЭД за последние 12 месяцев"
@@ -35,35 +35,35 @@ rules:
     rationale: "Смена деятельности перед кредитом — может скрывать фрод-схему (AML/CDD risk indicator)"
 
   - id: LOAN_TO_REVENUE_RATIO
-    name: "Запрашиваемая сумма >50% годовой выручки"
-    name_uz: "Soʻralayotgan summa yillik tushumning 50% dan ortiq"
+    name: "Запрашиваемая сумма >40% годовой выручки"
+    name_uz: "Soʻralayotgan summa yillik tushumning 40% dan ortiq"
     category: structural
     severity: high
-    source: "Внутренние методики UZ-банков; стандартная практика МСБ-кредитования"
-    source_uz: "Oʻzbekiston banklarining ichki uslublari; KOʻB kreditlash standart amaliyoti"
-    formula: "loan_request_amount / latest_annual_revenue > 0.50"
-    rationale: "Перекредитованность — ведущий предиктор дефолта"
+    source: "IFC SME Banking Knowledge Guide (unsecured МСБ-baseline 0.30-0.40); внутренние методики UZ-банков"
+    source_uz: "IFC SME Banking Knowledge Guide (taʼminlanmagan KOʻB baseline 0.30-0.40); UZ-banklarning ichki uslublari"
+    formula: "loan_request_amount / latest_annual_revenue > 0.40"
+    rationale: "Перекредитованность — ведущий предиктор дефолта. ADR-0024 audit: порог 0.50→0.40 как консервативный unsecured-default; secured-уточнение до 0.70 — backlog (требует loan_request.collateral_type)"
 
   # --- Финансовые ---
   - id: REVENUE_DROP_MOM_30
-    name: "Падение выручки >30% МоМ два месяца подряд"
-    name_uz: "Tushumning oydan oyga 30% dan ortiq pasayishi ketma-ket 2 oy"
+    name: "Падение выручки >30% МоМ два месяца подряд (вне декабря–февраля)"
+    name_uz: "Tushumning oydan oyga 30% dan ortiq pasayishi ketma-ket 2 oy (12–2 oydan tashqari)"
     category: financial
     severity: high
-    source: "ЦБ РУз Положение №2696 «О порядке классификации качества активов» (lex.uz/ru/docs/2703056, посл. ред. 2696-5 от 23.12.2025); Basel III SREP; внутренняя методология"
-    source_uz: "ЎзР МБ №2696-сонли қарори (актив сифатини таснифлаш тартиби); Basel III SREP"
-    formula: "mom_pct < -0.30 for 2 consecutive months"
-    rationale: "Резкое падение выручки — сильный предиктор дефолта на 6 мес"
+    source: "Basel III SREP; FRB SR 11-7 / SR 26-02; внутренняя методология. ADR-0024 audit: убрана подложная атрибуция «ЦБ РУз №27-п»"
+    source_uz: "Basel III SREP; FRB SR 11-7 / SR 26-02; ichki uslubiyat"
+    formula: "mom_pct < -0.30 for 2 consecutive months AND month NOT IN (12, 1, 2)"
+    rationale: "Резкое падение выручки — сильный предиктор дефолта на 6 мес. ADR-0024: добавлен сезонный фильтр (декабрь–февраль) — натуральный спад из-за закрытия года/праздников / низкого инвентаря даёт ложноположительные"
 
   - id: REVENUE_DROP_YOY_50
     name: "Падение годовой выручки >50% YoY"
     name_uz: "Yillik tushumning yildan yilga 50% dan ortiq pasayishi"
     category: financial
     severity: high
-    source: "ЦБ РУз Положение №2696 (lex.uz/ru/docs/2703056); Altman Z-score методология; внутренняя методология"
-    source_uz: "ЎзР МБ №2696-сонли қарори; Altman Z-score методологияси"
-    formula: "(curr_revenue - prev_revenue) / prev_revenue < -0.50"
-    rationale: "Стратегическое сжатие бизнеса"
+    source: "Altman Z-score методология; Iwanicz-Drozdowska et al. (JIFM 2017); Basel III IRB. ADR-0024 audit: убрана подложная атрибуция «ЦБ РУз №27-п»"
+    source_uz: "Altman Z-score метoдологияси; Iwanicz-Drozdowska et al. (JIFM 2017); Basel III IRB"
+    formula: "(curr_revenue - prev_revenue) / prev_revenue < -0.50 AND prev_revenue > 200_000_000 UZS"
+    rationale: "Стратегическое сжатие бизнеса. ADR-0024: добавлен материальный порог prev_revenue >200 млн сум — ниже малое предприятие, YoY-падение технически высокое из-за shumovoy baseline"
 
   - id: NEGATIVE_PROFIT_3Q
     name: "Чистая прибыль ≤0 три квартала подряд"
@@ -86,24 +86,24 @@ rules:
     rationale: "Negative equity / technical insolvency — один из сильнейших предикторов default'а: обязательства превышают активы"
 
   - id: VAT_GROWTH_NO_REVENUE
-    name: "Рост НДС-обязательств без роста выручки"
-    name_uz: "QQS majburiyatlari oʻsishi tushum oʻsmasdan"
+    name: "Рост НДС-обязательств без существенного роста выручки"
+    name_uz: "QQS majburiyatlari oʻsishi tushum sezilarli oʻsmasdan"
     category: financial
     severity: medium
-    source: "НК РУз; внутренние методики Soliq + банковская практика"
-    source_uz: "НК РУз; Soliq ichki uslublari + bank amaliyoti"
-    formula: "vat_growth > 0.20 and revenue_growth <= 0"
-    rationale: "Может означать фиктивный документооборот"
+    source: "НК РУз гл. 34-35 (НДС-обязательства); my.soliq.uz внутренние методики; банковская практика"
+    source_uz: "НК РУз 34-35-боблари; my.soliq.uz ichki uslublari; bank amaliyoti"
+    formula: "vat_growth > 0.20 AND revenue_growth < 0.05"
+    rationale: "Может означать фиктивный документооборот / накачивание оборота. ADR-0024 audit: revenue_growth ceiling 0% → 5% — порог 0% пропускал «выручка едва-едва не падает»"
 
   - id: VAT_ESF_MISMATCH
-    name: "Разрыв декларация НДС vs ЭСФ >15%"
-    name_uz: "QQS deklaratsiyasi va EHF oʻrtasidagi farq 15% dan ortiq"
+    name: "Разрыв декларация НДС vs ЭСФ >15% при материальной декларации"
+    name_uz: "QQS deklaratsiyasi va EHF farqi 15% dan ortiq (jiddiy deklaratsiyada)"
     category: financial
     severity: critical
     source: "НК РУз ст. 47 (счёт-фактура) + ст. 257 (корректировка налоговой базы) + ст. 223 (сокрытие, штраф 20%) (lex.uz/ru/docs/4674893); ПКМ РУз №489 (порядок выставления ЭСФ); ст. 175-1 КоАО РУз (адм. штрафы 5-20 БРВ)"
     source_uz: "ЎзР СК 47-моддаси (ҳисобварақ-фактура) + 257 + 223 (lex.uz/ru/docs/4674893); ВМ №489-сонли қарори; МЖтК 175-1-моддаси"
-    formula: "abs(vat_declared - sum_seller_esf_vat) / vat_declared > 0.15"
-    rationale: "Прямое расхождение — признак фиктивной отчётности"
+    formula: "abs(vat_declared - sum_seller_esf_vat) / vat_declared > 0.15 AND vat_declared > 10_000_000 UZS"
+    rationale: "Прямое расхождение — признак фиктивной отчётности. ADR-0024: добавлен материальный порог декларации >10 млн сум — ниже технические микро-периоды (закрытие квартала, единичные ввозы)"
 
   - id: LOW_MARGIN_HIGH_TURNOVER
     name: "Маржа <5% при годовой выручке >5 млрд сум"
@@ -218,14 +218,14 @@ rules:
     rationale: "Классическая схема фиктивной отчётности"
 
   - id: CIRCULAR_INVOICING
-    name: "Циклические ЭСФ с контрагентами"
-    name_uz: "Kontragentlar bilan tsiklik EHF"
+    name: "Циклические ЭСФ с контрагентами (объём пары ≥100 млн сум)"
+    name_uz: "Kontragentlar bilan tsiklik EHF (juftlik hajmi ≥100 mln soʻm)"
     category: counterparty
     severity: high
     source: "НК РУз гл. 17 (НДС, выставление счетов-фактур); EAG typology reports — VAT carousel patterns; Закон РУз ЗРУ-660; FATF Recommendation 21 (suspicious transactions)"
     source_uz: "ЎзР СК 17-боби (QQS, ҳисобварақ-фактуралар); EAG типология ҳисоботлари — QQS «карусели»; ЎзР ЗРУ-660; FATF tavsiya 21"
-    formula: "exists 2-cycle: A→B and B→A within 90 days (упрощ.)"
-    rationale: "Симулированный документооборот для увеличения видимого оборота"
+    formula: "exists 2-cycle: A→B and B→A within 90 days AND pair_total_volume >= 100_000_000 UZS"
+    rationale: "Симулированный документооборот для увеличения видимого оборота. ADR-0024: добавлен материальный порог пары ≥100 млн сум — ниже рутинные bidirectional ЭСФ (subcontracting, factoring, mutual offsets)"
 
   # --- Meta (data-quality safeguards) ---
   - id: INSUFFICIENT_DATA

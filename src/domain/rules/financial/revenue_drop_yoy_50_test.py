@@ -40,22 +40,45 @@ def _snapshot(*reports: FinancialReport) -> BorrowerSnapshot:
     )
 
 
+# ADR-0024: материальный порог prev > 200 млн UZS.
+M = 1_000_000  # 1 млн UZS = 1M (короткая ссылка для читаемости тестов)
+
+
 class TestRevenueDropYoy50:
     def test_fires_when_revenue_drops_60pct(self) -> None:
-        ev = revenue_drop_yoy_50(_snapshot(_annual(2024, 100), _annual(2025, 40)))
+        # 500M → 200M = −60% YoY, prev > 200M порог.
+        ev = revenue_drop_yoy_50(_snapshot(_annual(2024, 500 * M), _annual(2025, 200 * M)))
         assert ev is not None
 
     def test_silent_when_drop_only_20pct(self) -> None:
-        assert revenue_drop_yoy_50(_snapshot(_annual(2024, 100), _annual(2025, 80))) is None
+        assert (
+            revenue_drop_yoy_50(_snapshot(_annual(2024, 500 * M), _annual(2025, 400 * M))) is None
+        )
 
     def test_silent_at_exactly_50pct(self) -> None:
-        assert revenue_drop_yoy_50(_snapshot(_annual(2024, 100), _annual(2025, 50))) is None
+        # 500M → 250M = ровно −50%, boundary inclusive (>=) silent.
+        assert (
+            revenue_drop_yoy_50(_snapshot(_annual(2024, 500 * M), _annual(2025, 250 * M))) is None
+        )
 
     def test_silent_with_only_one_annual_report(self) -> None:
-        assert revenue_drop_yoy_50(_snapshot(_annual(2025, 100))) is None
+        assert revenue_drop_yoy_50(_snapshot(_annual(2025, 500 * M))) is None
 
     def test_silent_when_growing(self) -> None:
-        assert revenue_drop_yoy_50(_snapshot(_annual(2024, 100), _annual(2025, 150))) is None
+        assert (
+            revenue_drop_yoy_50(_snapshot(_annual(2024, 500 * M), _annual(2025, 750 * M))) is None
+        )
 
     def test_silent_when_previous_year_zero(self) -> None:
         assert revenue_drop_yoy_50(_snapshot(_annual(2024, 0), _annual(2025, 0))) is None
+
+    def test_silent_when_prev_below_material_threshold(self) -> None:
+        # ADR-0024: prev=100 млн (< 200M) — silent даже при −60% drop
+        assert (
+            revenue_drop_yoy_50(_snapshot(_annual(2024, 100 * M), _annual(2025, 40 * M))) is None
+        )
+
+    def test_fires_at_material_boundary(self) -> None:
+        # ADR-0024: prev=201 млн (>200M) — fires
+        ev = revenue_drop_yoy_50(_snapshot(_annual(2024, 201 * M), _annual(2025, 50 * M)))
+        assert ev is not None

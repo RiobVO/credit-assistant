@@ -1,7 +1,10 @@
-"""LOAN_TO_REVENUE_RATIO: запрашиваемая сумма >50% годовой выручки."""
+"""LOAN_TO_REVENUE_RATIO: запрашиваемая сумма >40% годовой выручки."""
 
-# RULE_SOURCE: внутренние методики банков UZ; общая практика МСБ-кредитования
-# CONFIDENCE: HIGH (industry-standard ratio)
+# RULE_SOURCE: IFC SME Banking Knowledge Guide (unsecured МСБ-baseline 0.30-0.40);
+#   внутренние методики UZ-банков. ADR-0024: порог снижен 0.50 → 0.40 как
+#   консервативный unsecured-default. Secured-вариант (порог 0.70) требует
+#   поля `loan_request.collateral_type` — backlog post-Commit 5.
+# CONFIDENCE: MEDIUM (industry practice / multilateral baseline)
 # VALIDATED_BY: []
 
 from decimal import Decimal
@@ -9,7 +12,10 @@ from decimal import Decimal
 from domain.entities.borrower_snapshot import BorrowerSnapshot
 from domain.rules.protocol import FiringEvidence
 
-THRESHOLD = Decimal("0.5")
+# ADR-0024: 0.50 → 0.40 per Claude Q0.B (IFC SME Banking Knowledge Guide
+# рекомендует 0.30-0.40 для unsecured МСБ-baseline). Secured-уточнение
+# до 0.70 — backlog (требует loan_request.collateral_type).
+THRESHOLD = Decimal("0.4")
 
 
 def loan_to_revenue_ratio(snapshot: BorrowerSnapshot) -> FiringEvidence | None:

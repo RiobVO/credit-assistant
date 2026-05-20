@@ -1,7 +1,9 @@
 """REVENUE_DROP_YOY_50: падение годовой выручки >50% год-к-году."""
 
-# RULE_SOURCE: ЦБ РУз положение №27-п; Базель III IRB approach
-# CONFIDENCE: HIGH (regulatory)
+# RULE_SOURCE: Altman Z-score / Iwanicz-Drozdowska et al. (JIFM 2017);
+#   Базель III IRB approach. ADR-0024 убрал атрибуцию «ЦБ РУз №27-п» —
+#   положение не подтверждено.
+# CONFIDENCE: MEDIUM (industry practice / academic baseline)
 # VALIDATED_BY: []
 
 from decimal import Decimal
@@ -10,6 +12,10 @@ from domain.entities.borrower_snapshot import BorrowerSnapshot
 from domain.rules.protocol import FiringEvidence
 
 THRESHOLD = Decimal("-0.50")
+# ADR-0024: minimum previous-year revenue, ниже которого падение −50%
+# не имеет банковского значения (200 млн UZS ≈ stat.uz нижняя граница
+# малого предприятия). Per Claude Q0.B audit.
+PREV_REVENUE_MIN_THRESHOLD = Decimal("200000000")
 
 
 def revenue_drop_yoy_50(snapshot: BorrowerSnapshot) -> FiringEvidence | None:
@@ -20,6 +26,9 @@ def revenue_drop_yoy_50(snapshot: BorrowerSnapshot) -> FiringEvidence | None:
     prev, curr = sorted_reports[-2], sorted_reports[-1]
 
     if prev.revenue.amount <= 0:
+        return None
+    # ADR-0024: материальность базы для YoY-расчёта.
+    if prev.revenue.amount < PREV_REVENUE_MIN_THRESHOLD:
         return None
 
     yoy = (curr.revenue.amount - prev.revenue.amount) / prev.revenue.amount

@@ -11,6 +11,12 @@ from domain.entities.vat_period_report import VatPeriodReport
 from domain.rules.protocol import FiringEvidence
 
 THRESHOLD = Decimal("0.15")
+# ADR-0024: minimum vat_declared, ниже которого rule молчит. 10 млн UZS
+# отделяет рабочие декларации от технических микро-периодов (закрытие
+# квартала, единичные ввозы). Без minimum'а правило фолсит на крошечных
+# абсолютах (например, 50 000 vs 70 000 → 40% mismatch). Per Claude Q0.B
+# audit, источник: НК РУз ст. 47 + 257, материальность декларации.
+VAT_DECLARED_MIN_THRESHOLD = Decimal("10000000")
 
 
 def vat_esf_mismatch(snapshot: BorrowerSnapshot) -> FiringEvidence | None:
@@ -20,6 +26,9 @@ def vat_esf_mismatch(snapshot: BorrowerSnapshot) -> FiringEvidence | None:
     ``esf_seller_vat_total``). Без полного периода → правило молчит (degraded).
     Это поведение задокументировано в ADR 0006 — реальные данные my3.soliq.uz
     приходят помесячно, и сравнивать имеет смысл только в рамках одного периода.
+
+    ADR-0024: при ``vat_declared`` ≤ 10 млн сум правило молчит — материальность
+    декларации недостаточна для regulatory red flag.
     """
     complete = [p for p in snapshot.vat_periods if _is_complete(p)]
     if not complete:
@@ -32,6 +41,9 @@ def vat_esf_mismatch(snapshot: BorrowerSnapshot) -> FiringEvidence | None:
 
     vat_declared = latest.vat_declared.amount
     if vat_declared <= 0:
+        return None
+    # ADR-0024 materiality threshold.
+    if vat_declared < VAT_DECLARED_MIN_THRESHOLD:
         return None
 
     sum_seller_vat = latest.esf_seller_vat_total.amount

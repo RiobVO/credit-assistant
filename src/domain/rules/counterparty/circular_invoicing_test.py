@@ -11,12 +11,21 @@ from domain.value_objects.inn import INN
 from domain.value_objects.money import Currency, Money
 
 UZS = Currency.UZS
+# ADR-0024: MIN_PAIR_VOLUME = 100_000_000 UZS. Default amount = 60 млн UZS
+# на одну фактуру → пара 60+60 = 120M > порог. Для negative-cases используется
+# 30 млн (пара 60M < порог).
+DEFAULT_INVOICE_AMOUNT = 60_000_000
 
 
-def _inv(when: date, role: InvoiceRole, cp_inn: str = "987654321") -> Invoice:
+def _inv(
+    when: date,
+    role: InvoiceRole,
+    cp_inn: str = "987654321",
+    amount: int = DEFAULT_INVOICE_AMOUNT,
+) -> Invoice:
     return Invoice(
         date=when,
-        amount=Money(Decimal("100"), UZS),
+        amount=Money(Decimal(amount), UZS),
         our_role=role,
         counterparty_inn=INN(cp_inn),
         counterparty_name="ООО",
@@ -71,6 +80,13 @@ class TestCircularInvoicing:
 
     def test_silent_with_no_invoices(self) -> None:
         assert circular_invoicing(_snapshot()) is None
+
+    def test_silent_when_pair_below_material_threshold(self) -> None:
+        # ADR-0024: пара 30M+30M = 60M < 100M порог → silent (рутинное)
+        assert circular_invoicing(_snapshot(
+            _inv(date(2026, 4, 1), InvoiceRole.SELLER, amount=30_000_000),
+            _inv(date(2026, 4, 15), InvoiceRole.BUYER, amount=30_000_000),
+        )) is None
 
     def test_counts_multiple_distinct_cycles(self) -> None:
         ev = circular_invoicing(_snapshot(

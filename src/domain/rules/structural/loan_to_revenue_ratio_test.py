@@ -1,4 +1,4 @@
-"""LOAN_TO_REVENUE_RATIO: запрашиваемая сумма >50% годовой выручки."""
+"""LOAN_TO_REVENUE_RATIO: запрашиваемая сумма >40% годовой выручки (ADR-0024)."""
 
 from datetime import date
 from decimal import Decimal
@@ -62,12 +62,17 @@ class TestLoanToRevenueRatio:
     def test_silent_when_loan_is_10_pct(self) -> None:
         assert loan_to_revenue_ratio(_snapshot(100_000_000, 1_000_000_000)) is None
 
-    def test_silent_at_boundary_50_pct(self) -> None:
-        # >0.5 строго; 0.5 ровно — silent
-        assert loan_to_revenue_ratio(_snapshot(500_000_000, 1_000_000_000)) is None
+    def test_silent_at_boundary_40_pct(self) -> None:
+        # ADR-0024: >0.4 строго; 0.4 ровно — silent
+        assert loan_to_revenue_ratio(_snapshot(400_000_000, 1_000_000_000)) is None
 
-    def test_fires_just_above_50_pct(self) -> None:
-        ev = loan_to_revenue_ratio(_snapshot(501_000_000, 1_000_000_000))
+    def test_fires_just_above_40_pct(self) -> None:
+        ev = loan_to_revenue_ratio(_snapshot(401_000_000, 1_000_000_000))
+        assert ev is not None
+
+    def test_fires_at_50_pct_after_threshold_lowered(self) -> None:
+        # Регрессия после ADR-0024: 0.50 теперь fires (раньше boundary).
+        ev = loan_to_revenue_ratio(_snapshot(500_000_000, 1_000_000_000))
         assert ev is not None
 
     def test_silent_when_no_loan_request(self) -> None:
