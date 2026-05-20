@@ -70,6 +70,27 @@
 
 **Acceptance**: 8 × 3 = **24/24 PASS**. Любая ячейка FAIL → задокументировать в Issues + fix перед demo.
 
+### Acceptance grid (per-cell tick)
+
+Проставь `☑` после успешного прохода ячейки. Любая `☐` к моменту GO/NO-GO = блокер.
+
+| Route                          | light | dark | system |
+|--------------------------------|:-----:|:----:|:------:|
+| `/`                            |  ☐   |  ☐   |   ☐   |
+| `/login`                       |  ☐   |  ☐   |   ☐   |
+| `/search`                      |  ☐   |  ☐   |   ☐   |
+| `/history`                     |  ☐   |  ☐   |   ☐   |
+| `/dossier/BR-2026-0048`        |  ☐   |  ☐   |   ☐   |
+| `/manual-input` (Step 1→2→3)   |  ☐   |  ☐   |   ☐   |
+| `/help`                        |  ☐   |  ☐   |   ☐   |
+| `/settings`                    |  ☐   |  ☐   |   ☐   |
+
+**Что специфично смотреть на пересечениях:**
+
+- **light** — brand-primary в hover/active кнопках, контраст серого текста (`--ink-3`) на `--surface`, читаемость chart-labels на белом фоне. На `/dossier` — UZS-suffix и footer цвета в PDF preview.
+- **dark** — контраст charts (Recharts палитра против `--surface-2`/`--surface-3` тёмного), переход `--state-bad-bg` на анфрахитном фоне (не сливается), border'ы карточек (`--ink-4` тёмный — не невидимый), source-trail border bar (CA-DS21: зелёный/синий/серый/amber — все читаются). `/dossier` PDF documentation **остаётся light forever** (CA-DS5) — проверь что download'нутый PDF не тёмный.
+- **system** — после initial paint смени OS theme (Win11: Settings → Personalization → Colors → Mode) **во время сессии** — UI должен переключиться live через matchMedia listener (CA-DS5), без F5. SSR no-FOUC: hard refresh (Ctrl+F5) на каждом route в режиме system — нет flash светлой темы у dark-OS.
+
 ### Console-error gate
 
 На каждом из 24 проходов:
@@ -89,30 +110,96 @@ Allow:
 
 ## 2FA flows (4 пути, ~10 минут)
 
-Делегировано в `docs/operations/2fa-smoke.md`. Прогнать **на текущей сборке** все 4 пути:
+Полный playbook — `docs/operations/2fa-smoke.md`. Здесь — короткий re-statement 4 путей с expected outcome каждого. Прогнать **на текущей сборке**.
 
-- Enrollment → Login через TOTP → Login через backup-код → Disable.
+1. **Enable (Enrollment)** — `/settings → Безопасность → Включить 2FA` → scan QR в Authenticator → 6-значный код → скачать `.txt` с 10 backup-кодами.
+   *Expected*: карточка 2FA зелёная «Активна», `.txt` содержит 10 строк × 8 символов (A-Z 0-9).
+2. **Login через TOTP** — logout → `/login` email+пароль → step-2 → свежий 6-значный код.
+   *Expected*: redirect на `/search`, audit-log `login` event содержит `mfa=totp`.
+3. **Recovery (login через backup-код)** — logout → `/login` email+пароль → step-2 → ссылка «Использовать резервный код» → один из сохранённых.
+   *Expected*: redirect на `/search`; повторный ввод того же кода даёт `invalid_code` (код сгорает).
+4. **Disable** — `/settings → Безопасность → 2FA → Отключить` → пароль + свежий TOTP.
+   *Expected*: карточка серая «Не настроена», `mfa_secret` и `mfa_backup_codes_hash` в БД = NULL.
 
-Acceptance: 4/4 пути PASS, backup-code сгорает после первого использования.
+**Negative-path inline check** (не отдельный путь, но обязательная micro-проверка на пути 2):
+
+- Введи **неправильный** 6-значный код на login step-2 → expect `invalid_code` с понятным текстом ошибки, **не** stack trace; retry-counter не блокирует input навсегда; нет утечки access/refresh-token (DevTools → Network → нет `Set-Cookie ca_access` в response failed login).
+
+Acceptance: **4/4 пути PASS** + negative-path не выдаёт токен. Backup-code сгорает после первого использования.
 
 ---
 
-## Edge UX matrix (Блок 5)
+## Edge UX scenarios (Блок 5)
 
-Что user видит когда что-то ломается. Каждый сценарий — отдельный сеанс.
+Что user видит когда что-то ломается. Каждый сценарий — отдельный сеанс. Все 8 — обязательны.
 
-| # | Сценарий | Как воспроизвести | Acceptance |
-|---|---|---|---|
-| E1 | **API down** | `docker compose stop api`, обновить `/search` | Не whitescreen. Error-banner «Сервис недоступен» или skeleton + retry. После `docker compose start api` UI восстанавливается. |
-| E2 | **API 500** | API guard: вернуть 500 на любой endpoint (можно вручную через curl POST на несуществующий путь и проверить error-handling в UI на реальном flow) | Тост / inline-error с понятным текстом, не stack-trace. Retry кнопка где применимо. |
-| E3 | **Empty search** | `/search` → ИНН `999999999` (несуществующий) | Empty-state с подсказкой «Не найдено. Попробуйте создать вручную → /manual-input». |
-| E4 | **Borrower без xltx** | Через `/manual-input` без upload xltx — только manual ввод во всех полях | Wizard проходит, dossier создаётся, в G-разделе risk-score есть, source-trail показывает manual везде. |
-| E5 | **PDF gen latency** | `/dossier/{id}` → клик «Скачать PDF» | Loading-spinner, кнопка disabled во время gen, success → download trigger. Если >10s — не зависает, не повторяет click. |
-| E6 | **Refresh-token revoked mid-session** | В Redis: `DEL refresh:denylist:<jti>` всех, или `FLUSHDB`. В UI триггернуть refresh (подождать 15м access-ttl или симулировать) | Redirect на `/login` с сохранением URL для return-after-login. Нет потери данных wizard если был в process (или явный warning «session expired, please save draft»). |
-| E7 | **Network drop mid-wizard** | DevTools → Network → Offline → submit Шаг 3 | Toast «Нет сети», submit-кнопка не disabled навсегда, после restore retry работает. |
-| E8 | **Slow API** | DevTools → Network → Slow 3G → `/dossier/{id}` | Skeleton placeholders, не whitescreen, charts ждут данные. |
+### E1 — API kill
 
-Acceptance: **8/8 PASS** или каждый FAIL зарегистрирован как issue с severity (block/non-block для demo).
+**Repro**: `docker compose stop api`, в UI обновить `/search` (F5).
+
+**Expected UI**: не whitescreen. Error-banner «Сервис недоступен» или skeleton + retry-кнопка. Sidebar / header не падают (рендерятся из cached app-shell). После `docker compose start api` + retry — UI восстанавливается, не требует full reload.
+
+**Pass criteria**: ☐ нет whitescreen · ☐ retry работает после restart · ☐ console без unhandled promise rejection.
+
+### E2 — API 500 / 504
+
+**Repro**:
+- 500: спровоцировать backend exception — например, POST на `/api/dossier` с заведомо невалидным JSON (`Content-Type: application/json` + body `{`).
+- 504: throttling proxy / network conditioner (DevTools → Network → custom profile с latency 30s) на любой `/api/...` запрос — backend ответ дольше gateway timeout'а.
+
+**Expected UI**: toast / inline-error с понятным русским текстом («Сервер вернул ошибку», «Сервис не отвечает» — не голый `500 Internal Server Error`). Retry-кнопка где применимо (`/search`, `/dossier` PDF download, manual-input submit). Stack-trace **не виден** пользователю.
+
+**Pass criteria**: ☐ нет stack-trace · ☐ retry доступен · ☐ correlation_id видим в DevTools response headers (для T3.2 поддержки).
+
+### E3 — Empty search
+
+**Repro**: `/search` → ИНН `999999999` (несуществующий формат ОК, но нет в БД).
+
+**Expected UI**: empty-state с illustration / иконкой + текст «Не найдено» + подсказка-CTA «Создать вручную → /manual-input». Кнопка-link на manual-input реактивна.
+
+**Pass criteria**: ☐ empty-state читаемый · ☐ CTA ведёт на `/manual-input` · ☐ нет 404 baner / stack.
+
+### E4 — Borrower без xltx
+
+**Repro**: `/manual-input` → Step 1 заполнить руками без upload xltx → Step 2 руками все поля → Step 3 руками → Generate.
+
+**Expected UI**: wizard проходит без ошибок «требуется upload»; dossier создаётся; в `/dossier/{new_id}` раздел G (summary) содержит risk-score; source-trail в Step 2 (если открыть draft заново) показывает `manual` на всех полях (без зелёного auto badge'а).
+
+**Pass criteria**: ☐ wizard submit success · ☐ dossier открывается · ☐ source-trail = manual везде · ☐ red-flag engine отработал (или явный пустой список без падения).
+
+### E5 — PDF gen latency (>10s)
+
+**Repro**: `/dossier/{id}` → клик «Скачать PDF». Для гарантированного latency — выбрать dossier с большим набором evidence (например `BR-2026-0042`, имеет много counterparties).
+
+**Expected UI**: loading-spinner на кнопке, кнопка `disabled` во время gen (нельзя кликнуть повторно — нет дубля jobs). Success → trigger native download. Если gen >10s — UI не зависает, не показывает «Сервер не отвечает», audit-log `download_pdf` фиксирует только один event.
+
+**Pass criteria**: ☐ нет double-click race · ☐ spinner виден · ☐ download trigger срабатывает · ☐ audit-log один event per click.
+
+### E6 — Refresh-token revoked mid-session
+
+**Repro**: залогинен. В Redis: `docker compose exec -T redis redis-cli FLUSHDB` (стирает refresh denylist полностью) **или** заденилист'ить конкретный jti через CLI. В UI выждать 15 мин access-ttl ИЛИ симулировать через DevTools — Application → Cookies → удалить `ca_access` и триггернуть запрос к `/api/...`.
+
+**Expected UI**: redirect на `/login` с query `?next=<original_path>` (return-after-login сохранён). Если был в wizard mid-flow — явный toast/banner «Сессия истекла, черновик сохранён» (draft persistence per CA-058 / TTL 30d). Нет потери данных при re-login → return на `/manual-input` → restore draft видим в Step 1 prefill.
+
+**Pass criteria**: ☐ redirect с next= · ☐ draft не теряется · ☐ после re-login возврат на исходный route · ☐ нет infinite-loop refresh→401→refresh.
+
+### E7 — Network drop mid-wizard
+
+**Repro**: `/manual-input` Step 2 заполнить → DevTools → Network → Offline → submit Step 3 (Generate).
+
+**Expected UI**: toast «Нет сети, проверьте подключение». Submit-кнопка возвращается в active (не disabled навсегда). После DevTools → Network → Online → повторный click submit-кнопки проходит, dossier создаётся.
+
+**Pass criteria**: ☐ toast виден · ☐ кнопка не зависает в disabled · ☐ retry после restore сетки работает · ☐ нет дубля dossier'ов в БД (idempotency).
+
+### E8 — Wizard partial submit & recovery
+
+**Repro**: `/manual-input` Step 1 заполнить → Continue к Step 2 → заполнить половину полей → закрыть вкладку (или logout). Re-login. Открыть `/manual-input` или drafts list.
+
+**Expected UI**: draft восстанавливается — prefill через sessionStorage (Step 1 borrower-карточка per CA-058) + drafts table (TTL 30d) для Step 2 финансов. Пользователь видит «Восстановить черновик от <дата>» и продолжает с Step 2 без потери данных. После полного submit (Step 3 → Generate) draft удаляется.
+
+**Pass criteria**: ☐ draft жив после close/logout · ☐ TTL ≤30 дней соблюдается · ☐ после успешной генерации draft удаляется · ☐ нет дубль-drafts при повторных open/close циклах.
+
+Acceptance: **8/8 PASS** или каждый FAIL зарегистрирован как issue в `pre-demo-smoke-history.md` с severity (block/non-block для demo).
 
 ---
 
@@ -129,10 +216,38 @@ Acceptance: **8/8 PASS** или каждый FAIL зарегистрирован
 | Issues registered | ☐ |  |  |
 | Demo trip GO/NO-GO | ☐ |  |  |
 
+### Detailed per-cell log
+
+Шаблон для построчного журналирования прохода. Заполнять в режиме «одна ячейка matrix / один edge-сценарий / один 2FA путь = одна строка». Полный лог прогона дублируется в `pre-demo-smoke-history.md` как отдельная запись.
+
+| Дата | Route | Theme | Status (PASS/FAIL) | Notes | Signed by |
+|---|---|---|---|---|---|
+|  |  |  |  |  |  |
+|  |  |  |  |  |  |
+|  |  |  |  |  |  |
+|  |  |  |  |  |  |
+|  |  |  |  |  |  |
+|  |  |  |  |  |  |
+|  |  |  |  |  |  |
+|  |  |  |  |  |  |
+|  |  |  |  |  |  |
+|  |  |  |  |  |  |
+|  |  |  |  |  |  |
+|  |  |  |  |  |  |
+|  |  |  |  |  |  |
+|  |  |  |  |  |  |
+|  |  |  |  |  |  |
+|  |  |  |  |  |  |
+|  |  |  |  |  |  |
+|  |  |  |  |  |  |
+|  |  |  |  |  |  |
+|  |  |  |  |  |  |
+
 ---
 
 ## После прогона
 
 1. **CLAUDE.md**: обновить «Stack state» датой последнего pre-demo smoke + ссылку на коммит этого playbook (или последний коммит фикса из этого прогона).
-2. **Issues**: всё что FAIL — atomic tasks, fix → re-run только затронутый блок (не весь playbook).
-3. **Демо-окно**: повторный полный прогон **за 24 часа до выезда** на пилот. Между прогонами — заморозка scope: только critical bugfix.
+2. **`pre-demo-smoke-history.md`**: добавить запись о прогоне (формат — header `### YYYY-MM-DD — <инициалы>`, baseline commit, results, issues found, sign-off). См. `docs/operations/pre-demo-smoke-history.md`.
+3. **Issues**: всё что FAIL — atomic tasks, fix → re-run только затронутый блок (не весь playbook).
+4. **Демо-окно**: повторный полный прогон **за 24 часа до выезда** на пилот. Между прогонами — заморозка scope: только critical bugfix.
