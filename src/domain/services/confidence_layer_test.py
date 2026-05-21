@@ -36,7 +36,7 @@ def _full_borrower() -> Borrower:
         registration_date=date(2018, 1, 1),
         director_name="И.И.",
         director_appointed_at=date(2018, 1, 1),
-        okved_main="46.39",
+        oked_main="46.39",
         registered_address="г. Ташкент",
     )
 
@@ -201,7 +201,7 @@ def test_scenario_5_borrower_core_partial_lowers_coverage() -> None:
         registration_date=date(2018, 1, 1),
         director_name="",  # пусто
         director_appointed_at=date(2018, 1, 1),
-        okved_main="",  # пусто
+        oked_main="",  # пусто
         registered_address="г. Ташкент",
     )
     snap = BorrowerSnapshot(borrower=borrower, as_of=date(2026, 5, 1))

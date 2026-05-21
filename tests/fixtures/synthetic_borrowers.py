@@ -49,8 +49,8 @@ def _borrower(
         registration_date=date(2018, 1, 1),
         director_name="Иванов И.И.",
         director_appointed_at=director_appointed_at,
-        okved_main="62.01",
-        okved_main_changed_at=okved_changed_at,
+        oked_main="62.01",
+        oked_main_changed_at=okved_changed_at,
         registered_address="г. Ташкент",
         # ADR-0024 Session 3: OKVED_CHANGED_12M теперь fires только если
         # `oked_changed_by_owner=True`. fixtures, передающие

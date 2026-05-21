@@ -176,7 +176,7 @@ def _full_borrower() -> Borrower:
         registration_date=date(2018, 1, 1),
         director_name="И.И.",
         director_appointed_at=date(2018, 1, 1),
-        okved_main="46.39",
+        oked_main="46.39",
         registered_address="г. Ташкент",
     )
 

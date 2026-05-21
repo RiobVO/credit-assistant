@@ -74,7 +74,7 @@ def _payload() -> dict[str, Any]:
             "registration_date": "2019-03-15",
             "director_name": "Каримов Ш.А.",
             "director_appointed_at": "2021-06-01",
-            "okved_main": "46.49",
+            "oked_main": "46.49",
             "registered_address": "Ташкент",
         },
         "as_of": "2026-05-08",

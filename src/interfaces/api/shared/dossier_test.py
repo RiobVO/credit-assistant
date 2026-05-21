@@ -115,7 +115,7 @@ def client() -> Iterator[TestClient]:
 def _borrower_payload(
     *,
     director_appointed_at: str = "2020-01-01",
-    okved_main_changed_at: str | None = None,
+    oked_main_changed_at: str | None = None,
     oked_changed_by_owner: bool = False,
 ) -> dict[str, Any]:
     return {
@@ -125,9 +125,9 @@ def _borrower_payload(
         "registration_date": "2018-05-01",
         "director_name": "Иванов И.И.",
         "director_appointed_at": director_appointed_at,
-        "okved_main": "46.49",
+        "oked_main": "46.49",
         "registered_address": "Ташкент, ул. Амира Темура, 1",
-        "okved_main_changed_at": okved_main_changed_at,
+        "oked_main_changed_at": oked_main_changed_at,
         # ADR-0024 Session 3: OKVED_CHANGED_12M fires только при owner-initiated
         # смене ОКЭД. Helper-level default False; тесты, полагающиеся на
         # firing, передают True явно.
@@ -317,7 +317,7 @@ class TestOkvedChangedRule:
     def test_okved_changed_within_12_months_fires(self, client: TestClient) -> None:
         payload = {
             "borrower": _borrower_payload(
-                okved_main_changed_at="2025-08-01",
+                oked_main_changed_at="2025-08-01",
                 # ADR-0024 Session 3: правило требует owner-initiated смену.
                 oked_changed_by_owner=True,
             ),
@@ -354,7 +354,7 @@ class TestRiskScoreCombination:
         payload = {
             "borrower": _borrower_payload(
                 director_appointed_at="2026-01-15",       # medium
-                okved_main_changed_at="2025-08-01",        # medium
+                oked_main_changed_at="2025-08-01",        # medium
                 # ADR-0024 Session 3: явный owner-initiated флаг для firing
                 # OKVED_CHANGED_12M в скор-комбинации.
                 oked_changed_by_owner=True,

@@ -41,7 +41,7 @@ def _snapshot(*invoices: Invoice) -> BorrowerSnapshot:
             registration_date=date(2020, 1, 1),
             director_name="Иванов",
             director_appointed_at=date(2020, 1, 1),
-            okved_main="62.01",
+            oked_main="62.01",
             registered_address="Ташкент",
         ),
         as_of=date(2026, 5, 8),

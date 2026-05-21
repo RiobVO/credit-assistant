@@ -67,9 +67,9 @@ def _borrower() -> dict[str, Any]:
         "registration_date": "2018-05-01",
         "director_name": "Director D.D.",
         "director_appointed_at": "2020-01-01",
-        "okved_main": "46.49",
+        "oked_main": "46.49",
         "registered_address": "Tashkent, ul. 1",
-        "okved_main_changed_at": None,
+        "oked_main_changed_at": None,
     }
 
 

@@ -23,7 +23,7 @@ def _borrower() -> Borrower:
         registration_date=date(2020, 3, 15),
         director_name="Иванов И.И.",
         director_appointed_at=date(2024, 1, 10),
-        okved_main="62.01",
+        oked_main="62.01",
         registered_address="Ташкент",
     )
 

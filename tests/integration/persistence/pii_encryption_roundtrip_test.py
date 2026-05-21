@@ -117,7 +117,7 @@ async def test_borrower_director_name_encrypted_at_rest(
         registration_date=date(2020, 1, 1),
         director_name="Петров П.П.",
         director_appointed_at=date(2021, 1, 1),
-        okved_main="62.01",
+        oked_main="62.01",
         registered_address="Ташкент",
     )
     pg_session.add(orm)
@@ -146,7 +146,7 @@ async def test_borrower_snapshot_payload_wrapped_in_jsonb(
         registration_date=date(2020, 1, 1),
         director_name="Сидоров С.С.",
         director_appointed_at=date(2021, 1, 1),
-        okved_main="62.01",
+        oked_main="62.01",
         registered_address="Ташкент",
     )
     pg_session.add(borrower)

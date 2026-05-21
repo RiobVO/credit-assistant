@@ -25,7 +25,7 @@ def okved_changed_12m(snapshot: BorrowerSnapshot) -> FiringEvidence | None:
     # (Госкомстат auto-overwrite, default-False legacy данные).
     if not borrower.oked_changed_by_owner:
         return None
-    changed_at = borrower.okved_main_changed_at
+    changed_at = borrower.oked_main_changed_at
     if changed_at is None:
         return None
     days_since = (snapshot.as_of - changed_at).days
@@ -34,5 +34,5 @@ def okved_changed_12m(snapshot: BorrowerSnapshot) -> FiringEvidence | None:
     return FiringEvidence(
         message=f"Основной ОКЭД сменился собственником {days_since} дней назад",
         message_uz=f"Asosiy ОКЭД egasi tomonidan {days_since} kun oldin almashgan",
-        evidence={"days_since_change": days_since, "current_okved": borrower.okved_main},
+        evidence={"days_since_change": days_since, "current_oked": borrower.oked_main},
     )

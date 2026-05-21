@@ -91,7 +91,7 @@ describe("OkvedAutocomplete (CA-DS20b)", () => {
     const { input } = renderAutocomplete();
     fireEvent.focus(input);
     expect(
-      await screen.findByText(ru.accountant.manual_input.s1_okved_loading),
+      await screen.findByText(ru.accountant.manual_input.s1_oked_loading),
     ).toBeInTheDocument();
   });
 
@@ -141,7 +141,7 @@ describe("OkvedAutocomplete (CA-DS20b)", () => {
     fireEvent.change(input, { target: { value: "99.99" } });
     await waitFor(() => {
       expect(
-        screen.getByText(ru.accountant.manual_input.s1_okved_empty),
+        screen.getByText(ru.accountant.manual_input.s1_oked_empty),
       ).toBeInTheDocument();
     });
   });
