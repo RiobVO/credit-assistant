@@ -124,6 +124,10 @@ class CounterpartyInput(_StrictModel):
     inn: str
     name: str
     registration_date: date
+    # ADR-0024 Session 3: ОПФ контрагента. LegalForm.IE исключается из
+    # SHELL_COMPANY_PARTNERS — ИП регистрируются за 1-2 дня и молодые
+    # легитимны. None для legacy / data sources, которые поле не заполняют.
+    opf: LegalFormCode | None = None
 
     @field_validator("inn")
     @classmethod

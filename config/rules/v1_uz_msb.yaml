@@ -228,14 +228,14 @@ rules:
     rationale: "Типичная схема накрутки оборотов перед получением кредита"
 
   - id: SHELL_COMPANY_PARTNERS
-    name: "Контрагенты с ИНН моложе 6 месяцев"
-    name_uz: "INN olingan vaqti 6 oydan kam boʻlgan kontragentlar"
+    name: "Юр-лица-контрагенты с ИНН моложе 6 месяцев"
+    name_uz: "INN olingan vaqti 6 oydan kam boʻlgan yuridik shaxs kontragentlar"
     category: counterparty
     severity: high
     source: "FATF Recommendation 10 (CDD) + Recommendation 24 (Beneficial Ownership); Закон РУз ЗРУ-660 «О ПОД/ФТ»; EAG typology — shell-company misuse"
     source_uz: "FATF tavsiya 10 (CDD) ва 24 (Beneficial Ownership); ЎзР ЗРУ-660-сонли қонуни; EAG типология"
-    formula: "any(months_since_registration(cp) < 6)"
-    rationale: "Классическая схема фиктивной отчётности"
+    formula: "any(months_since_registration(cp) < 6 AND cp.opf != IE)"
+    rationale: "Классическая схема фиктивной отчётности. ADR-0024 Session 3: ИП исключены — регистрация в Узбекистане за 1-2 дня, уставного капитала не требует (Закон РУз «О гарантиях свободы предпринимательской деятельности»), молодой ИП = норма. opf=None (legacy / data source без поля) трактуется conservative: fires"
 
   - id: CIRCULAR_INVOICING
     name: "Циклические ЭСФ с контрагентами (объём пары ≥100 млн сум)"

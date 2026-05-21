@@ -85,6 +85,7 @@ def _full_snapshot() -> BorrowerSnapshot:
                 inn=INN("200000020"),
                 name="Покупатель",
                 registration_date=date(2024, 1, 1),
+                opf=LegalForm.LLC,
             ),
         ],
         counterparties_suppliers=[
@@ -92,6 +93,7 @@ def _full_snapshot() -> BorrowerSnapshot:
                 inn=INN("300000030"),
                 name="Поставщик",
                 registration_date=date(2019, 1, 1),
+                opf=LegalForm.IE,
             ),
         ],
         buyer_revenue_share={"200000020": Decimal("0.5")},
@@ -307,6 +309,35 @@ def test_ca037_legacy_payload_without_new_keys_still_loads() -> None:
     # всеми None».
     assert r.balance_end is None
     assert r.balance_start is None
+
+
+def test_session3_counterparty_opf_legacy_defaults_none() -> None:
+    """ADR-0024 Session 3: legacy `counterparties_*` без ключа `opf` —
+    после snapshot_from_payload поле = None, conservative read.
+    """
+    legacy_payload: dict[str, object] = {
+        "as_of": "2026-04-01",
+        "annual_reports": [],
+        "quarterly_reports": [],
+        "monthly_turnover": [],
+        "counterparties_buyers": [
+            {
+                "inn": "200000020",
+                "name": "Покупатель",
+                "registration_date": "2024-01-01",
+                # Никаких Session 3 ключей (opf) — записано до Session 3.
+            },
+        ],
+        "counterparties_suppliers": [],
+        "buyer_revenue_share": {},
+        "supplier_purchase_share": {},
+        "invoices": [],
+        "tax_events": [],
+        "vat_periods": [],
+        "loan_request": None,
+    }
+    restored = snapshot_from_payload(legacy_payload, _borrower())
+    assert restored.counterparties_buyers[0].opf is None
 
 
 def test_session3_tax_event_material_legacy_defaults_false() -> None:

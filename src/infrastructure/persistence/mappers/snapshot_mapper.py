@@ -18,7 +18,7 @@ from decimal import Decimal
 from typing import Any, cast
 from uuid import UUID
 
-from domain.entities.borrower import Borrower
+from domain.entities.borrower import Borrower, LegalForm
 from domain.entities.borrower_snapshot import BorrowerSnapshot
 from domain.entities.counterparty import Counterparty
 from domain.entities.financial_report import FinancialReport
@@ -197,14 +197,19 @@ def _counterparty_to_dict(c: Counterparty) -> dict[str, Any]:
         "inn": c.inn.value,
         "name": c.name,
         "registration_date": c.registration_date.isoformat(),
+        "opf": c.opf.value if c.opf is not None else None,
     }
 
 
 def _counterparty_from_dict(d: dict[str, Any]) -> Counterparty:
+    # ADR-0024 Session 3: opf — legacy payloads ключа не содержат, читаем
+    # через `.get(...)` consistent с дефолтом entity (None).
+    opf_raw = d.get("opf")
     return Counterparty(
         inn=INN(d["inn"]),
         name=d["name"],
         registration_date=date.fromisoformat(d["registration_date"]),
+        opf=LegalForm(opf_raw) if opf_raw is not None else None,
     )
 
 
