@@ -72,7 +72,7 @@ services:
       # Phase 10 brand-tenant (ADR-0011 / CA-066): для PDF-рендера. По умолчанию
       # `default` brand из `config/brands/default.json`. Override через env:
       # `BRAND_ID=uzbekbank docker compose up -d --build api`.
-      BRAND_ID: ${BRAND_ID:-default}
+      BRAND_ID: ${BRAND_ID:-uzbekbank}
       # Phase 4: JWT для bank-auth. ДЛЯ DEV ТОЛЬКО — в проде передавать через
       # секреты банка (Vault/SOPS). Pydantic Settings читает JWT_SECRET case-insensitively.
       JWT_SECRET: ${JWT_SECRET:-dev-compose-insecure-change-me-32bytes-minimum}

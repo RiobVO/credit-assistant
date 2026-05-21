@@ -116,7 +116,7 @@ class Ldap3Client:
         except LDAPBindError:
             return False
         except LDAPException as exc:
-            logger.warning("LDAP user-bind raised non-bind error: %s", exc)
+            logger.warning("LDAP user-bind raised non-bind error", exc_info=exc)
             return False
 
         ok = bool(cast("Any", conn).bound)

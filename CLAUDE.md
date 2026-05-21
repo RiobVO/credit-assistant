@@ -36,7 +36,8 @@ commit hashes + lessons).
 - Backend env: `APP_MODE=bank`, `BRAND_ID=default`, `PII_ENC_KEYS` задан тестовым Fernet-ключом (`/tmp/pii_key.txt`, prefix `iEuuP5WADM_...`). БД зашифрована — без ключа restore из `backup-pre-t13.sql` (gitignored).
 - Frontend Next dev (Turbopack) `npm run dev` в `web/` — порт 3000. Production-image тоже билдится (T3.6.1).
 - Seeded analyst для smoke: **email `t04@bank.uz`** / **password `T04Smoke!`**, без MFA.
-- Dossiers: 49 (47 backfilled `BR-2026-0001..0047` + smoke `BR-2026-0048..0049`). Snapshot.payload + drafts.payload зашифрованы. Demo scenarios используют `BR-2026-0030/0040/0042/0046/0047` (см. `docs/demo/scenarios.md`).
+- Dossiers: 52 (47 backfilled `BR-2026-0001..0047` + smoke `BR-2026-0048..0049` + 3 post-Day-4 smoke iterations `BR-2026-0050..0052`). Snapshot.payload + drafts.payload зашифрованы. Demo scenarios используют `BR-2026-0030/0040/0042/0046/0047` (см. `docs/demo/scenarios.md`).
+- Independent audit 2026-05-21 — `docs/audit/2026-05-21/00-summary.md` (5 параллельных subagent'ов: honesty / security / architecture / demo-readiness / documentation, area scores 5/10–8.5/10, top-10 фиксов priority-ranked).
 - Backups: `./backups/` (gitignored) — 2 dump'а после T3.4 smoke.
 - **Alembic head: `b04677374b85`**. **Rule count: 24** (`config/rules/v1_uz_msb.yaml`). **KPI count: 8** (`ebitda`/`debt_to_ebitda`/`current_ratio`/`working_capital`/`interest_coverage`/`dscr`/`quick_ratio`/`fx_exposure_ratio` + legacy ROE/EBIT/etc).
 - Deps Day 4: `networkx>=3.4` (graph cycle detection для CIRCULAR_INVOICING).
