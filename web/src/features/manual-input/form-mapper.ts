@@ -57,6 +57,10 @@ type LoanRequest = {
   rate_pct: string; // Decimal как строка
   purpose: string;
   category: string;
+  // ADR-0024 Session 3: collateral_type для secured-variant порога
+  // LOAN_TO_REVENUE_RATIO. 'none' = unsecured (порог 0.40),
+  // остальные = secured (порог 0.70).
+  collateral_type: "none" | "real_estate" | "movable" | "guarantee" | "other";
 };
 
 export type ManualInputPayload = {
@@ -224,6 +228,7 @@ export function formValuesToPayload(values: FormValues): ManualInputPayload {
       rate_pct: step3.loanRatePct.replace(",", "."),
       purpose: step3.loanPurpose,
       category: step3.loanCategory,
+      collateral_type: step3.collateralType,
     };
   }
 

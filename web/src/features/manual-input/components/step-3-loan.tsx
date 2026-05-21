@@ -43,6 +43,7 @@ import {
 } from "../lib/finance";
 import {
   type FormValues,
+  collateralTypes,
   loanCategories,
   loanTerms,
 } from "../schema";
@@ -63,6 +64,7 @@ export function Step3Loan() {
   const ratePctStr = useWatch({ control, name: "step3.loanRatePct" });
   const purpose = useWatch({ control, name: "step3.loanPurpose" });
   const category = useWatch({ control, name: "step3.loanCategory" });
+  const collateral = useWatch({ control, name: "step3.collateralType" });
 
   const revenue2025 = useWatch({ control, name: "step2.revenue.y2025" });
   const profit2025 = useWatch({ control, name: "step2.netProfit.y2025" });
@@ -103,6 +105,7 @@ export function Step3Loan() {
     ratePct: ratePctStr ?? "",
     purpose: purpose ?? "",
     category: category ?? "",
+    collateral: collateral ?? "",
   });
 
   return (
@@ -114,7 +117,7 @@ export function Step3Loan() {
         aux={
           <CounterChip
             filled={filled}
-            total={5}
+            total={6}
             eyebrow={t("s3_counter_filled")}
           />
         }
@@ -230,6 +233,7 @@ export function Step3Loan() {
               </span>
             </div>
             <CategoryBlock />
+            <CollateralBlock />
           </Field>
         </div>
       </SectionCard>
@@ -292,6 +296,56 @@ function CategoryBlock() {
   );
 }
 
+// ADR-0024 Session 3: collateral_type segmented pills для secured-variant
+// LOAN_TO_REVENUE_RATIO. 'none' = unsecured (порог 0.40), остальные = secured
+// (порог 0.70). Default 'none' — analyst явно поднимает порог выбором
+// конкретного обеспечения.
+function CollateralBlock() {
+  const t = useTranslations("accountant.manual_input");
+  const { control } = useFormContext<FormValues>();
+  return (
+    <Controller
+      control={control}
+      name="step3.collateralType"
+      render={({ field }) => (
+        <div className="mt-[10px] rounded-[11px] border border-[var(--border)] bg-[var(--surface-2)] px-4 py-[14px]">
+          <div className="mb-[10px] flex items-center gap-2">
+            <span className="text-[10.5px] font-semibold tracking-[0.08em] text-[var(--ink-4)] uppercase">
+              {t("s3_collateral_eyebrow")}
+            </span>
+            <span className="text-[11px] font-bold text-[var(--state-bad-fg)]">
+              *
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {collateralTypes.map((opt) => {
+              const active = field.value === opt.code;
+              return (
+                <button
+                  key={opt.code}
+                  type="button"
+                  onClick={() => field.onChange(opt.code)}
+                  className={cn(
+                    "rounded-full border px-[14px] py-[7px] text-[13px] transition-all",
+                    active
+                      ? "border-[color-mix(in_srgb,var(--brand-primary)_45%,transparent)] bg-[var(--brand-primary-soft)] font-semibold text-[var(--brand-primary-ink)]"
+                      : "border-[var(--border-strong)] bg-[var(--surface)] text-[var(--ink-2)] hover:border-[var(--brand-primary)] hover:text-[var(--ink-1)]",
+                  )}
+                >
+                  {t(opt.i18nKey)}
+                </button>
+              );
+            })}
+          </div>
+          <p className="mt-2 text-[11.5px] leading-[1.4] text-[var(--ink-4)]">
+            {t("s3_collateral_help")}
+          </p>
+        </div>
+      )}
+    />
+  );
+}
+
 // Rate-bar slider visualization (14-26% market range). Premium-feel без motion.
 function RateBar({ value }: { value: number }) {
   const min = 14;
@@ -318,21 +372,23 @@ function RateBar({ value }: { value: number }) {
   );
 }
 
-// Counter: 5 предикатов «filled». Категория всегда truthy (default
-// 'working_capital'); сумма/срок/ставка — по naturally-parsed value;
-// purpose — по длине ≥20 (matches zod min(20)).
+// Counter: 6 предикатов «filled». Категория и collateral всегда truthy
+// (default 'working_capital' / 'none'); сумма/срок/ставка — по naturally-
+// parsed value; purpose — по длине ≥20 (matches zod min(20)).
 function countFilled({
   loanAmount,
   termMonths,
   ratePct,
   purpose,
   category,
+  collateral,
 }: {
   loanAmount: string;
   termMonths: number;
   ratePct: string;
   purpose: string;
   category: string;
+  collateral: string;
 }): number {
   let n = 0;
   if (digitsOnly(loanAmount).length > 0) n += 1;
@@ -340,5 +396,6 @@ function countFilled({
   if (ratePct.trim().length > 0) n += 1;
   if (purpose.trim().length >= 20) n += 1;
   if (category.length > 0) n += 1;
+  if (collateral.length > 0) n += 1;
   return n;
 }

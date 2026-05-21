@@ -12,6 +12,9 @@ const baseStep1 = {
   directorName: "Иванов И.И.",
   directorAppointedAt: "2020-01-01",
   registeredAddress: "г. Ташкент, ул. Амира Темура, 12",
+  // ADR-0024 Session 3: новые поля schema (boolean toggle + read-only date).
+  okedChangedByOwner: false,
+  okvedMainChangedAt: null,
 };
 
 describe("step1Schema.registeredAddress (CA-038)", () => {

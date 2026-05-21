@@ -150,6 +150,7 @@ def _to_loan_request(p: LoanRequestInput | None) -> LoanRequest | None:
         rate_pct=p.rate_pct,
         purpose=p.purpose,
         category=p.category,
+        collateral_type=p.collateral_type,
     )
 
 

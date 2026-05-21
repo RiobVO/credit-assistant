@@ -79,6 +79,17 @@ export const loanCategories = [
   { code: "trade_finance", label: "Торговое финансирование" },
 ] as const;
 
+// ADR-0024 Session 3: типы обеспечения для secured-variant порога
+// LOAN_TO_REVENUE_RATIO. Labels локализуются через i18n keys
+// `s3_collateral_<code>` (без hardcoded RU как у loanCategories).
+export const collateralTypes = [
+  { code: "none", i18nKey: "s3_collateral_none" },
+  { code: "real_estate", i18nKey: "s3_collateral_real_estate" },
+  { code: "movable", i18nKey: "s3_collateral_movable" },
+  { code: "guarantee", i18nKey: "s3_collateral_guarantee" },
+  { code: "other", i18nKey: "s3_collateral_other" },
+] as const;
+
 export const step1Schema = z
   .object({
     inn: z
@@ -191,6 +202,16 @@ export const step3Schema = z.object({
     "refinancing",
     "trade_finance",
   ]),
+  // ADR-0024 Session 3: collateral_type для secured-variant
+  // LOAN_TO_REVENUE_RATIO. 'none' = unsecured (порог 0.40), остальные
+  // = secured (порог 0.70).
+  collateralType: z.enum([
+    "none",
+    "real_estate",
+    "movable",
+    "guarantee",
+    "other",
+  ]),
 });
 
 export const formSchema = z.object({
@@ -264,6 +285,9 @@ export function defaultFormValues(): FormValues {
       loanRatePct: "",
       loanPurpose: "",
       loanCategory: "working_capital",
+      // ADR-0024 Session 3: default 'none' (unsecured, conservative). Analyst
+      // явно выбирает secured-вариант через UI Step 3.
+      collateralType: "none",
     },
   };
 }

@@ -10,8 +10,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import Decimal
+from typing import Literal
 
 from domain.value_objects.money import Money
+
+# ADR-0024 Session 3: secured-variant порог 0.70 для LOAN_TO_REVENUE_RATIO.
+# 'none' = unsecured (порог 0.40), остальные = secured (порог 0.70). None в
+# самом поле — для legacy / data sources без явного collateral_type.
+CollateralType = Literal["none", "real_estate", "movable", "guarantee", "other"]
 
 
 class InvalidLoanRequestError(ValueError):
@@ -25,6 +31,12 @@ class LoanRequest:
     rate_pct: Decimal  # годовая ставка в процентах, напр. 24.5
     purpose: str
     category: str
+    # ADR-0024 Session 3: тип обеспечения для secured-variant порога
+    # LOAN_TO_REVENUE_RATIO. None = legacy data (трактуется conservatively
+    # как unsecured, порог 0.40). 'none' = явно без обеспечения. Любой
+    # secured-вариант (real_estate / movable / guarantee / other) поднимает
+    # порог до 0.70.
+    collateral_type: CollateralType | None = None
 
     def __post_init__(self) -> None:
         if self.term_months <= 0:

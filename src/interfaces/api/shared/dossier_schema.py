@@ -158,6 +158,9 @@ class TaxEventInput(_StrictModel):
     material: bool = False
 
 
+CollateralTypeCode = Literal["none", "real_estate", "movable", "guarantee", "other"]
+
+
 class LoanRequestInput(_StrictModel):
     """Параметры запрашиваемого кредита (CA-005). Все поля обязательны —
     UI на Шаге 3 их собирает; адаптеры файловых источников поле не заполняют."""
@@ -167,6 +170,11 @@ class LoanRequestInput(_StrictModel):
     rate_pct: Decimal = Field(ge=0)
     purpose: str
     category: str
+    # ADR-0024 Session 3: тип обеспечения для secured-variant порога
+    # LOAN_TO_REVENUE_RATIO (unsecured 0.40 vs secured 0.70). Default None —
+    # legacy / data sources без поля; UI Step 3 принудительно даёт 'none' или
+    # secured-тип. Backend трактует None == 'none' (conservative).
+    collateral_type: CollateralTypeCode | None = None
 
 
 class InvoiceInput(_StrictModel):
