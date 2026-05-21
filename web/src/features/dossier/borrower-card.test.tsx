@@ -17,9 +17,9 @@ const BORROWER: DossierViewDto["borrower"] = {
   registration_date: "2020-01-01",
   director_name: "Test Director",
   director_appointed_at: "2024-01-01",
-  okved_main: "47.11",
+  oked_main: "47.11",
   registered_address: "Tashkent",
-  okved_main_changed_at: null,
+  oked_main_changed_at: null,
   charter_capital: null,
   oked_changed_by_owner: false,
 };

@@ -140,7 +140,7 @@ class WeasyPrintPdfRenderer:
             ),
         ).decode("ascii")
 
-        okved_short, okved_full = _resolve_okved(borrower.okved_main, messages)
+        okved_short, okved_full = _resolve_okved(borrower.oked_main, messages)
         region_city, region_district = _parse_region(
             borrower.registered_address, messages.region_district_full,
         )

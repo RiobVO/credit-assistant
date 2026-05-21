@@ -8,13 +8,13 @@ const baseStep1 = {
   name: "ООО Тест",
   legalForm: "llc" as const,
   registrationDate: "2020-01-01",
-  okvedMain: "62.01",
+  okedMain: "62.01",
   directorName: "Иванов И.И.",
   directorAppointedAt: "2020-01-01",
   registeredAddress: "г. Ташкент, ул. Амира Темура, 12",
   // ADR-0024 Session 3: новые поля schema (boolean toggle + read-only date).
   okedChangedByOwner: false,
-  okvedMainChangedAt: null,
+  okedMainChangedAt: null,
 };
 
 describe("step1Schema.registeredAddress (CA-038)", () => {

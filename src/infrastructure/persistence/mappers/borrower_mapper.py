@@ -19,9 +19,9 @@ def borrower_to_orm_kwargs(borrower: Borrower) -> dict[str, Any]:
         "registration_date": borrower.registration_date,
         "director_name": borrower.director_name,
         "director_appointed_at": borrower.director_appointed_at,
-        "okved_main": borrower.okved_main,
+        "oked_main": borrower.oked_main,
         "registered_address": borrower.registered_address,
-        "okved_main_changed_at": borrower.okved_main_changed_at,
+        "oked_main_changed_at": borrower.oked_main_changed_at,
         "oked_changed_by_owner": borrower.oked_changed_by_owner,
     }
     if borrower.charter_capital is not None:
@@ -44,9 +44,9 @@ def borrower_from_orm(orm: BorrowerORM) -> Borrower:
         registration_date=orm.registration_date,
         director_name=orm.director_name,
         director_appointed_at=orm.director_appointed_at,
-        okved_main=orm.okved_main,
+        oked_main=orm.oked_main,
         registered_address=orm.registered_address,
-        okved_main_changed_at=orm.okved_main_changed_at,
+        oked_main_changed_at=orm.oked_main_changed_at,
         charter_capital=charter_capital,
         oked_changed_by_owner=orm.oked_changed_by_owner,
     )

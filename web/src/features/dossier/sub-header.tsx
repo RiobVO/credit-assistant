@@ -53,9 +53,9 @@ export function SubHeader({
       registration_date: borrower.registration_date,
       director_name: borrower.director_name,
       director_appointed_at: borrower.director_appointed_at,
-      okved_main: borrower.okved_main,
+      oked_main: borrower.oked_main,
       registered_address: borrower.registered_address,
-      okved_main_changed_at: borrower.okved_main_changed_at,
+      oked_main_changed_at: borrower.oked_main_changed_at,
       oked_changed_by_owner: borrower.oked_changed_by_owner,
     });
     router.push(`/manual-input?inn=${encodeURIComponent(borrower.inn)}`);
@@ -65,7 +65,7 @@ export function SubHeader({
   const meta = [
     t("meta_inn", { inn: borrower.inn }),
     t("meta_legal_form", { form: legalLabel }),
-    t("meta_okved", { code: borrower.okved_main }),
+    t("meta_okved", { code: borrower.oked_main }),
   ].join(" · ");
 
   return (

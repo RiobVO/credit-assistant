@@ -13,9 +13,9 @@ DEFAULT false.
 borrowers — все existing dossiers становятся silent для этого правила, что
 ожидаемо (regression Commit 6 принимает диф).
 
-Naming note: temporary mixed-prefix `oked_changed_by_owner` рядом с existing
-`okved_main_changed_at` сохраняется до Tier 3 OKVED→ОКЭД rename. Per Claude
-Q0.B: УзР официальный термин — ОКЭД (ПКМ №275 от 24.08.2016).
+Naming note: temporary mixed-prefix `oked_changed_by_owner` рядом с legacy
+`oked_main_changed_at` существовал между Session 3 и Tier 3 rename. Полный
+rename выполнен миграцией b04677374b85 (ПКМ РУз №275 от 24.08.2016).
 
 Downgrade: DROP COLUMN.
 """

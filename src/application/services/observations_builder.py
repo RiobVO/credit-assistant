@@ -163,13 +163,13 @@ def _resolve_roe_ctx(
 ) -> str:
     """ADR-0024: industry-aware ctx для ROE-наблюдения.
 
-    Lookup ``snapshot.borrower.okved_main`` → bucket (section letter A/C/F/…).
+    Lookup ``snapshot.borrower.oked_main`` → bucket (section letter A/C/F/…).
     Если bucket найден — name_ru/name_uz зависит от locale messages.
     Catalog ``None`` или код unknown → neutral fallback без industry-имени.
     """
     if benchmark_catalog is None:
         return messages.obs_roe_ctx_no_industry
-    code = snapshot.borrower.okved_main
+    code = snapshot.borrower.oked_main
     bucket = benchmark_catalog.by_oked_code(code) if code else None
     if bucket is None:
         return messages.obs_roe_ctx_no_industry

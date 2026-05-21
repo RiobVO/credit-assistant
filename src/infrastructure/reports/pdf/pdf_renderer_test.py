@@ -46,7 +46,7 @@ def _make_bundle() -> DossierPdfBundle:
         registration_date=date(2018, 3, 14),
         director_name="Каримов Ш.А.",
         director_appointed_at=date(2018, 3, 14),
-        okved_main="46.39",
+        oked_main="46.39",
         registered_address="г. Ташкент",
     )
     snapshot = BorrowerSnapshot(borrower=borrower, as_of=date(2026, 4, 30))

@@ -16,7 +16,7 @@ def _llc() -> Borrower:
         registration_date=date(2020, 3, 15),
         director_name="Иванов И.И.",
         director_appointed_at=date(2024, 1, 10),
-        okved_main="62.01",
+        oked_main="62.01",
         registered_address="г. Ташкент, ул. Амира Темура 1",
         charter_capital=Money(Decimal("400000000"), Currency.UZS),
     )
@@ -37,7 +37,7 @@ class TestBorrowerConstruction:
 
     def test_okved_changed_at_defaults_to_none(self) -> None:
         b = _llc()
-        assert b.okved_main_changed_at is None
+        assert b.oked_main_changed_at is None
 
     def test_individual_entrepreneur_with_14_digit_inn(self) -> None:
         ie = Borrower(
@@ -47,7 +47,7 @@ class TestBorrowerConstruction:
             registration_date=date(2023, 1, 1),
             director_name="Петров П.П.",
             director_appointed_at=date(2023, 1, 1),
-            okved_main="47.11",
+            oked_main="47.11",
             registered_address="Ташкент",
         )
         assert ie.legal_form == LegalForm.IE
