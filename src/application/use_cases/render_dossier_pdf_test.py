@@ -133,7 +133,9 @@ async def test_passes_enriched_bundle_to_renderer() -> None:
 
     result = await use_case.execute(record.dossier_id)
 
-    assert result == b"%PDF-fake"
+    assert result is not None
+    assert result.pdf_bytes == b"%PDF-fake"
+    assert result.case_id == record.case_id
     assert len(renderer.calls) == 1
     bundle = renderer.calls[0]
     assert bundle.view_bundle.view is record
