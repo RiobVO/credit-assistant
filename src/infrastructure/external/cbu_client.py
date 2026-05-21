@@ -69,10 +69,10 @@ async def fetch_usd_rate() -> CbuRate:
         except Exception as exc:
             last_exc = exc
             _logger.warning(
-                "cbu.fetch_attempt_failed attempt=%d url=%s error=%r",
+                "cbu.fetch_attempt_failed attempt=%d url=%s",
                 attempt + 1,
                 url,
-                exc,
+                exc_info=exc,
             )
 
     raise CbuFetchError(f"all {len(attempts)} CBU fetch attempts failed: {last_exc!r}")

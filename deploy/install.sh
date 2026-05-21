@@ -170,6 +170,13 @@ cat <<EOF
       interfaces.cli.seed_analysts --email admin@bank.uz \\
       --password CHANGE_ME --full-name 'Admin Analyst'"
 
+  Опционально — seed 5 demo dossiers для pilot walkthrough
+  (BR-2026-0030/0040/0042/0046/0047, см. docs/demo/scenarios.md):
+    docker compose -f docker-compose.yml -f docker-compose.prod.yml exec api \\
+      bash -c "cd /app/src && uv run --no-sync python -m \\
+      scripts.seed_demo_borrowers --commit"
+  Скрипт идемпотентен — повторный запуск skip'ает уже существующие case_id.
+
   Документация: deploy/README.md
 ══════════════════════════════════════════════════════════════════════
 EOF
