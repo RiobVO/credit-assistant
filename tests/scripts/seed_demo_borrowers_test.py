@@ -1,7 +1,7 @@
 """Unit-тесты для scripts.seed_demo_borrowers — 5 deterministic demo dossiers."""
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date
 
 from scripts.seed_demo_borrowers import (
     DEMO_AS_OF,
@@ -66,7 +66,7 @@ def test_br0046_has_vat_mismatch_and_recent_director() -> None:
     specs = _build_dossier_specs()
     _, d = next((b, dd) for b, dd in specs if dd.case_id == "BR-2026-0046")
     assert d.vat_period is not None
-    year, month, declared, esf = d.vat_period
+    _year, _month, declared, esf = d.vat_period
     diff = abs(declared - esf) / declared
     assert diff > 0.15, "должно быть >15% для VAT_ESF_MISMATCH"
     assert d.director_appointed_at_override is not None
