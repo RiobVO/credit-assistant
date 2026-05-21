@@ -94,6 +94,7 @@ def _full_snapshot() -> BorrowerSnapshot:
                 name="Поставщик",
                 registration_date=date(2019, 1, 1),
                 opf=LegalForm.IE,
+                is_foreign=True,
             ),
         ],
         buyer_revenue_share={"200000020": Decimal("0.5")},
@@ -338,6 +339,8 @@ def test_session3_counterparty_opf_legacy_defaults_none() -> None:
     }
     restored = snapshot_from_payload(legacy_payload, _borrower())
     assert restored.counterparties_buyers[0].opf is None
+    # ADR-0024 Session 3: is_foreign тоже default False для legacy.
+    assert restored.counterparties_buyers[0].is_foreign is False
 
 
 def test_session3_tax_event_material_legacy_defaults_false() -> None:

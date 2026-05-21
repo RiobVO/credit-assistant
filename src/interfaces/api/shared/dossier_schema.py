@@ -128,6 +128,10 @@ class CounterpartyInput(_StrictModel):
     # SHELL_COMPANY_PARTNERS — ИП регистрируются за 1-2 дня и молодые
     # легитимны. None для legacy / data sources, которые поле не заполняют.
     opf: LegalFormCode | None = None
+    # ADR-0024 Session 3: иностранный контрагент. SINGLE_SUPPLIER_CONCENTRATION
+    # эскалирует severity до high при is_foreign + >0.50 закупок.
+    # Default False для backward-compat — старое поведение (порог 0.60 medium).
+    is_foreign: bool = False
 
     @field_validator("inn")
     @classmethod

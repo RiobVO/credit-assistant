@@ -19,6 +19,11 @@ class Counterparty:
     # за 1-2 дня без уставного капитала, молодые ИП — норма (Закон РУз
     # «О гарантиях свободы предпринимательской деятельности»).
     opf: LegalForm | None = None
+    # ADR-0024 Session 3: иностранный контрагент. SINGLE_SUPPLIER_CONCENTRATION
+    # эскалирует severity до high при foreign + >0.50 (FATF R.10 CDD —
+    # foreign suppliers требуют усиленной проверки). Default False для
+    # legacy / data sources без поля.
+    is_foreign: bool = False
 
     def months_since_registration(self, as_of: date) -> int:
         # Полные месяцы между датами; день, месяц which has not arrived — округление вниз
