@@ -96,7 +96,9 @@ class ParseManualInputFilesUseCase:
                 fmt = self.adapter.detect(f.content)
             except Exception as exc:
                 warnings.append(f"{f.name}: не удалось открыть ({exc})")
-                _logger.warning("parse_files.open_failed name=%s error=%s", f.name, exc)
+                _logger.warning(
+                    "parse_files.open_failed name=%s", f.name, exc_info=exc
+                )
                 continue
 
             if fmt is SoliqXltxFormat.UNKNOWN:
@@ -129,7 +131,10 @@ class ParseManualInputFilesUseCase:
             except Exception as exc:
                 warnings.append(f"{f.name}: ошибка парсинга ({exc})")
                 _logger.warning(
-                    "parse_files.parse_failed name=%s fmt=%s error=%s", f.name, fmt, exc
+                    "parse_files.parse_failed name=%s fmt=%s",
+                    f.name,
+                    fmt,
+                    exc_info=exc,
                 )
                 continue
 

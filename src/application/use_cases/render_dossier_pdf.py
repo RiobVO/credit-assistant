@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable
+from dataclasses import dataclass
 from typing import Literal
 from uuid import UUID
 
@@ -39,6 +40,14 @@ Lang = Literal["ru", "uz"]
 DEFAULT_LANG: Lang = "ru"
 
 
+@dataclass(frozen=True, slots=True)
+class RenderedPdf:
+    """Результат рендера: байты + ``case_id`` для построения filename'а."""
+
+    pdf_bytes: bytes
+    case_id: str
+
+
 class RenderDossierPdf:
     def __init__(
         self,
@@ -56,7 +65,9 @@ class RenderDossierPdf:
         self._messages_loader = pdf_messages_loader
         self._benchmark_catalog = benchmark_catalog
 
-    async def execute(self, dossier_id: UUID, lang: Lang = DEFAULT_LANG) -> bytes | None:
+    async def execute(
+        self, dossier_id: UUID, lang: Lang = DEFAULT_LANG
+    ) -> RenderedPdf | None:
         view_bundle = await self._loader.execute(dossier_id)
         if view_bundle is None:
             return None
@@ -82,7 +93,8 @@ class RenderDossierPdf:
             lang=lang,
             messages=messages,
         )
-        return await asyncio.to_thread(self._renderer.render, bundle)
+        pdf_bytes = await asyncio.to_thread(self._renderer.render, bundle)
+        return RenderedPdf(pdf_bytes=pdf_bytes, case_id=view_bundle.view.case_id)
 
 
 def _rule_name_for_lang(rule: Rule, lang: Lang) -> str:

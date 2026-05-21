@@ -353,7 +353,7 @@ export function InnInput({
     // не должен фантомно «проверять заново» с visible flash spinner-а.
     if (state.kind === "verified") return;
     setState({ kind: "checking" });
-    // Mock GNK lookup. TODO[CA-003]: реальный запрос /api/system/gnk/{inn}.
+    // TODO[CA-003]: replace mock summary with real ГНК lookup.
     timerRef.current = setTimeout(() => {
       setState({ kind: "verified", summaryKey: "s1_inn_summary_mock" });
     }, CHECK_DELAY_MS);
