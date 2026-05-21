@@ -67,6 +67,13 @@ class BorrowerInput(_StrictModel):
     registered_address: str
     okved_main_changed_at: date | None = None
     charter_capital: MoneyInput | None = None
+    # ADR-0024 Session 3: narrow для OKVED_CHANGED_12M — true означает «смена
+    # ОКЭД инициирована собственником» (vs Госкомстат auto-overwrite). Default
+    # False — backward-compat: brand-new dossiers через wizard и parser-driven
+    # источники без поля становятся silent для правила. Toggle reachable
+    # только в UI Step 1 во flow «Пересобрать с дополнениями» (требует
+    # parser-given okved_main_changed_at).
+    oked_changed_by_owner: bool = False
 
     @field_validator("inn")
     @classmethod
@@ -124,6 +131,14 @@ class CounterpartyInput(_StrictModel):
     inn: str
     name: str
     registration_date: date
+    # ADR-0024 Session 3: ОПФ контрагента. LegalForm.IE исключается из
+    # SHELL_COMPANY_PARTNERS — ИП регистрируются за 1-2 дня и молодые
+    # легитимны. None для legacy / data sources, которые поле не заполняют.
+    opf: LegalFormCode | None = None
+    # ADR-0024 Session 3: иностранный контрагент. SINGLE_SUPPLIER_CONCENTRATION
+    # эскалирует severity до high при is_foreign + >0.50 закупок.
+    # Default False для backward-compat — старое поведение (порог 0.60 medium).
+    is_foreign: bool = False
 
     @field_validator("inn")
     @classmethod
@@ -137,6 +152,13 @@ class TaxEventInput(_StrictModel):
     amount: MoneyInput | None = None
     delay_days: int | None = None
     duration_days: int | None = None
+    # ADR-0024 Session 3: material — ст.223 НК РУз (сокрытие, штраф 20%)
+    # vs ст.219 КоАО (просрочка отчёта, БРВ-штраф). Default False —
+    # обратная совместимость c data sources, которые поле не заполняют.
+    material: bool = False
+
+
+CollateralTypeCode = Literal["none", "real_estate", "movable", "guarantee", "other"]
 
 
 class LoanRequestInput(_StrictModel):
@@ -148,6 +170,11 @@ class LoanRequestInput(_StrictModel):
     rate_pct: Decimal = Field(ge=0)
     purpose: str
     category: str
+    # ADR-0024 Session 3: тип обеспечения для secured-variant порога
+    # LOAN_TO_REVENUE_RATIO (unsecured 0.40 vs secured 0.70). Default None —
+    # legacy / data sources без поля; UI Step 3 принудительно даёт 'none' или
+    # secured-тип. Backend трактует None == 'none' (conservative).
+    collateral_type: CollateralTypeCode | None = None
 
 
 class InvoiceInput(_StrictModel):
@@ -258,6 +285,9 @@ class BorrowerOutput(_StrictModel):
     registered_address: str
     okved_main_changed_at: date | None = None
     charter_capital: MoneyOutput | None = None
+    # ADR-0024 Session 3: см. BorrowerInput.oked_changed_by_owner. Frontend
+    # рендерит conditional toggle в Step 1 «Пересобрать с дополнениями».
+    oked_changed_by_owner: bool = False
 
 
 class ApplicationOutput(_StrictModel):

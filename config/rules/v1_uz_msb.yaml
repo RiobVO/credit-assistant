@@ -25,24 +25,24 @@ rules:
     rationale: "Свежий директор + материальная заявка (≥500 млн сум) — паттерн фронт-фигуры (AML/CDD). Без материальной заявки чаще operational change, чем AML — ADR-0024 audit"
 
   - id: OKVED_CHANGED_12M
-    name: "Изменение основного ОКЭД за последние 12 месяцев"
-    name_uz: "Soʻnggi 12 oyda asosiy ОКЭД oʻzgarishi"
+    name: "Изменение основного ОКЭД собственником за последние 12 месяцев"
+    name_uz: "Soʻnggi 12 oyda egasi tomonidan asosiy ОКЭД oʻzgarishi"
     category: structural
     severity: medium
     source: "Постановление КМ РУз №275 от 24.08.2016 (UZ-ОКЭД ред.2); FATF Recommendation 10 (CDD); внутренние методики UZ-банков"
     source_uz: "ЎзР Вазирлар Маҳкамасининг 24.08.2016 №275-сонли қарори (UZ-ОКЭД); FATF tavsiya 10 (CDD)"
-    formula: "(as_of - okved_main_changed_at).days <= 365"
-    rationale: "Смена деятельности перед кредитом — может скрывать фрод-схему (AML/CDD risk indicator)"
+    formula: "borrower.oked_changed_by_owner AND (as_of - okved_main_changed_at).days <= 365"
+    rationale: "Смена деятельности собственником перед кредитом — AML/CDD сигнал (может скрывать фрод-схему). ADR-0024 Session 3: добавлен gate `oked_changed_by_owner=True` — Госкомстат auto-overwrite (массовая перекатегоризация без заёмщика) больше не триггерит правило"
 
   - id: LOAN_TO_REVENUE_RATIO
-    name: "Запрашиваемая сумма >40% годовой выручки"
-    name_uz: "Soʻralayotgan summa yillik tushumning 40% dan ortiq"
+    name: "Запрашиваемая сумма vs годовая выручка (secured-variant)"
+    name_uz: "Soʻralayotgan summa yillik tushum bilan (taʼminot variantini hisobga olgan)"
     category: structural
     severity: high
-    source: "IFC SME Banking Knowledge Guide (unsecured МСБ-baseline 0.30-0.40); внутренние методики UZ-банков"
-    source_uz: "IFC SME Banking Knowledge Guide (taʼminlanmagan KOʻB baseline 0.30-0.40); UZ-banklarning ichki uslublari"
-    formula: "loan_request_amount / latest_annual_revenue > 0.40"
-    rationale: "Перекредитованность — ведущий предиктор дефолта. ADR-0024 audit: порог 0.50→0.40 как консервативный unsecured-default; secured-уточнение до 0.70 — backlog (требует loan_request.collateral_type)"
+    source: "IFC SME Banking Knowledge Guide (unsecured МСБ-baseline 0.30-0.40, secured 0.60-0.70); внутренние методики UZ-банков"
+    source_uz: "IFC SME Banking Knowledge Guide (taʼminlanmagan KOʻB baseline 0.30-0.40, taʼminlangan 0.60-0.70); UZ-banklarning ichki uslublari"
+    formula: "ratio > 0.40 (unsecured / collateral=none|null) OR ratio > 0.70 (secured)"
+    rationale: "Перекредитованность — ведущий предиктор дефолта. ADR-0024 Session 3: добавлен secured-variant — `collateral_type` ∈ {real_estate, movable, guarantee, other} поднимает порог до 0.70 (банк имеет страховочную базу). None / 'none' (legacy + unsecured) → строгий порог 0.40 (IFC SME baseline)"
 
   # --- Финансовые ---
   - id: REVENUE_DROP_MOM_30
@@ -187,14 +187,14 @@ rules:
     rationale: "Прямое ограничение со стороны налоговой"
 
   - id: TAX_PENALTIES_CURRENT_YEAR
-    name: "Пеня по налогам в текущем календарном году"
-    name_uz: "Joriy kalendar yilida soliq boʻyicha penya"
+    name: "Материальная пеня по налогам в текущем календарном году"
+    name_uz: "Joriy kalendar yilida moddiy soliq penyasi"
     category: payment_discipline
     severity: medium
-    source: "НК РУз; банковская методика оценки платёжной дисциплины"
-    source_uz: "НК РУз; toʻlov intizomini baholash bank uslubi"
-    formula: "any(ev.type == PENALTY and ev.year == current_year)"
-    rationale: "Свежая пеня — текущая проблема с дисциплиной"
+    source: "НК РУз ст.223 (сокрытие налоговой базы, штраф 20% от суммы) vs ст.219 КоАО (просрочка отчёта, БРВ-штраф); банковская методика оценки платёжной дисциплины"
+    source_uz: "ЎзР СК 223-моддаси (солиқ базасини яшириш, маблағнинг 20% штрафи) vs МЖтК 219-моддаси (ҳисобот кечиктириш, БҲМ штрафи); toʻlov intizomini baholash bank uslubi"
+    formula: "any(ev.type == PENALTY and ev.year == current_year AND ev.material)"
+    rationale: "Материальная пеня по ст.223 НК РУз (сокрытие, штраф 20%) — реальный credit-risk сигнал. Процедурные пени по ст.219 КоАО (просрочка отчёта, БРВ-штраф) — операционная неаккуратность, отфильтровываются. ADR-0024 Session 3: добавлен фильтр `material=True`"
 
   # --- Контрагентные ---
   - id: SINGLE_BUYER_CONCENTRATION
@@ -208,14 +208,14 @@ rules:
     rationale: "Высокий риск потери всего бизнеса при уходе клиента"
 
   - id: SINGLE_SUPPLIER_CONCENTRATION
-    name: "Концентрация >60% закупок у одного поставщика"
-    name_uz: "Xaridlarning 60% dan ortigʻi bitta yetkazib beruvchidan"
+    name: "Концентрация закупок у одного поставщика (foreign-escalation)"
+    name_uz: "Xaridlarning bitta yetkazib beruvchida toʻplanishi (chet ellik-eskalatsiya)"
     category: counterparty
     severity: medium
-    source: "Базель III concentration risk; supply-chain risk practice"
-    source_uz: "Базель III concentration risk; supply-chain risk practice"
-    formula: "max_supplier_purchase_share > 0.60"
-    rationale: "Зависимость от единственного поставщика"
+    source: "Basel III concentration risk; FATF Recommendation 10 (CDD — foreign-counterparty enhanced due diligence); supply-chain risk practice"
+    source_uz: "Basel III concentration risk; FATF tavsiya 10 (CDD — chet ellik kontragent uchun kuchaytirilgan tekshiruv); supply-chain tavakkalligi amaliyoti"
+    formula: "(max_supplier.is_foreign AND max_share > 0.50) → high; max_share > 0.60 → medium"
+    rationale: "Зависимость от единственного поставщика. ADR-0024 Session 3: dual-severity — foreign-поставщик при доле >0.50 эскалируется до HIGH (FATF R.10 enhanced CDD, supply-chain currency/sanctions exposure), domestic >0.60 остаётся MEDIUM (Basel III baseline). Severity HIGH передаётся через FiringEvidence override поверх YAML medium"
 
   - id: NEW_COUNTERPARTY_LARGE_SHARE
     name: "Новые контрагенты (<180 дней) дают >30% оборота"
@@ -228,14 +228,14 @@ rules:
     rationale: "Типичная схема накрутки оборотов перед получением кредита"
 
   - id: SHELL_COMPANY_PARTNERS
-    name: "Контрагенты с ИНН моложе 6 месяцев"
-    name_uz: "INN olingan vaqti 6 oydan kam boʻlgan kontragentlar"
+    name: "Юр-лица-контрагенты с ИНН моложе 6 месяцев"
+    name_uz: "INN olingan vaqti 6 oydan kam boʻlgan yuridik shaxs kontragentlar"
     category: counterparty
     severity: high
     source: "FATF Recommendation 10 (CDD) + Recommendation 24 (Beneficial Ownership); Закон РУз ЗРУ-660 «О ПОД/ФТ»; EAG typology — shell-company misuse"
     source_uz: "FATF tavsiya 10 (CDD) ва 24 (Beneficial Ownership); ЎзР ЗРУ-660-сонли қонуни; EAG типология"
-    formula: "any(months_since_registration(cp) < 6)"
-    rationale: "Классическая схема фиктивной отчётности"
+    formula: "any(months_since_registration(cp) < 6 AND cp.opf != IE)"
+    rationale: "Классическая схема фиктивной отчётности. ADR-0024 Session 3: ИП исключены — регистрация в Узбекистане за 1-2 дня, уставного капитала не требует (Закон РУз «О гарантиях свободы предпринимательской деятельности»), молодой ИП = норма. opf=None (legacy / data source без поля) трактуется conservative: fires"
 
   - id: CIRCULAR_INVOICING
     name: "Циклические ЭСФ с контрагентами (объём пары ≥100 млн сум)"

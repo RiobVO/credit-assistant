@@ -55,6 +55,8 @@ export function SubHeader({
       director_appointed_at: borrower.director_appointed_at,
       okved_main: borrower.okved_main,
       registered_address: borrower.registered_address,
+      okved_main_changed_at: borrower.okved_main_changed_at,
+      oked_changed_by_owner: borrower.oked_changed_by_owner,
     });
     router.push(`/manual-input?inn=${encodeURIComponent(borrower.inn)}`);
   };

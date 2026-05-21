@@ -79,6 +79,17 @@ export const loanCategories = [
   { code: "trade_finance", label: "Торговое финансирование" },
 ] as const;
 
+// ADR-0024 Session 3: типы обеспечения для secured-variant порога
+// LOAN_TO_REVENUE_RATIO. Labels локализуются через i18n keys
+// `s3_collateral_<code>` (без hardcoded RU как у loanCategories).
+export const collateralTypes = [
+  { code: "none", i18nKey: "s3_collateral_none" },
+  { code: "real_estate", i18nKey: "s3_collateral_real_estate" },
+  { code: "movable", i18nKey: "s3_collateral_movable" },
+  { code: "guarantee", i18nKey: "s3_collateral_guarantee" },
+  { code: "other", i18nKey: "s3_collateral_other" },
+] as const;
+
 export const step1Schema = z
   .object({
     inn: z
@@ -98,6 +109,17 @@ export const step1Schema = z
       .trim()
       .min(15, "Адрес должен содержать не менее 15 символов (улица, дом)")
       .refine((v) => /\d/.test(v), "Адрес должен содержать номер дома"),
+    // ADR-0024 Session 3: narrow scope для OKVED_CHANGED_12M. Toggle
+    // reachable только когда `okvedMainChangedAt` пришло с backend (через
+    // «Пересобрать с дополнениями»); в brand-new dossier flow поле hidden,
+    // default false. Date picker не добавляется — поле parser-driven,
+    // editable date = data-integrity bug с future parser re-runs.
+    okedChangedByOwner: z.boolean(),
+    // Read-only «сигнальное» поле: ISO date если backend знает дату смены
+    // ОКЭД (через парсер/ORM), null иначе. UI читает значение для
+    // conditional rendering toggle; в submit payload не уходит — backend
+    // имеет авторитетное значение через borrower-record.
+    okvedMainChangedAt: z.string().nullable(),
   })
   .refine(
     ({ registrationDate, directorAppointedAt }) => {
@@ -180,6 +202,16 @@ export const step3Schema = z.object({
     "refinancing",
     "trade_finance",
   ]),
+  // ADR-0024 Session 3: collateral_type для secured-variant
+  // LOAN_TO_REVENUE_RATIO. 'none' = unsecured (порог 0.40), остальные
+  // = secured (порог 0.70).
+  collateralType: z.enum([
+    "none",
+    "real_estate",
+    "movable",
+    "guarantee",
+    "other",
+  ]),
 });
 
 export const formSchema = z.object({
@@ -210,6 +242,11 @@ export function defaultFormValues(): FormValues {
       directorName: "",
       directorAppointedAt: "",
       registeredAddress: "",
+      // ADR-0024 Session 3: default false для brand-new dossiers. Prefill из
+      // existing borrower (через CA-058 sessionStorage) перетирает значение
+      // на actual flag из БД.
+      okedChangedByOwner: false,
+      okvedMainChangedAt: null,
     },
     step2: {
       revenue: {
@@ -248,6 +285,9 @@ export function defaultFormValues(): FormValues {
       loanRatePct: "",
       loanPurpose: "",
       loanCategory: "working_capital",
+      // ADR-0024 Session 3: default 'none' (unsecured, conservative). Analyst
+      // явно выбирает secured-вариант через UI Step 3.
+      collateralType: "none",
     },
   };
 }

@@ -61,11 +61,15 @@ class RuleRegistry:
             evidence = rule.fn(snapshot)
             if evidence is None:
                 continue
+            # ADR-0024 Session 3: evidence.severity (если задан) перекрывает
+            # rule.severity. Используется для dual-severity escalation
+            # (см. protocol.FiringEvidence.severity).
+            severity = evidence.severity if evidence.severity is not None else rule.severity
             fired.append(
                 RedFlag(
                     rule_id=rule.id,
                     rule_version=rule.version,
-                    severity=rule.severity,
+                    severity=severity,
                     source=rule.source,
                     source_uz=rule.source_uz,
                     message=evidence.message,

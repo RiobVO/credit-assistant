@@ -85,6 +85,7 @@ def _full_snapshot() -> BorrowerSnapshot:
                 inn=INN("200000020"),
                 name="Покупатель",
                 registration_date=date(2024, 1, 1),
+                opf=LegalForm.LLC,
             ),
         ],
         counterparties_suppliers=[
@@ -92,6 +93,8 @@ def _full_snapshot() -> BorrowerSnapshot:
                 inn=INN("300000030"),
                 name="Поставщик",
                 registration_date=date(2019, 1, 1),
+                opf=LegalForm.IE,
+                is_foreign=True,
             ),
         ],
         buyer_revenue_share={"200000020": Decimal("0.5")},
@@ -111,6 +114,7 @@ def _full_snapshot() -> BorrowerSnapshot:
                 date=date(2026, 2, 1),
                 type=TaxEventType.PENALTY,
                 amount=_money(50_000_000),
+                material=True,
             ),
             TaxEvent(
                 date=date(2025, 11, 1),
@@ -132,6 +136,7 @@ def _full_snapshot() -> BorrowerSnapshot:
             rate_pct=Decimal("22.5"),
             purpose="working_capital",
             category="standard",
+            collateral_type="real_estate",
         ),
     )
 
@@ -306,6 +311,99 @@ def test_ca037_legacy_payload_without_new_keys_still_loads() -> None:
     # всеми None».
     assert r.balance_end is None
     assert r.balance_start is None
+
+
+def test_session3_loan_request_collateral_type_legacy_defaults_none() -> None:
+    """ADR-0024 Session 3: legacy `loan_request` без ключа `collateral_type` —
+    после snapshot_from_payload поле = None, conservative read (трактуется как
+    unsecured порог 0.40).
+    """
+    legacy_payload: dict[str, object] = {
+        "as_of": "2026-04-01",
+        "annual_reports": [],
+        "quarterly_reports": [],
+        "monthly_turnover": [],
+        "counterparties_buyers": [],
+        "counterparties_suppliers": [],
+        "buyer_revenue_share": {},
+        "supplier_purchase_share": {},
+        "invoices": [],
+        "tax_events": [],
+        "vat_periods": [],
+        "loan_request": {
+            "amount": {"amount": "500000000", "currency": "UZS"},
+            "term_months": 24,
+            "rate_pct": "22.5",
+            "purpose": "working_capital",
+            "category": "standard",
+            # Никаких Session 3 ключей (collateral_type) — записано до Session 3.
+        },
+    }
+    restored = snapshot_from_payload(legacy_payload, _borrower())
+    assert restored.loan_request is not None
+    assert restored.loan_request.collateral_type is None
+
+
+def test_session3_counterparty_opf_legacy_defaults_none() -> None:
+    """ADR-0024 Session 3: legacy `counterparties_*` без ключа `opf` —
+    после snapshot_from_payload поле = None, conservative read.
+    """
+    legacy_payload: dict[str, object] = {
+        "as_of": "2026-04-01",
+        "annual_reports": [],
+        "quarterly_reports": [],
+        "monthly_turnover": [],
+        "counterparties_buyers": [
+            {
+                "inn": "200000020",
+                "name": "Покупатель",
+                "registration_date": "2024-01-01",
+                # Никаких Session 3 ключей (opf) — записано до Session 3.
+            },
+        ],
+        "counterparties_suppliers": [],
+        "buyer_revenue_share": {},
+        "supplier_purchase_share": {},
+        "invoices": [],
+        "tax_events": [],
+        "vat_periods": [],
+        "loan_request": None,
+    }
+    restored = snapshot_from_payload(legacy_payload, _borrower())
+    assert restored.counterparties_buyers[0].opf is None
+    # ADR-0024 Session 3: is_foreign тоже default False для legacy.
+    assert restored.counterparties_buyers[0].is_foreign is False
+
+
+def test_session3_tax_event_material_legacy_defaults_false() -> None:
+    """ADR-0024 Session 3: legacy `tax_events` без ключа `material` — после
+    snapshot_from_payload поле = False, consistent с дефолтом entity.
+    """
+    legacy_payload: dict[str, object] = {
+        "as_of": "2026-04-01",
+        "annual_reports": [],
+        "quarterly_reports": [],
+        "monthly_turnover": [],
+        "counterparties_buyers": [],
+        "counterparties_suppliers": [],
+        "buyer_revenue_share": {},
+        "supplier_purchase_share": {},
+        "invoices": [],
+        "tax_events": [
+            {
+                "date": "2026-03-15",
+                "type": "penalty",
+                "amount": {"amount": "1000000", "currency": "UZS"},
+                "delay_days": None,
+                "duration_days": None,
+                # Никаких Session 3 ключей (material) — записано до Session 3.
+            },
+        ],
+        "vat_periods": [],
+        "loan_request": None,
+    }
+    restored = snapshot_from_payload(legacy_payload, _borrower())
+    assert restored.tax_events[0].material is False
 
 
 def test_session2_inventory_backward_compat_with_current_assets_present() -> None:

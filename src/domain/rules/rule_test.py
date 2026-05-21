@@ -104,6 +104,40 @@ class TestRuleRegistryRunAll:
         assert {f.rule_id for f in flags} == {"A", "B"}
 
 
+class TestRuleRegistrySeverityOverride:
+    """ADR-0024 Session 3: FiringEvidence.severity override поверх rule.severity."""
+
+    def test_override_none_uses_rule_severity(self) -> None:
+        # Evidence без severity — flag берёт severity из YAML (Rule.severity).
+        def _fires_default(s: BorrowerSnapshot) -> FiringEvidence | None:
+            return FiringEvidence(message="default", evidence={})
+
+        registry = RuleRegistry(
+            rules=[
+                Rule("R", "v1", FlagSeverity.MEDIUM, "s", "financial", _fires_default),
+            ],
+        )
+        flags = registry.run_all(_snapshot())
+        assert flags[0].severity == FlagSeverity.MEDIUM
+
+    def test_override_promotes_severity(self) -> None:
+        # Evidence.severity=HIGH перекрывает Rule.severity=MEDIUM.
+        def _fires_escalated(s: BorrowerSnapshot) -> FiringEvidence | None:
+            return FiringEvidence(
+                message="escalated",
+                evidence={},
+                severity=FlagSeverity.HIGH,
+            )
+
+        registry = RuleRegistry(
+            rules=[
+                Rule("R", "v1", FlagSeverity.MEDIUM, "s", "financial", _fires_escalated),
+            ],
+        )
+        flags = registry.run_all(_snapshot())
+        assert flags[0].severity == FlagSeverity.HIGH
+
+
 class TestRuleRegistryLookup:
     def test_by_id_returns_rule(self) -> None:
         target = Rule("X", "v1", FlagSeverity.LOW, "s", "structural", _never_fires)

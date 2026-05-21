@@ -85,6 +85,7 @@ def to_borrower(payload: BorrowerInput) -> Borrower:
         registered_address=payload.registered_address,
         okved_main_changed_at=payload.okved_main_changed_at,
         charter_capital=_to_money_optional(payload.charter_capital),
+        oked_changed_by_owner=payload.oked_changed_by_owner,
     )
 
 
@@ -135,6 +136,8 @@ def _to_counterparty(p: CounterpartyInput) -> Counterparty:
         inn=INN(p.inn),
         name=p.name,
         registration_date=p.registration_date,
+        opf=LegalForm(p.opf) if p.opf is not None else None,
+        is_foreign=p.is_foreign,
     )
 
 
@@ -147,6 +150,7 @@ def _to_loan_request(p: LoanRequestInput | None) -> LoanRequest | None:
         rate_pct=p.rate_pct,
         purpose=p.purpose,
         category=p.category,
+        collateral_type=p.collateral_type,
     )
 
 
@@ -157,6 +161,7 @@ def _to_tax_event(p: TaxEventInput) -> TaxEvent:
         amount=_to_money_optional(p.amount),
         delay_days=p.delay_days,
         duration_days=p.duration_days,
+        material=p.material,
     )
 
 
@@ -284,6 +289,7 @@ def _borrower_to_output(b: Borrower) -> BorrowerOutput:
         registered_address=b.registered_address,
         okved_main_changed_at=b.okved_main_changed_at,
         charter_capital=_money_to_output(b.charter_capital) if b.charter_capital else None,
+        oked_changed_by_owner=b.oked_changed_by_owner,
     )
 
 

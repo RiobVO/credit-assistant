@@ -57,6 +57,10 @@ type LoanRequest = {
   rate_pct: string; // Decimal как строка
   purpose: string;
   category: string;
+  // ADR-0024 Session 3: collateral_type для secured-variant порога
+  // LOAN_TO_REVENUE_RATIO. 'none' = unsecured (порог 0.40),
+  // остальные = secured (порог 0.70).
+  collateral_type: "none" | "real_estate" | "movable" | "guarantee" | "other";
 };
 
 export type ManualInputPayload = {
@@ -69,6 +73,10 @@ export type ManualInputPayload = {
     director_appointed_at: string;
     okved_main: string;
     registered_address: string;
+    // ADR-0024 Session 3: narrow для OKVED_CHANGED_12M. Default false для
+    // brand-new dossiers; true только когда analyst поставил toggle во
+    // flow «Пересобрать с дополнениями».
+    oked_changed_by_owner: boolean;
   };
   as_of: string;
   annual_reports: FinancialReport[];
@@ -191,6 +199,7 @@ export function formValuesToPayload(values: FormValues): ManualInputPayload {
       director_appointed_at: step1.directorAppointedAt,
       okved_main: step1.okvedMain,
       registered_address: step1.registeredAddress,
+      oked_changed_by_owner: step1.okedChangedByOwner,
     },
     as_of: today,
     annual_reports: annual,
@@ -219,6 +228,7 @@ export function formValuesToPayload(values: FormValues): ManualInputPayload {
       rate_pct: step3.loanRatePct.replace(",", "."),
       purpose: step3.loanPurpose,
       category: step3.loanCategory,
+      collateral_type: step3.collateralType,
     };
   }
 
