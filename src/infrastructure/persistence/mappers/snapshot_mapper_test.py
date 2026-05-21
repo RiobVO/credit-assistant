@@ -111,6 +111,7 @@ def _full_snapshot() -> BorrowerSnapshot:
                 date=date(2026, 2, 1),
                 type=TaxEventType.PENALTY,
                 amount=_money(50_000_000),
+                material=True,
             ),
             TaxEvent(
                 date=date(2025, 11, 1),
@@ -306,6 +307,37 @@ def test_ca037_legacy_payload_without_new_keys_still_loads() -> None:
     # всеми None».
     assert r.balance_end is None
     assert r.balance_start is None
+
+
+def test_session3_tax_event_material_legacy_defaults_false() -> None:
+    """ADR-0024 Session 3: legacy `tax_events` без ключа `material` — после
+    snapshot_from_payload поле = False, consistent с дефолтом entity.
+    """
+    legacy_payload: dict[str, object] = {
+        "as_of": "2026-04-01",
+        "annual_reports": [],
+        "quarterly_reports": [],
+        "monthly_turnover": [],
+        "counterparties_buyers": [],
+        "counterparties_suppliers": [],
+        "buyer_revenue_share": {},
+        "supplier_purchase_share": {},
+        "invoices": [],
+        "tax_events": [
+            {
+                "date": "2026-03-15",
+                "type": "penalty",
+                "amount": {"amount": "1000000", "currency": "UZS"},
+                "delay_days": None,
+                "duration_days": None,
+                # Никаких Session 3 ключей (material) — записано до Session 3.
+            },
+        ],
+        "vat_periods": [],
+        "loan_request": None,
+    }
+    restored = snapshot_from_payload(legacy_payload, _borrower())
+    assert restored.tax_events[0].material is False
 
 
 def test_session2_inventory_backward_compat_with_current_assets_present() -> None:

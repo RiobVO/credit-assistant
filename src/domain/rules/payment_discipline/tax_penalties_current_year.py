@@ -1,6 +1,13 @@
-"""TAX_PENALTIES_CURRENT_YEAR: пеня по налогам в текущем календарном году."""
+"""TAX_PENALTIES_CURRENT_YEAR: материальная пеня по налогам в текущем календарном году.
 
-# RULE_SOURCE: НК РУз; банковская методика оценки платёжной дисциплины
+ADR-0024 Session 3: правило фильтрует пени по `TaxEvent.material`. Только
+material=True (ст.223 НК РУз — сокрытие налоговой базы, штраф 20% от суммы)
+триггерит правило. material=False (ст.219 КоАО — просрочка отчёта,
+БРВ-штраф / процедурные нарушения) игнорируется — это операционная
+неаккуратность, не AML/credit-risk сигнал.
+"""
+
+# RULE_SOURCE: НК РУз ст.223 (сокрытие, штраф 20%) vs ст.219 КоАО (БРВ-штраф)
 # CONFIDENCE: HIGH (regulatory)
 # VALIDATED_BY: []
 
@@ -16,7 +23,9 @@ def tax_penalties_current_year(snapshot: BorrowerSnapshot) -> FiringEvidence | N
     penalties = [
         ev
         for ev in snapshot.tax_events
-        if ev.type == TaxEventType.PENALTY and ev.date.year == current_year
+        if ev.type == TaxEventType.PENALTY
+        and ev.date.year == current_year
+        and ev.material
     ]
     if not penalties:
         return None
@@ -27,8 +36,10 @@ def tax_penalties_current_year(snapshot: BorrowerSnapshot) -> FiringEvidence | N
     )
     count = len(penalties)
     return FiringEvidence(
-        message=f"Пеня по налогам в {current_year} году: {count} шт., итого {total}",
-        message_uz=f"{current_year} yilida soliq boʻyicha penyalar: {count} ta, jami {total}",
+        message=f"Материальная пеня по налогам в {current_year} году: {count} шт., итого {total}",
+        message_uz=(
+            f"{current_year} yilida moddiy soliq penyalari: {count} ta, jami {total}"
+        ),
         evidence={
             "count": count,
             "total_amount": str(total),

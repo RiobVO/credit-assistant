@@ -187,14 +187,14 @@ rules:
     rationale: "Прямое ограничение со стороны налоговой"
 
   - id: TAX_PENALTIES_CURRENT_YEAR
-    name: "Пеня по налогам в текущем календарном году"
-    name_uz: "Joriy kalendar yilida soliq boʻyicha penya"
+    name: "Материальная пеня по налогам в текущем календарном году"
+    name_uz: "Joriy kalendar yilida moddiy soliq penyasi"
     category: payment_discipline
     severity: medium
-    source: "НК РУз; банковская методика оценки платёжной дисциплины"
-    source_uz: "НК РУз; toʻlov intizomini baholash bank uslubi"
-    formula: "any(ev.type == PENALTY and ev.year == current_year)"
-    rationale: "Свежая пеня — текущая проблема с дисциплиной"
+    source: "НК РУз ст.223 (сокрытие налоговой базы, штраф 20% от суммы) vs ст.219 КоАО (просрочка отчёта, БРВ-штраф); банковская методика оценки платёжной дисциплины"
+    source_uz: "ЎзР СК 223-моддаси (солиқ базасини яшириш, маблағнинг 20% штрафи) vs МЖтК 219-моддаси (ҳисобот кечиктириш, БҲМ штрафи); toʻlov intizomini baholash bank uslubi"
+    formula: "any(ev.type == PENALTY and ev.year == current_year AND ev.material)"
+    rationale: "Материальная пеня по ст.223 НК РУз (сокрытие, штраф 20%) — реальный credit-risk сигнал. Процедурные пени по ст.219 КоАО (просрочка отчёта, БРВ-штраф) — операционная неаккуратность, отфильтровываются. ADR-0024 Session 3: добавлен фильтр `material=True`"
 
   # --- Контрагентные ---
   - id: SINGLE_BUYER_CONCENTRATION

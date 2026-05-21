@@ -33,18 +33,25 @@ def _snapshot(*events: TaxEvent) -> BorrowerSnapshot:
     )
 
 
-def _penalty(when: date, amount: int) -> TaxEvent:
-    return TaxEvent(date=when, type=TaxEventType.PENALTY, amount=Money(Decimal(amount), UZS))
+def _penalty(when: date, amount: int, *, material: bool) -> TaxEvent:
+    return TaxEvent(
+        date=when,
+        type=TaxEventType.PENALTY,
+        amount=Money(Decimal(amount), UZS),
+        material=material,
+    )
 
 
 class TestTaxPenaltiesCurrentYear:
     def test_fires_when_penalty_in_current_year(self) -> None:
-        ev = tax_penalties_current_year(_snapshot(_penalty(date(2026, 3, 1), 50_000_000)))
+        ev = tax_penalties_current_year(
+            _snapshot(_penalty(date(2026, 3, 1), 50_000_000, material=True))
+        )
         assert ev is not None
         assert ev.evidence["count"] == 1
 
     def test_silent_when_penalty_only_in_previous_year(self) -> None:
-        prev = _penalty(date(2025, 12, 31), 50_000_000)
+        prev = _penalty(date(2025, 12, 31), 50_000_000, material=True)
         assert tax_penalties_current_year(_snapshot(prev)) is None
 
     def test_silent_with_no_events(self) -> None:
@@ -57,10 +64,42 @@ class TestTaxPenaltiesCurrentYear:
     def test_aggregates_multiple_penalties(self) -> None:
         ev = tax_penalties_current_year(
             _snapshot(
-                _penalty(date(2026, 1, 15), 10_000_000),
-                _penalty(date(2026, 4, 30), 25_000_000),
+                _penalty(date(2026, 1, 15), 10_000_000, material=True),
+                _penalty(date(2026, 4, 30), 25_000_000, material=True),
             )
         )
         assert ev is not None
         assert ev.evidence["count"] == 2
         assert ev.evidence["total_amount"] == "35000000"
+
+
+class TestTaxPenaltiesMaterialFilter:
+    """ADR-0024 Session 3: правило стреляет только на material=True пенях."""
+
+    def test_fires_on_material_penalty(self) -> None:
+        # Материальная пеня (ст.223 НК РУз — сокрытие, штраф 20%).
+        ev = tax_penalties_current_year(
+            _snapshot(_penalty(date(2026, 3, 1), 50_000_000, material=True))
+        )
+        assert ev is not None
+
+    def test_silent_on_procedural_penalty(self) -> None:
+        # Процедурная пеня (ст.219 КоАО — просрочка отчёта, БРВ-штраф)
+        # игнорируется: это операционная неаккуратность, не credit-risk.
+        ev = tax_penalties_current_year(
+            _snapshot(_penalty(date(2026, 4, 1), 100_000, material=False))
+        )
+        assert ev is None
+
+    def test_counts_only_material_in_mixed(self) -> None:
+        # 2 материальных + 1 процедурная — count=2, total=80M (процедурную не считаем).
+        ev = tax_penalties_current_year(
+            _snapshot(
+                _penalty(date(2026, 1, 15), 30_000_000, material=True),
+                _penalty(date(2026, 2, 28), 50_000_000, material=True),
+                _penalty(date(2026, 3, 10), 200_000, material=False),
+            )
+        )
+        assert ev is not None
+        assert ev.evidence["count"] == 2
+        assert ev.evidence["total_amount"] == "80000000"

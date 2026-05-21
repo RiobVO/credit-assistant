@@ -157,6 +157,7 @@ def _to_tax_event(p: TaxEventInput) -> TaxEvent:
         amount=_to_money_optional(p.amount),
         delay_days=p.delay_days,
         duration_days=p.duration_days,
+        material=p.material,
     )
 
 

@@ -238,16 +238,21 @@ def _tax_event_to_dict(t: TaxEvent) -> dict[str, Any]:
         "amount": _money_to_dict(t.amount),
         "delay_days": t.delay_days,
         "duration_days": t.duration_days,
+        "material": t.material,
     }
 
 
 def _tax_event_from_dict(d: dict[str, Any]) -> TaxEvent:
+    # ADR-0024 Session 3: material — legacy payloads (до Session 3) ключа
+    # не содержат, читаем через `.get(..., False)` consistent с дефолтом
+    # entity.
     return TaxEvent(
         date=date.fromisoformat(d["date"]),
         type=TaxEventType(d["type"]),
         amount=_money_from_dict(d.get("amount")),
         delay_days=d.get("delay_days"),
         duration_days=d.get("duration_days"),
+        material=d.get("material", False),
     )
 
 

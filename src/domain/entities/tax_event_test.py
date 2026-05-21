@@ -44,3 +44,19 @@ class TestTaxEventConstruction:
             delay_days=45,
         )
         assert ev.delay_days == 45
+
+    def test_material_defaults_false(self) -> None:
+        # ADR-0024 Session 3: material=False по умолчанию — consistent с legacy
+        # payloads (до Session 3 поля не было в JSONB).
+        ev = TaxEvent(date=date(2026, 1, 1), type=TaxEventType.PENALTY)
+        assert ev.material is False
+
+    def test_material_true_for_substantive_penalty(self) -> None:
+        # Материальная пеня по ст.223 НК РУз (сокрытие, штраф 20%).
+        ev = TaxEvent(
+            date=date(2026, 3, 1),
+            type=TaxEventType.PENALTY,
+            amount=Money(Decimal("50000000"), Currency.UZS),
+            material=True,
+        )
+        assert ev.material is True
