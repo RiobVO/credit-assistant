@@ -10,7 +10,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from uuid import UUID, uuid4
 
-from sqlalchemy import DateTime, Numeric, String, func
+from sqlalchemy import Boolean, DateTime, Numeric, String, func
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -35,6 +35,14 @@ class BorrowerORM(Base):
     okved_main: Mapped[str] = mapped_column(String(50), nullable=False)
     registered_address: Mapped[str] = mapped_column(String(500), nullable=False)
     okved_main_changed_at: Mapped[date | None] = mapped_column(nullable=True)
+    # ADR-0024 Session 3: narrow для OKVED_CHANGED_12M (см. domain
+    # `Borrower.oked_changed_by_owner` docstring). NOT NULL DEFAULT false —
+    # 49 existing borrowers получают false через миграцию c5e9d2a7b1f4.
+    oked_changed_by_owner: Mapped[bool] = mapped_column(
+        Boolean(),
+        nullable=False,
+        server_default="false",
+    )
 
     charter_capital_amount: Mapped[Decimal | None] = mapped_column(Numeric(20, 2), nullable=True)
     charter_capital_currency: Mapped[str | None] = mapped_column(String(3), nullable=True)

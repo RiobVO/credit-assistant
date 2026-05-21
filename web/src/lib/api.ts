@@ -58,6 +58,9 @@ export type DossierViewDto = DossierResponseDto & {
     registered_address: string;
     okved_main_changed_at: string | null;
     charter_capital: { amount: string; currency: "UZS" | "USD" } | null;
+    // ADR-0024 Session 3: narrow flag для OKVED_CHANGED_12M (правило fires
+    // только при owner-initiated смене ОКЭД, не Госкомстат overwrite).
+    oked_changed_by_owner: boolean;
   };
   application: {
     id: string; // BR-YYYY-XXXX

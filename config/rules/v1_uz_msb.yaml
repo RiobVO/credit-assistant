@@ -25,14 +25,14 @@ rules:
     rationale: "Свежий директор + материальная заявка (≥500 млн сум) — паттерн фронт-фигуры (AML/CDD). Без материальной заявки чаще operational change, чем AML — ADR-0024 audit"
 
   - id: OKVED_CHANGED_12M
-    name: "Изменение основного ОКЭД за последние 12 месяцев"
-    name_uz: "Soʻnggi 12 oyda asosiy ОКЭД oʻzgarishi"
+    name: "Изменение основного ОКЭД собственником за последние 12 месяцев"
+    name_uz: "Soʻnggi 12 oyda egasi tomonidan asosiy ОКЭД oʻzgarishi"
     category: structural
     severity: medium
     source: "Постановление КМ РУз №275 от 24.08.2016 (UZ-ОКЭД ред.2); FATF Recommendation 10 (CDD); внутренние методики UZ-банков"
     source_uz: "ЎзР Вазирлар Маҳкамасининг 24.08.2016 №275-сонли қарори (UZ-ОКЭД); FATF tavsiya 10 (CDD)"
-    formula: "(as_of - okved_main_changed_at).days <= 365"
-    rationale: "Смена деятельности перед кредитом — может скрывать фрод-схему (AML/CDD risk indicator)"
+    formula: "borrower.oked_changed_by_owner AND (as_of - okved_main_changed_at).days <= 365"
+    rationale: "Смена деятельности собственником перед кредитом — AML/CDD сигнал (может скрывать фрод-схему). ADR-0024 Session 3: добавлен gate `oked_changed_by_owner=True` — Госкомстат auto-overwrite (массовая перекатегоризация без заёмщика) больше не триггерит правило"
 
   - id: LOAN_TO_REVENUE_RATIO
     name: "Запрашиваемая сумма >40% годовой выручки"

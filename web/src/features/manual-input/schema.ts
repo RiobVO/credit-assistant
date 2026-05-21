@@ -98,6 +98,17 @@ export const step1Schema = z
       .trim()
       .min(15, "Адрес должен содержать не менее 15 символов (улица, дом)")
       .refine((v) => /\d/.test(v), "Адрес должен содержать номер дома"),
+    // ADR-0024 Session 3: narrow scope для OKVED_CHANGED_12M. Toggle
+    // reachable только когда `okvedMainChangedAt` пришло с backend (через
+    // «Пересобрать с дополнениями»); в brand-new dossier flow поле hidden,
+    // default false. Date picker не добавляется — поле parser-driven,
+    // editable date = data-integrity bug с future parser re-runs.
+    okedChangedByOwner: z.boolean(),
+    // Read-only «сигнальное» поле: ISO date если backend знает дату смены
+    // ОКЭД (через парсер/ORM), null иначе. UI читает значение для
+    // conditional rendering toggle; в submit payload не уходит — backend
+    // имеет авторитетное значение через borrower-record.
+    okvedMainChangedAt: z.string().nullable(),
   })
   .refine(
     ({ registrationDate, directorAppointedAt }) => {
@@ -210,6 +221,11 @@ export function defaultFormValues(): FormValues {
       directorName: "",
       directorAppointedAt: "",
       registeredAddress: "",
+      // ADR-0024 Session 3: default false для brand-new dossiers. Prefill из
+      // existing borrower (через CA-058 sessionStorage) перетирает значение
+      // на actual flag из БД.
+      okedChangedByOwner: false,
+      okvedMainChangedAt: null,
     },
     step2: {
       revenue: {
