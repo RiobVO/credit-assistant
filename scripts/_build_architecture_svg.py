@@ -107,7 +107,10 @@ box_w1 = (inner_w - 2 * BOX_GAP) // 3
 x0 = LX + BOX_PAD
 draw_box(x0, BOX_Y, box_w1, 84, "FastAPI routers", "bank · accountant · shared")
 draw_box(x0 + box_w1 + BOX_GAP, BOX_Y, box_w1, 84, "Admin CLI", "seed · migrations · smoke")
-draw_box(x0 + 2 * (box_w1 + BOX_GAP), BOX_Y, box_w1, 84, "Next.js 15 App Router", "web/ frontend — RU + UZ")
+draw_box(
+    x0 + 2 * (box_w1 + BOX_GAP), BOX_Y, box_w1, 84,
+    "Next.js 15 App Router", "web/ frontend — RU + UZ",
+)
 
 # Layer 2: Application
 L2_Y, L2_H = L1_Y + L1_H + 40, 170
@@ -234,7 +237,8 @@ lines.append(
     f'stroke="#2563eb" stroke-width="2" marker-end="url(#arrowBlue)"/>'
 )
 lines.append(
-    f'  <text x="{LX + 172}" y="{LEG_Y - 4}" font-size="12" fill="#475569">runtime dependency</text>'
+    f'  <text x="{LX + 172}" y="{LEG_Y - 4}" font-size="12" '
+    f'fill="#475569">runtime dependency</text>'
 )
 lines.append(
     f'  <line x1="{LX + 380}" y1="{LEG_Y - 8}" x2="{LX + 440}" y2="{LEG_Y - 8}" '
