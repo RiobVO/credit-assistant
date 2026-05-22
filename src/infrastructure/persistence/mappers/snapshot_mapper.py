@@ -90,6 +90,8 @@ def _financial_report_to_dict(r: FinancialReport) -> dict[str, Any]:
     # period_start) и depreciation_amortization/operating_cash_flow на
     # report level — пробрасываем через `.get(...)` при чтении, чтобы legacy
     # payloads (до ADR-0024) грузились без миграции.
+    # ADR-0024 Session 4: liabilities_fx (period_end + period_start) —
+    # FX-компонент total liabilities для fx_exposure_ratio (8-й KPI).
     end = r.balance_end or BalanceSnapshot()
     start = r.balance_start or BalanceSnapshot()
     return {
@@ -112,6 +114,7 @@ def _financial_report_to_dict(r: FinancialReport) -> dict[str, Any]:
         "current_assets": _money_to_dict(end.current_assets),
         "current_liabilities": _money_to_dict(end.current_liabilities),
         "inventory": _money_to_dict(end.inventory),
+        "liabilities_fx": _money_to_dict(end.liabilities_fx),
         "assets_period_start": _money_to_dict(start.assets),
         "liabilities_period_start": _money_to_dict(start.liabilities),
         "equity_period_start": _money_to_dict(start.equity),
@@ -119,6 +122,7 @@ def _financial_report_to_dict(r: FinancialReport) -> dict[str, Any]:
         "current_assets_period_start": _money_to_dict(start.current_assets),
         "current_liabilities_period_start": _money_to_dict(start.current_liabilities),
         "inventory_period_start": _money_to_dict(start.inventory),
+        "liabilities_fx_period_start": _money_to_dict(start.liabilities_fx),
     }
 
 
@@ -145,6 +149,9 @@ def _financial_report_from_dict(d: dict[str, Any]) -> FinancialReport:
         current_assets=_money_from_dict(d.get("current_assets")),
         current_liabilities=_money_from_dict(d.get("current_liabilities")),
         inventory=_money_from_dict(d.get("inventory")),
+        # ADR-0024 Session 4: liabilities_fx — legacy payloads ключа не
+        # содержат, читаем `.get(...)` consistent с дефолтом BalanceSnapshot (None).
+        liabilities_fx=_money_from_dict(d.get("liabilities_fx")),
     )
     balance_start = BalanceSnapshot(
         assets=_money_from_dict(d.get("assets_period_start")),
@@ -154,6 +161,7 @@ def _financial_report_from_dict(d: dict[str, Any]) -> FinancialReport:
         current_assets=_money_from_dict(d.get("current_assets_period_start")),
         current_liabilities=_money_from_dict(d.get("current_liabilities_period_start")),
         inventory=_money_from_dict(d.get("inventory_period_start")),
+        liabilities_fx=_money_from_dict(d.get("liabilities_fx_period_start")),
     )
     return FinancialReport(
         period=period,
