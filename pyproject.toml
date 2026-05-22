@@ -32,6 +32,7 @@ dependencies = [
     "ldap3>=2.9",
     "sentry-sdk[fastapi]>=2.20",
     "prometheus-fastapi-instrumentator>=7",
+    "networkx>=3.4",
 ]
 
 [dependency-groups]
@@ -117,6 +118,14 @@ ignore_missing_imports = true
 # ldap3 (T1.5 / ADR-0019) — pure Python LDAP client. py.typed отсутствует,
 # обёртка LdapClient форсирует cast на наших call-site'ах.
 module = ["ldap3", "ldap3.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# networkx (CA-002) — Python graph library. py.typed отсутствует на момент
+# 3.x; types-networkx — community-stubs из typeshed-third-party. Наша обёртка
+# `_build_graph` хранит invariant (only str-INN nodes, edge dict externally),
+# поэтому Any-types из networkx не текут в правило.
+module = ["networkx", "networkx.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

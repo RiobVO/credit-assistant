@@ -238,14 +238,14 @@ rules:
     rationale: "Классическая схема фиктивной отчётности. ADR-0024 Session 3: ИП исключены — регистрация в Узбекистане за 1-2 дня, уставного капитала не требует (Закон РУз «О гарантиях свободы предпринимательской деятельности»), молодой ИП = норма. opf=None (legacy / data source без поля) трактуется conservative: fires"
 
   - id: CIRCULAR_INVOICING
-    name: "Циклические ЭСФ с контрагентами (объём пары ≥100 млн сум)"
-    name_uz: "Kontragentlar bilan tsiklik EHF (juftlik hajmi ≥100 mln soʻm)"
+    name: "Циклические ЭСФ с контрагентами (объём цикла ≥100 млн сум)"
+    name_uz: "Kontragentlar bilan tsiklik EHF (tsikl hajmi ≥100 mln soʻm)"
     category: counterparty
     severity: high
     source: "НК РУз гл. 17 (НДС, выставление счетов-фактур); EAG typology reports — VAT carousel patterns; Закон РУз ЗРУ-660; FATF Recommendation 21 (suspicious transactions)"
     source_uz: "ЎзР СК 17-боби (QQS, ҳисобварақ-фактуралар); EAG типология ҳисоботлари — QQS «карусели»; ЎзР ЗРУ-660; FATF tavsiya 21"
-    formula: "exists 2-cycle: A→B and B→A within 90 days AND pair_total_volume >= 100_000_000 UZS"
-    rationale: "Симулированный документооборот для увеличения видимого оборота. ADR-0024: добавлен материальный порог пары ≥100 млн сум — ниже рутинные bidirectional ЭСФ (subcontracting, factoring, mutual offsets)"
+    formula: "networkx.simple_cycles on DiGraph(invoices); per-cycle total >= 100_000_000 UZS AND all dates within 90 days"
+    rationale: "Симулированный документооборот для увеличения видимого оборота. CA-002: graph-based детектор через networkx.simple_cycles — на текущих данных эквивалентен 2-cycle heuristic (все edges через borrower), готов принять external invoices (CA-002b backlog) для 3+ node carousels. ADR-0024 Session 3 severity override: cycle.length>=3 эскалируется до CRITICAL поверх YAML high (3+ node VAT-carousel — явная криминальная топология per FATF R.21 + EAG typology)"
 
   # --- Meta (data-quality safeguards) ---
   - id: INSUFFICIENT_DATA
