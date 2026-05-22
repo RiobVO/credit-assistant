@@ -9,8 +9,13 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from application.dto.kpi_bundle import KpiLevelTone, KpiUnit, KpiValue
-from interfaces.api.shared.dossier_mapper import _kpi_value_to_output
+from application.dto.kpi_bundle import KpiBundle, KpiLevelTone, KpiUnit, KpiValue
+from interfaces.api.shared.dossier_mapper import (
+    _kpi_bundle_to_output,
+    _kpi_value_to_output,
+    _to_financial_report,
+)
+from interfaces.api.shared.dossier_schema import FinancialReportInput
 
 
 def test_kpi_value_to_output_level_tone_warn() -> None:
@@ -96,10 +101,6 @@ def test_kpi_bundle_to_output_propagates_fx_exposure_ratio() -> None:
     """KpiBundle.fx_exposure_ratio → KpiBundleOutput.fx_exposure_ratio через
     _kpi_bundle_to_output, без потери поля.
     """
-    from application.dto.kpi_bundle import KpiBundle
-
-    from interfaces.api.shared.dossier_mapper import _kpi_bundle_to_output
-
     bundle = KpiBundle(
         revenue_ltm=None,
         ebit=None,
@@ -122,9 +123,6 @@ def test_pydantic_financial_report_input_accepts_liabilities_fx() -> None:
     """FinancialReportInput принимает liabilities_fx как MoneyInput.
     Маппинг через _to_financial_report пробрасывает в BalanceSnapshot.liabilities_fx.
     """
-    from interfaces.api.shared.dossier_mapper import _to_financial_report
-    from interfaces.api.shared.dossier_schema import FinancialReportInput
-
     payload = FinancialReportInput.model_validate({
         "period": {"start": "2025-01-01", "end": "2025-12-31"},
         "revenue": {"amount": "5000000000", "currency": "UZS"},
