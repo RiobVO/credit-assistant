@@ -32,6 +32,7 @@ dependencies = [
     "ldap3>=2.9",
     "sentry-sdk[fastapi]>=2.20",
     "prometheus-fastapi-instrumentator>=7",
+    "networkx>=3.4",
 ]
 
 [dependency-groups]
