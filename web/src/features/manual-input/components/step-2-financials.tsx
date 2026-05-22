@@ -197,6 +197,13 @@ function AnnualBlock() {
           ariaLabelKey="s2_inventory_label"
           required={false}
         />
+        {/* ADR-0024 Session 4: FX-компонент для fx_exposure_ratio (8-й KPI). */}
+        <UzsRow
+          fieldName="step2.liabilitiesFxEnd25"
+          labelKey="s2_liabilities_fx_label"
+          ariaLabelKey="s2_liabilities_fx_label"
+          required={false}
+        />
         <BalanceComputed />
       </AnnualGroup>
 
@@ -275,7 +282,8 @@ type UzsFieldName =
   | "step2.taxesPaid25"
   | "step2.totalAssets"
   | "step2.totalLiabilities"
-  | "step2.inventoryEnd25";
+  | "step2.inventoryEnd25"
+  | "step2.liabilitiesFxEnd25";
 
 function UzsRow({
   fieldName,
