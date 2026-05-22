@@ -207,6 +207,11 @@ def _annual_extended(
     current_liabilities_end: int | None = None,
     # ADR-0024 (Session 2): inventory под Quick Ratio.
     inventory_end: int | None = None,
+    # ADR-0024 (Session 4): total liabilities + FX-компонент под
+    # fx_exposure_ratio. liabilities_end отделён от total_debt_end (debt — это
+    # долговые обязательства, liabilities — все обязательства).
+    liabilities_end: int | None = None,
+    liabilities_fx_end: int | None = None,
 ) -> FinancialReport:
     """Годовой отчёт с CA-037 расширениями + ADR-0024 (Session 1) полями.
     None — поле отсутствует в исходных.
@@ -225,6 +230,8 @@ def _annual_extended(
         current_assets=money_opt(current_assets_end),
         current_liabilities=money_opt(current_liabilities_end),
         inventory=money_opt(inventory_end),
+        liabilities=money_opt(liabilities_end),
+        liabilities_fx=money_opt(liabilities_fx_end),
     )
     balance_start = BalanceSnapshot(
         equity=money_opt(equity_start), total_debt=money_opt(total_debt_start),
@@ -872,6 +879,67 @@ def test_quick_ratio_silent_when_cl_zero() -> None:
     )
     bundle = compute_kpis(_snapshot(annual=[annual]))
     assert bundle.quick_ratio is None
+
+
+# ----------- fx_exposure_ratio (ADR-0024 Session 4) ---------------------------
+
+
+def test_fx_exposure_ratio_computed_when_both_present() -> None:
+    """liabilities_fx / liabilities × 100 → ratio в PCT (consistent с ROE)."""
+    annual = _annual_extended(
+        2025,
+        liabilities_end=2_000_000_000,
+        liabilities_fx_end=800_000_000,
+    )
+    bundle = compute_kpis(_snapshot(annual=[annual]))
+    assert bundle.fx_exposure_ratio is not None
+    # 800M / 2000M = 0.40 → 40 в PCT scale (ratio × 100, как ROE).
+    assert bundle.fx_exposure_ratio.value == Decimal(40)
+    assert bundle.fx_exposure_ratio.unit is KpiUnit.PCT
+    # БЕЗ level_tone в v1: пороги ЦБ РУз отложены.
+    assert bundle.fx_exposure_ratio.level_tone is None
+
+
+def test_fx_exposure_ratio_silent_when_fx_missing() -> None:
+    """liabilities_fx None → KPI None (banker не вводил FX-component)."""
+    annual = _annual_extended(2025, liabilities_end=2_000_000_000)
+    bundle = compute_kpis(_snapshot(annual=[annual]))
+    assert bundle.fx_exposure_ratio is None
+
+
+def test_fx_exposure_ratio_silent_when_liabilities_missing() -> None:
+    """liabilities None → KPI None (нечего соотносить — FORM_1 не загружен)."""
+    annual = _annual_extended(2025, liabilities_fx_end=800_000_000)
+    bundle = compute_kpis(_snapshot(annual=[annual]))
+    assert bundle.fx_exposure_ratio is None
+
+
+def test_fx_exposure_ratio_silent_when_liabilities_zero() -> None:
+    """liabilities = 0 → KPI None (защита от деления на ноль)."""
+    annual = _annual_extended(
+        2025,
+        liabilities_end=0,
+        liabilities_fx_end=0,
+    )
+    bundle = compute_kpis(_snapshot(annual=[annual]))
+    assert bundle.fx_exposure_ratio is None
+
+
+def test_fx_exposure_ratio_no_cap_above_100pct() -> None:
+    """Edge case: liabilities_fx > liabilities (banker error) → ratio > 100%
+    без cap. fmt_pct отрендерит честно «150%» — banker увидит абсурд и
+    поймёт что данные неверны. Acceptable UX для v1 manual-input.
+    """
+    annual = _annual_extended(
+        2025,
+        liabilities_end=2_000_000_000,
+        liabilities_fx_end=3_000_000_000,
+    )
+    bundle = compute_kpis(_snapshot(annual=[annual]))
+    assert bundle.fx_exposure_ratio is not None
+    # 3B / 2B × 100 = 150
+    assert bundle.fx_exposure_ratio.value == Decimal(150)
+    assert bundle.fx_exposure_ratio.unit is KpiUnit.PCT
 
 
 # ----------- interest_coverage ------------------------------------------------

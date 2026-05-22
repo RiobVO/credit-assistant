@@ -16,6 +16,12 @@ parser, не покрыт PROFIT_TAX scope). Имя поля честное: с�
 * EBIT ≤ 0 → KPI None (убыток, оценка некорректна);
 * иначе → Decimal ratio в формате ``X.XX``.
 
+ADR-0024 (Session 4) добавил 8-й KPI `fx_exposure_ratio` = `liabilities_fx /
+liabilities × 100` (PCT scale). Доля валютных обязательств в общих
+обязательствах. Критичен для МСБ Узбекистана с USD/EUR-долгами при UZS-
+выручке. Banker вводит `liabilities_fx` вручную в wizard Шаг 2. **БЕЗ
+level_tone в v1**: пороги отложены до verified § ЦБ РУз для FX-mismatch.
+
 ADR-0024 (Session 1) добавил 6 расширенных KPI **рядом** с legacy парой
 ``ebit``/``debt_to_ebit`` (CA-037 invariant: не переименовываем, добавляем):
 
@@ -101,6 +107,8 @@ class KpiBundle:
     dscr: KpiValue | None = None  # OCF / debt_service_annual (fallback EBITDA → EBIT)
     # ADR-0024 (Session 2): Quick Ratio (acid-test ratio).
     quick_ratio: KpiValue | None = None  # (current_assets − inventory) / current_liabilities
+    # ADR-0024 (Session 4): FX Exposure Ratio (8-й KPI).
+    fx_exposure_ratio: KpiValue | None = None  # liabilities_fx / liabilities × 100 (PCT)
 
 
 @dataclass(frozen=True, slots=True)
