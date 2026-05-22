@@ -20,6 +20,13 @@ Quick Ratio = (current_assets − inventory) / current_liabilities
 материальные запасы» в разделе II актива. Парсер FORM_1 пока не
 извлекает — заполняется вручную через manual-input wizard Шаг 2.
 
+ADR-0024 Session 4 (2026-05-20) добавил `liabilities_fx` — FX-компонент
+total liabilities для KPI `fx_exposure_ratio` (доля валютных обязательств
+в общих обязательствах). Критичен для МСБ Узбекистана с USD/EUR-долгами
+при UZS-выручке (currency mismatch → высокий FX risk). Banker вводит
+вручную в wizard Шаг 2; парсер FORM_1 не извлекает на v1. Без level_tone
+в KPI — пороги отложены до verified § ЦБ РУз для FX-mismatch.
+
 Все поля nullable — FORM_1 может отдать частичный снимок (например, только
 assets+liabilities без equity), мы парсим best-effort.
 
@@ -43,6 +50,10 @@ class BalanceSnapshot:
     current_liabilities: Money | None = None
     # ADR-0024 Session 2: inventory для Quick Ratio = (CA − inventory) / CL.
     inventory: Money | None = None
+    # ADR-0024 Session 4: FX-компонент для fx_exposure_ratio = liabilities_fx /
+    # liabilities. Доля валютных обязательств в общих обязательствах. Banker
+    # вводит вручную в wizard Шаг 2; парсер FORM_1 не извлекает на v1.
+    liabilities_fx: Money | None = None
 
     def is_empty(self) -> bool:
         """True если все поля None — снимок не несёт информации."""
@@ -54,4 +65,5 @@ class BalanceSnapshot:
             and self.current_assets is None
             and self.current_liabilities is None
             and self.inventory is None
+            and self.liabilities_fx is None
         )
