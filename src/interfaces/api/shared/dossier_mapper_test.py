@@ -9,8 +9,13 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from application.dto.kpi_bundle import KpiLevelTone, KpiUnit, KpiValue
-from interfaces.api.shared.dossier_mapper import _kpi_value_to_output
+from application.dto.kpi_bundle import KpiBundle, KpiLevelTone, KpiUnit, KpiValue
+from interfaces.api.shared.dossier_mapper import (
+    _kpi_bundle_to_output,
+    _kpi_value_to_output,
+    _to_financial_report,
+)
+from interfaces.api.shared.dossier_schema import FinancialReportInput
 
 
 def test_kpi_value_to_output_level_tone_warn() -> None:
@@ -71,3 +76,64 @@ def test_kpi_value_to_output_no_level_tone_is_none() -> None:
 def test_kpi_value_to_output_returns_none_for_none_input() -> None:
     """None-KpiValue (degraded mode) проходит насквозь как None."""
     assert _kpi_value_to_output(None) is None
+
+
+# ----------- ADR-0024 Session 4: fx_exposure_ratio mapping --------------------
+
+
+def test_kpi_value_to_output_fx_exposure_ratio_pct_no_level_tone() -> None:
+    """fx_exposure_ratio: PCT-юнит, level_tone остаётся None (пороги ЦБ РУз
+    отложены до verified §). Pydantic-output value сериализуется как str."""
+    kv = KpiValue(
+        value=Decimal(40),
+        unit=KpiUnit.PCT,
+        yoy_pct=None,
+        sparkline=(),
+    )
+    out = _kpi_value_to_output(kv)
+    assert out is not None
+    assert out.value == "40"
+    assert out.unit == "PCT"
+    assert out.level_tone is None
+
+
+def test_kpi_bundle_to_output_propagates_fx_exposure_ratio() -> None:
+    """KpiBundle.fx_exposure_ratio → KpiBundleOutput.fx_exposure_ratio через
+    _kpi_bundle_to_output, без потери поля.
+    """
+    bundle = KpiBundle(
+        revenue_ltm=None,
+        ebit=None,
+        roe=None,
+        debt_to_ebit=None,
+        fx_exposure_ratio=KpiValue(
+            value=Decimal(40),
+            unit=KpiUnit.PCT,
+            yoy_pct=None,
+            sparkline=(),
+        ),
+    )
+    out = _kpi_bundle_to_output(bundle)
+    assert out.fx_exposure_ratio is not None
+    assert out.fx_exposure_ratio.value == "40"
+    assert out.fx_exposure_ratio.unit == "PCT"
+
+
+def test_pydantic_financial_report_input_accepts_liabilities_fx() -> None:
+    """FinancialReportInput принимает liabilities_fx как MoneyInput.
+    Маппинг через _to_financial_report пробрасывает в BalanceSnapshot.liabilities_fx.
+    """
+    payload = FinancialReportInput.model_validate({
+        "period": {"start": "2025-01-01", "end": "2025-12-31"},
+        "revenue": {"amount": "5000000000", "currency": "UZS"},
+        "net_profit": {"amount": "500000000", "currency": "UZS"},
+        "liabilities": {"amount": "2000000000", "currency": "UZS"},
+        "liabilities_fx": {"amount": "800000000", "currency": "UZS"},
+    })
+    assert payload.liabilities_fx is not None
+    assert payload.liabilities_fx.amount == Decimal("800000000")
+
+    domain = _to_financial_report(payload)
+    assert domain.balance_end is not None
+    assert domain.balance_end.liabilities_fx is not None
+    assert domain.balance_end.liabilities_fx.amount == Decimal("800000000")

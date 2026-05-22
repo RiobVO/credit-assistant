@@ -106,6 +106,11 @@ class FinancialReportInput(_StrictModel):
     # вводит одно значение «Запасы на отчётную дату»); period_start доступен
     # через JSONB загрузку (test fixtures / future FORM_1 parser).
     inventory: MoneyInput | None = None
+    # ADR-0024 Session 4: FX-компонент для fx_exposure_ratio. Banker вводит
+    # вручную в wizard Шаг 2 («Обязательства в иностранной валюте»). Парсер
+    # FORM_1 не извлекает поле на v1; period_start доступен только через
+    # JSONB загрузку (test fixtures / future parser extension).
+    liabilities_fx: MoneyInput | None = None
 
 
 class MonthlyTurnoverInput(_StrictModel):
@@ -344,6 +349,8 @@ class KpiBundleOutput(_StrictModel):
     dscr: KpiValueOutput | None = None
     # ADR-0024 (Session 2):
     quick_ratio: KpiValueOutput | None = None
+    # ADR-0024 (Session 4): FX Exposure Ratio (8-й KPI).
+    fx_exposure_ratio: KpiValueOutput | None = None
 
 
 class MonthlyRevenuePointOutput(_StrictModel):

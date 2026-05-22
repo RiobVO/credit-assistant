@@ -45,6 +45,8 @@ const ALL_NULL_KPIS: DossierViewDto["kpis"] = {
   dscr: null,
   // ADR-0024 Session 2:
   quick_ratio: null,
+  // ADR-0024 Session 4:
+  fx_exposure_ratio: null,
 };
 
 function renderRow(kpis: DossierViewDto["kpis"]) {
@@ -73,6 +75,7 @@ describe("KpiRow — ADR-0024 Session 2 hide-empty contract", () => {
     expect(screen.queryByText("Покрытие процентов")).toBeNull();
     expect(screen.queryByText("DSCR")).toBeNull();
     expect(screen.queryByText("Quick Ratio")).toBeNull();
+    expect(screen.queryByText("Валютная позиция")).toBeNull();
     // Legacy CA-037 labels тоже hidden при null.
     expect(screen.queryByText("EBIT (прокси EBITDA)")).toBeNull();
     expect(screen.queryByText("ROE")).toBeNull();
@@ -135,6 +138,37 @@ describe("KpiRow — ADR-0024 Session 2 hide-empty contract", () => {
     renderRow(kpis);
     expect(screen.getByText("Quick Ratio")).toBeInTheDocument();
     expect(screen.getByText("1,5x")).toBeInTheDocument();
+  });
+
+  it("fx_exposure_ratio рендерится с PCT-формой без stripe (ADR-0024 Session 4)", () => {
+    // value 40 = 40% (backend уже даёт в процентах, ratio × 100 в calculator).
+    const fxKpi: KpiValueDto = {
+      value: "40",
+      unit: "PCT",
+      yoy_pct: null,
+      sparkline: [],
+      level_tone: null,  // в v1 пороги ЦБ РУз отложены
+    };
+    const { container } = renderRow({ ...ALL_NULL_KPIS, fx_exposure_ratio: fxKpi });
+    expect(screen.getByText("Валютная позиция")).toBeInTheDocument();
+    expect(screen.getByText("40,0%")).toBeInTheDocument();
+    // БЕЗ level_tone → нет border-l-4 stripe в этой карточке (другие могут быть).
+    // Проверяем что во всех KPI карточках нет stripe (все остальные null).
+    expect(container.querySelector(".border-l-4")).toBeNull();
+  });
+
+  it("fx_exposure_ratio > 100% (banker error) рендерится честно без cap", () => {
+    // Edge case: liabilities_fx > liabilities → ratio > 100%. fmt_pct отрендерит
+    // «150%» — banker увидит абсурд и поймёт что данные неверны.
+    const fxKpi: KpiValueDto = {
+      value: "150",
+      unit: "PCT",
+      yoy_pct: null,
+      sparkline: [],
+      level_tone: null,
+    };
+    renderRow({ ...ALL_NULL_KPIS, fx_exposure_ratio: fxKpi });
+    expect(screen.getByText("150,0%")).toBeInTheDocument();
   });
 
   it("debt_to_ebit Case 3 (ebit ≤ 0) рендерит EmptyKpiCard danger — это сигнал, не пустота", () => {
