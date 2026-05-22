@@ -120,6 +120,14 @@ ignore_missing_imports = true
 module = ["ldap3", "ldap3.*"]
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+# networkx (CA-002) — Python graph library. py.typed отсутствует на момент
+# 3.x; types-networkx — community-stubs из typeshed-third-party. Наша обёртка
+# `_build_graph` хранит invariant (only str-INN nodes, edge dict externally),
+# поэтому Any-types из networkx не текут в правило.
+module = ["networkx", "networkx.*"]
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 # domain тесты живут рядом с кодом (`*_test.py`); integration — в `tests/`
