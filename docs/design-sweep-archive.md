@@ -339,3 +339,22 @@ Verify: tsc clean + eslint 0 warnings + vitest 101/101 + next build 24 routes. B
 **Open TODOs:** CA-DS25 (real backend sparkline), CA-DS28 (hybrid CA-003 ГНК lookup + manual upload).
 
 Phase 10 (PDF document) — финальная фаза Design Sweep, unblocked.
+
+---
+
+## Design Sweep status snapshot (все 10 фаз DONE)
+
+| # | Phase | Status | Commit |
+|---|---|---|---|
+| 1 | Login | DONE | `0a1c86c`..`34d97f6` |
+| 2 | Search | DONE | `c9afbce` → `022dfcf` |
+| 3 | History | DONE | `8bbc154` |
+| 4 | Help | DONE | `cb8b046`..`91c4090` |
+| 5 | Settings | DONE | `06f0ae4` + Phase 5.B + functional holes |
+| 6 | Manual-input Step 1 (Borrower) | DONE | `d2fb869` + `c116908` |
+| 7 | Manual-input Step 2 (Financial) | DONE | `40c770d` |
+| 8 | Manual-input Step 3 (Loan) | DONE | `94229e8` |
+| 9 | Dossier view | DONE | `bcde558` |
+| 10 | PDF document | DONE | `a8f2b66` |
+
+Подробности по каждой фазе — выше в этом же файле.
