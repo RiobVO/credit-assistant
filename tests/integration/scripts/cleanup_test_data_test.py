@@ -16,6 +16,11 @@ from datetime import date
 from uuid import UUID, uuid4
 
 import pytest
+from scripts.cleanup_test_data import (
+    _delete_analysts,
+    _delete_borrowers,
+    _rename_analysts,
+)
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,12 +28,6 @@ from infrastructure.persistence.models.analyst import AnalystORM
 from infrastructure.persistence.models.borrower import BorrowerORM
 from infrastructure.persistence.models.borrower_snapshot import BorrowerSnapshotORM
 from infrastructure.persistence.models.dossier import DossierORM
-
-from scripts.cleanup_test_data import (
-    _delete_analysts,
-    _delete_borrowers,
-    _rename_analysts,
-)
 
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
 
