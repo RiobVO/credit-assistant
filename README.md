@@ -172,17 +172,6 @@ open http://localhost:8000/docs
 docker compose exec api bash -c "cd /app && uv run python -m ruff check . && uv run python -m mypy --strict src tests && uv run python -m pytest"
 ```
 
-## Screenshots
-
-Live screenshots from the demo deployment.
-
-| | |
-|---|---|
-| ![Bank history page](docs/screenshots/history.png) | ![Dossier view](docs/screenshots/dossier.png) |
-| ![Manual input wizard](docs/screenshots/wizard.png) | ![Generated bilingual PDF](docs/screenshots/pdf-sample.png) |
-
-_Screenshots added post-merge; see [demo scenarios walkthrough](docs/demo/scenarios.md) for the same flows narrated step-by-step._
-
 ## Built with
 
 - **Plain stack, no exotic deps** — FastAPI · SQLAlchemy 2.0 (async) · Pydantic v2 · Alembic · Next.js 15 (App Router) · TypeScript strict · shadcn/ui · Tailwind 4 · React Query · zod · WeasyPrint · pytest · vitest · ruff · mypy `--strict`.
@@ -191,9 +180,7 @@ _Screenshots added post-merge; see [demo scenarios walkthrough](docs/demo/scenar
 
 ## License
 
-This project is licensed under the MIT License — see [`LICENSE`](LICENSE) for full text.
-
-The code is the author's IP; banks receive a right-to-use under separate agreement.
+This project is licensed under the MIT License — see [`LICENSE`](LICENSE) for full text. You may freely use, modify, and redistribute the code under the terms in `LICENSE`.
 
 ## Contact
 
