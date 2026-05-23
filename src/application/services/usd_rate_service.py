@@ -80,7 +80,9 @@ class UsdRateService:
         try:
             cbu = await fetch_usd_rate()
         except CbuFetchError as exc:
-            _logger.warning("usd_rate.cbu_unavailable error=%r", exc)
+            # exc_info=exc сохраняет цепочку (ConnectionResetError → SSLError → CbuFetchError),
+            # без этого оператор видит только финальное сообщение без traceback.
+            _logger.warning("usd_rate.cbu_unavailable", exc_info=exc)
             return None
         rate = UsdUzsRate(rate=cbu.rate, asof=cbu.asof, source="cbu_live")
         await self._repo.save(

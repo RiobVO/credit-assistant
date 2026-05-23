@@ -343,7 +343,7 @@ def test_roe_none_when_equity_avg_zero() -> None:
 
 def test_roe_none_when_equity_avg_negative() -> None:
     """Отрицательный equity_avg → None. Это red-flag сигнал
-    (TODO[CA-XXX]: rule NEGATIVE_EQUITY); KPI карточка показывает empty state
+    (CA-049: rule NEGATIVE_EQUITY); KPI карточка показывает empty state
     «Отрицательный собственный капитал — ROE не определён»."""
     annual = _annual_extended(2025, equity_start=-100_000_000, equity_end=-50_000_000)
     bundle = compute_kpis(_snapshot(annual=[annual]))

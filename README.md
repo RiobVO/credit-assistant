@@ -4,9 +4,7 @@
 
 ## Status
 
-**Phase 1 — Domain Core: complete.** 17 red-flag правил, value objects, entities, BorrowerSnapshot, ScoringService, YAML-конфигурация (`config/rules/v1_uz_msb.yaml`). Coverage `src/domain/rules` ≈ 99%, 217 unit + integration тестов.
-
-Phase 0 — Foundation: complete (`/health`, web UI, Docker Compose, CI).
+**Pre-demo MVP ready** (ADR-0024 Day 4 closed 2026-05-20). 24 red-flag правил, value objects, entities, BorrowerSnapshot, ScoringService, YAML-конфигурация (`config/rules/v1_uz_msb.yaml`). Подробнее — `CLAUDE.md` и `docs/audit/2026-05-21/00-summary.md`.
 
 ## Prerequisites
 
@@ -80,7 +78,7 @@ npm run build
 - [`PROJECT_BRIEF.md`](./PROJECT_BRIEF.md) — продуктовый brief, источник правды
 - [`CLAUDE.md`](./CLAUDE.md) — статус проекта и рабочие соглашения
 - [`docs/adr/`](./docs/adr/) — architecture decision records
-- [`config/rules/v1_uz_msb.yaml`](./config/rules/v1_uz_msb.yaml) — все 17 red-flag правил с metadata
+- [`config/rules/v1_uz_msb.yaml`](./config/rules/v1_uz_msb.yaml) — все 24 red-flag правил с metadata
 
 ## Как добавить новое правило
 

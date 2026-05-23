@@ -54,7 +54,7 @@
 | 1 | `/` | Открыть в чистой incognito-сессии | Редирект на `/login` (или `/search` если уже залогинен). Нет flash unstyled content. |
 | 2 | `/login` | Submit `t04@bank.uz` / `T04Smoke!` | Inputs aligned, кнопка submit реактивна, после success → `/search`. |
 | 3 | `/search` | Ввести ИНН несуществующий и существующий | Loading-state, empty-result UI, dossier-card открывается. |
-| 4 | `/history` | Открыть с непустым списком | 48 dossiers, sticky-header, sort/filter chips. |
+| 4 | `/history` | Открыть с непустым списком | 52 dossiers, sticky-header, sort/filter chips. |
 | 5 | `/dossier/BR-2026-0048` | Прокрутить все 7 разделов | A — identification, B — financials charts, C — turnover dynamics, D — counterparties, E — tax discipline, F — red flags, G — summary score. PDF-кнопка работает. |
 | 6 | `/manual-input` | Пройти wizard Шаг 1 → 2 → 3 → Generate | Step navigation, source-trail badges (auto/auto-edited/manual), validation на required, финальный submit генерирует dossier и редиректит на `/dossier/{new_id}`. |
 | 7 | `/help` | Развернуть все FAQ, проверить support tile | Phone/email/slack из brand-config, business-hours rendered, FAQ accordions. |

@@ -16,10 +16,9 @@ Phase 5.B endpoints — real RFC 6238 TOTP enrollment-flow.
 Audit: enrollment / disable пишутся как ``mfa_enrolled`` / ``mfa_disabled``;
 ошибки challenge — ``mfa_challenge_failed`` с masked-email.
 
-TODO[CA-DS12]: ``mfa_secret`` сейчас plain в БД. Production должна шифровать
-через банковский KMS/vault.
-TODO[CA-DS13]: admin-reset endpoint для случая «потерял phone + backup
-codes» — пока workaround через прямой SQL/seed.
+``mfa_secret`` Fernet-encrypted via ``EncryptedString`` TypeDecorator
+(ADR-0017). Compromised ``PII_ENC_KEYS`` = MFA bypass — same blast radius
+as PII decryption.
 """
 
 from __future__ import annotations

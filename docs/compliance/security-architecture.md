@@ -36,7 +36,7 @@
 | A04:2021 Insecure Design | Threat modeling до implementation, regular review |
 | A05:2021 Security Misconfiguration | `.env.example` без секретов, prod startup-asserts на mandatory env |
 | A06:2021 Vulnerable Components | `uv lock` pinning, periodic SCA scan (pre-pilot recommended) |
-| A07:2021 Identification/Authn Failures | bcrypt + MFA (TOTP/WebAuthn), refresh-token rotation, rate limiting |
+| A07:2021 Identification/Authn Failures | TOTP MFA + bcrypt cost=12 (≈250 ms/попытка). Rate limiting и account lockout на post-pilot roadmap. |
 | A08:2021 Software/Data Integrity | Container image signing (recommended), backup restore drill |
 | A09:2021 Logging/Monitoring Failures | structlog + correlation_id + GlitchTip error tracking |
 | A10:2021 SSRF | httpx с whitelisted endpoints, no user-controlled URLs |
@@ -47,8 +47,12 @@
   Mitigation — audit log append-only, PII masking в logs, role separation.
 - **MITM в банковской сети:** Caddy 2 HTTPS обязателен даже на internal
   периметре.
-- **Credential stuffing:** rate limiting через `slowapi` на `/login`,
-  account lockout после N failed attempts.
+- **Credential stuffing mitigation в v1:** bcrypt cost=12 латенс
+  (≈250 ms/попытка) + обязательный MFA. Rate limiting (slowapi) и account
+  lockout (failed-attempt counter в `analysts`) — post-pilot hardening
+  (ADR создаётся при старте, TODO[CA-rate-limit-adr]). Threat-model:
+  TOTP brute-force окно ≈30 мин без rate-limit, поэтому ловится через
+  GlitchTip alerts на high `mfa_verify_failed` rate + manual disable.
 - **Privileged access escalation:** break-glass list (`ADMIN_BREAK_GLASS_EMAILS`)
   логируется отдельным audit event'ом.
 
@@ -241,9 +245,11 @@ graph LR
 
 #### ЦБ РУз положения
 
-- Постановление №27-п (методики кредитного риск-анализа) — реализовано
-  через rules engine v1 (`config/rules/v1_uz_msb.yaml`).
-- Положение №2696 — foundational source для 9 правил после ADR-0024.
+- Положение ЦБ РУз №2696 (lex.uz/ru/docs/2703056) — foundational source
+  для 9 правил rules engine v1 (`config/rules/v1_uz_msb.yaml`) после
+  ADR-0024.
+<!-- ADR-0024 closure: «№27-п» was scrubbed as fabricated source 2026-05-19; рассмотрено Положение №2696 как замену -->
+
 
 ### 10. Secrets management
 
@@ -338,8 +344,10 @@ TLS 1.2+, TOTP RFC 6238.
 
 `TODO[CA-T4-UZ]: trebuetsya ruchnaya redaktura uzbekskogo eksperta`
 
-№547-sonli Qonun (PDn), Bazel III SREP, MB RUz №27-p va №2696 nizomlari.
-Har bir talab — implementatsiya mapping.
+№547-sonli Qonun (PDn), Bazel III SREP, MB RUz №2696-sonli nizomi
+(lex.uz/ru/docs/2703056). Har bir talab — implementatsiya mapping.
+<!-- ADR-0024 closure: «№27-p» soxta manba sifatida 2026-05-19 olib tashlandi; o'rniga №2696 nizomi qo'llaniladi -->
+
 
 ### 10. Sirlarni boshqarish
 
