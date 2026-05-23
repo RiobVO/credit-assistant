@@ -10,9 +10,9 @@ support. Не трогает существующий ``mfa_enabled`` — пос
 mfa_enabled=False в API, даже если stored bool=True. Это сжигает прежний
 security-theater seed для admin@.
 
-- ``mfa_secret`` — base32-encoded TOTP shared secret (RFC 6238). Хранится
-  plain в БД, поскольку POC. Production должен encrypt через банковский
-  vault/KMS (TODO[CA-DS12]). NULL = MFA не настроен.
+- ``mfa_secret`` — base32-encoded TOTP shared secret (RFC 6238). Шифруется
+  через ``EncryptedString`` Fernet TypeDecorator (ADR-0017, T1.3 — закрывает
+  CA-DS12). NULL = MFA не настроен.
 - ``mfa_enrolled_at`` — момент успешной первой verify-проверки. NULL до
   enrollment'а.
 - ``mfa_backup_codes_hash`` — JSON-массив bcrypt-хешей одноразовых

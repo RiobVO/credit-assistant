@@ -23,7 +23,7 @@ from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import Response
 
 from application.use_cases.load_dossier_for_view import LoadDossierForView
-from application.use_cases.render_dossier_pdf import Lang, RenderDossierPdf
+from application.use_cases.render_dossier_pdf import Lang, RenderDossierPdf, RenderedPdf
 from config.settings import get_settings
 from infrastructure.brand.brand_config import load_brand
 from infrastructure.catalog.oked_benchmark import (
@@ -101,7 +101,7 @@ async def download_dossier_pdf(
     )
 
     try:
-        pdf_bytes = await use_case.execute(dossier_id, lang=effective_lang)
+        result: RenderedPdf | None = await use_case.execute(dossier_id, lang=effective_lang)
     except OSError as exc:
         # WeasyPrint падает с OSError при отсутствии libpango/libgobject —
         # отдаём осмысленный 503 вместо 500.
@@ -114,7 +114,7 @@ async def download_dossier_pdf(
             ),
         ) from exc
 
-    if pdf_bytes is None:
+    if result is None:
         raise HTTPException(status_code=404, detail="Досье не найдено")
 
     if analyst is not None:
@@ -126,9 +126,9 @@ async def download_dossier_pdf(
             payload={"lang": effective_lang},
         )
 
-    filename = _build_filename(dossier_id)
+    filename = _build_filename(result.case_id)
     return Response(
-        content=pdf_bytes,
+        content=result.pdf_bytes,
         media_type="application/pdf",
         headers={
             "Content-Disposition": f'attachment; filename="{filename}"',
@@ -137,7 +137,10 @@ async def download_dossier_pdf(
     )
 
 
-def _build_filename(dossier_id: UUID) -> str:
-    """``BR-XXXX.pdf`` где XXXX — первые 4 hex uuid в верхнем регистре."""
-    suffix = dossier_id.hex[:4].upper()
-    return f"BR-{suffix}.pdf"
+def _build_filename(case_id: str) -> str:
+    """``<case_id>.pdf`` — human-readable, например ``BR-2026-0046.pdf``.
+
+    case_id формируется ``SqlAlchemyCaseIdAllocator`` и совпадает с тем, что
+    banker видит в UI и list-views — единственный читаемый идентификатор досье.
+    """
+    return f"{case_id}.pdf"

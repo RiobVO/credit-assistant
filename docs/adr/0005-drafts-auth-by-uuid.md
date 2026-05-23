@@ -4,6 +4,19 @@
 - **Date**: 2026-05-08
 - **Phase**: 2 (persistence)
 
+## Status (Updated 2026-05-21)
+
+**Superseded by status — partial.** Phase 4 (Bank Mode, closed 2026-05-11)
+shipped without `drafts.owner_user_id NOT NULL`. UUID-as-capability model
+остаётся в проде на момент аудита 2026-05-21. Re-decision required если
+bank-mode workflow введёт ownership tracking (например, «только автор
+видит свой draft»). До тех пор любой authenticated analyst со ссылкой
+на UUID может прочитать черновик — see `docs/audit/2026-05-21/02-security.md`
+IDOR finding для контекста.
+
+Старый «Phase 4 plan» раздел ниже оставлен для археологии — не
+реализован, не планируется в текущем виде.
+
 ## Context
 
 Phase 2.5.6 ввёл endpoints `/api/manual-input/draft` (POST/GET/PUT) для частичного сохранения формы досье в Accountant Mode. Бухгалтер заполняет форму в 3 шага, drafts сохраняются автоматически на переходах step 1→2, 2→3 (Phase 2.5.6.b).

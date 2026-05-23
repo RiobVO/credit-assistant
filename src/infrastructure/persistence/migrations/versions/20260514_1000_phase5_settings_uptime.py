@@ -11,7 +11,7 @@ Create Date: 2026-05-14 10:00:00.000000+00:00
   Real-update — `POST /api/bank/auth/change-password` (см. CA-068, коммит 7d65e29).
 - ``analysts.mfa_enabled`` (NOT NULL, default false) — флаг 2FA-enrollment'а.
   Заполняется seed-скриптом для admin@ как «enrolled in bank SSO/AD». Real
-  TOTP/SMS enrollment-flow — отдельный эпик (TODO[CA-DS10]).
+  TOTP enrollment-flow реализован в миграции 9a4d2e1f8b67 (closed Phase 5.B).
 - ``system_uptime_day`` — append-only журнал дней-аптайма для UI-calendar
   «30 дней без сбоев». UPSERT'ится при каждом вызове GET /api/system/health,
   worst-of-day агрегация: 'ok' → 'degraded' → 'down'. Seed-row на today

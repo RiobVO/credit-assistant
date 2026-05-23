@@ -323,7 +323,7 @@ rules:
 - JWT с коротким TTL (15 мин access, 7 дней refresh)
 - HTTPS обязателен в любой среде, кроме `localhost:8000`
 - CORS strict (только whitelisted origins)
-- Rate limiting (slowapi) на all endpoints
+- Rate limiting и account lockout — post-pilot hardening roadmap (см. backlog в CLAUDE.md). На v1 не реализованы — bcrypt cost=12 и MFA остаются единственной защитой brute-force.
 - Audit log всех действий с PII (ИНН, имена) — append-only
 
 ### Data handling

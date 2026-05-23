@@ -28,6 +28,7 @@ context-keys для pre-formatted (например ``methodology_body``).
 from __future__ import annotations
 
 import base64
+import logging
 from datetime import date, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -64,6 +65,8 @@ TEMPLATE_NAME = "dossier.html"
 # относительно base_url. Делаем base_url абсолютным file:// URI на директорию pdf/ —
 # работает одинаково на Windows-хосте и в Linux-контейнере (ADR-0008).
 _BASE_URL = PDF_DIR.as_uri()
+
+_logger = logging.getLogger(__name__)
 
 
 class WeasyPrintPdfRenderer:
@@ -495,22 +498,30 @@ def _format_evidence_value(evidence: dict[str, Any], messages: PdfMessages) -> s
         try:
             d = Decimal(str(value))
             return f"{d * 100:.0f}%"
-        except (InvalidOperation, TypeError, ValueError):
-            pass
+        except (InvalidOperation, TypeError, ValueError) as exc:
+            # Fallback на raw str — на проде debug-уровень для post-mortem,
+            # почему конкретное evidence ушло в шаблон не отформатированным.
+            _logger.debug(
+                "pdf.format_fallback bucket=pct key=%s value=%r", key, value, exc_info=exc
+            )
 
     if key in _UZS_EVIDENCE_KEYS:
         try:
             fmt_uzs = make_fmt_uzs(messages)
             return fmt_uzs(Decimal(str(value)), billions=True)
-        except (InvalidOperation, TypeError, ValueError):
-            pass
+        except (InvalidOperation, TypeError, ValueError) as exc:
+            _logger.debug(
+                "pdf.format_fallback bucket=uzs key=%s value=%r", key, value, exc_info=exc
+            )
 
     if key == "ratio":
         try:
             d = Decimal(str(value))
             return f"{d:.2f}".replace(".", ",")
-        except (InvalidOperation, TypeError, ValueError):
-            pass
+        except (InvalidOperation, TypeError, ValueError) as exc:
+            _logger.debug(
+                "pdf.format_fallback bucket=ratio key=%s value=%r", key, value, exc_info=exc
+            )
 
     return str(value)
 

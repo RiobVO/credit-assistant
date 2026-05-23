@@ -451,16 +451,21 @@ function ServicesValueText() {
 
 function FooterStrip() {
   const t = useTranslations("bank.settings");
+  const brand = useBrand();
+  // Support email — единая правда из brand-config (CA-066). Fallback на
+  // default.json (`support@credit-assistant.uz`), если brand не задал support
+  // секцию. /help уже читает из useBrand().support.email — consistent.
+  const supportEmail = brand.support?.email ?? "support@credit-assistant.uz";
   return (
     <div className="mt-2 flex items-center justify-between gap-3 border-t border-[var(--border)] bg-[var(--surface-2)] px-6 py-3.5 text-[12px] text-[var(--ink-3)]">
       <span>
         {t("support_label")} —{" "}
         <a
-          href={`mailto:${t("support_email")}`}
+          href={`mailto:${supportEmail}`}
           className="font-semibold text-[var(--ink-1)] no-underline"
           style={{ borderBottom: "1px solid var(--brand-primary)" }}
         >
-          {t("support_email")}
+          {supportEmail}
         </a>
       </span>
       <span>{t("copyright_short")}</span>
