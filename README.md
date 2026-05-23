@@ -6,13 +6,22 @@
 
 > *Production-grade SME credit scoring tool for Uzbek commercial banks — from raw borrower data to a committee-ready dossier in 8 to 20 minutes.*
 
-![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white) ![FastAPI 0.115](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white) ![SQLAlchemy 2.0](https://img.shields.io/badge/SQLAlchemy-2.0-D71F00?logo=sqlalchemy&logoColor=white) ![Next.js 15](https://img.shields.io/badge/Next.js-15-000000?logo=next.js&logoColor=white) ![TypeScript 5](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white) ![PostgreSQL 16](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white) ![Docker compose](https://img.shields.io/badge/Docker-compose-2496ED?logo=docker&logoColor=white) ![License MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+[![CI](https://github.com/RiobVO/credit-assistant/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/RiobVO/credit-assistant/actions/workflows/ci.yml) ![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white) ![FastAPI 0.115](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white) ![SQLAlchemy 2.0](https://img.shields.io/badge/SQLAlchemy-2.0-D71F00?logo=sqlalchemy&logoColor=white) ![Next.js 15](https://img.shields.io/badge/Next.js-15-000000?logo=next.js&logoColor=white) ![TypeScript 5](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white) ![PostgreSQL 16](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white) ![Docker compose](https://img.shields.io/badge/Docker-compose-2496ED?logo=docker&logoColor=white) ![License MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 
 Credit-assistant helps bank credit analysts evaluate SME loan applications end-to-end, from raw borrower data to a signed dossier. It is built for mid-tier Uzbek commercial banks that lend to small and medium businesses but lack the in-house digital tooling of larger players. The system runs 24 verified business rules and 8 financial KPIs over consolidated borrower data and produces a risk score plus a bilingual RU/UZ PDF dossier ready for the credit committee. Every value on screen and in the PDF carries a source trail back to the original document or rule reference.
 
 ## Why this exists
 
 Credit analysts at mid-tier Uzbek banks currently spend 2 to 4 hours per dossier manually compiling borrower data: cross-referencing Soliq tax exports, ESF e-invoices, financial statements, and GNK certificates, then transcribing the results into a committee-ready file. Credit-assistant cuts that work to 8 to 20 minutes while preserving audit-ready provenance — rule sources, evidence numbers, and source-trail chips attached to every field. It is designed to slot into mid-tier banks behind their existing core systems and close the digitalization gap they face against larger competitors like TBC and Kapitalbank.
+
+## Two operating modes, one business core
+
+The same domain layer, the same 24 rules, the same 8 KPIs — exposed through two distinct UIs depending on who is using the tool. Switching modes is an environment-variable change, not a fork.
+
+- **Bank Mode** (`APP_MODE=bank`) — the primary revenue path. Lives on-premise behind the bank's perimeter. A credit analyst logs in via LDAP / TOTP MFA, enters a borrower INN, uploads Soliq xltx exports + ESF CSV + GNK certificate, and gets back a scored dossier with a bilingual RU/UZ PDF ready to attach to the credit-committee folder. Every action (login, dossier view, PDF download, file upload) writes to an append-only audit log with brand-scoped indices.
+- **Accountant Mode** (`APP_MODE=accountant`) — the validation and organic-outreach path. Runs locally on an accountant's Mac or Windows. They upload exports for the firms they handle and see «what would the bank see if I applied for credit». Used for two things: (a) **logic validation** — accountants know their clients, so when the tool agrees or disagrees with their gut, that signal is gold; (b) **free marketing** — every accountant who likes the tool shows it to a dozen entrepreneur clients, each of whom now knows that scoring tooling exists and asks their bank why they don't have it.
+
+Architecturally these are two FastAPI router trees (`interfaces/api/bank/` and `interfaces/api/accountant/`) plus a shared core (`interfaces/api/shared/`) sitting on the same `domain/` and `application/` layers. The `if mode == "bank"` check is forbidden anywhere deeper than the top-level shells — enforced by a `useAppMode()` hook on the frontend and explicit router segregation on the backend.
 
 ## Architecture
 
@@ -119,6 +128,15 @@ def _compute_fx_exposure_ratio(latest: FinancialReport | None) -> KpiValue | Non
 
 _Both functions are typical, not cherry-picked — every rule in [`src/domain/rules/`](src/domain/rules/) has a `RULE_SOURCE` comment, every KPI in [`src/application/services/kpi_calculator.py`](src/application/services/kpi_calculator.py) follows the silent-on-missing-data contract. The discipline is in the repo, not the README._
 
+## Where to dive deeper
+
+If the README hooked you, here is the map of the codebase as docs:
+
+- **[`docs/adr/`](docs/adr/)** — 24 Architecture Decision Records. Each one captures a real choice (auth model, multi-tenancy approach, PII encryption, rules-research methodology) with context, alternatives considered, and consequences. Start at [`0024-foundational-source-verification.md`](docs/adr/0024-foundational-source-verification.md) for the rule-set research methodology.
+- **[`docs/conventions/active-contracts.md`](docs/conventions/active-contracts.md)** — live invariants the rest of the codebase still relies on (CA-001..CA-070+). Read before editing anything in `domain/`, `application/`, or persistence mappers.
+- **[`docs/demo/scenarios.md`](docs/demo/scenarios.md)** — five narrated walkthroughs of pre-seeded borrowers, each illustrating a different risk profile (clean, mixed, critical, OKED-changed, FX-mismatch). ~25 minutes end-to-end.
+- **[`docs/operations/`](docs/operations/)** — runbooks for pre-demo smoke (60–90 min playbook), 2FA smoke, PII key rotation, multi-tenant deployment, LDAP setup.
+
 ## By the numbers
 
 | Metric | Value |
@@ -177,6 +195,16 @@ docker compose exec api bash -c "cd /app && uv run python -m ruff check . && uv 
 - **Plain stack, no exotic deps** — FastAPI · SQLAlchemy 2.0 (async) · Pydantic v2 · Alembic · Next.js 15 (App Router) · TypeScript strict · shadcn/ui · Tailwind 4 · React Query · zod · WeasyPrint · pytest · vitest · ruff · mypy `--strict`.
 - **No SaaS dependencies in the data path** — bank deployments are on-premise behind their own perimeter; no telemetry calls out.
 - **Architecture-first discipline** — 24 ADRs in `docs/adr/`, active contracts in `docs/conventions/active-contracts.md`, every rule with a regulator citation in its module docstring. See [ADR-0024](docs/adr/0024-foundational-source-verification.md) for how the rule set was triangulated against multiple independent sources.
+
+## What's next
+
+Forward-looking direction, not a backlog of broken things:
+
+- **ESF realtime adapter** — replace the batch CSV import of e-invoices with a streaming pull from `faktura.uz` (pre-condition: pilot-bank OAuth token).
+- **OAuth2 / OIDC authentication** — Okta and Azure AD adapters alongside the existing LDAP path, for banks that already standardised on cloud identity (T1.5b in the roadmap).
+- **Cross-counterparty `CIRCULAR_INVOICING`** — extend the existing networkx-based graph cycle detection from internal ESF edges to external borrower-counterparty chains, once a cross-CP ESF source is available.
+- **Industry-median KPI bands** — once `stat.uz` publishes net-margin and current-ratio medians per OKED industry code, plug them into `kpi_calculator.level_tone` as a separate verified threshold layer.
+- **Bank ABS integration adapters** — first production target is a custom adapter into the bank's core banking system (ABS), replacing manual file upload with a direct pull of borrower data over the bank's internal network.
 
 ## License
 
