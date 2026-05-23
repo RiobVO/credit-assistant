@@ -187,6 +187,6 @@ The code is the author's IP; banks receive a right-to-use under separate agreeme
 
 ## Contact
 
-- **Email** — `eleru340@gmail.com` _(user fills in)_
-- **Telegram** — `plssog` _(user fills in)_
+- **Email** — `eleru340@gmail.com` 
+- **Telegram** — `plssog`
 - **Location** — Tashkent, Uzbekistan
