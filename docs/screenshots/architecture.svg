@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 1000" width="1400" height="1000" font-family="Inter, -apple-system, Segoe UI, system-ui, sans-serif">
+  <defs>
+    <linearGradient id="gInterfaces" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#eff6ff"/>
+      <stop offset="1" stop-color="#dbeafe"/>
+    </linearGradient>
+    <linearGradient id="gApplication" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#eef2ff"/>
+      <stop offset="1" stop-color="#e0e7ff"/>
+    </linearGradient>
+    <linearGradient id="gDomain" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fef3c7"/>
+      <stop offset="1" stop-color="#fde68a"/>
+    </linearGradient>
+    <linearGradient id="gInfra" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f8fafc"/>
+      <stop offset="1" stop-color="#e2e8f0"/>
+    </linearGradient>
+    <linearGradient id="gBox" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#f8fafc"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#0f172a" flood-opacity="0.08"/>
+    </filter>
+    <marker id="arrowBlue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/>
+    </marker>
+    <marker id="arrowSlate" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#64748b"/>
+    </marker>
+  </defs>
+  <rect width="1400" height="1000" fill="#f8fafc"/>
+  <text x="60" y="48" font-size="26" font-weight="700" fill="#0f172a">credit-assistant — Clean Hexagonal Architecture</text>
+  <text x="60" y="74" font-size="14" fill="#475569">Dependency direction flows inward: Interfaces → Application → Domain. Infrastructure implements ports.</text>
+  <rect x="60" y="100" width="1280" height="150" rx="14" fill="url(#gInterfaces)" stroke="#93c5fd" stroke-width="1"/>
+  <text x="78" y="128" font-size="13" font-weight="700" fill="#1e3a8a" letter-spacing="1.5">INTERFACES · entry points</text>
+  <rect x="84" y="148" width="394" height="84" rx="10" fill="url(#gBox)" stroke="#cbd5e1" stroke-width="1" filter="url(#shadow)"/>
+  <text x="100" y="176" font-size="14" font-weight="700" fill="#1e3a8a">FastAPI routers</text>
+  <text x="100" y="200" font-size="12" fill="#475569">bank · accountant · shared</text>
+  <rect x="502" y="148" width="394" height="84" rx="10" fill="url(#gBox)" stroke="#cbd5e1" stroke-width="1" filter="url(#shadow)"/>
+  <text x="518" y="176" font-size="14" font-weight="700" fill="#1e3a8a">Admin CLI</text>
+  <text x="518" y="200" font-size="12" fill="#475569">seed · migrations · smoke</text>
+  <rect x="920" y="148" width="394" height="84" rx="10" fill="url(#gBox)" stroke="#cbd5e1" stroke-width="1" filter="url(#shadow)"/>
+  <text x="936" y="176" font-size="14" font-weight="700" fill="#1e3a8a">Next.js 15 App Router</text>
+  <text x="936" y="200" font-size="12" fill="#475569">web/ frontend — RU + UZ</text>
+  <rect x="60" y="290" width="1280" height="170" rx="14" fill="url(#gApplication)" stroke="#a5b4fc" stroke-width="1"/>
+  <text x="78" y="318" font-size="13" font-weight="700" fill="#3730a3" letter-spacing="1.5">APPLICATION · orchestration</text>
+  <rect x="84" y="338" width="290" height="104" rx="10" fill="url(#gBox)" stroke="#cbd5e1" stroke-width="1" filter="url(#shadow)"/>
+  <text x="100" y="366" font-size="14" font-weight="700" fill="#3730a3">Use cases</text>
+  <text x="100" y="390" font-size="12" fill="#475569">build_borrower_snapshot · render_dossier_pdf · authenticate</text>
+  <rect x="398" y="338" width="290" height="104" rx="10" fill="url(#gBox)" stroke="#cbd5e1" stroke-width="1" filter="url(#shadow)"/>
+  <text x="414" y="366" font-size="14" font-weight="700" fill="#3730a3">Services</text>
+  <text x="414" y="390" font-size="12" fill="#475569">scoring · observations · KPI · readiness</text>
+  <rect x="712" y="338" width="290" height="104" rx="10" fill="url(#gBox)" stroke="#cbd5e1" stroke-width="1" filter="url(#shadow)"/>
+  <text x="728" y="366" font-size="14" font-weight="700" fill="#3730a3">Ports</text>
+  <text x="728" y="390" font-size="12" fill="#475569">AuthnPort · BorrowerRepoPort · PdfReportPort · PiiEncryptorPort</text>
+  <rect x="1026" y="338" width="290" height="104" rx="10" fill="url(#gBox)" stroke="#cbd5e1" stroke-width="1" filter="url(#shadow)"/>
+  <text x="1042" y="366" font-size="14" font-weight="700" fill="#3730a3">DTOs</text>
+  <text x="1042" y="390" font-size="12" fill="#475569">request / response shapes between layers</text>
+  <rect x="56" y="496" width="1288" height="168" rx="16" fill="none" stroke="#d97706" stroke-width="2.5"/>
+  <rect x="60" y="500" width="1280" height="160" rx="14" fill="url(#gDomain)" stroke="#fbbf24" stroke-width="1"/>
+  <text x="78" y="528" font-size="13" font-weight="700" fill="#78350f" letter-spacing="1.5">DOMAIN · pure business logic</text>
+  <text x="1322" y="528" font-size="12" font-weight="600" fill="#92400e" text-anchor="end">PURE — zero external imports</text>
+  <rect x="84" y="548" width="394" height="94" rx="10" fill="url(#gBox)" stroke="#cbd5e1" stroke-width="1" filter="url(#shadow)"/>
+  <text x="100" y="576" font-size="14" font-weight="700" fill="#78350f">Entities</text>
+  <text x="100" y="600" font-size="12" fill="#475569">Borrower · FinancialReport · Counterparty · Invoice</text>
+  <rect x="502" y="548" width="394" height="94" rx="10" fill="url(#gBox)" stroke="#cbd5e1" stroke-width="1" filter="url(#shadow)"/>
+  <text x="518" y="576" font-size="14" font-weight="700" fill="#78350f">Value objects</text>
+  <text x="518" y="600" font-size="12" fill="#475569">INN · Money · period identifiers</text>
+  <rect x="920" y="548" width="394" height="94" rx="10" fill="url(#gBox)" stroke="#cbd5e1" stroke-width="1" filter="url(#shadow)"/>
+  <text x="936" y="576" font-size="14" font-weight="700" fill="#78350f">24 red-flag rules</text>
+  <text x="936" y="600" font-size="12" fill="#475569">financial · counterparty · payment · structural</text>
+  <rect x="60" y="700" width="1280" height="200" rx="14" fill="url(#gInfra)" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="78" y="728" font-size="13" font-weight="700" fill="#1e293b" letter-spacing="1.5">INFRASTRUCTURE · adapters (implement ports)</text>
+  <rect x="84" y="748" width="185" height="120" rx="10" fill="url(#gBox)" stroke="#cbd5e1" stroke-width="1" filter="url(#shadow)"/>
+  <text x="100" y="776" font-size="14" font-weight="700" fill="#1e293b">SQLAlchemy</text>
+  <text x="100" y="800" font-size="12" fill="#475569">models · mappers · Alembic</text>
+  <rect x="293" y="748" width="185" height="120" rx="10" fill="url(#gBox)" stroke="#cbd5e1" stroke-width="1" filter="url(#shadow)"/>
+  <text x="309" y="776" font-size="14" font-weight="700" fill="#1e293b">Soliq parsers</text>
+  <text x="309" y="800" font-size="12" fill="#475569">xltx · Excel</text>
+  <rect x="502" y="748" width="185" height="120" rx="10" fill="url(#gBox)" stroke="#cbd5e1" stroke-width="1" filter="url(#shadow)"/>
+  <text x="518" y="776" font-size="14" font-weight="700" fill="#1e293b">ESF CSV</text>
+  <text x="518" y="800" font-size="12" fill="#475569">e-invoice adapter</text>
+  <rect x="711" y="748" width="185" height="120" rx="10" fill="url(#gBox)" stroke="#cbd5e1" stroke-width="1" filter="url(#shadow)"/>
+  <text x="727" y="776" font-size="14" font-weight="700" fill="#1e293b">WeasyPrint</text>
+  <text x="727" y="800" font-size="12" fill="#475569">RU / UZ PDF renderer</text>
+  <rect x="920" y="748" width="185" height="120" rx="10" fill="url(#gBox)" stroke="#cbd5e1" stroke-width="1" filter="url(#shadow)"/>
+  <text x="936" y="776" font-size="14" font-weight="700" fill="#1e293b">Auth</text>
+  <text x="936" y="800" font-size="12" fill="#475569">JWT · LDAP · TOTP · Fernet PII</text>
+  <rect x="1129" y="748" width="185" height="120" rx="10" fill="url(#gBox)" stroke="#cbd5e1" stroke-width="1" filter="url(#shadow)"/>
+  <text x="1145" y="776" font-size="14" font-weight="700" fill="#1e293b">Observability</text>
+  <text x="1145" y="800" font-size="12" fill="#475569">logs · metrics · tracing</text>
+  <line x1="700.0" y1="250" x2="700.0" y2="288" stroke="#2563eb" stroke-width="2" marker-end="url(#arrowBlue)"/>
+  <rect x="658.0" y="258.0" width="84" height="16" rx="4" fill="#ffffff" opacity="0.95" stroke="#e2e8f0"/>
+  <text x="700.0" y="270.0" font-size="11" font-weight="600" fill="#2563eb" text-anchor="middle">depends on</text>
+  <line x1="700.0" y1="460" x2="700.0" y2="494" stroke="#2563eb" stroke-width="2" marker-end="url(#arrowBlue)"/>
+  <rect x="658.0" y="466.0" width="84" height="16" rx="4" fill="#ffffff" opacity="0.95" stroke="#e2e8f0"/>
+  <text x="700.0" y="478.0" font-size="11" font-weight="600" fill="#2563eb" text-anchor="middle">depends on</text>
+  <line x1="480.0" y1="700" x2="480.0" y2="666" stroke="#64748b" stroke-width="1.8" stroke-dasharray="6,4" marker-end="url(#arrowSlate)"/>
+  <rect x="417.0" y="672.0" width="126" height="16" rx="4" fill="#ffffff" opacity="0.95" stroke="#e2e8f0"/>
+  <text x="480.0" y="684.0" font-size="11" font-weight="600" fill="#64748b" text-anchor="middle">implements ports</text>
+  <line x1="920.0" y1="700" x2="920.0" y2="666" stroke="#2563eb" stroke-width="2" marker-end="url(#arrowBlue)"/>
+  <rect x="878.0" y="672.0" width="84" height="16" rx="4" fill="#ffffff" opacity="0.95" stroke="#e2e8f0"/>
+  <text x="920.0" y="684.0" font-size="11" font-weight="600" fill="#2563eb" text-anchor="middle">depends on</text>
+  <rect x="60" y="918" width="1280" height="42" rx="8" fill="#ffffff" stroke="#e2e8f0"/>
+  <text x="78" y="936" font-size="12" font-weight="600" fill="#0f172a">Legend</text>
+  <line x1="160" y1="932" x2="220" y2="932" stroke="#2563eb" stroke-width="2" marker-end="url(#arrowBlue)"/>
+  <text x="232" y="936" font-size="12" fill="#475569">runtime dependency</text>
+  <line x1="440" y1="932" x2="500" y2="932" stroke="#64748b" stroke-width="1.8" stroke-dasharray="6,4" marker-end="url(#arrowSlate)"/>
+  <text x="512" y="936" font-size="12" fill="#475569">implements (port → adapter binding)</text>
+  <rect x="840" y="923" width="20" height="14" rx="3" fill="none" stroke="#d97706" stroke-width="2"/>
+  <text x="870" y="936" font-size="12" fill="#475569">Domain — pure layer (zero external imports)</text>
+</svg>
