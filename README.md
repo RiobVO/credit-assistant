@@ -22,9 +22,17 @@ The codebase follows Clean / Hexagonal layering with a strict inward dependency 
 
 <sup>High-resolution: [architecture.svg](docs/screenshots/architecture.svg) · regenerate via `python scripts/_build_architecture_svg.py`</sup>
 
-### How a rule looks in code
+### Two patterns the rest of the codebase repeats
 
-Every rule is a pure function with a regulator citation in its module docstring. Below is the actual file at [`src/domain/rules/financial/dscr_low.py`](src/domain/rules/financial/dscr_low.py) — abbreviated to the signature, source comment, threshold, and key fallback logic:
+The 24 red-flag rules and 8 financial KPIs are not magical — they are pure functions on a frozen `BorrowerSnapshot`, with no I/O, no globals, and no exceptions-as-control-flow. Here is one of each, verbatim from `src/`, so a reader can copy the pattern instead of guessing what production-grade looks like in this codebase.
+
+### How a rule looks in code — `DSCR_LOW`
+
+[`src/domain/rules/financial/dscr_low.py`](src/domain/rules/financial/dscr_low.py) fires when Debt Service Coverage Ratio falls below 1.3 — the borrower's operating cash flow is not enough to cover annual interest plus principal repayment. Three things to look at:
+
+1. **`RULE_SOURCE` comment** ties the 1.3 threshold to a citable source (Murodov 2025 peer-reviewed UZ research + IFC SME Knowledge Guide ch.4). No hand-wavy «industry standard» — every threshold in this repo points at a paper, regulator circular, or Basel reference.
+2. **Return type `FiringEvidence | None`** — the function never raises; either it has enough data to fire and returns evidence with the actual numbers, or it has missing data and returns `None`. No partial answers, no silent zeros.
+3. **Fallback chain OCF → EBITDA → EBIT** — if the borrower's statements lack operating cash flow, the rule degrades to EBITDA, then EBIT, and tells the analyst which numerator it used. Partial financial data still surfaces the risk signal instead of swallowing it.
 
 ```python
 """DSCR_LOW: Debt Service Coverage Ratio ниже минимума 1.3 (ADR-0024)."""
@@ -82,9 +90,11 @@ def dscr_low(snapshot: BorrowerSnapshot) -> FiringEvidence | None:
     )
 ```
 
-### How a KPI looks in code
+### How a KPI looks in code — `fx_exposure_ratio`
 
-Every KPI follows the same explainable pattern — silent on missing data, no fabricated thresholds. From [`src/application/services/kpi_calculator.py`](src/application/services/kpi_calculator.py) (`_compute_fx_exposure_ratio`):
+[`src/application/services/kpi_calculator.py`](src/application/services/kpi_calculator.py) computes the share of FX-denominated liabilities in total liabilities — a leading indicator for currency mismatch risk in Uzbek SME lending. The same purity contract applies, plus one deliberate engineering choice worth pointing out:
+
+**`level_tone=None`** — the function returns the ratio without a colour band (good / warn / bad). The reason is honest: there is no verified Central Bank of Uzbekistan threshold for FX-exposure of SME borrowers yet. Rather than invent a number that looks authoritative on a credit committee printout, we render the value plain and let the banker apply professional judgment. This «no fabricated thresholds» discipline is enforced repo-wide — when a regulator source surfaces, the colour band is added in a separate commit with the citation.
 
 ```python
 def _compute_fx_exposure_ratio(latest: FinancialReport | None) -> KpiValue | None:
@@ -107,7 +117,7 @@ def _compute_fx_exposure_ratio(latest: FinancialReport | None) -> KpiValue | Non
     # level_tone=None — see module-level note re backlog ЦБ РУз threshold
 ```
 
-_Every rule traces back to a verified source (FATF / Basel / Central Bank circular / peer-reviewed UZ research). Every KPI follows the same explainable pattern — silent on partial data, never fabricated._
+_Both functions are typical, not cherry-picked — every rule in [`src/domain/rules/`](src/domain/rules/) has a `RULE_SOURCE` comment, every KPI in [`src/application/services/kpi_calculator.py`](src/application/services/kpi_calculator.py) follows the silent-on-missing-data contract. The discipline is in the repo, not the README._
 
 ## By the numbers
 
